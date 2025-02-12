@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="assets/a.svg" height="300" alt="Logo">
+  <img src="assets/logo.svg" height="200" alt="Logo">
 </p>
+<p align="center"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /> <sup>A modular and extensible shell for Hyprland, written on <a href="https://github.com/Fabric-Development/fabric/">Fabric</a>. </sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /></p>
 
 <p align="center">
 
@@ -19,8 +20,6 @@
 <a href="https://github.com/S4NKALP/Modus/pulse">
 <img alt="Last Updated" src="https://img.shields.io/github/last-commit/S4NKALP/Modus?style=flat&color=e06c75&label="> </a>
 </p>
-
-<p align="center"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /> <sup>A modular and extensible shell for Hyprland, powered by <a href="https://github.com/Fabric-Development/fabric/">Fabric</a>. </sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /></p>
 
 <br>
 
