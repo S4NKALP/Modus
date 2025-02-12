@@ -91,13 +91,12 @@ cd Tela-icon-theme
 - [x] Sh Runner
 - [x] Emoji Picker
 - [x] Update Screenshot
+- [x] Installation script
 - [ ] Calendar with events
 - [ ] Network Manager
 - [ ] Power Manager
 - [ ] Screenshot Tool
 - [ ] Notification Panel
-- [ ] Installation script
 - [ ] Improve CSS Styling
 - [ ] Window Switcher
 - [ ] Web search in Launcher
-- [ ] Make Standalone Shell
