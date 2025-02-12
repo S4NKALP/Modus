@@ -1,64 +1,103 @@
 <p align="center">
-  <img src="sample-logo-470x235-1.png" alt="Logo">
-</p>
-
-<h1 align="center">Project Name</h1>
-
-<p align="center">
-
-<a href="https://github.com/your-username/repos/graphs/contributors">
-<img alt="People" src="https://img.shields.io/github/contributors/your-username/repos?style=flat&color=ffaaf2&label=People"> </a>
-
-<a href="https://github.com/your-username/repos/stargazers">
-<img alt="Stars" src="https://img.shields.io/github/stars/your-username/repos?style=flat&color=98c379&label=Stars"></a>
-
-<a href="https://github.com/your-username/repos/network/members">
-<img alt="Forks" src="https://img.shields.io/github/forks/your-username/repos?style=flat&color=66a8e0&label=Forks"> </a>
-
-<a href="https://github.com/your-username/repos/watchers">
-<img alt="Watches" src="https://img.shields.io/github/watchers/your-username/repos?style=flat&color=f5d08b&label=Watches"> </a>
-
-<a href="https://github.com/your-username/repos/pulse">
-<img alt="Last Updated" src="https://img.shields.io/github/last-commit/your-username/repos?style=flat&color=e06c75&label="> </a>
+  <img src="assets/a.svg" height="300" alt="Logo">
 </p>
 
 <p align="center">
-  <strong>A brief description of the project</strong>
-  <br>
-  Describe detailed information about the project, including its description and features.
-  <br>
-  <br>
-  <a href="https://github.com/your-username/your-repo/wiki">Documentation</a>
-  ·
-  <a href="https://github.com/your-username/your-repo/issues">Report a Bug</a>
-  ·
-  <a href="https://github.com/your-username/your-repo/issues">Request a Feature</a>
+
+<a href="https://github.com/S4NKALP/Modus/graphs/contributors">
+<img alt="People" src="https://img.shields.io/github/contributors/S4NKALP/Modus?style=flat&color=ffaaf2&label=People"> </a>
+
+<a href="https://github.com/S4NKALP/Modus/stargazers">
+<img alt="Stars" src="https://img.shields.io/github/stars/S4NKALP/Modus?style=flat&color=98c379&label=Stars"></a>
+
+<a href="https://github.com/S4NKALP/Modus/network/members">
+<img alt="Forks" src="https://img.shields.io/github/forks/S4NKALP/Modus?style=flat&color=66a8e0&label=Forks"> </a>
+
+<a href="https://github.com/S4NKALP/Modus/watchers">
+<img alt="Watches" src="https://img.shields.io/github/watchers/S4NKALP/Modus?style=flat&color=f5d08b&label=Watches"> </a>
+
+<a href="https://github.com/S4NKALP/Modus/pulse">
+<img alt="Last Updated" src="https://img.shields.io/github/last-commit/S4NKALP/Modus?style=flat&color=e06c75&label="> </a>
 </p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /> <sup>A modular and extensible shell for Hyprland, powered by <a href="https://github.com/Fabric-Development/fabric/">Fabric</a>. </sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /></p>
 
 <br>
 
-## Overview
+<figure>
+  <img src="assets/home.png" alt="fabric">
+  <br/>
+</figure>
+<br>
 
-Describe important information about the project, such as its overview and background.
+<h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Package.png" alt="Package" width="25" height="25" /></sub> Installation</h2>
 
-## Features
+> [!NOTE]
+> You need a functioning Hyprland installation.
 
-Explain the features and unique points of the project.
+1. Dependencies:
 
-## Installation
+```sh
+fabric fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblast power-profile-daemon adw-gtk-theme brightnessctl swww hypridle hyprlock imagemagick libnotify swappy libadwaita
+```
 
-Provide instructions on how to install the project and any dependencies.
+```sh
+python-materialyoucolor-git python-pillow python-toml python-setproctitle python-requests python-numpy python-pywayland python-pyxdg
+```
 
-## Usage
+```sh
+ttf-font-awesome otf-font-awesome ttf-material-symbols-variable-git ttf-google-sans ttf-opensans ttf-robot
+```
 
-Offer information on how to use the project, including sample code, to help users make the most of it.
+- Icon:
 
----
+```sh
+git clone https://github.com/vinceliuice/Tela-icon-theme
+cd Tela-icon-theme
+./install.sh nord
+```
 
-To use this template, follow these steps:
+<h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Camera%20with%20Flash.png" alt="Camera with Flash" width="25" height="25" /></sub> Screenshots</h2>
 
-1. [Fork the repository](https://github.com/S4NKALP/README-Templates/fork).
-2. Clone the forked repository to your local environment.
-3. Make the necessary changes and modifications.
-4. Commit and push your changes.
-5. Create a pull request to the original repository.
+<table align="center">
+
+  <tr>
+    <td colspan="1"><img src="assets/bluetooth.png"></td>
+    <td colspan="1"><img src="assets/cliphist.png"></td>
+    <td colspan="1"><img src="assets/wallpaper.png"></td>
+  </tr>
+<tr>
+    <td colspan="1"><img src="assets/todo.png"></td>
+    <td colspan="1"><img src="assets/shrunner.png"></td>
+    <td colspan="1"><img src="assets/osd.png"></td>
+</tr>
+<tr>
+    <td colspan="1"><img src="assets/powermenu.png"></td>
+    <td colspan="1"><img src="assets/notification.png"></td>
+    <td colspan="1"><img src="assets/emoji.png"></td>
+</tr>
+
+</table>
+
+<h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
+
+- [x] App Launcher
+- [x] Power Menu
+- [x] Wallpaper Picker
+- [x] Todo
+- [x] Bluetooth Manager
+- [x] Clipboard Manager
+- [x] OSD
+- [x] Sh Runner
+- [x] Emoji Picker
+- [x] Update Screenshot
+- [ ] Calendar with events
+- [ ] Network Manager
+- [ ] Power Manager
+- [ ] Screenshot Tool
+- [ ] Notification Panel
+- [ ] Installation script
+- [ ] Improve CSS Styling
+- [ ] Window Switcher
+- [ ] Web search in Launcher
+- [ ] Make Standalone Shell
