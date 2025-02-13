@@ -25,6 +25,7 @@ PACKAGES=(
 	python-numpy
 	python-pywayland
 	python-pyxdg
+	sddm-theme-corners-git
 	swww
 	swappy
 	wl-clipboard

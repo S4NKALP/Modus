@@ -1,0 +1,69 @@
+@import url(../../.cache/material/colors.css);
+@import "./bar.css";
+@import "./notification.css";
+@import "./osd.css";
+@import "./launcher.css";
+
+* {
+  all: unset;
+  color: @foreground;
+  font-size: 16px;
+  font-family: "Product Sans", Roboto, "Font Awesome 6 Free", Helvetica, Arial,
+    sans-serif;
+}
+
+/*
+ * ── corner ────────────────────────────────────────────────────────────
+*/
+
+#corner {
+  background-color: @surface;
+  border-radius: 0;
+}
+
+#corner-container {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+/*
+ * ── tooltip ───────────────────────────────────────────────────────────
+*/
+
+tooltip {
+  background-color: @surfaceContainer;
+  border-radius: 10px;
+  padding: 6px 10px;
+  outline: none;
+  border: none;
+  box-shadow: none;
+  animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+tooltip label {
+  color: @onSurface;
+  outline: none;
+  border: none;
+  box-shadow: none;
+  font-weight: normal;
+}
+
+@keyframes tooltipShow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+ * ── icon ──────────────────────────────────────────────────────────────
+*/
+
+#material_icon,
+#material_icon * {
+  all: unset;
+  font-family: "Material Symbols Outlined", "Material Symbols Sharp";
+}

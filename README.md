@@ -61,19 +61,19 @@ cd Tela-icon-theme
 <table align="center">
 
   <tr>
-    <td colspan="1"><img src="assets/bluetooth.png"></td>
-    <td colspan="1"><img src="assets/cliphist.png"></td>
-    <td colspan="1"><img src="assets/wallpaper.png"></td>
+    <td colspan="1"><img src="assets/screenshots/bluetooth.png"></td>
+    <td colspan="1"><img src="assets/screenshots/cliphist.png"></td>
+    <td colspan="1"><img src="assets/screenshots/wallpaper.png"></td>
   </tr>
 <tr>
-    <td colspan="1"><img src="assets/todo.png"></td>
-    <td colspan="1"><img src="assets/shrunner.png"></td>
-    <td colspan="1"><img src="assets/osd.png"></td>
+    <td colspan="1"><img src="assets/screenshots/todo.png"></td>
+    <td colspan="1"><img src="assets/screenshots/shrunner.png"></td>
+    <td colspan="1"><img src="assets/screenshots/osd.png"></td>
 </tr>
 <tr>
-    <td colspan="1"><img src="assets/powermenu.png"></td>
-    <td colspan="1"><img src="assets/notification.png"></td>
-    <td colspan="1"><img src="assets/emoji.png"></td>
+    <td colspan="1"><img src="assets/screenshots/powermenu.png"></td>
+    <td colspan="1"><img src="assets/screenshots/notification.png"></td>
+    <td colspan="1"><img src="assets/screenshots/emoji.png"></td>
 </tr>
 
 </table>

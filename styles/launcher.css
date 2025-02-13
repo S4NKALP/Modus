@@ -1,0 +1,327 @@
+/*
+ * ── launcher ──────────────────────────────────────────────────────────
+*/
+
+#launcher {
+  margin: 18px;
+  border: 1px solid @outlineVariant;
+  background-color: @surface;
+  border-radius: 24px;
+  padding: 18px;
+  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+#launcher entry {
+  transition: all 0.1s ease;
+  border-radius: 11px;
+  padding: 10px;
+  margin: 12px;
+  box-shadow: inset 0 0 0 1px @outlineVariant;
+}
+
+#launcher-content.wallpapers {
+  padding: 16px;
+  min-height: 420px;
+  min-width: 620px;
+}
+
+#launcer-content.cliphist {
+  min-height: 420px;
+}
+
+#launcher-content.bluetooth {
+  min-height: 464px;
+  min-width: 464px;
+}
+
+#launcher-content.power {
+  min-height: 52px;
+}
+
+#launcher-content {
+  min-width: 420px;
+}
+
+#app-launcher,
+#wallpapers,
+#todo,
+#bluetooth,
+#sh,
+#cliphist,
+#emoji,
+#powermenu {
+  transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+#toggle-launcher-button {
+  background-color: @secondaryContainer;
+  color: @onSecondaryContainer;
+  margin: 11px;
+  margin-left: 0px;
+  min-width: 54px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#clear-launcher-button {
+  background-color: @secondaryContainer;
+  color: @onSecondaryContainer;
+  margin: 11px;
+  margin-left: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+/*
+ * ── applauncher ───────────────────────────────────────────────────────
+*/
+
+#launcher-app {
+  border-radius: 16px;
+  padding: 16px;
+  transition: padding 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+#launcher-app:hover image,
+#launcher-app:active image,
+#launcher-app:selected image,
+#launcher-app.selected image,
+#launcher-app:focus image {
+  -gtk-icon-shadow: 2px 2px @primary;
+}
+
+#launcher-app:hover,
+#launcher-app:active,
+#launcher-app.selected,
+#launcher-app:selected,
+#launcher-app:focus {
+  text-shadow: 2pt 2pt 2pt @primary;
+}
+
+#launcher-app-icon {
+  margin-right: 8px;
+}
+
+/*
+ * ── wallpaper ─────────────────────────────────────────────────────────
+*/
+
+#wallpaper-icons:selected {
+  background-color: @surfaceBright;
+  border-radius: 8px;
+}
+
+#wallpaper-icons:hover {
+  background-color: @surfaceBright;
+  border-radius: 8px;
+}
+
+#dropdown-box {
+  background-color: @surface;
+  box-shadow: inset 0 0 0 1px @outlineVariant;
+  border-radius: 11px;
+  padding: 10px;
+  margin: 12px;
+}
+
+#scheme-dropdown {
+  font-weight: bold;
+}
+
+/*
+ * ── emoji ─────────────────────────────────────────────────────────────
+*/
+
+#launcher button#emoji-item {
+  border-radius: 11px;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  padding: 0px;
+}
+
+#launcher button#emoji-item label {
+  font-size: 24px;
+}
+
+#launcher button#emoji-item:hover,
+#launcher button#emoji-item:focus {
+  text-shadow: 2px 2px 2px @primary;
+}
+
+/*
+ * ── powermenu ─────────────────────────────────────────────────────────
+*/
+
+#powermenu-button {
+  border-radius: 20px;
+  padding: 20px;
+}
+
+#powermenu-button:hover,
+#powermenu-button:focus {
+  background-color: @surfaceBright;
+}
+
+#powermenu-button:active {
+  background-color: @primary;
+}
+
+/*
+ * ── cliphist ──────────────────────────────────────────────────────────
+*/
+#cliphist-history {
+  min-height: 420px;
+}
+
+#launcher button#clip-img-item {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+  min-width: 70px;
+  min-height: 70px;
+}
+
+#launcher button#clip-img-item:hover,
+#launcher button#clip-img-item:focus {
+  box-shadow: 2px 2px 2px @primary;
+}
+
+#launcher button#clip-item {
+  border-radius: 11px;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  padding: 6px;
+}
+
+#launcher button#clip-item {
+  font-size: 30px;
+}
+
+#launcher button#clip-item:hover,
+#launcher button#clip-item:focus {
+  text-shadow: 2px 2px 2px @primary;
+}
+
+/*
+ * ── todo ──────────────────────────────────────────────────────────────
+*/
+#todo-content {
+  min-height: 250px;
+}
+
+#todo-launcher {
+  background-color: @surface;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+#todo-item {
+  padding: 8px;
+  border-radius: 4px;
+  background-color: alpha(@surface, 0.8);
+}
+
+#todo-label {
+  color: @primary;
+}
+
+#todo-label-completed {
+  color: alpha(@outlineVariant, 0.5);
+  text-decoration: line-through;
+}
+
+#delete-button {
+  color: @error;
+}
+
+/*
+ * ── sh runner ─────────────────────────────────────────────────────────
+*/
+
+#launcher button#sh-item {
+  border-radius: 11px;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  padding: 0px;
+}
+
+#launcher button#sh-item {
+  font-size: 24px;
+}
+
+#launcher button#sh-item:hover,
+#launcher button#sh-item:focus {
+  text-shadow: 2px 2px 2px @primary;
+}
+
+/*
+ * ── bluetooth ─────────────────────────────────────────────────────────
+*/
+
+#bluetooth-header {
+  background-color: @surfaceContainer;
+  padding: 4px;
+  border-radius: 20px;
+}
+
+#bluetooth-device {
+  background-color: @secondaryContainer;
+  border-radius: 16px;
+  padding: 4px;
+  margin-bottom: 4px;
+}
+
+#bluetooth-scan,
+#bluetooth-toggle {
+  background-color: @secondaryContainer;
+  margin-left: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#bluetooth-scan:hover,
+#bluetooth-toggle:hover {
+  background-color: @surfaceBright;
+}
+
+#bluetooth-scan label,
+#bluetooth-toggle label {
+  font-weight: bold;
+}
+
+#bluetooth-text,
+#bluetooth-section {
+  font-weight: bold;
+}
+
+#bluetooth-text {
+  color: @primary;
+}
+
+#bluetooth-connection {
+  font-size: 20px;
+}
+
+#bluetooth-connect {
+  background-color: @surface;
+  border-radius: 16px;
+  padding: 8px 16px;
+}
+
+#bluetooth-connect:hover {
+  background-color: @surfaceBright;
+}
+
+#bluetooth-paired,
+#bluetooth-available {
+  background-color: @surfaceContainer;
+  padding: 4px;
+  border-radius: 20px;
+  min-height: 200px;
+}
