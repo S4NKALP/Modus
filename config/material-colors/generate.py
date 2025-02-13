@@ -262,28 +262,6 @@ def generate_templates(
         with open(new_path, "w") as f:
             f.write(template)
 
-    for file in ready_templates:
-        _template = ""
-        for color in vars(MaterialDynamicColors).keys():
-            color_name = getattr(MaterialDynamicColors, color)
-            if hasattr(color_name, "get_hct"):
-                rgba = color_name.get_hct(scheme).to_rgba()
-                hex_color = rgb_to_hex(rgba)
-                rgb_color = rgba_to_rgb(rgba)
-                new_line = ready_templates[file].format(
-                    name=color, hex=hex_color, rgb=rgb_color
-                )
-                _template += new_line
-                if color in additional:
-                    new_line = ready_templates[file].format(
-                        name=additional[color], hex=hex_color, rgb=rgb_color
-                    )
-                    _template += new_line
-
-        new_path = join(output_folder, os.path.basename(file))
-        with open(new_path, "w") as f:
-            f.write(_template)
-
 
 def run_hooks(folder: str):
     if not os.path.exists(folder):
@@ -364,13 +342,6 @@ def main(
 
     generate_templates(
         f"{script_dir}/templates", cache_path, scheme, color_scheme, image_path
-    )
-    generate_templates(
-        f"{script_dir}/templates/svg",
-        join(cache_path, "svg/"),
-        scheme,
-        color_scheme,
-        image_path,
     )
 
     if is_dark:
