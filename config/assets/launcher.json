@@ -1,0 +1,11 @@
+{
+  "commands": {
+    ":wp": "launcher.open(\"wallpapers\")",
+    ":em": "launcher.open(\"emoji\")",
+    ":ch": "launcher.open(\"cliphist\")",
+    ":td": "launcher.open(\"todo\")",
+    ":bt": "launcher.open(\"bluetooth\")",
+    ":sh": "launcher.open(\"sh\")",
+    ":pw": "launcher.open(\"power\")"
+  }
+}

@@ -1,0 +1,184 @@
+#bar {
+  background-color: @surface;
+  padding: 3px;
+}
+
+#bar label {
+  font-weight: bold;
+}
+
+#bar.hidden {
+  opacity: 0;
+  padding: 3px;
+  margin-bottom: -52px;
+  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+/*
+ * ── bar modules ───────────────────────────────────────────────────────
+*/
+
+#start-container,
+#center-container,
+#end-container {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-left: 12px;
+  margin-right: 12px;
+}
+
+/*
+ * ── workspace ─────────────────────────────────────────────────────────
+*/
+
+#workspaces {
+  border-radius: 100px;
+  font-style: normal;
+  background: @surfaceContainer;
+  padding: 0px 10px 0px 10px;
+}
+
+/*
+ * ── Clock ─────────────────────────────────────────────────────────────
+*/
+
+#datetime {
+  background-color: @surfaceContainer;
+  border-radius: 100px;
+  padding: 8px;
+}
+
+/*
+ * ── battery ───────────────────────────────────────────────────────────
+*/
+
+#battery {
+  padding: 0 0 0 4px;
+}
+
+/*
+ * ── tray ──────────────────────────────────────────────────────────────
+*/
+
+#tray {
+  background-color: @surfaceContainer;
+  border-radius: 100px;
+  padding: 2px 10px 0px 10px;
+}
+
+#tray > button {
+  margin: 0px;
+  padding: 0px;
+}
+
+menu {
+  border: solid 1px @outlineVariant;
+  border-radius: 16px;
+  background-color: @surface;
+  padding: 6px;
+}
+
+menu > menuitem {
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+menu > menuitem:hover {
+  background-color: @surfaceBright;
+}
+
+menu > menuitem:hover > label {
+  color: @onSurface;
+}
+
+/*
+ * ── logo ──────────────────────────────────────────────────────────────
+*/
+#logo {
+  background-color: @surfaceContainer;
+  border-radius: 100px;
+  padding: 0px 10px 0px 10px;
+}
+
+#logo-name {
+  color: darker(@primary);
+}
+
+#logo:hover {
+  background-color: @surfaceBright;
+  box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
+}
+
+/*
+ * ── applets ───────────────────────────────────────────────────────────
+*/
+
+#applets {
+  background-color: @surfaceContainer;
+  border-radius: 100px;
+  padding: 2px 10px 2px 10px;
+  margin: 0px;
+}
+
+#applets .icon {
+  color: @onSurface;
+  font-weight: 900;
+}
+
+#applets > button {
+  color: @onSurface;
+  margin: 0px;
+  padding: 0px;
+}
+
+/*
+ * ── taskbar ───────────────────────────────────────────────────────────
+*/
+
+#taskbar {
+  border-radius: 100px;
+  color: @onSurface;
+  background: @surfaceContainer;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#taskbar > button.activated {
+  border-radius: 100px;
+  background: @surfaceVariant;
+}
+
+#taskbar > button:hover {
+  background: @surfaceBright;
+}
+
+#taskbar > button {
+  padding: 0px 4px;
+  margin: 4px 0px;
+  border-radius: 100px;
+  border: 0px;
+}
+
+#taskbar > button:last-child {
+  margin-right: 0px;
+}
+
+#progress {
+  color: lighter(@outlineVariant);
+  border: 1px solid @primary;
+}
+
+#recording-indicator {
+  padding: 6px 12px 6px 12px;
+  border-radius: 99px;
+}
+
+#recording-indicator {
+  animation: error 0.8s linear infinite alternate;
+}
+
+@keyframes error {
+  to {
+    background-color: @onError;
+  }
+}

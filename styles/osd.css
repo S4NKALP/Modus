@@ -1,0 +1,42 @@
+#osd {
+  background: @surfaceContainer;
+  padding: 10px 4px 10px 4px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  min-width: 190px;
+}
+
+#osd scale {
+  min-width: 150px;
+}
+
+#osd slider {
+  color: @onPrimary;
+  background-color: @primary;
+  background-size: 20px 20px;
+  min-width: 5px;
+  min-height: 14px;
+  border-radius: 100px;
+  padding: 0px;
+  background-repeat: no-repeat;
+  background-position: center;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: -16px;
+  margin-bottom: -16px;
+  box-shadow:
+    -4px 0px 0px 1px @surfaceContainer,
+    4px 0px 0px 1px @surfaceContainer;
+}
+
+#osd trough {
+  background: @secondaryContainer;
+  min-height: 10px;
+  margin-right: 4px;
+  border-radius: 100px;
+}
+
+#osd highlight {
+  border-radius: 100px 0px 0px 100px;
+  background: @primary;
+}
