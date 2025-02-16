@@ -2,6 +2,7 @@ import psutil
 from fabric import Fabricator
 from fabric.widgets.box import Box
 from fabric.widgets.overlay import Overlay
+from fabric.widgets.label import Label
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from snippets import MaterialIcon
 
@@ -54,12 +55,13 @@ class BatteryLabel(Box):
         )
 
         self.battery_overlay = Overlay(child=self.progress_bar, overlays=battery_icon)
+        self.battery_label = Label(label=f"{battery_percent}%", name="battery-label")
 
-        self.children = self.battery_overlay
+        self.children = self.battery_label, self.battery_overlay
 
         battery_percent = round(battery.percent)
         self.progress_bar.value = battery_percent / 100
-        # self.show() if battery_percent < 100 else self.hide()
+        self.show() if battery_percent < 100 else self.hide()
 
         self.set_tooltip_text(
             f"Battery: {battery_percent}%\nStatus: {'Charging' if is_charging else 'Discharging'}"

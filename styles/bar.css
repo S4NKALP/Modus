@@ -51,9 +51,18 @@
 /*
  * ── battery ───────────────────────────────────────────────────────────
 */
-
 #battery {
-  padding: 0 0 0 4px;
+  background-color: @surfaceContainer;
+  border-radius: 100px;
+  padding: 2px 10px 2px 10px;
+}
+
+#battery label {
+  font-weight: 600;
+}
+
+#battery-label {
+  margin-right: 5px;
 }
 
 /*
