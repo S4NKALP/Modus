@@ -156,7 +156,7 @@ class WallpaperSelector(Box):
         new_mode = "dark" if not current_state else "light"
 
         # Call the shell script with the --set argument
-        command = f"bash {get_relative_path('../../../config/dark-theme.sh')} --set {new_mode}"
+        command = f"bash {get_relative_path('../../../config/scripts/dark-theme.sh')} --set {new_mode}"
         GLib.spawn_command_line_async(command)
 
         # Set the appropriate icon based on the mode

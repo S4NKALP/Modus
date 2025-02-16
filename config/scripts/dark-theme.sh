@@ -14,8 +14,8 @@ get_relative_path() {
 }
 
 # Assign relative paths to variables
-GENERATOR=$(get_relative_path "./material-colors/generate.py")
-SETTINGS_FILE=$(get_relative_path "./assets/settings.json")
+GENERATOR=$(get_relative_path "../material-colors/generate.py")
+SETTINGS_FILE=$(get_relative_path "../assets/settings.json")
 
 # Function to read a value from the JSON file
 get_json_value() {
