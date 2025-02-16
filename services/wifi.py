@@ -7,8 +7,6 @@ from loguru import logger
 
 from fabric.utils import exec_shell_command_async
 
-from gi.repository.NM import DeviceEthernet, DeviceWifi
-
 try:
     gi.require_version("NM", "1.0")
     from gi.repository import NM
