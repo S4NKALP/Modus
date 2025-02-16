@@ -24,7 +24,7 @@
 <br>
 
 <figure>
-  <img src="assets/home.png" alt="fabric">
+  <img src="assets/screenshots/home.png" alt="fabric">
   <br/>
 </figure>
 <br>

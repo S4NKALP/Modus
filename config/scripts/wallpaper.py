@@ -22,7 +22,7 @@ def get_relative_path(path: str, level: int = 1) -> str:
 
 
 lock_file_path = "/tmp/wallpaper.lock"
-settings_file_path = get_relative_path("../config/assets/settings.json")
+settings_file_path = get_relative_path("../assets/settings.json")
 
 
 def acquire_lock():
