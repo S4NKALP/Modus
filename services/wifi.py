@@ -1,11 +1,10 @@
 from typing import Any, List, Literal
+
 import gi
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import bulk_connect
+from fabric.utils import bulk_connect, exec_shell_command_async
 from gi.repository import Gio
 from loguru import logger
-
-from fabric.utils import exec_shell_command_async
 
 try:
     gi.require_version("NM", "1.0")
@@ -15,11 +14,16 @@ except ValueError:
 
 
 class Wifi(Service):
+    """A service to manage wifi devices"""
+
     @Signal
     def changed(self) -> None: ...
 
     @Signal
     def enabled(self) -> bool: ...
+
+    @Signal
+    def scanning(self, is_scanning: bool) -> None: ...
 
     def __init__(self, client: NM.Client, device: NM.DeviceWifi, **kwargs):
         self._client: NM.Client = client
@@ -76,13 +80,18 @@ class Wifi(Service):
     #     self._device.access
 
     def scan(self):
-        self._device.request_scan_async(
-            None,
-            lambda device, result: [
-                device.request_scan_finish(result),
-                self.emit("changed"),
-            ],
-        )
+        """Start scanning for WiFi networks and emit scanning signal"""
+        if self._device:
+            self.emit("scanning", True)  # Emit signal that scanning has started
+            self._device.request_scan_async(
+                None,
+                lambda device, result: [
+                    device.request_scan_finish(result),
+                    self.emit(
+                        "scanning", False
+                    ),  # Emit signal that scanning has stopped
+                ],
+            )
 
     def notifier(self, name: str, *args):
         self.notify(name)
@@ -193,6 +202,8 @@ class Wifi(Service):
 
 
 class Ethernet(Service):
+    """A service to manage ethernet devices"""
+
     @Signal
     def changed(self) -> None: ...
 
@@ -234,23 +245,25 @@ class Ethernet(Service):
         self._client: NM.Client = client
         self._device: NM.DeviceEthernet = device
 
-        for pn in (
+        for names in (
             "active-connection",
             "icon-name",
             "internet",
             "speed",
             "state",
         ):
-            self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
+            self._device.connect(f"notify::{names}", lambda *_: self.notifier(names))
 
         self._device.connect("notify::speed", lambda *_: print(_))
 
-    def notifier(self, pn):
-        self.notify(pn)
+    def notifier(self, names):
+        self.notify(names)
         self.emit("changed")
 
 
 class NetworkClient(Service):
+    """A service to manage network devices"""
+
     @Signal
     def device_ready(self) -> None: ...
 
@@ -289,7 +302,7 @@ class NetworkClient(Service):
                 x
                 for x in devices
                 if x.get_device_type() == device_type
-                and x.get_active_connection() != None
+                and x.get_active_connection() is not None
             ),
             None,
         )
@@ -297,6 +310,9 @@ class NetworkClient(Service):
     def _get_primary_device(self) -> Literal["wifi", "wired"] | None:
         if not self._client:
             return None
+
+        if self._client.get_primary_connection() is None:
+            return "wifi"
         return (
             "wifi"
             if "wireless"
@@ -316,4 +332,3 @@ class NetworkClient(Service):
     @Property(str, "readable")
     def primary_device(self) -> Literal["wifi", "wired"] | None:
         return self._get_primary_device()
-
