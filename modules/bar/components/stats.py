@@ -11,7 +11,7 @@ from snippets import MaterialIcon
 
 class SystemInfo(Button):
     ICONS = [
-        ("CPU", "settings_motion_mode"),
+        ("CPU", "memory"),
         ("Swap", "swap_horiz"),
         ("RAM", "memory_alt"),
         ("Temp", "thermometer"),
@@ -29,7 +29,6 @@ class SystemInfo(Button):
     def _initialize_content(self):
         self.box = Box(orientation="h", name="tray")
         self.progress_bars = {}
-        self.labels = {}
         self.icons = {}
 
         for system, icon_name in self.ICONS:
@@ -39,25 +38,27 @@ class SystemInfo(Button):
 
     def _create_system_item(self, system, icon_name):
         self.progress_bars[system] = self._create_progress_bar()
-        self.labels[system] = self._create_label()
         self.icons[system] = self._create_icon(icon_name)
 
         overlay = Overlay(
             child=self.progress_bars[system], overlays=[self.icons[system]]
         )
-        self.box.pack_start(overlay, False, False, 0)
-        self.box.pack_start(self.labels[system], False, False, 0)
+        self.box.pack_start(overlay, False, False, 4)
 
     def _create_progress_bar(self):
         return CircularProgressBar(
-            name="progress", line_style="round", line_width=1, size=24
+            name="progress",
+            line_style="round",
+            line_width=3,
+            size=28,
+            start_at=0,
+            end_at=0.5,
+            # start_angle=180,
+            end_angle=180,
         )
 
-    def _create_label(self):
-        return Label(style="font-size:14px; margin: 4px;")
-
     def _create_icon(self, icon_name):
-        return MaterialIcon(icon_name, size=16)
+        return MaterialIcon(icon_name, 16)
 
     def _refresh_system_info(self, fab: Fabricator):
         while True:
@@ -83,12 +84,5 @@ class SystemInfo(Button):
 
     def _update_ui(self, usages):
         for system, usage in usages.items():
-            if usage is None:
-                usage = 0
-                self.labels[system].set_label("N/A")
-            else:
-                usage = int(usage)
-
             self.progress_bars[system].value = usage / 100
-            self.labels[system].set_label(f"{usage}")
-            self.progress_bars[system].set_tooltip_text(f"{system} Usage: {usage}%")
+            self.progress_bars[system].set_tooltip_text(f"{system} {usage}%")

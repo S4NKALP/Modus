@@ -41,7 +41,7 @@ class Bar(Window):
 
         self.recording_indicator = Button(
             name="recording-indicator",
-            child=MaterialIcon("screen_record", 14),
+            child=MaterialIcon("stop_circle", 16),
             visible=False,
             on_clicked=lambda *_: sc.screencast_stop(),
         )
@@ -76,7 +76,6 @@ class Bar(Window):
             orientation="h",
             children=[
                 self.language,
-                self.battery,
                 self.powerindicator,
                 self.bluetooth,
                 self.network,
@@ -111,6 +110,7 @@ class Bar(Window):
                 children=[
                     self.recording_indicator,
                     self.tray,
+                    self.battery,
                     self.applets,
                     self.date_time,
                 ],

@@ -61,7 +61,7 @@ class BatteryLabel(Box):
 
         battery_percent = round(battery.percent)
         self.progress_bar.value = battery_percent / 100
-        self.show() if battery_percent < 100 else self.hide()
+        # self.show() if battery_percent < 100 else self.hide()
 
         self.set_tooltip_text(
             f"Battery: {battery_percent}%\nStatus: {'Charging' if is_charging else 'Discharging'}"
