@@ -183,7 +183,8 @@ menu > menuitem:hover > label {
 }
 
 #recording-indicator {
-  animation: error 0.8s linear infinite alternate;
+  color: @primary;
+  animation: error 2s infinite;
 }
 
 @keyframes error {

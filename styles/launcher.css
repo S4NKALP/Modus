@@ -34,6 +34,11 @@
   min-width: 464px;
 }
 
+#launcher-content.wifi {
+  min-height: 464px;
+  min-width: 464px;
+}
+
 #launcher-content.power {
   min-height: 52px;
 }
@@ -71,6 +76,20 @@
   min-width: 44px;
   min-height: 44px;
   border-radius: 100%;
+}
+
+#scrolled-window scrollbar {
+  border-radius: 10px;
+  background-color: @surface;
+  /*padding: 4px;*/
+  /*margin-left: 6px;*/
+}
+
+#scrolled-window slider {
+  border-radius: 8px;
+  min-width: 10px;
+  min-height: 48px;
+  background-color: @primary;
 }
 
 /*
@@ -172,7 +191,7 @@
  * ── cliphist ──────────────────────────────────────────────────────────
 */
 #cliphist-history {
-  min-height: 420px;
+  min-height: 520px;
 }
 
 #launcher button#clip-img-item {
@@ -320,6 +339,72 @@
 
 #bluetooth-paired,
 #bluetooth-available {
+  background-color: @surfaceContainer;
+  padding: 4px;
+  border-radius: 20px;
+  min-height: 200px;
+}
+
+/*
+ * ── wifi ──────────────────────────────────────────────────────────────
+*/
+
+#wifi-header {
+  background-color: @surfaceContainer;
+  padding: 4px;
+  border-radius: 20px;
+}
+
+#wifi-device {
+  background-color: @secondaryContainer;
+  border-radius: 16px;
+  padding: 4px;
+  margin-bottom: 4px;
+}
+
+#wifi-scan,
+#wifi-toggle {
+  background-color: @secondaryContainer;
+  margin-left: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#wifi-scan:hover,
+#wifi-toggle:hover {
+  background-color: @surfaceBright;
+}
+
+#wifi-scan label,
+#wifi-toggle label {
+  font-weight: bold;
+}
+
+#wifi-text,
+#wifi-section {
+  font-weight: bold;
+}
+
+#wifi-text {
+  color: @primary;
+}
+
+#wifi-connection {
+  font-size: 20px;
+}
+
+#wifi-connect {
+  background-color: @surface;
+  border-radius: 16px;
+  padding: 8px 16px;
+}
+
+#wifi-connect:hover {
+  background-color: @surfaceBright;
+}
+
+#wifi-available {
   background-color: @surfaceContainer;
   padding: 4px;
   border-radius: 20px;

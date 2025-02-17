@@ -6,6 +6,7 @@
     ":td": "launcher.open(\"todo\")",
     ":bt": "launcher.open(\"bluetooth\")",
     ":sh": "launcher.open(\"sh\")",
-    ":pw": "launcher.open(\"power\")"
+    ":pw": "launcher.open(\"power\")",
+    ":nw": "launcher.open(\"wifi\")"
   }
 }

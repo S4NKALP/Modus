@@ -44,6 +44,8 @@ bind_vars = {
     "suffix_launcher": "D",
     "prefix_power": "SUPER",
     "suffix_power": "X",
+    "prefix_wifi": "SUPER",
+    "suffix_wifi": "N",
     "prefix_toggle": "SUPER",
     "suffix_toggle": "H",
     "prefix_randomwallpaper": "ALT SHIFT",
@@ -152,6 +154,7 @@ $scriptsDir = $HOME/Modus/config
 
 bind = {bind_vars["prefix_restart"]}, {bind_vars["suffix_restart"]}, exec, killall modus; python {home}/Modus/main.py # Reload Modus | Default: SUPER ALT + T
 bind = {bind_vars["prefix_bluetooth"]}, {bind_vars["suffix_bluetooth"]}, exec, $fabricSend 'launcher.open("bluetooth")' # Bluetooth | Default: ALT + B
+bind = {bind_vars["prefix_wifi"]}, {bind_vars["suffix_wifi"]}, exec, $fabricSend 'launcher.open("wifi")' # Wifi | Default: SUPER + N
 bind = {bind_vars["prefix_emoji"]}, {bind_vars["suffix_emoji"]}, exec, $fabricSend 'launcher.open("emoji")' # Emoji | Default: SUPER + E
 bind = {bind_vars["prefix_cliphist"]}, {bind_vars["suffix_cliphist"]}, exec, $fabricSend 'launcher.open("cliphist")' # Cliphist | Default: SUPER + V
 bind = {bind_vars["prefix_todo"]}, {bind_vars["suffix_todo"]}, exec, $fabricSend 'launcher.open("todo")' # Todo | Default: SUPER + T
@@ -163,7 +166,7 @@ bind = {bind_vars["prefix_power"]}, {bind_vars["suffix_power"]}, exec, $fabricSe
 bind = {bind_vars["prefix_toggle"]}, {bind_vars["suffix_toggle"]}, exec, $fabricSend 'bar.toggle_hidden()' # Toggle Bar | Default: SUPER + H
 bind = {bind_vars["prefix_screenshotregion"]}, {bind_vars["suffix_screenshotregion"]}, exec, $fabricSend 'sc.screenshot()' # Screenshot Region | Default: SUPER + Z
 bind = {bind_vars["prefix_screenshot"]}, {bind_vars["suffix_screenshot"]}, exec, $fabricSend 'sc.screenshot(True)' # ScreenshotFullScreen | Default: Print
-bind = {bind_vars["prefix_screencast"]}, {bind_vars["suffix_screencast"]}, exec, $fabricSend 'sc.screencast()' # Screencast | Default: SUPER + R
+bind = {bind_vars["prefix_screencast"]}, {bind_vars["suffix_screencast"]}, exec, $fabricSend 'sc.screencast_start()' # Screencast | Default: SUPER + R
 
 
 # Wallpapers directory: {bind_vars["wallpapers_dir"]}
