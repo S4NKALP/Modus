@@ -96,7 +96,7 @@ status = args.status
 
 HOME = os.path.expanduser("~")
 
-module_path = get_relative_path("./material-colors")
+module_path = get_relative_path("../material-colors")
 sys.path.append(module_path)
 
 module_name = "generate"

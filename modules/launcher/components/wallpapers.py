@@ -179,7 +179,7 @@ class WallpaperSelector(Box):
         file_name = model[path][1]
         full_path = os.path.join(WALLPAPERS_DIR, file_name)
         selected_scheme = self.scheme_dropdown.get_active_id()
-        wallpaper = get_relative_path("../../../config/wallpaper.py")
+        wallpaper = get_relative_path("../../../config/scripts/wallpaper.py")
         command = f"python -O {wallpaper} -I {full_path}"
         GLib.spawn_command_line_async(command)
         self.update_scheme(selected_scheme)
