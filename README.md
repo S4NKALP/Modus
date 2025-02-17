@@ -91,8 +91,8 @@ cd Tela-icon-theme
 - [x] Emoji Picker
 - [x] Update Screenshot
 - [x] Installation script
+- [x] Network Manager
 - [ ] Calendar with events
-- [ ] Network Manager
 - [ ] Power Manager
 - [ ] Screenshot Tool
 - [ ] Notification Panel
