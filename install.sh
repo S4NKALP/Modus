@@ -49,13 +49,13 @@ fi
 
 # Optional: Prevent running as root
 if [ "$(id -u)" -eq 0 ]; then
-	echo "Please do not run this script as root."
+	echo ":: Please do not run this script as root."
 	exit 1
 fi
 
 # Install paru if not installed
 if ! command -v yay &>/dev/null; then
-	echo "Installing paru..."
+	echo ":: Installing paru..."
 	tmpdir=$(mktemp -d)
 	git clone https://aur.archlinux.org/paru.git "$tmpdir/paru"
 	cd "$tmpdir/paru"
@@ -66,19 +66,28 @@ fi
 
 # Clone or update the repository
 if [ -d "$INSTALL_DIR" ]; then
-	echo "Updating Modus..."
+	echo ":: Updating Modus..."
 	git -C "$INSTALL_DIR" pull
 else
-	echo "Cloning Modus..."
+	echo ":: Cloning Modus..."
 	git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
 # Install required packages using paru
-echo "Installing required packages..."
+echo ":: Installing required packages..."
 paru -S --needed --noconfirm "${PACKAGES[@]}" || true
 
+# Backup and replace GTK configs
+echo ":: Updating GTK configurations..."
+mkdir -p "$HOME/.config"
+[[ -d "$HOME/.config/gtk-3.0" ]] && mv "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-3.0-bk"
+[[ -d "$HOME/.config/gtk-4.0" ]] && mv "$HOME/.config/gtk-4.0" "$HOME/.config/gtk-4.0-bk"
+
+cp -r "$INSTALL_DIR/assets/gtk-3.0" "$HOME/.config/"
+cp -r "$INSTALL_DIR/assets/gtk-4.0" "$HOME/.config/"
+
 # Install Icon
-echo "Installing icon theme..."
+echo ":: Installing icon theme..."
 tmpdir=$(mktemp -d)
 cd /tmp/install
 git clone https://github.com/vinceliuice/Tela-icon-theme
@@ -86,9 +95,9 @@ cd "$tmpdir/Tela-icon-theme"
 ./install.sh nord
 
 # Launch Modus without terminal output
-echo "Starting Modus..."
+echo ":: Starting Modus..."
 killall modus 2>/dev/null || true
 python "$INSTALL_DIR/main.py" >/dev/null 2>&1 &
 disown
 
-echo "Installation complete."
+echo ":: Installation complete."
