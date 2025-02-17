@@ -12,6 +12,7 @@ from modules.launcher.components import (
     Sh,
     TodoManager,
     WallpaperSelector,
+    WifiManager,
 )
 
 
@@ -33,6 +34,7 @@ class Launcher(Window):
         self.todo = TodoManager()
         self.bluetooth = BluetoothConnections()
         self.sh = Sh(launcher=self)
+        self.wifi = WifiManager()
 
         self.stack = Stack(
             name="launcher-content",
@@ -49,6 +51,7 @@ class Launcher(Window):
                 self.todo,
                 self.bluetooth,
                 self.sh,
+                self.wifi,
             ],
         )
 
@@ -77,6 +80,7 @@ class Launcher(Window):
             self.todo,
             self.bluetooth,
             self.sh,
+            self.wifi,
         ]:
             if widget == self.wallpapers:
                 self.wallpapers.viewport.hide()
@@ -94,6 +98,7 @@ class Launcher(Window):
             "todo",
             "bluetooth",
             "sh",
+            "wifi",
         ]:
             self.stack.remove_style_class(style)
 
@@ -112,6 +117,7 @@ class Launcher(Window):
             "todo": self.todo,
             "bluetooth": self.bluetooth,
             "sh": self.sh,
+            "wifi": self.wifi,
         }
 
         for w in widgets.values():
