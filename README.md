@@ -94,8 +94,17 @@ cd Tela-icon-theme
 - [x] Network Manager
 - [ ] Calendar with events
 - [ ] Power Manager
-- [ ] Screenshot Tool
 - [ ] Notification Panel
 - [ ] Improve CSS Styling
 - [ ] Window Switcher
 - [ ] Web search in Launcher
+
+## Special Thanks
+
+A big thank you to the following people for their incredible help with code and creative ideas. Your help made a real difference!
+
+- [darsh](https://github.com/its-darsh): for creating Fabric, which made everything possible.
+- [gummy bear album](https://github.com/muhchaudhary): for sharing fantastic code snippets that saved me time and effort.
+- [axenide](https://github.com/Axenide): for the amazing config that not only inspired parts of mine but also provided some gems I couldn’t resist borrowing.
+
+I truly appreciate your support
