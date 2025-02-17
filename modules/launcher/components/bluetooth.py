@@ -79,7 +79,8 @@ class BluetoothConnections(Box):
             child=self.toggle_icon,
             on_clicked=lambda *_: self.client.toggle_power(),
         )
-
+        self.client.notify("scanning")
+        self.client.notify("enabled")
         self.client.connect(
             "notify::enabled",
             lambda *_: self.toggle_icon.set_label(
@@ -119,8 +120,6 @@ class BluetoothConnections(Box):
 
         # to run notify closures thus display the status
         # without having to wait until an actual change
-        self.client.notify("scanning")
-        self.client.notify("enabled")
 
     def on_device_added(self, client: BluetoothClient, address: str):
         if not (device := client.get_device(address)):

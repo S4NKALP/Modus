@@ -48,7 +48,7 @@ class Cliphist(Box):
         )
 
         self.launcher_box = Box(
-            name="cliphist-launcher-box",
+            name="cliphist-history",
             spacing=10,
             orientation="v",
             h_expand=True,
@@ -65,7 +65,7 @@ class Cliphist(Box):
         if not self.viewport:
             self.viewport = Box(name="viewport", spacing=4, orientation="v")
             self.scrolled_window = ScrolledWindow(
-                name="cliphist-history",
+                name="scrolled-window",
                 spacing=10,
                 h_scrollbar_policy="never",
                 child=self.viewport,
