@@ -81,6 +81,11 @@ class AppLauncher(Box):
         self.viewport.children = []
         self.selected_index = -1
 
+        if query.strip():
+            self.launcher.dashboard.hide()
+        else:
+            self.launcher.dashboard.show()
+
         if not query.strip():
             return False
 

@@ -6,6 +6,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
 from snippets import MaterialIcon
+# from .buttons import
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -62,6 +63,15 @@ class BluetoothConnections(Box):
             orientation="vertical",
             **kwargs,
         )
+        self.launcher = kwargs["launcher"]
+
+        self.bluetooth_button = self.launcher.dashboard.bluetooth_button
+        self.bt_status_text = self.bluetooth_button.bluetooth_status_text
+        self.bt_status_button = self.bluetooth_button.bluetooth_status_button
+        self.bt_icon = self.bluetooth_button.bluetooth_icon
+        self.bt_label = self.bluetooth_button.bluetooth_label
+        self.bt_menu_button = self.bluetooth_button.bluetooth_menu_button
+        self.bt_menu_label = self.bluetooth_button.bluetooth_menu_label
 
         self.client = BluetoothClient(on_device_added=self.on_device_added)
         self.toggle_icon = MaterialIcon("bluetooth_disabled")
@@ -79,14 +89,8 @@ class BluetoothConnections(Box):
             child=self.toggle_icon,
             on_clicked=lambda *_: self.client.toggle_power(),
         )
-        self.client.notify("scanning")
-        self.client.notify("enabled")
-        self.client.connect(
-            "notify::enabled",
-            lambda *_: self.toggle_icon.set_label(
-                "bluetooth" if self.client.enabled else "bluetooth_disabled"
-            ),
-        )
+
+        self.client.connect("notify::enabled", lambda *_: self.status_label())
         self.client.connect(
             "notify::scanning",
             lambda *_: self.scan_icon.set_label(
@@ -120,6 +124,37 @@ class BluetoothConnections(Box):
 
         # to run notify closures thus display the status
         # without having to wait until an actual change
+        self.client.notify("scanning")
+        self.client.notify("enabled")
+
+    def status_label(self):
+        print(self.client.enabled)
+        if self.client.enabled:
+            self.toggle_icon.set_label("bluetooth")
+            self.bt_status_text.set_label("Enabled")
+            for i in [
+                self.bt_status_button,
+                self.bt_status_text,
+                self.bt_icon,
+                self.bt_label,
+                self.bt_menu_button,
+                self.bt_menu_label,
+            ]:
+                i.remove_style_class("disabled")
+            self.bt_icon.set_label("bluetooth")
+        else:
+            self.toggle_icon.set_label("bluetooth_disabled")
+            self.bt_status_text.set_label("Disabled")
+            for i in [
+                self.bt_status_button,
+                self.bt_status_text,
+                self.bt_icon,
+                self.bt_label,
+                self.bt_menu_button,
+                self.bt_menu_label,
+            ]:
+                i.add_style_class("disabled")
+            self.bt_icon.set_label("bluetooth_disabled")
 
     def on_device_added(self, client: BluetoothClient, address: str):
         if not (device := client.get_device(address)):

@@ -1,6 +1,8 @@
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow as Window
+from fabric.widgets.box import Box
+from fabric.widgets.label import Label
 from modules.launcher.components import (
     AppLauncher,
     BluetoothConnections,
@@ -12,6 +14,7 @@ from modules.launcher.components import (
     WallpaperSelector,
     WifiManager,
     Calendar,
+    Dashboard,
 )
 
 
@@ -25,16 +28,26 @@ class Launcher(Window):
             **kwargs,
         )
 
-        self.launcher = AppLauncher(launcher=self)
+        self.dashboard = Dashboard(launcher=self)
         self.wallpapers = WallpaperSelector(launcher=self)
         self.power = PowerMenu(launcher=self)
         self.emoji = Emoji(launcher=self)
         self.cliphist = Cliphist(launcher=self)
         self.todo = TodoManager()
-        self.bluetooth = BluetoothConnections()
+        self.bluetooth = BluetoothConnections(launcher=self)
         self.sh = Sh(launcher=self)
         self.wifi = WifiManager()
         self.calendar = Calendar()
+
+        self.dashboard = Box(
+            name="dashboard",
+            orientation="h",
+            spacing=10,
+            children=[
+                self.dashboard,
+            ],
+        )
+        self.launcher = AppLauncher(launcher=self)
 
         self.stack = Stack(
             name="launcher-content",
@@ -60,6 +73,7 @@ class Launcher(Window):
             name="launcher",
             orientation="v",
             start_children=self.stack,
+            end_children=self.dashboard,
         )
 
         self.add(self.launcher_box)
@@ -121,6 +135,7 @@ class Launcher(Window):
 
         for w in widgets.values():
             w.hide()
+            self.dashboard.hide()
         for style in widgets.keys():
             self.stack.remove_style_class(style)
 
@@ -133,6 +148,7 @@ class Launcher(Window):
                 self.launcher.open_launcher()
                 self.launcher.search_entry.set_text("")
                 self.launcher.search_entry.grab_focus()
+                self.dashboard.show()
 
             elif widget == "wallpapers":
                 self.wallpapers.search_entry.set_text("")

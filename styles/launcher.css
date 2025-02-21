@@ -1,6 +1,9 @@
 /*
  * ── launcher ──────────────────────────────────────────────────────────
 */
+#dashboard {
+  min-height: 100px;
+}
 
 #launcher {
   margin: 18px;
@@ -31,12 +34,12 @@
 
 #launcher-content.bluetooth {
   min-height: 464px;
-  min-width: 464px;
+  min-width: 485px;
 }
 
 #launcher-content.wifi {
   min-height: 464px;
-  min-width: 464px;
+  min-width: 485px;
 }
 
 #launcher-content.power {
@@ -49,7 +52,7 @@
 }
 
 #launcher-content {
-  min-width: 420px;
+  min-width: 485px;
 }
 
 #app-launcher,
@@ -61,16 +64,6 @@
 #emoji,
 #powermenu {
   transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-#toggle-launcher-button {
-  background-color: @secondaryContainer;
-  color: @onSecondaryContainer;
-  margin: 11px;
-  margin-left: 0px;
-  min-width: 48px;
-  min-height: 44px;
-  border-radius: 100%;
 }
 
 #clear-launcher-button {
