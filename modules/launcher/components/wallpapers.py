@@ -4,12 +4,10 @@ import os
 from PIL import Image
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GdkPixbuf, GLib, Gtk, Gio, Gdk
-from snippets import MaterialIcon
-from fabric.utils import exec_shell_command, get_relative_path
+from fabric.utils import get_relative_path
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 from snippets import WALLPAPERS_DIR
@@ -84,13 +82,6 @@ class WallpaperSelector(Box):
         self.scheme_dropdown.set_active_id("tonalSpot")
         self.scheme_dropdown.connect("changed", self.on_scheme_changed)
 
-        initial_icon = "light_mode" if not self.check_dark_mode_state() else "dark_mode"
-        self.toggle_button = Button(
-            child=MaterialIcon(initial_icon),
-            name="toggle-launcher-button",
-            on_clicked=self.toggle_dark_mode,
-        )
-
         self.dropdown_box = Box(
             name="dropdown-box",
             children=[
@@ -103,7 +94,7 @@ class WallpaperSelector(Box):
             spacing=10,
             orientation="h",
             start_children=[self.search_entry],
-            end_children=[self.dropdown_box, self.toggle_button],
+            end_children=[self.dropdown_box],
         )
 
         self.add(self.header_box)
@@ -335,20 +326,3 @@ class WallpaperSelector(Box):
         if self.get_mapped():
             widget.grab_focus()
         return False
-
-    def toggle_dark_mode(self, *_):
-        current_state = self.check_dark_mode_state()
-        new_mode = "dark" if not current_state else "light"
-        command = f"bash {get_relative_path('../../../config/scripts/dark-theme.sh')} --set {new_mode}"
-        GLib.spawn_command_line_async(command)
-        icon_name = "dark_mode" if new_mode == "dark" else "light_mode"
-        if self.toggle_button.get_child():
-            self.toggle_button.remove(self.toggle_button.get_child())
-        self.toggle_button.add(MaterialIcon(icon_name))
-        self.toggle_button.show_all()
-
-    def check_dark_mode_state(self):
-        result = exec_shell_command(
-            "gsettings get org.gnome.desktop.interface color-scheme"
-        )
-        return result.strip().replace("'", "") == "prefer-dark"

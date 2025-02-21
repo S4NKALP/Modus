@@ -20,6 +20,8 @@
 
 #notification .close-button {
   border-radius: 100px;
+  min-width: 40px;
+  min-height: 40px;
 }
 
 #notification .close-button:hover {
@@ -42,6 +44,7 @@
   border-radius: 100px;
   background-color: transparent;
 }
+
 #notification-action-buttons button:hover {
   background-color: lighter(@outlineVariant);
 }

@@ -3,6 +3,7 @@
 @import "./notification.css";
 @import "./osd.css";
 @import "./launcher.css";
+@import "./dashboard.css";
 
 * {
   all: unset;
@@ -61,9 +62,8 @@ tooltip label {
 /*
  * ── icon ──────────────────────────────────────────────────────────────
 */
-
-#material_icon,
-#material_icon * {
+#material-icon,
+#material-icon * {
   all: unset;
   font-family: "Material Symbols Outlined", "Material Symbols Sharp";
 }
