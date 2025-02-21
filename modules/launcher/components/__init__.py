@@ -8,3 +8,4 @@ from .sh import *
 from .todo import *
 from .wallpapers import *
 from .wifi import *
+from .calendar import *

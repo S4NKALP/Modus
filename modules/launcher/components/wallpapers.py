@@ -3,10 +3,11 @@ import json
 import os
 from PIL import Image
 from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GdkPixbuf, GLib, Gtk, Gio
+from gi.repository import GdkPixbuf, GLib, Gtk, Gio, Gdk
 from snippets import MaterialIcon
 from fabric.utils import exec_shell_command, get_relative_path
 import concurrent.futures
@@ -30,10 +31,16 @@ class WallpaperSelector(Box):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(name="wallpapers", spacing=4, orientation="v", **kwargs)
+        super().__init__(
+            name="wallpapers",
+            spacing=4,
+            orientation="v",
+            h_expand=False,
+            v_expand=False,
+            **kwargs,
+        )
         self.launcher = kwargs["launcher"]
 
-        # self.wallpapers_dir = os.path.expanduser("~/Pictures/wallpapers")
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
         self.files = [f for f in os.listdir(WALLPAPERS_DIR) if self._is_image(f)]
@@ -41,10 +48,13 @@ class WallpaperSelector(Box):
         self.thumbnail_queue = []
         self.executor = ThreadPoolExecutor(max_workers=4)  # Shared executor
 
-        self.viewport = Gtk.IconView()
+        self.selected_index = -1
+
+        # IconView for displaying thumbnails.
+        self.viewport = Gtk.IconView(name="wallpaper-icons")
         self.viewport.set_model(Gtk.ListStore(GdkPixbuf.Pixbuf, str))
         self.viewport.set_pixbuf_column(0)
-        self.viewport.set_text_column(1)
+        self.viewport.set_text_column(-1)
         self.viewport.set_item_width(0)
         self.viewport.connect("item-activated", self.on_wallpaper_selected)
 
@@ -57,10 +67,12 @@ class WallpaperSelector(Box):
         )
 
         self.search_entry = Entry(
-            name="search-entry",
+            name="search-entry-walls",
             h_expand=True,
             notify_text=lambda entry, *_: self.arrange_viewport(entry.get_text()),
+            on_key_press_event=self.on_search_entry_key_press,
         )
+        self.search_entry.connect("focus-out-event", self.on_search_entry_focus_out)
 
         self.scheme_dropdown = Gtk.ComboBoxText()
         self.scheme_dropdown.set_name("scheme-dropdown")
@@ -72,7 +84,6 @@ class WallpaperSelector(Box):
         self.scheme_dropdown.set_active_id("tonalSpot")
         self.scheme_dropdown.connect("changed", self.on_scheme_changed)
 
-        # Set the initial icon based on dark mode state
         initial_icon = "light_mode" if not self.check_dark_mode_state() else "dark_mode"
         self.toggle_button = Button(
             child=MaterialIcon(initial_icon),
@@ -82,18 +93,17 @@ class WallpaperSelector(Box):
 
         self.dropdown_box = Box(
             name="dropdown-box",
-            orientation="h",
             children=[
                 self.scheme_dropdown,
-                MaterialIcon("keyboard_arrow_down"),
             ],
         )
 
-        self.header_box = Box(
+        self.header_box = CenterBox(
             name="header-box",
             spacing=10,
             orientation="h",
-            children=[self.search_entry, self.dropdown_box, self.toggle_button],
+            start_children=[self.search_entry],
+            end_children=[self.dropdown_box, self.toggle_button],
         )
 
         self.add(self.header_box)
@@ -101,6 +111,7 @@ class WallpaperSelector(Box):
         self._start_thumbnail_thread()
         self.setup_file_monitor()
         self.show_all()
+        self.search_entry.grab_focus()
 
     def setup_file_monitor(self):
         gfile = Gio.File.new_for_path(WALLPAPERS_DIR)
@@ -135,11 +146,9 @@ class WallpaperSelector(Box):
                         print(f"Error deleting cache for changed file {file_name}: {e}")
                 self.executor.submit(self._process_file, file_name)
 
-    def close_selector(self):
-        self.launcher.close()
-
     def arrange_viewport(self, query: str = ""):
-        self.viewport.get_model().clear()
+        model = self.viewport.get_model()
+        model.clear()
         filtered_thumbnails = [
             (thumb, name)
             for thumb, name in self.thumbnails
@@ -147,32 +156,14 @@ class WallpaperSelector(Box):
         ]
 
         filtered_thumbnails.sort(key=lambda x: x[1].lower())
-
         for pixbuf, file_name in filtered_thumbnails:
-            self.viewport.get_model().append([pixbuf, file_name])
+            model.append([pixbuf, file_name])
 
-    def toggle_dark_mode(self, *_):
-        current_state = self.check_dark_mode_state()
-        new_mode = "dark" if not current_state else "light"
-
-        # Call the shell script with the --set argument
-        command = f"bash {get_relative_path('../../../config/scripts/dark-theme.sh')} --set {new_mode}"
-        GLib.spawn_command_line_async(command)
-
-        # Set the appropriate icon based on the mode
-        icon_name = "dark_mode" if new_mode == "dark" else "light_mode"
-
-        # Update button icon
-        if self.toggle_button.get_child():
-            self.toggle_button.remove(self.toggle_button.get_child())
-        self.toggle_button.add(MaterialIcon(icon_name))
-        self.toggle_button.show_all()
-
-    def check_dark_mode_state(self):
-        result = exec_shell_command(
-            "gsettings get org.gnome.desktop.interface color-scheme"
-        )
-        return result.strip().replace("'", "") == "prefer-dark"
+        if query.strip() == "":
+            self.viewport.unselect_all()
+            self.selected_index = -1
+        elif len(model) > 0:
+            self.update_selection(0)
 
     def on_wallpaper_selected(self, iconview, path):
         model = iconview.get_model()
@@ -214,6 +205,76 @@ class WallpaperSelector(Box):
         except Exception as error:
             print(f"Failed to update generation-scheme in settings.json: {error}")
 
+    def on_search_entry_key_press(self, widget, event):
+        if event.state & Gdk.ModifierType.SHIFT_MASK:
+            if event.keyval in (Gdk.KEY_Up, Gdk.KEY_Down):
+                schemes_list = list(self.SCHEMES.keys())
+                current_id = self.scheme_dropdown.get_active_id()
+                current_index = (
+                    schemes_list.index(current_id) if current_id in schemes_list else 0
+                )
+                if event.keyval == Gdk.KEY_Up:
+                    new_index = (current_index - 1) % len(schemes_list)
+                else:
+                    new_index = (current_index + 1) % len(schemes_list)
+                self.scheme_dropdown.set_active(new_index)
+                return True
+            elif event.keyval == Gdk.KEY_Right:
+                self.scheme_dropdown.popup()
+                return True
+
+        if event.keyval in (Gdk.KEY_Up, Gdk.KEY_Down, Gdk.KEY_Left, Gdk.KEY_Right):
+            self.move_selection_2d(event.keyval)
+            return True
+        elif event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            if self.selected_index != -1:
+                path = Gtk.TreePath.new_from_indices([self.selected_index])
+                self.on_wallpaper_selected(self.viewport, path)
+            return True
+
+        return False
+
+    def move_selection_2d(self, keyval):
+        model = self.viewport.get_model()
+        total_items = len(model)
+        if total_items == 0:
+            return
+
+        if self.selected_index == -1:
+            new_index = (
+                0 if keyval in (Gdk.KEY_Down, Gdk.KEY_Right) else total_items - 1
+            )
+        else:
+            current_index = self.selected_index
+            # Calculate columns based on the allocation width.
+            allocation = self.viewport.get_allocation()
+            item_width = 108
+            columns = max(1, allocation.width // item_width)
+
+            if keyval == Gdk.KEY_Right:
+                new_index = current_index + 1
+            elif keyval == Gdk.KEY_Left:
+                new_index = current_index - 1
+            elif keyval == Gdk.KEY_Down:
+                new_index = current_index + columns
+            elif keyval == Gdk.KEY_Up:
+                new_index = current_index - columns
+
+            # Ensure new_index remains within limits.
+            if new_index < 0:
+                new_index = 0
+            if new_index >= total_items:
+                new_index = total_items - 1
+
+        self.update_selection(new_index)
+
+    def update_selection(self, new_index: int):
+        self.viewport.unselect_all()
+        path = Gtk.TreePath.new_from_indices([new_index])
+        self.viewport.select_path(path)
+        self.viewport.scroll_to_path(path, False, 0.5, 0.5)
+        self.selected_index = new_index
+
     def _start_thumbnail_thread(self):
         thread = GLib.Thread.new("thumbnail-loader", self._preload_thumbnails, None)
 
@@ -231,8 +292,15 @@ class WallpaperSelector(Box):
         if not os.path.exists(cache_path):
             try:
                 with Image.open(full_path) as img:
-                    img.thumbnail((96, 96), Image.Resampling.BILINEAR)
-                    img.save(cache_path, "PNG")
+                    width, height = img.size
+                    side = min(width, height)
+                    left = (width - side) // 2
+                    top = (height - side) // 2
+                    right = left + side
+                    bottom = top + side
+                    img_cropped = img.crop((left, top, right, bottom))
+                    img_cropped.thumbnail((96, 96), Image.Resampling.LANCZOS)
+                    img_cropped.save(cache_path, "PNG")
             except Exception as e:
                 print(f"Error processing {file_name}: {e}")
                 return
@@ -262,3 +330,25 @@ class WallpaperSelector(Box):
         return file_name.lower().endswith(
             (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp")
         )
+
+    def on_search_entry_focus_out(self, widget, event):
+        if self.get_mapped():
+            widget.grab_focus()
+        return False
+
+    def toggle_dark_mode(self, *_):
+        current_state = self.check_dark_mode_state()
+        new_mode = "dark" if not current_state else "light"
+        command = f"bash {get_relative_path('../../../config/scripts/dark-theme.sh')} --set {new_mode}"
+        GLib.spawn_command_line_async(command)
+        icon_name = "dark_mode" if new_mode == "dark" else "light_mode"
+        if self.toggle_button.get_child():
+            self.toggle_button.remove(self.toggle_button.get_child())
+        self.toggle_button.add(MaterialIcon(icon_name))
+        self.toggle_button.show_all()
+
+    def check_dark_mode_state(self):
+        result = exec_shell_command(
+            "gsettings get org.gnome.desktop.interface color-scheme"
+        )
+        return result.strip().replace("'", "") == "prefer-dark"
