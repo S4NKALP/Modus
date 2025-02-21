@@ -37,7 +37,7 @@
 1. Dependencies:
 
 ```sh
-fabric fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblast power-profile-daemon adw-gtk-theme brightnessctl swww hypridle hyprlock imagemagick libnotify swappy libadwaita
+fabric fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblast power-profile-daemon adw-gtk-theme brightnessctl swww hypridle hyprlock imagemagick libnotify swappy libadwaita wlinhibit
 ```
 
 ```sh
@@ -92,7 +92,7 @@ cd Tela-icon-theme
 - [x] Update Screenshot
 - [x] Installation script
 - [x] Network Manager
-- [ ] Calendar with events
+- [x] Calendar
 - [ ] Power Manager
 - [ ] Notification Panel
 - [ ] Improve CSS Styling

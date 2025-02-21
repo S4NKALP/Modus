@@ -11,10 +11,8 @@ from gi.repository import GLib
 from modules.bar.components import (
     BatteryLabel,
     BluetoothIndicator,
-    IdleIndicator,
     MicrophoneIndicator,
     NetworkIndicator,
-    PowerProfileIndicator,
     SystemInfo,
     TaskBar,
     VolumeIndicator,
@@ -57,10 +55,8 @@ class Bar(Window):
         self.bluetooth = BluetoothIndicator()
         self.network = NetworkIndicator()
         self.microphone = MicrophoneIndicator()
-        self.idle = IdleIndicator()
         self.taskbar = TaskBar()
         self.info = SystemInfo()
-        self.powerindicator = PowerProfileIndicator()
         self.tray = SystemTray(name="tray", icon_size=16, spacing=4)
         self.launcher = Button(
             name="logo",
@@ -76,12 +72,10 @@ class Bar(Window):
             orientation="h",
             children=[
                 self.language,
-                self.powerindicator,
                 self.bluetooth,
                 self.network,
                 self.volume,
                 self.microphone,
-                self.idle,
             ],
         )
 

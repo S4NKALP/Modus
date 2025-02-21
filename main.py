@@ -8,9 +8,11 @@ from loguru import logger
 from modules.bar.bar import Bar
 from modules.launcher.launcher import Launcher
 from modules.notification_popup import NotificationPopup
-from modules.osd import OSDContainer
+
+from modules.osd import OSD
 from modules.corners import Corners
 from services import sc
+from config.config import open_config
 
 for log in [
     "fabric.hyprland.widgets",
@@ -18,6 +20,8 @@ for log in [
     "fabric.bluetooth.service",
 ]:
     logger.disable(log)
+
+config_path = os.path.expanduser("~/Modus/config/assets/config.json")
 
 
 def update_main_css():
@@ -42,10 +46,12 @@ def apply_style(app: Application):
 
 if __name__ == "__main__":
     update_main_css()
+    if not os.path.isfile(config_path):
+        open_config()
     sc = sc
     bar = Bar()
     corners = Corners()
-    osd = OSDContainer()
+    osd = OSD()
     notif = NotificationPopup()
     launcher = Launcher()
 

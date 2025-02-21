@@ -1,42 +1,44 @@
-#osd {
-  background: @surfaceContainer;
-  padding: 10px 4px 10px 4px;
-  border-radius: 14px;
-  margin-bottom: 16px;
-  min-width: 190px;
+.osd-panel {
+  background-color: transparent;
 }
 
-#osd scale {
+#osd-label {
+  font-size: 17px;
+  font-weight: bold;
+}
+
+#osd-value {
+  font-weight: bold;
+  font-size: 25px;
+}
+
+#progress-container {
+  border-radius: 6px;
+  min-height: 12px;
   min-width: 150px;
 }
 
-#osd slider {
-  color: @onPrimary;
+#progress-fill {
   background-color: @primary;
-  background-size: 20px 20px;
-  min-width: 5px;
-  min-height: 14px;
-  border-radius: 100px;
-  padding: 0px;
-  background-repeat: no-repeat;
-  background-position: center;
-  margin-left: 0px;
-  margin-right: 0px;
-  margin-top: -16px;
-  margin-bottom: -16px;
-  box-shadow:
-    -4px 0px 0px 1px @surfaceContainer,
-    4px 0px 0px 1px @surfaceContainer;
+  border-radius: 6px;
+  min-height: 8px;
+  transition: min-width 0.3s ease-in-out;
 }
 
-#osd trough {
-  background: @secondaryContainer;
-  min-height: 10px;
-  margin-right: 4px;
-  border-radius: 100px;
+#progress-background {
+  background-color: @surfaceContainer;
+  border-radius: 6px;
+  min-height: 8px;
+  min-width: 150px;
 }
 
-#osd highlight {
-  border-radius: 100px 0px 0px 100px;
-  background: @primary;
+#control-section {
+  padding: 10px;
+  border-radius: 10px;
+  background-color: @surface;
+}
+
+.osd-hidden {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }

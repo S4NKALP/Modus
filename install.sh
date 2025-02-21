@@ -33,6 +33,7 @@ PACKAGES=(
 	libadwaita
 	adw-gtk-theme
 	brightnessctl
+	wlinhibit
 	power-profile-daemon
 	ttf-font-awesome
 	otf-font-awesome
@@ -75,7 +76,7 @@ fi
 
 # Install required packages using paru
 echo ":: Installing required packages..."
-paru -S --needed --noconfirm "${PACKAGES[@]}" || true
+paru -Syy --needed --noconfirm "${PACKAGES[@]}" || true
 
 # Backup and replace GTK configs
 echo ":: Updating GTK configurations..."
