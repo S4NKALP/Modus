@@ -14,6 +14,41 @@
   transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
+#bar.visible {
+  opacity: 1;
+  padding: 3px;
+  margin-bottom: 0px;
+  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+/*
+ * ── button bar ────────────────────────────────────────────────────────
+*/
+
+#button-bar {
+  background-color: @surfaceContainer;
+  min-width: 38px;
+  border-radius: 100px;
+  transition: all 0.1s ease;
+}
+
+#button-bar-label {
+  color: @primary;
+  font-size: 24px;
+  border-radius: 100px;
+  transition: all 0.1s ease;
+}
+
+#button-bar:hover #button-bar-label {
+  background-color: @surfaceBright;
+  box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
+}
+
+#button-bar:active #button-bar-label {
+  color: @shadow;
+  background-color: @primary;
+}
+
 /*
  * ── bar modules ───────────────────────────────────────────────────────
 */
@@ -39,6 +74,36 @@
 }
 
 /*
+ * ── update ────────────────────────────────────────────────────────────
+*/
+
+#update-icon {
+  color: @primary;
+  font-size: 22px;
+  margin-right: 1px;
+  padding: 2px;
+  border-radius: 11px;
+  transition: all 0.1s ease;
+}
+
+#updated-icon {
+  color: @primary;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 99px;
+  transition: all 0.1s ease;
+}
+
+#update-label {
+  color: @primary;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 0px;
+  border-radius: 11px;
+  transition: all 0.1s ease;
+}
+
+/*
  * ── Clock ─────────────────────────────────────────────────────────────
 */
 
@@ -51,25 +116,11 @@
 /*
  * ── battery ───────────────────────────────────────────────────────────
 */
-/*#battery {*/
-/*  background-color: @surfaceContainer;*/
-/*  border-radius: 100px;*/
-/*  padding: 2px 10px 2px 10px;*/
-/*}*/
-/**/
-/*#battery label {*/
-/*  font-weight: 600;*/
-/*}*/
-/**/
-/*#battery-label {*/
-/*  margin-right: 5px;*/
-/*}*/
 
 #battery {
   background-color: @surfaceContainer;
-  padding: 4px;
-  border-radius: 16px;
-  margin-top: 4px;
+  padding: 2px 10px 2px 10px;
+  border-radius: 100px;
 }
 
 #battery-circle {
@@ -78,7 +129,7 @@
 }
 
 #battery-circle.alert {
-  border: 2px solid @error-dim;
+  border: 2px solid @error;
 }
 
 #battery-icon {
@@ -86,22 +137,23 @@
 }
 
 #battery-icon.alert {
-  color: @error-dim;
+  color: @onError;
 }
 
 #battery-save,
 #battery-balanced,
 #battery-performance {
-  border-radius: 12px;
-  min-width: 28px;
+  min-width: 30px;
   min-height: 28px;
+  margin: 2px 0px;
+  border-radius: 100px;
 }
 
 #battery-save-label,
 #battery-balanced-label,
 #battery-performance-label {
   color: @outline;
-  font-size: 20px;
+  font-size: 24px;
 }
 
 #battery-save:hover,
@@ -132,6 +184,17 @@
   color: @primary;
   font-weight: bold;
   margin: 0 4px;
+  font-size: 11px;
+}
+
+/*
+ * ── systeminfo ────────────────────────────────────────────────────────
+*/
+
+#system-info {
+  background-color: @surfaceContainer;
+  border-radius: 100px;
+  padding: 2px 10px 0px 10px;
 }
 
 /*
@@ -198,15 +261,21 @@ menu > menuitem:hover > label {
   margin: 0px;
 }
 
-#applets .icon {
-  color: @onSurface;
-  font-weight: 900;
+#indicator-icon {
+  font-size: 24px;
 }
 
-#applets > button {
-  color: @onSurface;
-  margin: 0px;
-  padding: 0px;
+/*
+ * ── stats i.e cpu,ram,swap,temp ───────────────────────────────────────
+*/
+
+#stats-icons {
+  font-size: 20px;
+}
+
+#stats-progress {
+  color: @surfaceBright;
+  border: 3px solid @primary;
 }
 
 /*
@@ -241,18 +310,20 @@ menu > menuitem:hover > label {
   margin-right: 0px;
 }
 
-#progress {
-  color: lighter(@outlineVariant);
-  border: 1px solid @primary;
-}
+/*
+ * ── recording indicator ───────────────────────────────────────────────
+*/
 
 #recording-indicator {
-  padding: 6px 12px 6px 12px;
-  border-radius: 99px;
+  min-width: 38px;
+  border-radius: 100px;
 }
 
-#recording-indicator {
-  color: @primary;
+#recorder {
+  color: @error;
+  border-radius: 100px;
+  min-width: 25px;
+  font-size: 20px;
   animation: error 2s infinite;
 }
 

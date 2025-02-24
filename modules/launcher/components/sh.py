@@ -6,7 +6,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from snippets import MaterialIcon
+
 
 CACHE_DIR = os.getenv(
     "XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache", "fabric")
@@ -37,7 +37,7 @@ class Sh(Box):
         self.header_box = Box(
             spacing=10,
             orientation="h",
-            children=[self.search_entry, MaterialIcon("terminal")],
+            children=[self.search_entry],
         )
 
         self.launcher_box = Box(
@@ -53,9 +53,11 @@ class Sh(Box):
         if not self.viewport:
             self.viewport = Box(name="viewport", spacing=10, orientation="v")
             self.scrolled_window = ScrolledWindow(
+                name="scrolled-window",
                 spacing=10,
                 h_scrollbar_policy="never",
                 v_scrollbar_policy="never",
+                # min_content_size=(-1, -1),
                 child=self.viewport,
             )
             self.launcher_box.add(self.scrolled_window)

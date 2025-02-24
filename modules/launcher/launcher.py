@@ -2,7 +2,6 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.box import Box
-from fabric.widgets.label import Label
 from modules.launcher.components import (
     AppLauncher,
     BluetoothConnections,

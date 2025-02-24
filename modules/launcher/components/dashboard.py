@@ -9,7 +9,7 @@ from gi.repository import Gtk, Gdk, GLib  # Added Gdk import
 from fabric.utils import get_relative_path
 
 gi.require_version("Gtk", "3.0")
-from snippets import MaterialIcon
+import snippets.iconss as icons
 
 
 def add_hover_cursor(widget):
@@ -31,8 +31,9 @@ def add_hover_cursor(widget):
 
 class NetworkButton(Box):
     def __init__(self):
-        self.network_icon = MaterialIcon(
-            "wifi",
+        self.network_icon = Label(
+            name="network-icon",
+            markup=icons.wifi,
         )
         self.network_label = Label(
             name="network-label",
@@ -66,7 +67,10 @@ class NetworkButton(Box):
         )
         add_hover_cursor(self.network_status_button)  # <-- Added hover
 
-        self.network_menu_label = MaterialIcon("chevron_right")
+        self.network_menu_label = Label(
+            name="network-menu-label",
+            markup=icons.chevron_right,
+        )
         self.network_menu_button = Button(
             name="network-menu-button",
             child=self.network_menu_label,
@@ -97,7 +101,10 @@ class BluetoothButton(Box):
         )
         self.launcher = launcher
 
-        self.bluetooth_icon = MaterialIcon("bluetooth")
+        self.bluetooth_icon = Label(
+            name="bluetooth-icon",
+            markup=icons.bluetooth,
+        )
         self.bluetooth_label = Label(
             name="bluetooth-label",
             label="Bluetooth",
@@ -133,8 +140,10 @@ class BluetoothButton(Box):
             on_clicked=lambda *_: self.launcher.bluetooth.client.toggle_power(),
         )
         add_hover_cursor(self.bluetooth_status_button)  # <-- Added hover
-
-        self.bluetooth_menu_label = MaterialIcon("chevron_right")
+        self.bluetooth_menu_label = Label(
+            name="bluetooth-menu-label",
+            markup=icons.chevron_right,
+        )
         self.bluetooth_menu_button = Button(
             name="bluetooth-menu-button",
             on_clicked=lambda *_: self.launcher.open("bluetooth"),
@@ -148,7 +157,10 @@ class BluetoothButton(Box):
 
 class NightModeButton(Button):
     def __init__(self):
-        self.night_mode_icon = MaterialIcon("mode_night")
+        self.night_mode_icon = Label(
+            name="night-mode-icon",
+            markup=icons.night,
+        )
         self.night_mode_label = Label(
             name="night-mode-label",
             label="Night Mode",
@@ -230,7 +242,10 @@ class NightModeButton(Button):
 
 class CaffeineButton(Button):
     def __init__(self):
-        self.caffeine_icon = MaterialIcon("coffee")
+        self.caffeine_icon = Label(
+            name="caffeine-icon",
+            markup=icons.coffee,
+        )
         self.caffeine_label = Label(
             name="caffeine-label",
             label="Caffeine",
@@ -308,7 +323,10 @@ class CaffeineButton(Button):
 
 class DarkModeButton(Button):
     def __init__(self):
-        self.dark_mode_icon = MaterialIcon("contrast")
+        self.dark_mode_icon = Label(
+            name="dark-mode-icon",
+            markup=icons.darkmode,
+        )
         self.dark_mode_label = Label(
             name="dark-mode-label", label="Dark Mode", justification="left"
         )
@@ -384,96 +402,6 @@ class DarkModeButton(Button):
         return is_dark_mode
 
 
-#
-# class PowerProfileButton(Button):
-#     def __init__(self):
-#         self.power_profile_icon = MaterialIcon("local_fire_department")
-#         self.power_profile_label = Label(
-#             name="power-profile-label", label="Power Profile", justification="left"
-#         )
-#         self.power_profile_label_box = Box(
-#             children=[self.power_profile_label, Box(h_expand=True)]
-#         )
-#         self.power_profile_status = Label(
-#             name="power-profile-status", label="Loading...", justification="left"
-#         )
-#         self.power_profile_status_box = Box(
-#             children=[self.power_profile_status, Box(h_expand=True)]
-#         )
-#         self.power_profile_text = Box(
-#             name="power-profile-text",
-#             orientation="v",
-#             h_align="start",
-#             v_align="center",
-#             children=[self.power_profile_label_box, self.power_profile_status_box],
-#         )
-#         self.power_profile_box = Box(
-#             h_align="start",
-#             v_align="center",
-#             spacing=10,
-#             children=[self.power_profile_icon, self.power_profile_text],
-#         )
-#
-#         super().__init__(
-#             name="power-profile-button",
-#             h_expand=True,
-#             child=self.power_profile_box,
-#             on_clicked=self.toggle_power_profile,
-#         )
-#         add_hover_cursor(self)
-#
-#         self.widgets = [
-#             self,
-#             self.power_profile_label,
-#             self.power_profile_status,
-#             self.power_profile_icon,
-#         ]
-#
-#         # **Delay the profile check to allow system services to start**
-#         GLib.timeout_add(1000, self.check_power_profile)
-#
-#     def toggle_power_profile(self, *_):
-#         current_profile = self.check_power_profile()
-#         if current_profile == "balanced":
-#             self.set_power_profile("performance")
-#         elif current_profile == "performance":
-#             self.set_power_profile("power-saver")
-#         else:
-#             self.set_power_profile("balanced")
-#
-#     def check_power_profile(self):
-#         try:
-#             result = exec_shell_command("powerprofilesctl get")
-#             if isinstance(result, str):
-#                 current_profile = result.strip().lower()
-#                 self.power_profile_status.set_label(current_profile.capitalize())
-#                 self.update_button_style(current_profile)
-#                 return current_profile
-#         except Exception as e:
-#             print(f"Error checking power profile: {e}")
-#             self.power_profile_status.set_label("Balanced")  # Fallback
-#             return "balanced"
-#
-#     def set_power_profile(self, profile):
-#         exec_shell_command_async(f"powerprofilesctl set {profile}")
-#         self.power_profile_status.set_label(profile.capitalize())
-#         self.update_button_style(profile)
-#
-#     def update_button_style(self, profile):
-#         if profile == "balanced":
-#             self.power_profile_icon.set_label("balance")
-#             self.add_style_class("balanced-profile")
-#             self.power_profile_label.add_style_class("disabled")
-#         else:
-#             self.remove_style_class("balanced-profile")
-#
-#         if profile == "performance":
-#             self.power_profile_icon.set_label("local_fire_department")
-#         elif profile == "power-saver":
-#             self.power_profile_icon.set_label("data_saver_on")
-#
-
-
 class Dashboard(Gtk.Grid):
     def __init__(self, **kwargs):
         super().__init__(name="buttons-grid")
@@ -491,7 +419,6 @@ class Dashboard(Gtk.Grid):
         self.night_mode_button = NightModeButton()
         self.caffeine_button = CaffeineButton()
         self.dark_mode_button = DarkModeButton()
-        # self.power_profile_button = PowerProfileButton()
 
         # Attach buttons into the grid (one row, four columns)
         self.attach(self.network_button, 0, 0, 1, 1)
@@ -499,6 +426,5 @@ class Dashboard(Gtk.Grid):
         self.attach(self.dark_mode_button, 2, 0, 1, 1)
         self.attach(self.night_mode_button, 0, 1, 1, 1)
         self.attach(self.caffeine_button, 1, 1, 1, 1)
-        # self.attach(self.power_profile_button, 2, 1, 1, 1)
 
         self.show_all()

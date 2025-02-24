@@ -20,7 +20,7 @@ class PagerClient(TypedDict):
 
 
 class TaskBar(Box):
-    def __init__(self, icon_size: int = 20, **kwargs):
+    def __init__(self, icon_size: int = 22, **kwargs):
         super().__init__(
             orientation="h",
             spacing=7,
