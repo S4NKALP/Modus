@@ -6,7 +6,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from snippets import MaterialIcon
+import snippets.iconss as icons
 
 
 class TodoManager(Box):
@@ -36,7 +36,7 @@ class TodoManager(Box):
                 self.todo_entry,
                 Button(
                     name="add-button",
-                    child=MaterialIcon("add"),
+                    child=Label(name="todo-add-button", markup=icons.add),
                     tooltip_text="Add Todo",
                     on_clicked=lambda *_: self.handle_add_todo(
                         self.todo_entry.get_text()
@@ -59,8 +59,9 @@ class TodoManager(Box):
         if not self.viewport:
             self.viewport = Box(name="viewport", spacing=4, orientation="v")
             self.scrolled_window = ScrolledWindow(
-                name="todo-content",
+                name="scrolled-window",
                 spacing=10,
+                min_content_size=(-1, -1),
                 h_scrollbar_policy="never",
                 child=self.viewport,
             )
@@ -82,7 +83,7 @@ class TodoListManager:
     def __init__(self, launcher):
         self.launcher = launcher
         self.todos = []
-        self.todo_file = os.path.expanduser("~/.local/share/fabric/todos.json")
+        self.todo_file = os.path.expanduser("~/.local/share/modus/todos.json")
         self.load_todos()
 
     def load_todos(self):
@@ -130,9 +131,10 @@ class TodoListManager:
         )
 
         checkbox = Button(
-            name="todo-checkbox",
-            child=MaterialIcon(
-                "check_box" if todo["completed"] else "check_box_outline_blank"
+            name="checkbox",
+            child=Label(
+                name="todo-checkbox",
+                markup=icons.check_box if todo["completed"] else icons.box,
             ),
             on_clicked=lambda _, todo_id=todo["id"]: self.toggle_todo(todo_id),
         )
@@ -147,7 +149,7 @@ class TodoListManager:
 
         delete_button = Button(
             name="delete-button",
-            child=MaterialIcon("delete"),
+            child=Label(name="todo-delete-button", markup=icons.trash),
             on_clicked=lambda _, todo_id=todo["id"]: self.delete_todo(todo_id),
         )
 

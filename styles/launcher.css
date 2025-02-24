@@ -28,22 +28,26 @@
   min-width: 620px;
 }
 
-#launcer-content.cliphist {
-  min-height: 420px;
+.cliphist {
+  min-height: 464px;
+  min-width: 300px;
+}
+
+.applauncher {
+  min-height: 464px;
 }
 
 #launcher-content.bluetooth {
   min-height: 464px;
-  min-width: 485px;
 }
 
 #launcher-content.wifi {
   min-height: 464px;
-  min-width: 485px;
 }
 
-#launcher-content.power {
-  min-height: 52px;
+#launcher-content.todo {
+  min-width: 460px;
+  min-height: 300px;
 }
 
 #launcher-content.calendar {
@@ -62,25 +66,15 @@
 #sh,
 #cliphist,
 #emoji,
-#powermenu {
+#power {
   transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-#clear-launcher-button {
-  background-color: @secondaryContainer;
-  color: @onSecondaryContainer;
-  margin: 11px;
-  margin-left: 0px;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 100%;
 }
 
 #scrolled-window scrollbar {
   border-radius: 10px;
   background-color: @surface;
-  /*padding: 4px;*/
-  /*margin-left: 6px;*/
+  padding: 4px;
+  margin-left: 6px;
 }
 
 #scrolled-window slider {
@@ -174,28 +168,41 @@
  * ── powermenu ─────────────────────────────────────────────────────────
 */
 
-#powermenu-button {
+#power-menu-button {
   border-radius: 20px;
+  min-width: 52px;
+  min-height: 52px;
   padding: 20px;
 }
 
-#powermenu-button:hover,
-#powermenu-button:focus {
+#power-menu-button label {
+  font-size: 49px;
+  color: @foreground;
+}
+
+#power-menu-button:hover,
+#power-menu-button:focus {
   background-color: @surfaceBright;
 }
 
-#powermenu-button:active {
+#power-menu-button:hover label,
+#power-menu-button:focus label {
+  color: @primary;
+}
+
+#power-menu-button:active {
   background-color: @primary;
+}
+
+#power-menu-button:active label {
+  color: @shadow;
 }
 
 /*
  * ── cliphist ──────────────────────────────────────────────────────────
 */
-#cliphist-history {
-  min-height: 520px;
-}
 
-#launcher button#clip-img-item {
+button#clip-img-item {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -204,12 +211,12 @@
   min-height: 70px;
 }
 
-#launcher button#clip-img-item:hover,
-#launcher button#clip-img-item:focus {
+button#clip-img-item:hover,
+button#clip-img-item:focus {
   box-shadow: 2px 2px 2px @primary;
 }
 
-#launcher button#clip-item {
+button#clip-item {
   border-radius: 11px;
   background-color: transparent;
   background-image: none;
@@ -217,22 +224,34 @@
   padding: 6px;
 }
 
-#launcher button#clip-item {
+button#clip-item {
   font-size: 30px;
 }
 
-#launcher button#clip-item:hover,
-#launcher button#clip-item:focus {
+button#clip-item:hover,
+button#clip-item:focus {
   text-shadow: 2px 2px 2px @primary;
+}
+
+#clear-button {
+  margin: 11px;
+  margin-left: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#clear-button:hover {
+  background-color: mix(@onSurface, @surface, 0.92);
+}
+
+#cliphist-clear-button {
+  font-size: 24px;
 }
 
 /*
  * ── todo ──────────────────────────────────────────────────────────────
 */
-#todo-content {
-  min-height: 250px;
-}
-
 #todo-launcher {
   background-color: @surface;
   padding: 10px;
@@ -246,7 +265,7 @@
 }
 
 #todo-label {
-  color: @primary;
+  font-size: 16px;
 }
 
 #todo-label-completed {
@@ -254,8 +273,34 @@
   text-decoration: line-through;
 }
 
-#delete-button {
-  color: @error;
+#add-button {
+  margin: 11px;
+  margin-left: 0px;
+  margin-right: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#delete-button,
+#checkbox {
+  margin-left: 0px;
+  margin-right: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#add-button:hover,
+#delete-button:hover,
+#checkbox:hover {
+  background-color: mix(@onSurface, @surface, 0.92);
+}
+
+#todo-add-button,
+#todo-checkbox,
+#todo-delete-button {
+  font-size: 24px;
 }
 
 /*
@@ -294,6 +339,11 @@
   border-radius: 16px;
   padding: 4px;
   margin-bottom: 4px;
+}
+
+#bluetooth-scan-button,
+#bluetooth-toggle-button {
+  font-size: 24px;
 }
 
 #bluetooth-scan,
@@ -343,7 +393,6 @@
   background-color: @surfaceContainer;
   padding: 4px;
   border-radius: 20px;
-  min-height: 200px;
 }
 
 /*
@@ -361,6 +410,10 @@
   border-radius: 16px;
   padding: 4px;
   margin-bottom: 4px;
+}
+
+#wifi-toggle-icon {
+  font-size: 24px;
 }
 
 #wifi-scan,
@@ -409,7 +462,6 @@
   background-color: @surfaceContainer;
   padding: 4px;
   border-radius: 20px;
-  min-height: 200px;
 }
 
 /*
@@ -434,8 +486,8 @@
 
 #day-label,
 #day-empty {
-  min-width: 41px;
-  min-height: 30px;
+  min-width: 42px;
+  min-height: 36px;
 }
 
 #day-empty {
@@ -454,7 +506,9 @@
 #day-label.current-day {
   background-color: @primary;
   color: @onPrimary;
-  border-radius: 20px;
+  min-height: 36px;
+  min-width: 42px;
+  border-radius: 99px;
 }
 
 #prev-month-button,
@@ -481,6 +535,13 @@
 #prev-month-button:active #month-button-label,
 #next-month-button:active #month-button-label {
   color: @surface;
+}
+
+#day-box {
+  padding: 5px;
+  border-radius: 5px;
+  min-width: 30px;
+  min-height: 30px;
 }
 
 #prev-month-day,

@@ -1,16 +1,14 @@
 import os
 import subprocess
 from typing import List
-
 from fabric import Fabricator
-from fabric.utils import remove_handler
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GLib
-from snippets import MaterialIcon
+import snippets.iconss as icons
 
 
 class Cliphist(Box):
@@ -25,30 +23,30 @@ class Cliphist(Box):
         self._arranger_handler = 0
         self.cliphist_manager = CliphistManager(self)
         self.viewport = None
-        self.launcher = kwargs["launcher"]
 
         self.search_entry = Entry(
             name="search-entry",
             h_expand=True,
-            notify_text=lambda entry, *_: self.handle_search_input(entry.get_text()),
-            on_activate=lambda entry, *_: self.handle_search_input(entry.get_text()),
-        )
-
-        self.toggle_button = Button(
-            child=MaterialIcon("delete_forever"),
-            name="clear-launcher-button",
-            on_clicked=self.on_button_clicked,
+            on_activate=lambda entry, *_: self.handle_search(entry.get_text()),
         )
 
         self.header_box = Box(
             name="header-box",
             spacing=10,
             orientation="h",
-            children=[self.search_entry, self.toggle_button],
+            children=[
+                self.search_entry,
+                Button(
+                    name="clear-button",
+                    child=Label(name="cliphist-clear-button", markup=icons.clear),
+                    tooltip_text="Clear Clipboard History",
+                    on_clicked=self.handle_clear_history,
+                ),
+            ],
         )
 
         self.launcher_box = Box(
-            name="cliphist-history",
+            name="cliphist-launcher-box",
             spacing=10,
             orientation="v",
             h_expand=True,
@@ -57,32 +55,31 @@ class Cliphist(Box):
 
         self.add(self.launcher_box)
 
-    def on_button_clicked(self, *_):
-        GLib.spawn_command_line_async("cliphist wipe")
-        self.cliphist_manager.update_cliphist_history()
-
     def open_launcher(self):
         if not self.viewport:
             self.viewport = Box(name="viewport", spacing=4, orientation="v")
             self.scrolled_window = ScrolledWindow(
                 name="scrolled-window",
                 spacing=10,
+                min_content_size=(-1, -1),
                 h_scrollbar_policy="never",
+                # v_scrollbar_policy="never",
                 child=self.viewport,
             )
             self.launcher_box.add(self.scrolled_window)
 
         self.viewport.children = []
-        self.cliphist_manager.arrange_viewport()
+        self.cliphist_manager.update_cliphist_history()
 
         self.viewport.show()
         self.search_entry.grab_focus()
 
-    def close_launcher(self):
-        self.launcher.close()
+    def handle_search(self, text: str):
+        self.cliphist_manager.arrange_viewport(query=text)
 
-    def handle_search_input(self, text: str):
-        self.cliphist_manager.arrange_viewport(text)
+    def handle_clear_history(self, *_):
+        GLib.spawn_command_line_async("cliphist wipe")
+        self.cliphist_manager.update_cliphist_history()
 
 
 class CliphistManager:
@@ -121,7 +118,7 @@ class CliphistManager:
                 ["cliphist", "decode", clip_id], capture_output=True, check=True
             )
             subprocess.run(["wl-copy"], input=decode_result.stdout, check=True)
-            self.launcher.close_launcher()
+            self.launcher.open_launcher()
         except subprocess.CalledProcessError as e:
             print(f"Error copying clip {clip_id}: {e}")
 
@@ -133,22 +130,25 @@ class CliphistManager:
             decode_result = subprocess.run(
                 ["cliphist", "decode", clip_id], capture_output=True, check=True
             )
-
             with open(output_file, "wb") as f:
                 f.write(decode_result.stdout)
-
             return output_file
         except (subprocess.CalledProcessError, IOError) as e:
             print(f"Error saving image file for clip {clip_id}: {e}")
             return ""
 
+    def update_cliphist_history(self):
+        self.cliphist_history = self.get_clip_history()
+        self.arrange_viewport()
+
     def query_clips(self, query: str = "") -> List[dict]:
-        history = self.get_clip_history()
-
         if not query.strip():
-            return history
-
-        return [item for item in history if query.lower() in item["content"].lower()]
+            return self.cliphist_history
+        return [
+            clip
+            for clip in self.cliphist_history
+            if query.lower() in clip["content"].lower()
+        ]
 
     def bake_clip_slot(self, item: dict) -> Button:
         if "[[ binary data" in item["content"].lower():
@@ -163,19 +163,17 @@ class CliphistManager:
                 name="clip-img-item",
                 on_clicked=lambda _, clip_id=item["id"]: self.copy_clip(clip_id),
             )
-
             button.set_style(
                 f"background-image: url('{output_file}'); background-size: cover; background-position: center;"
             )
             return button
-
         return None
 
     def _create_text_button(self, item: dict) -> Button:
         return Button(
             child=Label(
-                label=item["content"][:55]
-                + ("..." if len(item["content"]) > 55 else ""),
+                label=item["content"][:35]
+                + ("..." if len(item["content"]) > 35 else ""),
                 h_expand=True,
                 v_align="center",
                 h_align="start",
@@ -184,17 +182,9 @@ class CliphistManager:
             name="clip-item",
         )
 
-    def update_cliphist_history(self):
-        self.cliphist_history = self.get_clip_history()
-        if self.launcher.viewport:
-            GLib.idle_add(self.arrange_viewport)
-
     def arrange_viewport(self, query: str = ""):
         if not self.launcher.viewport:
             return
-
-        if self.launcher._arranger_handler:
-            remove_handler(self.launcher._arranger_handler)
 
         self.launcher.viewport.children = []
         filtered_clips = self.query_clips(query)

@@ -4,8 +4,8 @@ from fabric.widgets.image import Image
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from snippets import MaterialIcon
 from services import NetworkClient
+import snippets.iconss as icons
 
 
 class WifiNetworkSlot(CenterBox):
@@ -15,7 +15,7 @@ class WifiNetworkSlot(CenterBox):
         self.client = client
         self.connecting = False  # Tracks if we are connecting/disconnecting
 
-        self.connection_icon = MaterialIcon("signal_wifi_off", 12)
+        self.connection_icon = Label(name="wifi-connection", markup=icons.wifi_off)
         self.connect_button = Button(
             name="wifi-connect",
             label="Connect",
@@ -68,9 +68,7 @@ class WifiNetworkSlot(CenterBox):
                 self.connect_button.sensitive = True
 
         if not self.connecting:
-            self.connection_icon.set_label(
-                "signal_wifi_4_bar" if connected else "signal_wifi_off"
-            )
+            self.connection_icon.set_markup(icons.wifi if connected else icons.wifi_off)
             self.connect_button.set_label("Disconnect" if connected else "Connect")
 
 
@@ -84,8 +82,8 @@ class WifiManager(Box):
         )
 
         self.client = NetworkClient()
-        self.scan_icon = MaterialIcon("wifi_find")
-        self.toggle_icon = MaterialIcon("signal_wifi_off")
+        self.scan_icon = Label(name="wifi-scan-icon", markup=icons.scan)
+        self.toggle_icon = Label(name="wifi-toggle-icon", markup=icons.wifi_off)
 
         self.scan_button = Button(
             name="wifi-scan",
@@ -113,8 +111,10 @@ class WifiManager(Box):
                 end_children=self.toggle_button,
             ),
             ScrolledWindow(
-                name="scrolled-window",
+                name="wifi-available",
                 v_expand=True,
+                h_scrollbar_policy="never",
+                min_content_size=(-1, -1),
                 child=self.available_box,
             ),
         ]
@@ -135,10 +135,8 @@ class WifiManager(Box):
         self.build_wifi_options()
 
     def update_toggle_icon(self):
-        self.toggle_icon.set_label(
-            "signal_wifi_4_bar"
-            if self.client.wifi_device.enabled
-            else "signal_wifi_off"
+        self.toggle_icon.set_markup(
+            icons.wifi if self.client.wifi_device.enabled else icons.wifi_off
         )
 
     def build_wifi_options(self):

@@ -1,11 +1,9 @@
-import time
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.label import Label
 from fabric.widgets.box import Box
-from gi.repository import GLib, GObject
+from gi.repository import GLib
 from fabric.widgets.centerbox import CenterBox
 from services import brightness, audio
-from snippets import Animator, MaterialIcon
 
 
 def create_progress_bar(percentage, width=150):

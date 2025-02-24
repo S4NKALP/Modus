@@ -1,6 +1,11 @@
 from fabric.hyprland.widgets import Language
 from fabric.system_tray.widgets import SystemTray
-from fabric.utils import FormattedString, bulk_replace
+from fabric.utils import (
+    FormattedString,
+    bulk_replace,
+    exec_shell_command_async,
+    get_relative_path,
+)
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -10,16 +15,14 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from gi.repository import GLib
 from modules.bar.components import (
     BatteryLabel,
-    BluetoothIndicator,
-    MicrophoneIndicator,
-    NetworkIndicator,
     SystemInfo,
     TaskBar,
-    VolumeIndicator,
     workspace,
+    Indicators,
+    UpdatesWidget,
 )
-from snippets import MaterialIcon
 from services import sc
+import snippets.iconss as icons
 
 
 class Bar(Window):
@@ -39,7 +42,7 @@ class Bar(Window):
 
         self.recording_indicator = Button(
             name="recording-indicator",
-            child=MaterialIcon("stop_circle", 16),
+            child=Label(name="recorder", markup=icons.record),
             visible=False,
             on_clicked=lambda *_: sc.screencast_stop(),
         )
@@ -50,13 +53,9 @@ class Bar(Window):
 
         self.date_time = DateTime(formatters=["%-I:%M 󰧞 %a %d %b"], name="datetime")
 
-        self.battery = BatteryLabel(name="battery")
-        self.volume = VolumeIndicator()
-        self.bluetooth = BluetoothIndicator()
-        self.network = NetworkIndicator()
-        self.microphone = MicrophoneIndicator()
+        self.battery = BatteryLabel()
         self.taskbar = TaskBar()
-        self.info = SystemInfo()
+        self.stats = SystemInfo()
         self.tray = SystemTray(name="tray", icon_size=16, spacing=4)
         self.launcher = Button(
             name="logo",
@@ -65,6 +64,15 @@ class Bar(Window):
                 "fabric-cli exec modus 'launcher.open(\"launcher\")'"
             ),
         )
+        self.updates = UpdatesWidget()
+        self.indicators = Indicators()
+        self.button_config = Button(
+            name="button-bar",
+            on_clicked=lambda *_: exec_shell_command_async(
+                f"python {get_relative_path('../../config/config.py')}"
+            ),
+            child=Label(name="button-bar-label", markup=icons.config),
+        )
 
         self.applets = Box(
             name="applets",
@@ -72,10 +80,7 @@ class Bar(Window):
             orientation="h",
             children=[
                 self.language,
-                self.bluetooth,
-                self.network,
-                self.volume,
-                self.microphone,
+                self.indicators,
             ],
         )
 
@@ -85,11 +90,7 @@ class Bar(Window):
                 name="start-container",
                 spacing=8,
                 orientation="h",
-                children=[
-                    self.launcher,
-                    self.workspaces,
-                    self.info,
-                ],
+                children=[self.launcher, self.workspaces, self.stats, self.updates],
             ),
             center_children=Box(
                 name="center-container",
@@ -107,6 +108,7 @@ class Bar(Window):
                     self.battery,
                     self.applets,
                     self.date_time,
+                    self.button_config,
                 ],
             ),
         )
@@ -127,6 +129,8 @@ class Bar(Window):
     def toggle_hidden(self):
         self.hidden = not self.hidden
         if self.hidden:
+            self.bar.remove_style_class("visible")
             self.bar.add_style_class("hidden")
         else:
             self.bar.remove_style_class("hidden")
+            self.bar.add_style_class("visible")
