@@ -29,6 +29,9 @@
 </figure>
 <br>
 
+> [!WARNING]
+> This configuration is tailored to my preferences with little regard for others. It's not designed to be "good"—just comfortable for me.
+
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Package.png" alt="Package" width="25" height="25" /></sub> Installation</h2>
 
 > [!NOTE]
