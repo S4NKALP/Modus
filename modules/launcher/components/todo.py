@@ -6,7 +6,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-import snippets.iconss as icons
+import utils.icons as icons
 
 
 class TodoManager(Box):
@@ -83,7 +83,7 @@ class TodoListManager:
     def __init__(self, launcher):
         self.launcher = launcher
         self.todos = []
-        self.todo_file = os.path.expanduser("~/.local/share/modus/todos.json")
+        self.todo_file = os.path.expanduser("~/.local/state/modus/todos.json")
         self.load_todos()
 
     def load_todos(self):

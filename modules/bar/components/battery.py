@@ -10,10 +10,10 @@ from fabric.widgets.revealer import Revealer
 from fabric.core.fabricator import Fabricator
 from fabric.utils.helpers import exec_shell_command_async
 from gi.repository import GLib
-import snippets.iconss as icons
+import utils.icons as icons
 
 
-class BatteryLabel(Box):
+class Battery(Box):
     def __init__(self, **kwargs):
         super().__init__(
             name="battery",
@@ -59,8 +59,8 @@ class BatteryLabel(Box):
             value=0,
             size=28,
             line_width=2,
-            start_angle=180,
-            end_angle=360,
+            start_angle=150,
+            end_angle=390,
         )
 
         self.bat_overlay = Overlay(

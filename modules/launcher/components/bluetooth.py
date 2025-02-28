@@ -5,7 +5,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
-import snippets.iconss as icons
+import utils.icons as icons
 
 
 class BluetoothDeviceSlot(CenterBox):
