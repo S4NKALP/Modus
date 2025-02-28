@@ -35,7 +35,7 @@
 #control-section {
   padding: 10px;
   border-radius: 10px;
-  background-color: @surface;
+  background-color: lighter(@background);
 }
 
 .osd-hidden {
