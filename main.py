@@ -5,12 +5,13 @@ from fabric import Application
 from fabric.utils import get_relative_path, monitor_file
 from loguru import logger
 
-from modules.bar.bar import Bar
+from modules.bar.bar import Bar, ScreenCorners
 from modules.launcher.launcher import Launcher
+from modules.dock import Dock
 from modules.notification_popup import NotificationPopup
 
 from modules.osd import OSD
-from modules.corners import Corners
+
 from services import sc
 from config.config import open_config
 
@@ -50,7 +51,8 @@ if __name__ == "__main__":
         open_config()
     sc = sc
     bar = Bar()
-    corners = Corners()
+    dock = Dock()
+    corners = ScreenCorners()
     osd = OSD()
     notif = NotificationPopup()
     launcher = Launcher()
@@ -60,6 +62,7 @@ if __name__ == "__main__":
         bar,
         launcher,
         osd,
+        dock,
     )
     setproctitle.setproctitle("modus")
 
