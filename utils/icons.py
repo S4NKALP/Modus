@@ -53,8 +53,8 @@ shutdown: str = "&#xeb0d;"
 power_saving: str = "&#xed4f;"
 power_balanced: str = "&#xfa77;"
 power_performance: str = "&#xec45;"
-charging: str = "&#x10063;"
-discharging: str = "&#x1006a;"
+charging: str = "&#xefef;"
+discharging: str = "&#xefe9;"
 alert: str = "&#xefb4;"
 
 # Applets
@@ -64,6 +64,7 @@ night: str = "&#xeaf8;"
 coffee: str = "&#xef0e;"
 dnd: str = "&#xea35;"
 darkmode: str = "&#xfe56;"
+world: str = "&#xeb54;"
 
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"
@@ -128,6 +129,7 @@ disc_off: str = "&#xf118;"
 
 # Misc
 dot: str = "&#xf698;"
+palette: str = "&#xeb01;"
 
 exceptions: list[str] = ["font_family", "font_weight", "span"]
 
