@@ -9,7 +9,7 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 
 
 CACHE_DIR = os.getenv(
-    "XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache", "fabric")
+    "XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache", "modus")
 )
 BINS = os.path.join(CACHE_DIR, "binaries")
 

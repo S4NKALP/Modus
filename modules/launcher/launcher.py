@@ -38,13 +38,12 @@ class Launcher(Window):
         self.wifi = WifiManager()
         self.calendar = Calendar()
 
+        # Wrap the dashboard in a Box container
         self.dashboard = Box(
             name="dashboard",
             orientation="h",
             spacing=10,
-            children=[
-                self.dashboard,
-            ],
+            children=[self.dashboard],
         )
         self.launcher = AppLauncher(launcher=self)
 
@@ -78,7 +77,10 @@ class Launcher(Window):
         self.add(self.launcher_box)
         self.show_all()
         self.hide()
-        self.add_keybinding("Escape", lambda *_: self.close())
+        self.add_keybinding("Escape", self._on_escape)
+
+    def _on_escape(self, *args):
+        return self.close()
 
     def close(self):
         self.set_keyboard_mode("none")

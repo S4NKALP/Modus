@@ -5,7 +5,7 @@ from fabric.widgets.label import Label
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
-import snippets.iconss as icons
+import utils.icons as icons
 
 
 class Calendar(Gtk.Box):
@@ -27,7 +27,7 @@ class Calendar(Gtk.Box):
 
         self.prev_month_button = Gtk.Button(
             name="prev-month-button",
-            child=Label(name="month-button-label", markup=icons.chevron_left)
+            child=Label(name="month-button-label", markup=icons.chevron_left),
         )
         self.prev_month_button.connect("clicked", self.on_prev_month_clicked)
         self.header.pack_start(self.prev_month_button, False, False, 0)
@@ -37,7 +37,7 @@ class Calendar(Gtk.Box):
 
         self.next_month_button = Gtk.Button(
             name="next-month-button",
-            child=Label(name="month-button-label", markup=icons.chevron_right)
+            child=Label(name="month-button-label", markup=icons.chevron_right),
         )
         self.next_month_button.connect("clicked", self.on_next_month_clicked)
         self.header.pack_start(self.next_month_button, False, False, 0)

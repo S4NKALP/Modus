@@ -2,7 +2,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.button import Button
 from fabric.utils.helpers import exec_shell_command_async
-import snippets.iconss as icons
+import utils.icons as icons
 
 
 class PowerMenu(Box):
@@ -86,4 +86,3 @@ class PowerMenu(Box):
     def poweroff(self, *args):
         exec_shell_command_async("systemctl poweroff")
         self.close_menu()
-

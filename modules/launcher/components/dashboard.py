@@ -9,7 +9,7 @@ from gi.repository import Gtk, Gdk, GLib  # Added Gdk import
 from fabric.utils import get_relative_path
 
 gi.require_version("Gtk", "3.0")
-import snippets.iconss as icons
+import utils.icons as icons
 
 
 def add_hover_cursor(widget):

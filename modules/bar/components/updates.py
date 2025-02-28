@@ -3,11 +3,11 @@ from fabric.utils import exec_shell_command_async, get_relative_path, invoke_rep
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
+from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
-import snippets.iconss as icons
 from loguru import logger
 from gi.repository import Gtk
-from fabric.widgets.button import Button
+import utils.icons as icons
 
 
 class UpdatesWidget(Button):

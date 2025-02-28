@@ -4,19 +4,19 @@ from fabric.widgets.label import Label
 from fabric.widgets.box import Box
 from fabric.bluetooth import BluetoothClient
 from services import NetworkClient, audio
-import snippets.iconss as icons
+import utils.icons as icons
 
 
-class Indicators(Box):
+class SystemIndicators(Box):
     def __init__(self, **kwargs):
         super().__init__(orientation="h", spacing=2, **kwargs)
 
-        self.bluetooth_icon = Label(name="indicator-icon")
-        self.wifi_icon = Label(name="indicator-icon")
-        self.volume_icon_button = Label(name="indicator-icon")
-        self.microphone_icon = Label(name="indicator-icon")
-        self.idle_label = Label(name="indicator-icon")
-        self.night_label = Label(name="indicator-icon")
+        self.bluetooth_icon = Label(name="system-indicator-icon")
+        self.wifi_icon = Label(name="system-indicator-icon")
+        self.volume_icon_button = Label(name="system-indicator-icon")
+        self.microphone_icon = Label(name="system-indicator-icon")
+        self.idle_label = Label(name="system-indicator-icon")
+        self.night_label = Label(name="system-indicator-icon")
 
         for widget in [
             self.bluetooth_icon,
@@ -86,8 +86,8 @@ class Indicators(Box):
                 if stream.muted
                 else (
                     icons.vol_mute
-                    if volume_level == 0
-                    else (icons.vol_medium if volume_level <= 50 else icons.vol_high)
+                    if volume_level < 1
+                    else (icons.vol_medium if volume_level >= 1 else icons.vol_high)
                 )
             )
 
