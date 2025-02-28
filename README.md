@@ -95,9 +95,9 @@ cd Tela-icon-theme
 - [x] Calendar
 - [x] Power Manager
 - [x] Dock
+- [x] Web search in Launcher
 - [ ] Notification Panel
 - [ ] Improve CSS Styling
-- [x] Web search in Launcher
 - [ ] Update Screenshot
 
 ## Special Thanks

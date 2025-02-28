@@ -35,12 +35,9 @@ PACKAGES=(
 	brightnessctl
 	wlinhibit
 	power-profile-daemon
-	ttf-font-awesome
-	otf-font-awesome
-	ttf-material-symbols-variable-git
 	ttf-google-sans
 	ttf-opensans
-	ttf-robot
+	ttf-tabler-icons
 )
 
 if ! grep -q "arch" /etc/os-release; then
