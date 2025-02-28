@@ -8,7 +8,7 @@
 #launcher {
   margin: 18px;
   border: 1px solid @outlineVariant;
-  background-color: @surface;
+  background-color: lighter(@background);
   border-radius: 24px;
   padding: 18px;
   transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
@@ -33,8 +33,8 @@
   min-width: 300px;
 }
 
-.applauncher {
-  min-height: 464px;
+.applauncher-scrolled-window {
+  transition: min-height 0.2s ease;
 }
 
 #launcher-content.bluetooth {
@@ -72,7 +72,7 @@
 
 #scrolled-window scrollbar {
   border-radius: 10px;
-  background-color: @surface;
+  background-color: lighter(@background);
   padding: 4px;
   margin-left: 6px;
 }
@@ -91,6 +91,7 @@
 #launcher-app {
   border-radius: 16px;
   padding: 16px;
+  min-height: 0;
   transition: padding 0.25s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
@@ -121,6 +122,10 @@
   min-width: 300px;
 }
 
+#entry-custom-color {
+  min-width: 10px;
+}
+
 #wallpaper-icons:selected {
   background-color: @surfaceBright;
   border-radius: 8px;
@@ -132,7 +137,7 @@
 }
 
 #dropdown-box {
-  background-color: @surface;
+  background-color: lighter(@background);
   box-shadow: inset 0 0 0 1px @outlineVariant;
   border-radius: 11px;
   padding: 10px;
@@ -141,6 +146,42 @@
 
 #scheme-dropdown {
   font-weight: bold;
+}
+
+/* Customize the overall switch appearance */
+#materialyoucolor-switcher {
+  min-width: 40px;
+  min-height: 20px;
+  background-color: @surface;
+  border-radius: 15px;
+  padding: 2px;
+  transition: background-color 0.3s ease;
+}
+
+/* Style the switch's slider */
+#materialyoucolor-switcher slider {
+  background-color: var(--primary);
+  border-radius: 16px;
+  min-width: 20px;
+  min-height: 20px;
+  transition:
+    background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
+    transform 0.25s cubic-bezier(0.5, 0.25, 0, 1.25);
+}
+
+/* When the switch is active (checked) */
+#materialyoucolor-switcher:checked {
+  background-color: @primary;
+}
+
+/* Optional: additional styling for the slider when active */
+#materialyoucolor-switcher:checked slider {
+  background-color: @shadow;
+}
+
+#mat-label {
+  font-size: 24px;
+  margin-left: 4px;
 }
 
 /*
@@ -253,7 +294,6 @@ button#clip-item:focus {
  * ── todo ──────────────────────────────────────────────────────────────
 */
 #todo-launcher {
-  background-color: @surface;
   padding: 10px;
   border-radius: 8px;
 }
@@ -261,7 +301,7 @@ button#clip-item:focus {
 #todo-item {
   padding: 8px;
   border-radius: 4px;
-  background-color: alpha(@surface, 0.8);
+  background-color: alpha(@background, 0.3);
 }
 
 #todo-label {
@@ -269,7 +309,7 @@ button#clip-item:focus {
 }
 
 #todo-label-completed {
-  color: alpha(@outlineVariant, 0.5);
+  color: alpha(@outlineVariant, 1);
   text-decoration: line-through;
 }
 
@@ -379,7 +419,7 @@ button#clip-item:focus {
 }
 
 #bluetooth-connect {
-  background-color: @surface;
+  background-color: lighter(@background);
   border-radius: 16px;
   padding: 8px 16px;
 }
@@ -449,7 +489,7 @@ button#clip-item:focus {
 }
 
 #wifi-connect {
-  background-color: @surface;
+  background-color: lighter(@background);
   border-radius: 16px;
   padding: 8px 16px;
 }
@@ -546,6 +586,5 @@ button#clip-item:focus {
 
 #prev-month-day,
 #next-month-day {
-  /*color: lighter(@surfaceBright);*/
   color: mix(@onSurfaceVariant, transparent, 0.6);
 }
