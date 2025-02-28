@@ -49,8 +49,8 @@ class OSD(Window):
         super().__init__(
             name="osd-menu",
             layer="overlay",
-            anchor="bottom",
-            margin="0 0 10px 0",
+            anchor="top",
+            margin="10px 0 0 0",
             keyboard_mode="on-demand",
             visible=False,
             style_classes="osd-panel",
