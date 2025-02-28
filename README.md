@@ -94,10 +94,11 @@ cd Tela-icon-theme
 - [x] Network Manager
 - [x] Calendar
 - [x] Power Manager
+- [x] Dock
 - [ ] Notification Panel
 - [ ] Improve CSS Styling
-- [ ] Window Switcher
 - [x] Web search in Launcher
+- [ ] Update Screenshot
 
 ## Special Thanks
 
