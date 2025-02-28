@@ -93,7 +93,7 @@ cd Tela-icon-theme
 - [x] Installation script
 - [x] Network Manager
 - [x] Calendar
-- [ ] Power Manager
+- [x] Power Manager
 - [ ] Notification Panel
 - [ ] Improve CSS Styling
 - [ ] Window Switcher
