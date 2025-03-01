@@ -75,7 +75,7 @@ if [ -d "$INSTALL_DIR" ]; then
 	git -C "$INSTALL_DIR" pull
 else
 	echo "Cloning Modus..."
-	git clone "$REPO_URL" "$INSTALL_DIR"
+	git clone -b vertical-bar "$REPO_URL" "$INSTALL_DIR"
 fi
 
 # Install required packages using the AUR helper
