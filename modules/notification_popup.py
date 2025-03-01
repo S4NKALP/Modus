@@ -271,7 +271,7 @@ class NotificationPopup(Window):
         self.notifications = Box(
             v_expand=True,
             h_expand=True,
-            style="margin: 1px 0px 1px 1px;",
+            style="margin: 3px 3px 0px 0px;",
             orientation="v",
             spacing=5,
         )

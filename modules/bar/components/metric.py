@@ -13,14 +13,15 @@ class Metrics(Box):
         "CPU": icons.cpu,
         "RAM": icons.memory,
         "Swap": icons.swap,
-        "Disk": icons.disk,
         "Temp": icons.temp,
+        "Disk": icons.disk,
     }
 
     def __init__(self, **kwargs):
         super().__init__(
             name="metrics",
-            spacing=8,
+            spacing=10,
+            orientation="v",
             h_align="center",
             v_align="fill",
             visible=True,
@@ -51,8 +52,8 @@ class Metrics(Box):
     def _update_system_info(self):
         ram_usage = psutil.virtual_memory().percent
         swap_usage = psutil.swap_memory().percent
-        disk_usage = psutil.disk_usage("/").percent
         cpu_usage = psutil.cpu_percent(interval=0)
+        disk_usage = psutil.disk_usage("/").percent
 
         temp = self._get_device_temperature()
         temp_usage = temp if temp is not None else 0
@@ -61,8 +62,8 @@ class Metrics(Box):
             "CPU": cpu_usage,
             "RAM": ram_usage,
             "Swap": swap_usage,
-            "Disk": disk_usage,
             "Temp": temp_usage,
+            "Disk": disk_usage,
         }
 
         for system, usage in usages.items():

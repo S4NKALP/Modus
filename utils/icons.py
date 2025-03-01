@@ -57,20 +57,31 @@ charging: str = "&#xefef;"
 discharging: str = "&#xefe9;"
 alert: str = "&#xefb4;"
 
+
+moderate_signal: str = "&#xeba4;"
+good_signal: str = "&#xeba5;"
+no_signal: str = "&#xf063;"
+weak_signal: str = "&#xeba3;"
 # Applets
+lan: str = "&#xeb9d;"
+wifi_0: str = "&#xeba3;"
+wifi_1: str = "&#xeba4;"
+wifi_2: str = "&#xeba5;"
+wifi_3: str = "&#xeb52;"
 wifi: str = "&#xeb52;"
+world: str = "&#xeb54;"
+world_off: str = "&#xf1ca;"
 bluetooth: str = "&#xea37;"
 night: str = "&#xeaf8;"
 coffee: str = "&#xef0e;"
 dnd: str = "&#xea35;"
 darkmode: str = "&#xfe56;"
-world: str = "&#xeb54;"
 
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"
 night_off: str = "&#xf162;"
 dnd_off: str = "&#xece9;"
-mic_off: str = "&#xed16;"
+
 
 # Bluetooth
 bluetooth_connected: str = "&#xecea;"
@@ -97,12 +108,10 @@ vol_mute: str = "&#xeb50;"
 vol_medium: str = "&#xeb4f;"
 vol_high: str = "&#xeb51;"
 
-# Network
-lan: str = "&#xeb9d;"
-moderate_signal: str = "&#xeba4;"
-good_signal: str = "&#xeba5;"
-no_signal: str = "&#xf063;"
-weak_signal: str = "&#xeba3;"
+
+mic: str = "&#xeaf0;"
+mic_muted: str = "&#xed16;"
+
 
 # Overview
 circle_plus: str = "&#xea69;"

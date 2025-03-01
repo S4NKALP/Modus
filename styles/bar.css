@@ -1,113 +1,63 @@
-#bar {
-  padding: 0px 7px 0px 7px;
-}
-
-#bar.start-container {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  border-bottom-right-radius: 15px;
-}
-
-#bar.end-container {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  border-bottom-left-radius: 15px;
-}
-
-#center-bar {
-  background-color: transparent;
-}
+/*
+ * ── bar ───────────────────────────────────────────────────────────────
+*/
 
 #bar,
 #bar-corner * {
   background-color: lighter(@background);
 }
 
-#bar.hidden {
-  opacity: 0;
-  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-#bar.visible {
-  opacity: 1;
-  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
+#start-container,
+#center-container,
+#end-container {
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 /*
- * ── button bar ────────────────────────────────────────────────────────
+ * ── tray ──────────────────────────────────────────────────────────────
 */
 
-#button-bar {
+#tray-revealer {
   background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 1px 0px 1px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-  transition: all 0.1s ease;
-}
-
-#button-bar-label {
-  color: @primary;
-  font-size: 20px;
-  border-radius: 8px;
-  transition: all 0.1s ease;
-}
-
-#button-bar:hover #button-bar-label {
-  background-color: @surfaceBright;
-  box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
-}
-
-#button-bar:active #button-bar-label {
-  color: @shadow;
-  background-color: @primary;
-}
-
-/*
- * ── workspace ─────────────────────────────────────────────────────────
-*/
-
-#workspaces {
-  font-style: normal;
-  background: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-left: 5px;
+  margin-right: 5px;
   padding: 0px 8px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
+  border-radius: 8px 8px 0 0;
+  font-size: 18px;
 }
 
-/*
- * ── update ────────────────────────────────────────────────────────────
-*/
-
-#update-icon {
-  color: @primary;
-  font-size: 22px;
-  padding: 1px;
-  border-radius: 11px;
-  transition: all 0.1s ease;
+#tray {
+  background-color: @surfaceContainer;
+  margin-right: 5px;
+  margin-left: 5px;
+  padding: 0px 8px 0px;
+  border-radius: 0px 0px 8px 8px;
 }
 
-#updated-icon {
-  color: @primary;
-  font-size: 20px;
-  padding: 4px;
-  border-radius: 99px;
-  transition: all 0.1s ease;
-}
-
-#update-label {
-  color: @primary;
-  font-size: 10px;
-  font-weight: bold;
+#tray > button {
+  margin: 2px;
   padding: 0px;
-  margin-right: 4px;
-  border-radius: 11px;
-  transition: all 0.1s ease;
+}
+
+menu {
+  border: solid 1px @outlineVariant;
+  border-radius: 16px;
+  background-color: @surface;
+  padding: 6px;
+}
+
+menu > menuitem {
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+menu > menuitem:hover {
+  background-color: @surfaceBright;
+}
+
+menu > menuitem:hover > label {
+  color: @onSurface;
 }
 
 /*
@@ -116,12 +66,74 @@
 
 #datetime {
   background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
+  margin-right: 5px;
+  margin-left: 5px;
+  padding: 5px 0px 5px 0px;
+}
+
+#datetime label {
+  margin-left: 6px;
+  /*font-size: 14px;*/
+}
+
+/*
+ * ── status indicator ───────────────────────────────────────────────────────────
+*/
+
+#system-indicators {
+  background-color: @surfaceContainer;
+  margin-right: 5px;
+  margin-left: 5px;
+  border-radius: 8px;
+}
+
+#system-indicator-icon {
+  margin-bottom: 4px;
+  font-size: 18px;
+}
+
+/*
+ * ── logo ──────────────────────────────────────────────────────────────
+*/
+#logo {
+  background-color: @surfaceContainer;
+  margin-right: 5px;
+  margin-left: 5px;
+  border-radius: 8px;
+}
+
+#logo-name {
+  font-size: 16px;
+  padding: 2px 0px 0 8px;
+}
+
+#logo:hover {
+  background-color: @surfaceBright;
+  box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
+}
+
+/*
+ * ── metric ────────────────────────────────────────────────────────
+*/
+
+#metrics {
+  background-color: @surfaceContainer;
+  margin-right: 5px;
+  margin-left: 5px;
+  padding-top: 8px;
+  padding-right: 2px;
+  padding-left: 2px;
+  border-radius: 8px;
+}
+
+#metric-icon {
+  font-size: 16px;
+}
+
+#metric-circle {
+  color: @surfaceBright;
+  border: 3px solid @primary;
 }
 
 /*
@@ -130,12 +142,10 @@
 
 #battery {
   background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
+  margin-left: 5px;
+  margin-right: 5px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
+  padding-top: 8px;
 }
 
 #battery-circle {
@@ -148,7 +158,7 @@
 }
 
 #battery-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 #battery-icon.alert {
@@ -158,17 +168,16 @@
 #battery-save,
 #battery-balanced,
 #battery-performance {
-  min-width: 30px;
-  min-height: 28px;
-  margin: 2px 0px;
-  border-radius: 100px;
+  min-width: 25px;
+  min-height: 32px;
+  border-radius: 8px;
 }
 
 #battery-save-label,
 #battery-balanced-label,
 #battery-performance-label {
   color: @outline;
-  font-size: 20px;
+  font-size: 18px;
 }
 
 #battery-save:hover,
@@ -203,149 +212,49 @@
 }
 
 /*
- * ── metric ────────────────────────────────────────────────────────
+ * ── workspace ─────────────────────────────────────────────────────────
 */
 
-#metrics {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
+#workspaces {
+  font-style: normal;
+  background: @surfaceContainer;
+  margin-right: 5px;
+  margin-left: 5px;
   padding: 0px 8px 0px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
 }
 
-#metric-icon {
+#workspace-name {
+  padding: 5px 0px 5px 0px;
+}
+
+#button-bar {
+  background-color: @surfaceContainer;
+  margin-left: 5px;
+  margin-right: 5px;
+  padding: 5px 0px 5px 0px;
+  border-radius: 8px;
+  transition: all 0.1s ease;
+}
+
+#button-bar-label {
+  color: @primary;
   font-size: 20px;
+  border-radius: 99px;
+  min-height: 28px;
+  min-width: 18px;
+  transition: all 0.1s ease;
 }
 
-#metric-circle {
-  color: @surfaceBright;
-  border: 3px solid @primary;
-}
-
-/*
- * ── tray ──────────────────────────────────────────────────────────────
-*/
-
-#tray-revealer {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 2px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-  font-size: 20px;
-}
-
-#tray {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-left: 4px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-}
-
-#tray > button {
-  margin: 0px;
-  padding: 0px;
-}
-
-menu {
-  border: solid 1px @outlineVariant;
-  border-radius: 16px;
-  background-color: @surface;
-  padding: 6px;
-}
-
-menu > menuitem {
-  border-radius: 10px;
-  padding: 6px 10px;
-}
-
-menu > menuitem:hover {
+#button-bar:hover #button-bar-label {
   background-color: @surfaceBright;
-}
-
-menu > menuitem:hover > label {
-  color: @onSurface;
-}
-
-/*
- * ── logo ──────────────────────────────────────────────────────────────
-*/
-#logo {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-}
-
-#logo-name {
-  color: darker(@primary);
-}
-
-#logo:hover {
-  background-color: @surfaceBright;
   box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
 }
 
-/*
- * ── status indicator ───────────────────────────────────────────────────────────
-*/
-
-#system-indicators {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-}
-
-#system-indicator-icon {
-  font-size: 20px;
-}
-
-/*
- * ── taskbar ───────────────────────────────────────────────────────────
-*/
-
-#taskbar {
-  border-radius: 100px;
-  color: @onSurface;
-  background: @surfaceContainer;
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-#taskbar > button.activated {
-  border-radius: 100px;
-  background: @surfaceVariant;
-}
-
-#taskbar > button:hover {
-  background: @surfaceBright;
-}
-
-#taskbar > button {
-  padding: 0px 4px;
-  margin: 4px 0px;
-  border-radius: 100px;
-  border: 0px;
-}
-
-#taskbar > button:last-child {
-  margin-right: 0px;
+#button-bar:active #button-bar-label {
+  color: @shadow;
+  background-color: @primary;
 }
 
 /*
@@ -354,11 +263,12 @@ menu > menuitem:hover > label {
 
 #recorder {
   color: @error;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-right: 5px;
+  margin-left: 5px;
+  min-height: 28px;
   padding: 0px 6px 0px;
   border-radius: 8px;
-  font-size: 20px;
+  font-size: 16px;
   animation: error 2s infinite;
 }
 

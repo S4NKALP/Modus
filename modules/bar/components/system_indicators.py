@@ -9,23 +9,21 @@ import utils.icons as icons
 
 class SystemIndicators(Box):
     def __init__(self, **kwargs):
-        super().__init__(orientation="h", spacing=2, **kwargs)
+        super().__init__(orientation="v", spacing=2, **kwargs)
 
         self.bluetooth_icon = Label(name="system-indicator-icon")
         self.wifi_icon = Label(name="system-indicator-icon")
         self.volume_icon_button = Label(name="system-indicator-icon")
         self.microphone_icon = Label(name="system-indicator-icon")
-        self.idle_label = Label(name="system-indicator-icon")
-        self.night_label = Label(name="system-indicator-icon")
 
         for widget in [
             self.bluetooth_icon,
             self.wifi_icon,
             self.volume_icon_button,
             self.microphone_icon,
-            self.idle_label,
-            self.night_label,
         ]:
+            widget.set_hexpand(False)
+            widget.set_vexpand(False)
             self.add(widget)
 
         self.audio_service = audio
@@ -48,87 +46,110 @@ class SystemIndicators(Box):
                 "changed", self.update_network_status
             )
 
-        Fabricator(interval=1000, poll_from=self.update_all_statuses)
+        Fabricator(interval=1000, poll_from=self.update_network_status)
 
         self.update_bluetooth_status()
 
-    def update_all_statuses(self, *_args):
-        self.update_idle_night_status()
-        self.update_network_status()
-
-    def update_idle_night_status(self, *_):
-        """Updates the idle and night mode status icons."""
-        self.idle_label.set_markup(
-            icons.coffee
-            if subprocess.run(
-                ["pgrep", "-x", "wlinhibit"], capture_output=True
-            ).returncode
-            == 0
-            else ""
-        )
-
-        self.night_label.set_markup(
-            icons.night
-            if subprocess.run(
-                ["pgrep", "-x", "hyprsunset"], capture_output=True
-            ).returncode
-            == 0
-            else ""
-        )
-
     def update_volume_status(self, *_):
-        """Updates the volume icon based on speaker status."""
         stream = self.audio_service.speaker
-        if stream:
-            volume_level = stream.volume
-            self.volume_icon_button.set_markup(
-                icons.vol_off
-                if stream.muted
-                else (
-                    icons.vol_mute
-                    if volume_level < 1
-                    else (icons.vol_medium if volume_level >= 1 else icons.vol_high)
-                )
-            )
+        if not stream:
+            return
+
+        # Normalize volume to integer percentage (0-100)
+        volume_level = stream.volume
+        if volume_level > 1:
+            volume_level = min(int(volume_level), 100)
+        else:
+            volume_level = int(volume_level * 100)
+
+        is_muted = stream.muted
+
+        if is_muted:
+            icon = icons.vol_off
+        elif volume_level > 74:
+            icon = icons.vol_high
+        elif volume_level > 0:
+            icon = icons.vol_medium
+        else:
+            icon = icons.vol_mute
+
+        self.volume_icon_button.set_markup(icon)
+
+        tooltip_text = "Muted" if is_muted else f"Volume: {volume_level}%"
+        self.volume_icon_button.set_tooltip_text(tooltip_text)
 
     def update_mic_status(self, *_):
-        """Updates the microphone icon based on mute status."""
         mic = self.audio_service.microphone
-        self.microphone_icon.set_markup(icons.mic_off if mic and mic.muted else "")
-        self.microphone_icon.set_visible(bool(mic))
+        if not mic:
+            return
+
+        # Normalize volume to integer percentage (0-100)
+        volume_level = mic.volume
+        if volume_level > 1:
+            volume_level = min(int(volume_level), 100)
+        else:
+            volume_level = int(volume_level * 100)
+
+        is_muted = mic.muted
+        icon = icons.mic_off if is_muted else icons.mic
+
+        self.microphone_icon.set_markup(icon)
+        tooltip_text = "Muted" if is_muted else f"Microphone: {volume_level}%"
+        self.microphone_icon.set_tooltip_text(tooltip_text)
 
     def update_bluetooth_status(self, *_):
-        """Updates the Bluetooth icon based on enabled status."""
-        self.bluetooth_icon.set_markup(
-            icons.bluetooth if self.bluetooth_client.enabled else icons.bluetooth_off
-        )
+        if self.bluetooth_client.enabled:
+            # Get a list of connected devices
+            connected_devices = [
+                device.name
+                for device in self.bluetooth_client.devices
+                if device.connected
+            ]
+
+            if connected_devices:
+                self.bluetooth_icon.set_markup(icons.bluetooth_connected)
+                self.bluetooth_icon.set_tooltip_text(f"{', '.join(connected_devices)}")
+            else:
+                self.bluetooth_icon.set_markup(icons.bluetooth)
+                self.bluetooth_icon.set_tooltip_text(
+                    "Bluetooth is enabled, no devices connected"
+                )
+        else:
+            self.bluetooth_icon.set_markup(icons.bluetooth_off)
+            self.bluetooth_icon.set_tooltip_text("Bluetooth is disabled")
 
     def update_network_status(self, *_):
         primary_device = self.network_client.primary_device
 
         if primary_device == "wifi" and self.network_client.wifi_device:
             wifi_device = self.network_client.wifi_device
-            self.set_tooltip_text(self.network_client.wifi_device.ssid)
+
+            self.wifi_icon.set_tooltip_text(
+                wifi_device.ssid if wifi_device.ssid else "No WiFi Connection"
+            )
 
             if wifi_device.enabled:
-                wifi_strength = wifi_device.strength
+                strength = wifi_device.strength
 
-                if wifi_strength == -1:  # No active connection
-                    icon_label = icons.wifi_off
+                if strength > 0:
+                    if strength < 25:
+                        icon_label = icons.wifi_0
+                    elif strength < 50:
+                        icon_label = icons.wifi_1
+                    elif strength < 75:
+                        icon_label = icons.wifi_2
+                    else:
+                        icon_label = icons.wifi_3
                 else:
-                    icon_label = {
-                        80: icons.wifi,
-                        60: icons.good_signal,
-                        40: icons.moderate_signal,
-                        20: icons.weak_signal,
-                        0: icons.no_signal,
-                    }.get(min(80, 20 * round(wifi_strength / 20)), icons.wifi_off)
+                    icon_label = icons.wifi_off
             else:
                 icon_label = icons.wifi_off
 
         elif primary_device == "wired":
             icon_label = icons.lan
+            self.wifi_icon.set_tooltip_text("Wired Connection")
+
         else:
-            icon_label = icons.wifi_off
+            icon_label = icons.wifi_off  # No network
 
         self.wifi_icon.set_markup(icon_label)

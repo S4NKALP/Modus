@@ -17,7 +17,7 @@ class Battery(Box):
     def __init__(self, **kwargs):
         super().__init__(
             name="battery",
-            orientation="h",
+            orientation="v",
             spacing=0,
         )
 
@@ -38,18 +38,20 @@ class Battery(Box):
             ),
             on_clicked=lambda *_: self.set_power_mode("performance"),
         )
+        self.bat_level = Label(
+            name="battery-level",
+            label="100%",
+        )
 
-        # Attach mouse enter/leave events to buttons as well
         for btn in [self.bat_save, self.bat_balanced, self.bat_perf]:
             btn.connect("enter-notify-event", self.on_mouse_enter)
             btn.connect("leave-notify-event", self.on_mouse_leave)
 
-        # Group the mode buttons into a container.
         self.mode_switcher = Box(
             name="power-mode-switcher",
-            orientation="h",
+            orientation="v",
             spacing=4,
-            children=[self.bat_save, self.bat_balanced, self.bat_perf],
+            children=[self.bat_level, self.bat_save, self.bat_balanced, self.bat_perf],
         )
 
         self.bat_icon = Label(name="battery-icon", markup=icons.battery)
@@ -70,26 +72,19 @@ class Battery(Box):
             overlays=[self.bat_icon],
         )
 
-        self.bat_level = Label(
-            name="battery-level",
-            label="100%",
-        )
-
         self.bat_revealer = Revealer(
             name="battery-revealer",
             transition_duration=250,
-            transition_type="slide-left",
-            child=self.bat_level,
+            transition_type="slide-up",
+            child=self.mode_switcher,
             child_revealed=False,
         )
 
-        # Create an inner container to hold the battery elements.
-        inner_container = Box(orientation="h", spacing=3)
+        inner_container = Box(orientation="v", spacing=3)
         inner_container.add(self.bat_overlay)
         inner_container.add(self.bat_revealer)
         inner_container.add(self.mode_switcher)
 
-        # Wrap the inner container in an EventBox.
         self.event_box = EventBox(
             events=["enter-notify-event", "leave-notify-event"],
             name="battery-eventbox",
@@ -98,16 +93,13 @@ class Battery(Box):
         self.event_box.connect("leave-notify-event", self.on_mouse_leave)
         self.event_box.add(inner_container)
 
-        # Add the EventBox to the Battery widget.
         self.add(self.event_box)
 
         self.current_mode = None
-        # Initialize hide_timer for delayed hiding.
         self.hide_timer = None
-        # Initialize counter to track hover status across all related widgets.
         self.hover_counter = 0
 
-        # Initialize Fabricator for battery polling every 5 seconds.
+        # Fabricator for battery polling every second
         self.batt_fabricator = Fabricator(
             lambda *args, **kwargs: self.poll_battery(),
             interval=1000,
@@ -116,9 +108,18 @@ class Battery(Box):
         )
         self.batt_fabricator.changed.connect(self.update_battery)
 
-        # Run update_battery immediately at startup.
+        # Fabricator for power profile monitoring every 5 seconds
+        self.profile_fabricator = Fabricator(
+            lambda *args, **kwargs: self.get_active_power_profile(),
+            interval=5000,  # Check every 5 seconds
+            stream=False,
+            default_value="balanced",
+        )
+        self.profile_fabricator.changed.connect(self.set_active_profile)
+
+        # Run initial UI updates
         GLib.idle_add(self.update_battery, None, self.poll_battery())
-        self.set_power_mode("balanced")
+        GLib.idle_add(self.set_active_profile, None, self.get_active_power_profile())
 
     def on_mouse_enter(self, widget, event):
         """Reveal battery level on hover."""
@@ -145,11 +146,7 @@ class Battery(Box):
         return False
 
     def poll_battery(self):
-        """
-        Polls the battery status by running the "acpi -b" command.
-        If no battery information is found, returns (0, None).
-        Otherwise, returns a tuple: (battery percentage as a float between 0 and 1, battery status string)
-        """
+        """Polls the battery status using 'acpi -b' command."""
         try:
             output = subprocess.check_output(["acpi", "-b"]).decode("utf-8").strip()
             if "Battery" not in output:
@@ -165,9 +162,7 @@ class Battery(Box):
         return (0, None)
 
     def update_battery(self, sender, battery_data):
-        """
-        Updates the battery widget...
-        """
+        """Updates the battery widget UI."""
         value, status = battery_data
         if value == 0:
             self.bat_overlay.set_visible(False)
@@ -180,7 +175,6 @@ class Battery(Box):
         percentage = int(value * 100)
         self.bat_level.set_label(f"{percentage}%")
 
-        # Actualizar el icono de la batería basado en el nivel y el estado de carga.
         if percentage <= 15:
             self.bat_icon.set_markup(icons.alert)
             self.bat_icon.add_style_class("alert")
@@ -188,9 +182,7 @@ class Battery(Box):
         else:
             self.bat_icon.remove_style_class("alert")
             self.bat_circle.remove_style_class("alert")
-            if (
-                status == "Discharging"
-            ):  # Muestra discharging en cualquier nivel, incluso al 100%.
+            if status == "Discharging":
                 self.bat_icon.set_markup(icons.discharging)
             elif percentage == 100:
                 self.bat_icon.set_markup(icons.battery)
@@ -199,15 +191,35 @@ class Battery(Box):
             else:
                 self.bat_icon.set_markup(icons.battery)
 
+    def get_active_power_profile(self):
+        """Returns the currently active power profile using powerprofilesctl."""
+        try:
+            output = (
+                subprocess.check_output(["powerprofilesctl", "get"])
+                .decode("utf-8")
+                .strip()
+            )
+            return output
+        except Exception as err:
+            print(f"Error fetching active power profile: {err}")
+            return "balanced"
+
+    def set_active_profile(self, sender, profile):
+        """Detects the current power profile and updates the UI accordingly."""
+        profile_map = {
+            "power-saver": "powersave",
+            "balanced": "balanced",
+            "performance": "performance",
+        }
+        if profile in profile_map and self.current_mode != profile_map[profile]:
+            self.set_power_mode(profile_map[profile])
+
     def set_power_mode(self, mode):
-        """
-        Switches power mode by running the corresponding auto-cpufreq command.
-        mode: one of 'powersave', 'balanced', or 'performance'
-        """
+        """Switches power mode using power-profile-daemon."""
         commands = {
-            "powersave": "sudo auto-cpufreq --force powersave",
-            "balanced": "sudo auto-cpufreq --force reset",
-            "performance": "sudo auto-cpufreq --force performance",
+            "powersave": "powerprofilesctl set power-saver",
+            "balanced": "powerprofilesctl set balanced",
+            "performance": "powerprofilesctl set performance",
         }
         if mode in commands:
             try:
@@ -215,23 +227,15 @@ class Battery(Box):
                 self.current_mode = mode
                 self.update_button_styles()
             except Exception as err:
-                # Optionally, handle errors or display a notification.
                 print(f"Error setting power mode: {err}")
 
     def update_button_styles(self):
-        """
-        Optionally updates button styles to reflect the current mode.
-        Adjust the styling method based on your toolkit's capabilities.
-        """
-        if self.current_mode == "powersave":
-            self.bat_save.add_style_class("active")
-            self.bat_balanced.remove_style_class("active")
-            self.bat_perf.remove_style_class("active")
-        elif self.current_mode == "balanced":
-            self.bat_save.remove_style_class("active")
-            self.bat_balanced.add_style_class("active")
-            self.bat_perf.remove_style_class("active")
-        elif self.current_mode == "performance":
-            self.bat_save.remove_style_class("active")
-            self.bat_balanced.remove_style_class("active")
-            self.bat_perf.add_style_class("active")
+        """Updates button styles to reflect the current mode."""
+        for btn, mode in zip(
+            [self.bat_save, self.bat_balanced, self.bat_perf],
+            ["powersave", "balanced", "performance"],
+        ):
+            if self.current_mode == mode:
+                btn.add_style_class("active")
+            else:
+                btn.remove_style_class("active")

@@ -8,8 +8,8 @@
 * {
   all: unset;
   color: @foreground;
-  font-size: 16px;
-  font-family: "Product Sans", sans-serif;
+  font-size: 13px;
+  font-family: "Chakra Petch", sans-serif;
 }
 
 /*
@@ -17,11 +17,21 @@
 */
 
 tooltip {
-  border: solid 1px;
+  background-color: @surfaceContainer;
   border-radius: 10px;
-  border-color: @surface;
-  background-color: @shadow;
+  padding: 6px 10px;
+  outline: none;
+  border: none;
+  box-shadow: none;
   animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+tooltip label {
+  color: @onSurface;
+  outline: none;
+  border: none;
+  box-shadow: none;
+  font-weight: normal;
 }
 
 @keyframes tooltipShow {
@@ -32,11 +42,6 @@ tooltip {
   to {
     opacity: 1;
   }
-}
-
-tooltip > * {
-  padding: 6px 10px;
-  border-radius: 10px;
 }
 
 /*

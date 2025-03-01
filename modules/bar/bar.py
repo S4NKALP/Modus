@@ -1,4 +1,3 @@
-from typing import Literal
 from fabric.hyprland.widgets import Language
 from fabric.system_tray.widgets import SystemTray
 from fabric.utils import (
@@ -22,39 +21,31 @@ from modules.bar.components import (
     Metrics,
     workspace,
     SystemIndicators,
-    UpdatesWidget,
 )
 from services import sc
 import utils.icons as icons
 
 
-class StatusBarCorner(Box):
-    def __init__(self, corner: Literal["top-right", "top-left"]):
-        super().__init__(
-            style="margin-bottom: 15px;",
-            name="bar-corner",
-            children=Corner(
-                orientation=corner,
-                size=15,
-            ),
-        )
-
-
 class Tray(Box):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(orientation="v", **kwargs)  # Ensure vertical layout
+
         self.tray = Box(
-            name="left-tray",
-            children=[SystemTray(name="tray", icon_size=16, spacing=4)],
+            orientation="v",
+            name="traybox",
+            children=[
+                SystemTray(name="tray", orientation="v", icon_size=16, spacing=4)
+            ],
         )
-        self.profile = Button(
-            child=Label(name="tray-revealer", markup=icons.chevron_left)
+        self.button = Button(
+            child=Label(name="tray-revealer", markup=icons.chevron_down),
         )
-        self.revealer = Revealer(transition_type="slide-left", transition_duration=1000)
+
+        self.revealer = Revealer(transition_type="slide-up", transition_duration=1000)
         self.revealer.add(self.tray)
 
         bulk_connect(
-            self.profile,
+            self.button,
             {
                 "enter-notify-event": self._on_enter,
                 "leave-notify-event": self._on_leave,
@@ -62,20 +53,20 @@ class Tray(Box):
             },
         )
 
-        self.add(self.profile)
+        self.add(self.button)
         self.add(self.revealer)
 
     def _on_enter(self, *args):
-        self.profile.set_cursor("pointer")
+        self.button.set_cursor("pointer")
 
     def _on_leave(self, *args):
-        self.profile.set_cursor("default")
+        self.button.set_cursor("default")
 
     def toggle_revealer(self, *args):
         new_state = not self.revealer.get_reveal_child()
         self.revealer.set_reveal_child(new_state)
-        new_icon = icons.chevron_right if new_state else icons.chevron_left
-        self.profile.get_child().set_markup(new_icon)
+        new_icon = icons.chevron_up if new_state else icons.chevron_down
+        self.button.get_child().set_markup(new_icon)
 
 
 class Bar(Window):
@@ -92,7 +83,7 @@ class Bar(Window):
                 ),
             ),
         )
-        self.bar_content = CenterBox(name="center-bar")
+        self.bar_content = CenterBox(name="bar", orientation="v")
         self.recording_indicator = Button(
             name="recording-indicator",
             child=Label(name="recorder", markup=icons.record),
@@ -102,11 +93,20 @@ class Bar(Window):
 
         sc.connect("recording", self.on_recording_status_change)
 
-        self.date_time = DateTime(formatters=["%-I:%M 󰧞 %a %d %b"], name="datetime")
+        self.date_time = DateTime(
+            v_align="center",
+            formatters=["%I\n%M \n󰧞 \n%a\n%d\n%b"],
+            name="datetime",
+        )
         self.battery = Battery()
         self.launcher = Button(
             name="logo",
-            child=Label(name="logo-name", label="󰣇 󰫿󰫰󰫵"),
+            child=Label(
+                h_align="center",
+                v_align="center",
+                name="logo-name",
+                label="󰣇 \n󰫿\n󰫰\n󰫵",
+            ),
             on_clicked=lambda *_: GLib.spawn_command_line_async(
                 "fabric-cli exec modus 'launcher.open(\"launcher\")'"
             ),
@@ -119,20 +119,19 @@ class Bar(Window):
             child=Label(name="button-bar-label", markup=icons.config),
         )
         self.stats = Metrics()
-        self.updates = UpdatesWidget()
         self.tray = Tray()
         self.indicators = SystemIndicators()
         self.applets = Box(
             name="system-indicators",
             spacing=4,
-            orientation="h",
+            orientation="v",
             children=[self.language, self.indicators],
         )
 
         self.bar_content.end_children = [
-            StatusBarCorner("top-right"),
             Box(
-                name="bar",
+                name="end-container",
+                orientation="v",
                 spacing=4,
                 children=[
                     self.recording_indicator,
@@ -142,23 +141,20 @@ class Bar(Window):
                     self.date_time,
                     self.button_config,
                 ],
-                style_classes="end-container",
             ),
         ]
-
         self.bar_content.start_children = [
             Box(
-                name="bar",
+                name="start-container",
+                orientation="v",
                 spacing=4,
-                children=[self.launcher, self.workspaces, self.stats, self.updates],
-                style_classes="start-container",
+                children=[self.launcher, self.workspaces, self.stats],
             ),
-            StatusBarCorner("top-left"),
         ]
 
         super().__init__(
             layer="top",
-            anchor="left top right",
+            anchor="top left bottom",
             exclusivity="auto",
             visible=True,
             child=self.bar_content,

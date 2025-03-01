@@ -50,7 +50,7 @@ class OSD(Window):
             name="osd-menu",
             layer="overlay",
             anchor="top",
-            margin="10px 0 0 0",
+            margin="3px 0 0 0",
             keyboard_mode="on-demand",
             visible=False,
             style_classes="osd-panel",
