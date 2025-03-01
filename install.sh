@@ -35,12 +35,8 @@ PACKAGES=(
 	brightnessctl
 	wlinhibit
 	power-profile-daemon
-	ttf-font-awesome
-	otf-font-awesome
-	ttf-material-symbols-variable-git
-	ttf-google-sans
-	ttf-opensans
-	ttf-robot
+	ttf-chakra-petch
+	ttf-tabler-icons
 )
 
 # Ensure running on Arch Linux
