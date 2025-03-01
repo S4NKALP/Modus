@@ -5,12 +5,15 @@ from fabric import Application
 from fabric.utils import get_relative_path, monitor_file
 from loguru import logger
 
-from modules.bar.bar import Bar
+from modules.bar.bar import Bar, ScreenCorners
 from modules.launcher.launcher import Launcher
+from modules.dock import Dock
 from modules.notification_popup import NotificationPopup
-from modules.osd import OSDContainer
-from modules.corners import Corners
+
+from modules.osd import OSD
+
 from services import sc
+from config.config import open_config
 
 for log in [
     "fabric.hyprland.widgets",
@@ -18,6 +21,8 @@ for log in [
     "fabric.bluetooth.service",
 ]:
     logger.disable(log)
+
+config_path = os.path.expanduser("~/Modus/config/assets/config.json")
 
 
 def update_main_css():
@@ -42,10 +47,13 @@ def apply_style(app: Application):
 
 if __name__ == "__main__":
     update_main_css()
+    if not os.path.isfile(config_path):
+        open_config()
     sc = sc
     bar = Bar()
-    corners = Corners()
-    osd = OSDContainer()
+    dock = Dock()
+    corners = ScreenCorners()
+    osd = OSD()
     notif = NotificationPopup()
     launcher = Launcher()
 
@@ -54,6 +62,7 @@ if __name__ == "__main__":
         bar,
         launcher,
         osd,
+        dock,
     )
     setproctitle.setproctitle("modus")
 

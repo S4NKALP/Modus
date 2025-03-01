@@ -117,7 +117,7 @@ def copy_wallpapers():
     subprocess.run(
         [
             "python",
-            os.path.expanduser("~/Modus/config/wallpaper.py"),
+            os.path.expanduser("~/Modus/config/scripts/wallpaper.py"),
             "-I",
             os.path.join(dest_wallpaper_dir, "example-1.jpg"),
         ]
@@ -150,7 +150,7 @@ exec-once = wl-paste --type text --watch cliphist store
 exec-once = wl-paste --type image --watch cliphist store
 
 $fabricSend = fabric-cli exec modus
-$scriptsDir = $HOME/Modus/config
+$scriptsDir = $HOME/Modus/config/scripts/
 
 bind = {bind_vars["prefix_restart"]}, {bind_vars["suffix_restart"]}, exec, killall modus; python {home}/Modus/main.py # Reload Modus | Default: SUPER ALT + T
 bind = {bind_vars["prefix_bluetooth"]}, {bind_vars["suffix_bluetooth"]}, exec, $fabricSend 'launcher.open("bluetooth")' # Bluetooth | Default: ALT + B

@@ -392,7 +392,7 @@ msgFileOutBgSelected: ACCENT;                   // Outgoing selected audio file 
 msgFile1Bg: #72b1df;                            // Blue shared links / files without image square thumbnail
 msgFile1BgDark: #5c9ece;                        // Blue shared files without image download circle background
 msgFile1BgOver: #5294c4;                        // Blue shared files without image download circle background with mouse over
-msgFile1BgSelected: #5099d0;                    // Blue shared files without image download circle background if file is selected
+msgFile1BgSelected: #50100d0;                    // Blue shared files without image download circle background if file is selected
 msgFile2Bg: #61b96e;                            // Green shared links / shared files without image square thumbnail
 msgFile2BgDark: #4da859;                        // Green shared files without image download circle background
 msgFile2BgOver: #44a050;                        // Green shared files without image download circle background with mouse over
@@ -514,7 +514,7 @@ mediaviewFileSizeFg: ON_BACKGROUND_DARKER;      // File size text in file rectan
 mediaviewFileRedCornerFg: #d55959;              // Red file thumbnail placeholder corner in file rectangle (for a file without thumbnail, like .pdf)
 mediaviewFileYellowCornerFg: #e8a659;           // Yellow file thumbnail placeholder corner in file rectangle (for a file without thumbnail, like .zip)
 mediaviewFileGreenCornerFg: #49a957;            // Green file thumbnail placeholder corner in file rectangle (for a file without thumbnail, like .exe)
-mediaviewFileBlueCornerFg: #599dcf;             // Blue file thumbnail placeholder corner in file rectangle (for a file without thumbnail, like .dmg)
+mediaviewFileBlueCornerFg: #5100dcf;             // Blue file thumbnail placeholder corner in file rectangle (for a file without thumbnail, like .dmg)
 mediaviewFileExtFg: activeButtonFg;             // File extension text in file thumbnail placeholder in file rectangle
 
 mediaviewMenuBg: BACKGROUND;                    // Context menu in Media Viewer background

@@ -1,8 +1,7 @@
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.stack import Stack
-from fabric.widgets.box import Box
 from fabric.widgets.wayland import WaylandWindow as Window
-from gi.repository import Gtk
+from fabric.widgets.box import Box
 from modules.launcher.components import (
     AppLauncher,
     BluetoothConnections,
@@ -13,6 +12,8 @@ from modules.launcher.components import (
     TodoManager,
     WallpaperSelector,
     WifiManager,
+    Calendar,
+    Dashboard,
 )
 
 
@@ -26,15 +27,25 @@ class Launcher(Window):
             **kwargs,
         )
 
-        self.launcher = AppLauncher(launcher=self)
+        self.dashboard = Dashboard(launcher=self)
         self.wallpapers = WallpaperSelector(launcher=self)
         self.power = PowerMenu(launcher=self)
         self.emoji = Emoji(launcher=self)
         self.cliphist = Cliphist(launcher=self)
         self.todo = TodoManager()
-        self.bluetooth = BluetoothConnections()
+        self.bluetooth = BluetoothConnections(launcher=self)
         self.sh = Sh(launcher=self)
         self.wifi = WifiManager()
+        self.calendar = Calendar()
+
+        # Wrap the dashboard in a Box container
+        self.dashboard = Box(
+            name="dashboard",
+            orientation="h",
+            spacing=10,
+            children=[self.dashboard],
+        )
+        self.launcher = AppLauncher(launcher=self)
 
         self.stack = Stack(
             name="launcher-content",
@@ -52,6 +63,7 @@ class Launcher(Window):
                 self.bluetooth,
                 self.sh,
                 self.wifi,
+                self.calendar,
             ],
         )
 
@@ -59,13 +71,16 @@ class Launcher(Window):
             name="launcher",
             orientation="v",
             start_children=self.stack,
+            end_children=self.dashboard,
         )
 
         self.add(self.launcher_box)
         self.show_all()
         self.hide()
-        self.wallpapers.viewport.hide()
-        self.add_keybinding("Escape", lambda *_: self.close())
+        self.add_keybinding("Escape", self._on_escape)
+
+    def _on_escape(self, *args):
+        return self.close()
 
     def close(self):
         self.set_keyboard_mode("none")
@@ -81,11 +96,8 @@ class Launcher(Window):
             self.bluetooth,
             self.sh,
             self.wifi,
+            self.calendar,
         ]:
-            if widget == self.wallpapers:
-                self.wallpapers.viewport.hide()
-                self.wallpapers.viewport.set_property("name", None)
-
             if hasattr(widget, "viewport") and widget.viewport:
                 widget.viewport.hide()
 
@@ -99,6 +111,7 @@ class Launcher(Window):
             "bluetooth",
             "sh",
             "wifi",
+            "calendar",
         ]:
             self.stack.remove_style_class(style)
 
@@ -118,10 +131,12 @@ class Launcher(Window):
             "bluetooth": self.bluetooth,
             "sh": self.sh,
             "wifi": self.wifi,
+            "calendar": self.calendar,
         }
 
         for w in widgets.values():
             w.hide()
+            self.dashboard.hide()
         for style in widgets.keys():
             self.stack.remove_style_class(style)
 
@@ -130,23 +145,16 @@ class Launcher(Window):
             self.stack.set_visible_child(widgets[widget])
             widgets[widget].show()
 
-            # if widget != "launcher":
-            #     self.launcher.hide()
-
-            if widget != "wallpapers":
-                self.wallpapers.viewport.hide()
-                self.wallpapers.viewport.set_property("name", None)
-
             if widget == "launcher":
                 self.launcher.open_launcher()
                 self.launcher.search_entry.set_text("")
                 self.launcher.search_entry.grab_focus()
+                self.dashboard.show()
 
             elif widget == "wallpapers":
                 self.wallpapers.search_entry.set_text("")
                 self.wallpapers.search_entry.grab_focus()
                 self.wallpapers.viewport.show()
-                self.wallpapers.viewport.set_property("name", "wallpaper-icons")
 
             elif widget == "emoji":
                 self.emoji.open_launcher()

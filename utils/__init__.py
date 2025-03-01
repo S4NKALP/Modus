@@ -1,13 +1,12 @@
-from .animator import *
 from .custom_image import *
-from .icon import *
+from .icon_resolver import *
 import json
 import os
 from fabric.utils import get_relative_path
 
 
 def read_config():
-    config_path = get_relative_path("../config/assets/launcher.json")
+    config_path = get_relative_path("../config/assets/modus.json")
 
     with open(config_path, "r") as file:
         # Load JSON data into a Python dictionary

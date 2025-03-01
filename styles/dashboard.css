@@ -1,0 +1,152 @@
+#buttons-grid {
+  min-height: 52px;
+}
+
+#network-button,
+#bluetooth-button,
+#night-mode-button,
+#dark-mode-button,
+#caffeine-button {
+  border-radius: 20px;
+}
+
+#network-button,
+#bluetooth-button {
+  background-color: unset;
+  padding: 0;
+}
+
+#night-mode-button,
+#dark-mode-button,
+#caffeine-button {
+  background-color: @primary;
+  padding: 0 10px;
+}
+
+#night-mode-button.disabled,
+#dark-mode-button.disabled,
+#caffeine-button.disabled {
+  background-color: @surface;
+}
+
+#network-status-button,
+#network-menu-button,
+#bluetooth-status-button,
+#bluetooth-menu-button {
+  background-color: @primary;
+  padding: 0 8px;
+}
+
+#network-menu-button,
+#bluetooth-menu-button {
+  border-left: 1px solid @outline;
+  min-width: 24px;
+}
+
+#network-status-button:hover,
+#network-menu-button:hover,
+#bluetooth-status-button:hover,
+#bluetooth-menu-button:hover,
+#bluetooth-button:hover,
+#night-mode-button:hover,
+#dark-mode-button:hover,
+#caffeine-button:hover {
+  background-color: @foreground;
+}
+
+/* Estados Disabled */
+#network-status-button.disabled,
+#network-menu-button.disabled,
+#bluetooth-status-button.disabled,
+#bluetooth-menu-button.disabled {
+  background-color: @surface;
+}
+
+#network-menu-button.disabled,
+#bluetooth-menu-button.disabled {
+  border-left: 1px solid @surfaceBright;
+}
+
+#network-status-button.disabled:hover,
+#network-menu-button.disabled:hover,
+#bluetooth-status-button.disabled:hover,
+#bluetooth-menu-button.disabled:hover,
+#night-mode-button.disabled:hover,
+#dark-mode-button.disabled:hover,
+#caffeine-button.disabled:hover {
+  background-color: @surfaceBright;
+}
+
+#network-status-button,
+#bluetooth-status-button {
+  border-radius: 20px 0 0 20px;
+}
+
+#network-menu-button,
+#bluetooth-menu-button {
+  border-radius: 0 20px 20px 0;
+}
+
+#network-icon,
+#bluetooth-icon,
+#night-mode-icon,
+#dark-mode-icon,
+#caffeine-icon {
+  color: @shadow;
+  font-size: 24px;
+}
+
+#network-icon.disabled,
+#bluetooth-icon.disabled,
+#night-mode-icon.disabled,
+#dark-mode-icon.disabled,
+#caffeine-icon.disabled {
+  color: @outline;
+}
+
+#network-menu-label,
+#bluetooth-menu-label {
+  color: @shadow;
+  font-size: 16px;
+}
+
+#network-menu-label.disabled,
+#bluetooth-menu-label.disabled {
+  color: @outline;
+}
+
+#network-label,
+#bluetooth-label,
+#night-mode-label,
+#caffeine-label,
+#dark-mode-label {
+  color: @shadow;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: -4px;
+}
+
+#network-label.disabled,
+#bluetooth-label.disabled,
+#night-mode-label.disabled,
+#dark-mode-label.disabled,
+#caffeine-label.disabled {
+  color: @outline;
+}
+
+#network-ssid,
+#bluetooth-status,
+#night-mode-status,
+#dark-mode-status,
+#caffeine-status {
+  color: @surfaceBright;
+  font-size: 12px;
+}
+
+#network-ssid.disabled,
+#bluetooth-status.disabled,
+#night-mode-status.disabled,
+#dark-mode-status.disabled,
+#caffeine-status.disabled {
+  color: @outline;
+}

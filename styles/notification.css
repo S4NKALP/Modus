@@ -1,60 +1,80 @@
-#notification {
-  padding: 16px;
-  border: solid 1px @outlineVariant;
+#notification-action-buttons button.start-action {
   border-radius: 20px;
-  margin-bottom: 12px;
-  background-color: @surfaceContainerLow;
-  min-width: 350px;
-}
-
-.notification-header .summary {
-  font-size: 0.92rem;
-  font-weight: bold;
-}
-
-.notification-body .body {
-  color: darker(@foreground);
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-
-#notification .close-button {
-  border-radius: 100px;
-}
-
-#notification .close-button:hover {
-  background: alpha(@foreground, 0.2);
-  transition: background 0.15s ease-in-out;
-  border-radius: 100px;
-}
-
-#notification-action-button button.start-action {
-  margin-left: 0;
-}
-
-#notification-action-button button.end-action {
-  margin-right: 0;
 }
 
 #notification-action-buttons button {
-  padding: 0.6rem;
-  font-weight: 600;
-  border-radius: 100px;
-  background-color: transparent;
+  background-color: @surfaceContainer;
+  padding: 8px;
+  border-radius: 20px;
 }
+
 #notification-action-buttons button:hover {
-  background-color: lighter(@outlineVariant);
+  background-color: @surfaceBright;
 }
 
-#notification-icon {
-  margin-right: 5px;
+#notification-action-buttons button:active {
+  background-color: @primary;
 }
 
-.image {
-  border-radius: 30px;
+#notification-action-buttons button:active #button-label {
+  color: @shadow;
 }
 
-#notification-circular-progress-bar {
-  border: solid 0px @outlineVariant;
-  color: transparent;
+#notification-image image {
+  border-radius: 16px;
+  color: @onSurface;
+}
+
+#notification-summary,
+#button-label {
+  font-weight: bold;
+}
+
+#notification-summary {
+  font-weight: bold;
+  color: @primary;
+}
+
+#notification-app-name {
+  color: @outline;
+}
+
+#action-button {
+  margin-top: 8px;
+}
+
+#notification-box {
+  border-radius: 20px;
+  padding: 16px;
+  background-color: @surfaceContainerLow;
+  margin: 4px;
+  min-width: 336px;
+}
+
+#boxed-notification-revealer {
+  margin-top: -14px;
+}
+
+#notif-close-button {
+  background-color: @surface;
+  border-radius: 16px;
+  padding: 4px;
+}
+
+#notif-close-button:hover,
+#notif-close-button:focus {
+  background-color: @surfaceBright;
+}
+
+#notif-close-button:active {
+  background-color: @error;
+}
+
+#notif-close-label {
+  color: @error;
+  font-size: 20px;
+}
+
+#notif-close-button:active #notif-close-label {
+  color: @shadow;
 }

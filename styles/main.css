@@ -3,27 +3,13 @@
 @import "./notification.css";
 @import "./osd.css";
 @import "./launcher.css";
+@import "./dashboard.css";
 
 * {
   all: unset;
   color: @foreground;
   font-size: 16px;
-  font-family: "Product Sans", Roboto, "Font Awesome 6 Free", Helvetica, Arial,
-    sans-serif;
-}
-
-/*
- * ── corner ────────────────────────────────────────────────────────────
-*/
-
-#corner {
-  background-color: @surface;
-  border-radius: 0;
-}
-
-#corner-container {
-  min-width: 20px;
-  min-height: 20px;
+  font-family: "Product Sans", sans-serif;
 }
 
 /*
@@ -31,21 +17,11 @@
 */
 
 tooltip {
-  background-color: @surfaceContainer;
+  border: solid 1px;
   border-radius: 10px;
-  padding: 6px 10px;
-  outline: none;
-  border: none;
-  box-shadow: none;
+  border-color: @surface;
+  background-color: @shadow;
   animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-tooltip label {
-  color: @onSurface;
-  outline: none;
-  border: none;
-  box-shadow: none;
-  font-weight: normal;
 }
 
 @keyframes tooltipShow {
@@ -58,12 +34,43 @@ tooltip label {
   }
 }
 
-/*
- * ── icon ──────────────────────────────────────────────────────────────
-*/
+tooltip > * {
+  padding: 6px 10px;
+  border-radius: 10px;
+}
 
-#material_icon,
-#material_icon * {
-  all: unset;
-  font-family: "Material Symbols Outlined", "Material Symbols Sharp";
+/*
+ * ── dock ──────────────────────────────────────────────────────────────
+*/
+#dock-icon {
+  padding: 0px 2px 0px 2px;
+}
+
+#dock {
+  padding: 10px;
+  background-color: alpha(@shadow, 0.5);
+  border: 0.5px solid alpha(@outlineVariant, 0.4);
+  border-radius: 12px;
+  margin-bottom: 2px;
+}
+
+#dock-separator {
+  border-right: 1px solid alpha(@foreground, 0.5);
+}
+
+#dock-app-button {
+  padding: 2px;
+  margin-left: 2px;
+  margin-right: 2px;
+  border-radius: 12px;
+}
+
+.show-dock {
+  opacity: 1;
+  margin: 0;
+}
+
+.hide-dock {
+  opacity: 1;
+  margin: -80px;
 }
