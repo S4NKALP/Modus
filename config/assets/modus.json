@@ -7,6 +7,18 @@
     ":bt": "launcher.open(\"bluetooth\")",
     ":sh": "launcher.open(\"sh\")",
     ":pw": "launcher.open(\"power\")",
-    ":nw": "launcher.open(\"wifi\")"
-  }
+    ":nw": "launcher.open(\"wifi\")",
+    ":cl": "launcher.open(\"calendar\")"
+  },
+  "pinned_apps": [
+    "kitty",
+    "code",
+    "materialgram",
+    "vesktop",
+    "spotify",
+    "libreoffice",
+    "wasistlos",
+    "pavucontrol",
+    "zen-browser"
+  ]
 }

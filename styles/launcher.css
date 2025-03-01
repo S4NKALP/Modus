@@ -1,11 +1,14 @@
 /*
  * ── launcher ──────────────────────────────────────────────────────────
 */
+#dashboard {
+  min-height: 100px;
+}
 
 #launcher {
   margin: 18px;
   border: 1px solid @outlineVariant;
-  background-color: @surface;
+  background-color: lighter(@background);
   border-radius: 24px;
   padding: 18px;
   transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
@@ -25,26 +28,35 @@
   min-width: 620px;
 }
 
-#launcer-content.cliphist {
-  min-height: 420px;
+.cliphist {
+  min-height: 464px;
+  min-width: 300px;
+}
+
+.applauncher-scrolled-window {
+  transition: min-height 0.2s ease;
 }
 
 #launcher-content.bluetooth {
   min-height: 464px;
-  min-width: 464px;
 }
 
 #launcher-content.wifi {
   min-height: 464px;
-  min-width: 464px;
 }
 
-#launcher-content.power {
-  min-height: 52px;
+#launcher-content.todo {
+  min-width: 460px;
+  min-height: 300px;
+}
+
+#launcher-content.calendar {
+  min-height: 420px;
+  min-width: 420px;
 }
 
 #launcher-content {
-  min-width: 420px;
+  min-width: 485px;
 }
 
 #app-launcher,
@@ -54,35 +66,15 @@
 #sh,
 #cliphist,
 #emoji,
-#powermenu {
+#power {
   transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-#toggle-launcher-button {
-  background-color: @secondaryContainer;
-  color: @onSecondaryContainer;
-  margin: 11px;
-  margin-left: 0px;
-  min-width: 54px;
-  min-height: 44px;
-  border-radius: 100%;
-}
-
-#clear-launcher-button {
-  background-color: @secondaryContainer;
-  color: @onSecondaryContainer;
-  margin: 11px;
-  margin-left: 0px;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 100%;
 }
 
 #scrolled-window scrollbar {
   border-radius: 10px;
-  background-color: @surface;
-  /*padding: 4px;*/
-  /*margin-left: 6px;*/
+  background-color: lighter(@background);
+  padding: 4px;
+  margin-left: 6px;
 }
 
 #scrolled-window slider {
@@ -99,6 +91,7 @@
 #launcher-app {
   border-radius: 16px;
   padding: 16px;
+  min-height: 0;
   transition: padding 0.25s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
@@ -125,6 +118,13 @@
 /*
  * ── wallpaper ─────────────────────────────────────────────────────────
 */
+#search-entry-walls {
+  min-width: 300px;
+}
+
+#entry-custom-color {
+  min-width: 10px;
+}
 
 #wallpaper-icons:selected {
   background-color: @surfaceBright;
@@ -137,7 +137,7 @@
 }
 
 #dropdown-box {
-  background-color: @surface;
+  background-color: lighter(@background);
   box-shadow: inset 0 0 0 1px @outlineVariant;
   border-radius: 11px;
   padding: 10px;
@@ -146,6 +146,42 @@
 
 #scheme-dropdown {
   font-weight: bold;
+}
+
+/* Customize the overall switch appearance */
+#materialyoucolor-switcher {
+  min-width: 40px;
+  min-height: 20px;
+  background-color: @surface;
+  border-radius: 15px;
+  padding: 2px;
+  transition: background-color 0.3s ease;
+}
+
+/* Style the switch's slider */
+#materialyoucolor-switcher slider {
+  background-color: var(--primary);
+  border-radius: 16px;
+  min-width: 20px;
+  min-height: 20px;
+  transition:
+    background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
+    transform 0.25s cubic-bezier(0.5, 0.25, 0, 1.25);
+}
+
+/* When the switch is active (checked) */
+#materialyoucolor-switcher:checked {
+  background-color: @primary;
+}
+
+/* Optional: additional styling for the slider when active */
+#materialyoucolor-switcher:checked slider {
+  background-color: @shadow;
+}
+
+#mat-label {
+  font-size: 24px;
+  margin-left: 4px;
 }
 
 /*
@@ -173,28 +209,41 @@
  * ── powermenu ─────────────────────────────────────────────────────────
 */
 
-#powermenu-button {
+#power-menu-button {
   border-radius: 20px;
+  min-width: 52px;
+  min-height: 52px;
   padding: 20px;
 }
 
-#powermenu-button:hover,
-#powermenu-button:focus {
+#power-menu-button label {
+  font-size: 49px;
+  color: @foreground;
+}
+
+#power-menu-button:hover,
+#power-menu-button:focus {
   background-color: @surfaceBright;
 }
 
-#powermenu-button:active {
+#power-menu-button:hover label,
+#power-menu-button:focus label {
+  color: @primary;
+}
+
+#power-menu-button:active {
   background-color: @primary;
+}
+
+#power-menu-button:active label {
+  color: @shadow;
 }
 
 /*
  * ── cliphist ──────────────────────────────────────────────────────────
 */
-#cliphist-history {
-  min-height: 520px;
-}
 
-#launcher button#clip-img-item {
+button#clip-img-item {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -203,12 +252,12 @@
   min-height: 70px;
 }
 
-#launcher button#clip-img-item:hover,
-#launcher button#clip-img-item:focus {
+button#clip-img-item:hover,
+button#clip-img-item:focus {
   box-shadow: 2px 2px 2px @primary;
 }
 
-#launcher button#clip-item {
+button#clip-item {
   border-radius: 11px;
   background-color: transparent;
   background-image: none;
@@ -216,24 +265,35 @@
   padding: 6px;
 }
 
-#launcher button#clip-item {
+button#clip-item {
   font-size: 30px;
 }
 
-#launcher button#clip-item:hover,
-#launcher button#clip-item:focus {
+button#clip-item:hover,
+button#clip-item:focus {
   text-shadow: 2px 2px 2px @primary;
+}
+
+#clear-button {
+  margin: 11px;
+  margin-left: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#clear-button:hover {
+  background-color: mix(@onSurface, @surface, 0.92);
+}
+
+#cliphist-clear-button {
+  font-size: 24px;
 }
 
 /*
  * ── todo ──────────────────────────────────────────────────────────────
 */
-#todo-content {
-  min-height: 250px;
-}
-
 #todo-launcher {
-  background-color: @surface;
   padding: 10px;
   border-radius: 8px;
 }
@@ -241,20 +301,46 @@
 #todo-item {
   padding: 8px;
   border-radius: 4px;
-  background-color: alpha(@surface, 0.8);
+  background-color: alpha(@background, 0.3);
 }
 
 #todo-label {
-  color: @primary;
+  font-size: 16px;
 }
 
 #todo-label-completed {
-  color: alpha(@outlineVariant, 0.5);
+  color: alpha(@outlineVariant, 1);
   text-decoration: line-through;
 }
 
-#delete-button {
-  color: @error;
+#add-button {
+  margin: 11px;
+  margin-left: 0px;
+  margin-right: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#delete-button,
+#checkbox {
+  margin-left: 0px;
+  margin-right: 0px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 100%;
+}
+
+#add-button:hover,
+#delete-button:hover,
+#checkbox:hover {
+  background-color: mix(@onSurface, @surface, 0.92);
+}
+
+#todo-add-button,
+#todo-checkbox,
+#todo-delete-button {
+  font-size: 24px;
 }
 
 /*
@@ -295,6 +381,11 @@
   margin-bottom: 4px;
 }
 
+#bluetooth-scan-button,
+#bluetooth-toggle-button {
+  font-size: 24px;
+}
+
 #bluetooth-scan,
 #bluetooth-toggle {
   background-color: @secondaryContainer;
@@ -328,7 +419,7 @@
 }
 
 #bluetooth-connect {
-  background-color: @surface;
+  background-color: lighter(@background);
   border-radius: 16px;
   padding: 8px 16px;
 }
@@ -342,7 +433,6 @@
   background-color: @surfaceContainer;
   padding: 4px;
   border-radius: 20px;
-  min-height: 200px;
 }
 
 /*
@@ -360,6 +450,10 @@
   border-radius: 16px;
   padding: 4px;
   margin-bottom: 4px;
+}
+
+#wifi-toggle-icon {
+  font-size: 24px;
 }
 
 #wifi-scan,
@@ -395,7 +489,7 @@
 }
 
 #wifi-connect {
-  background-color: @surface;
+  background-color: lighter(@background);
   border-radius: 16px;
   padding: 8px 16px;
 }
@@ -408,5 +502,89 @@
   background-color: @surfaceContainer;
   padding: 4px;
   border-radius: 20px;
-  min-height: 200px;
+}
+
+/*
+ * ── calendar ──────────────────────────────────────────────────────────
+*/
+
+#header {
+  border-radius: 16px;
+  padding: 4px;
+}
+
+#weekday-row {
+  border-radius: 8px;
+  padding: 4px;
+}
+
+#month-label,
+#weekday-label,
+#day-label {
+  font-weight: bold;
+}
+
+#day-label,
+#day-empty {
+  min-width: 42px;
+  min-height: 36px;
+}
+
+#day-empty {
+  color: @surfaceBright;
+}
+
+#weekday-label {
+  color: @primary;
+}
+
+#calendar-grid {
+  border-radius: 16px;
+  padding: 4px;
+}
+
+#day-label.current-day {
+  background-color: @primary;
+  color: @onPrimary;
+  min-height: 36px;
+  min-width: 42px;
+  border-radius: 99px;
+}
+
+#prev-month-button,
+#next-month-button {
+  border-radius: 8px;
+  padding: 4px;
+}
+
+#prev-month-button:hover,
+#next-month-button:hover {
+  background-color: @surfaceBright;
+}
+
+#prev-month-button:active,
+#next-month-button:active {
+  background-color: @primary;
+}
+
+#month-button-label {
+  color: @primary;
+  font-size: 20px;
+}
+
+#prev-month-button:active #month-button-label,
+#next-month-button:active #month-button-label {
+  color: @surface;
+}
+
+#day-box {
+  padding: 5px;
+  border-radius: 5px;
+  min-width: 30px;
+  min-height: 30px;
+}
+
+#prev-month-day,
+#next-month-day {
+  color: mix(@onSurfaceVariant, transparent, 0.6);
 }
