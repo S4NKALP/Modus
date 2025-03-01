@@ -39,6 +39,9 @@
 
 ### Arch Linux
 
+> [!NOTE]
+> You need to clone it into the Home directory.
+
 > [!TIP]
 > This command also works for updating an existing installation!
 
