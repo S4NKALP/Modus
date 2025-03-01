@@ -35,9 +35,8 @@ PACKAGES=(
 	brightnessctl
 	wlinhibit
 	power-profile-daemon
-	ttf-google-sans
-	ttf-opensans
 	ttf-chakra-petch
+	ttf-tabler-icons
 )
 
 # Ensure running on Arch Linux
