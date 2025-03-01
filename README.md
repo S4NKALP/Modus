@@ -37,6 +37,17 @@
 > [!NOTE]
 > You need a functioning Hyprland installation.
 
+### Arch Linux
+
+> [!TIP]
+> This command also works for updating an existing installation!
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/S4NKALP/Modus/main/install.sh | bash
+```
+
+### Manual Installation
+
 1. Dependencies:
 
 ```sh
