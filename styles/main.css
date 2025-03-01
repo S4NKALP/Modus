@@ -9,7 +9,7 @@
   all: unset;
   color: @foreground;
   font-size: 16px;
-  font-family: "Chakra Petch", sans-serif;
+  font-family: "Chakra Petch";
 }
 
 /*
