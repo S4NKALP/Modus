@@ -3,14 +3,14 @@
 }
 
 #bar.start-container {
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
   border-bottom-right-radius: 15px;
 }
 
 #bar.end-container {
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
   border-bottom-left-radius: 15px;
 }
 
@@ -25,15 +25,11 @@
 
 #bar.hidden {
   opacity: 0;
-  padding: 3px;
-  margin-bottom: -52px;
   transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
 #bar.visible {
   opacity: 1;
-  padding: 3px;
-  margin-bottom: 0px;
   transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
@@ -54,7 +50,7 @@
 
 #button-bar-label {
   color: @primary;
-  font-size: 24px;
+  font-size: 20px;
   border-radius: 8px;
   transition: all 0.1s ease;
 }
@@ -99,7 +95,7 @@
 #updated-icon {
   color: @primary;
   font-size: 20px;
-  padding: 8px;
+  padding: 4px;
   border-radius: 99px;
   transition: all 0.1s ease;
 }
@@ -172,7 +168,7 @@
 #battery-balanced-label,
 #battery-performance-label {
   color: @outline;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 #battery-save:hover,
@@ -317,7 +313,7 @@ menu > menuitem:hover > label {
 }
 
 #system-indicator-icon {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 /*
