@@ -37,6 +37,19 @@
 > [!NOTE]
 > You need a functioning Hyprland installation.
 
+### Arch Linux
+
+> [!NOTE]
+> You need to clone it into the Home directory.
+
+```bash
+git clone -b vertical-bar https://github.com/S4NKALP/Modus.git
+cd Modus
+bash install.sh
+```
+
+### Manual Installation
+
 1. Dependencies:
 
 ```sh
