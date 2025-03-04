@@ -1,7 +1,7 @@
 import subprocess
 from typing import Generator, List
+
 import ijson
-from functools import partial
 from fabric.utils import remove_handler, get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -18,23 +18,26 @@ class Emoji(Box):
             visible=False,
             **kwargs,
         )
+
         self.launcher = kwargs["launcher"]
-        self._arranger_handler = 0
+        self._arranger_handler: int = 0
         self.emoji_manager = EmojiManager(self)
         self.viewport = None
 
         self.search_entry = Entry(
             name="search-entry",
             h_expand=True,
-            notify_text=self._on_search_input,
-            on_activate=self._on_search_input,
+            notify_text=lambda entry, *_: self.handle_search_input(entry.get_text()),
+            on_activate=lambda entry, *_: self.handle_search_input(entry.get_text()),
         )
 
         self.header_box = Box(
             name="header-box",
             spacing=10,
             orientation="h",
-            children=[self.search_entry],
+            children=[
+                self.search_entry,
+            ],
         )
 
         self.launcher_box = Box(
@@ -45,9 +48,6 @@ class Emoji(Box):
         )
 
         self.add(self.launcher_box)
-
-    def _on_search_input(self, entry, *args):
-        self.handle_search_input(entry.get_text())
 
     def open_launcher(self):
         if not self.viewport:
@@ -63,11 +63,12 @@ class Emoji(Box):
 
         self.viewport.children = []
         self.emoji_manager.arrange_viewport()
+
         self.viewport.show()
         self.search_entry.grab_focus()
 
     def close_launcher(self):
-        self.launcher.close_launcher()
+        self.launcher.close()
 
     def handle_search_input(self, text: str):
         self.emoji_manager.arrange_viewport(text)
@@ -104,7 +105,7 @@ class EmojiManager:
             name="emoji-item",
             child=Label(label=emoji[0], h_align="center"),
             tooltip_text=emoji[1],
-            on_clicked=partial(self.copy_emoji, emoji),
+            on_clicked=lambda *_: self.copy_emoji(emoji),
             **kwargs,
         )
 
@@ -112,8 +113,11 @@ class EmojiManager:
         if not self.launcher.viewport:
             return
 
-        if self.launcher._arranger_handler:
+        (
             remove_handler(self.launcher._arranger_handler)
+            if self.launcher._arranger_handler
+            else None
+        )
         self.launcher.viewport.children = []
 
         filtered_emojis = self.query_emojis(query)
