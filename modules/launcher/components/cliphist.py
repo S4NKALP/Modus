@@ -1,7 +1,6 @@
 import os
 import subprocess
 from typing import List
-from functools import partial
 from fabric import Fabricator
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -80,6 +79,9 @@ class Cliphist(Box):
     def handle_search(self, text: str):
         self.cliphist_manager.arrange_viewport(query=text)
 
+    def close_launcher(self):
+        self.launcher.close()
+
     def handle_clear_history(self, *_):
         GLib.spawn_command_line_async("cliphist wipe")
         self.cliphist_manager.update_cliphist_history()
@@ -122,7 +124,7 @@ class CliphistManager:
                 ["cliphist", "decode", clip_id], capture_output=True, check=True
             )
             subprocess.run(["wl-copy"], input=decode_result.stdout, check=True)
-            self.launcher.close()
+            self.launcher.close_launcher()
         except subprocess.CalledProcessError as e:
             print(f"Error copying clip {clip_id}: {e}")
 
@@ -167,7 +169,7 @@ class CliphistManager:
             button = Button(
                 h_align="start",
                 name="clip-img-item",
-                on_clicked=partial(self._on_clip_clicked, item["id"]),
+                on_clicked=lambda _, clip_id=item["id"]: self.copy_clip(clip_id),
             )
             button.set_style(
                 f"background-image: url('{output_file}'); background-size: cover; background-position: center;"
@@ -184,7 +186,7 @@ class CliphistManager:
                 v_align="center",
                 h_align="start",
             ),
-            on_clicked=partial(self._on_clip_clicked, item["id"]),
+            on_clicked=lambda _, clip_id=item["id"]: self.copy_clip(clip_id),
             name="clip-item",
         )
 

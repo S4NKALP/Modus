@@ -31,6 +31,7 @@ PACKAGES=(
 	wl-clipboard
 	wf-recorder
 	libadwaita
+	acpi
 	adw-gtk-theme
 	brightnessctl
 	wlinhibit
