@@ -58,7 +58,7 @@ fabric fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblas
 ```
 
 ```sh
-python-materialyoucolor-git python-pillow python-toml python-setproctitle python-requests python-numpy python-pywayland python-pyxdg
+python-materialyoucolor-git python-pillow python-toml python-ijson python-setproctitle python-requests python-numpy python-pywayland python-pyxdg
 ```
 
 ```sh
