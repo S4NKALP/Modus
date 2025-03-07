@@ -25,6 +25,7 @@ PACKAGES=(
 	python-numpy
 	python-pywayland
 	python-pyxdg
+	python-ijson
 	sddm-theme-corners-git
 	swww
 	swappy
