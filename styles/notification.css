@@ -3,26 +3,27 @@
 }
 
 #notification-action-buttons button {
-  background-color: @surfaceContainer;
+  background-color: var(--surface);
   padding: 8px;
   border-radius: 20px;
+  transition: background-color 0.1s ease;
 }
 
 #notification-action-buttons button:hover {
-  background-color: @surfaceBright;
+  background-color: var(--surface-bright);
 }
 
 #notification-action-buttons button:active {
-  background-color: @primary;
+  background-color: var(--primary);
 }
 
 #notification-action-buttons button:active #button-label {
-  color: @shadow;
+  color: var(--shadow);
 }
 
 #notification-image image {
   border-radius: 16px;
-  color: @onSurface;
+  color: var(--on-surface);
 }
 
 #notification-summary,
@@ -32,11 +33,11 @@
 
 #notification-summary {
   font-weight: bold;
-  color: @primary;
+  color: var(--primary);
 }
 
 #notification-app-name {
-  color: @outline;
+  color: var(--outline);
 }
 
 #action-button {
@@ -46,9 +47,10 @@
 #notification-box {
   border-radius: 20px;
   padding: 16px;
-  background-color: @surfaceContainerLow;
+  background-color: var(--surface-container-low);
   margin: 4px;
   min-width: 336px;
+  transition: background-color 0.1s ease;
 }
 
 #boxed-notification-revealer {
@@ -56,25 +58,26 @@
 }
 
 #notif-close-button {
-  background-color: @surface;
+  background-color: var(--surface);
   border-radius: 16px;
   padding: 4px;
+  transition: background-color 0.1s ease;
 }
 
 #notif-close-button:hover,
 #notif-close-button:focus {
-  background-color: @surfaceBright;
+  background-color: var(--surface-bright);
 }
 
 #notif-close-button:active {
-  background-color: @error;
+  background-color: var(--red-dim);
 }
 
 #notif-close-label {
-  color: @error;
+  color: var(--red-dim);
   font-size: 20px;
 }
 
 #notif-close-button:active #notif-close-label {
-  color: @shadow;
+  color: var(--shadow);
 }

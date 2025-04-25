@@ -1,9 +1,10 @@
 from fabric.audio import Audio
 from .brightness import Brightness
-from .screen_record import ScreenRecorder
-from .network import *
+from .network import NetworkClient
+from .notification import *
+from .powerprofile import *
 
-
+network_client = NetworkClient()
 brightness = Brightness()
 audio = Audio()
-sc = ScreenRecorder()
+notification_service = CustomNotifications()

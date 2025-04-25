@@ -1,254 +1,107 @@
 #bar {
-  padding: 0px 7px 0px 7px;
+  padding: 0px 5px 0px 5px;
+  margin: 1px;
+  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
+  background-color: var(--surface);
+  /* Bar background */
 }
 
-#bar.start-container {
+#start-container,
+#center-container,
+#end-container {
   padding-top: 2px;
   padding-bottom: 2px;
-  border-bottom-right-radius: 15px;
 }
 
-#bar.end-container {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  border-bottom-left-radius: 15px;
-}
-
-#center-bar {
-  background-color: transparent;
-}
-
-#bar,
 #bar-corner * {
-  background-color: lighter(@background);
+  background-color: var(--surface);
 }
 
-#bar.hidden {
-  opacity: 0;
-  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-#bar.visible {
-  opacity: 1;
-  transition: all 0.5s cubic-bezier(0.5, 0.25, 0, 1);
-}
-
-/*
- * ── button bar ────────────────────────────────────────────────────────
-*/
-
-#button-bar {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 1px 0px 1px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-  transition: all 0.1s ease;
-}
-
-#button-bar-label {
-  color: @primary;
-  font-size: 20px;
-  border-radius: 8px;
-  transition: all 0.1s ease;
-}
-
-#button-bar:hover #button-bar-label {
-  background-color: @surfaceBright;
-  box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
-}
-
-#button-bar:active #button-bar-label {
-  color: @shadow;
-  background-color: @primary;
-}
-
-/*
- * ── workspace ─────────────────────────────────────────────────────────
-*/
-
+/**
+ * ── Workspace ─────────────────────────────────────────────────────────
+ */
 #workspaces {
   font-style: normal;
-  background: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
+  background-color: var(--surface-container);
+  padding: 4px;
+  margin-top: 1px;
+  margin-bottom: 1px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
 }
 
-/*
- * ── update ────────────────────────────────────────────────────────────
-*/
+/**
+ * ── Update ────────────────────────────────────────────────────────────
+ */
+#update {
+  background-color: var(--surface-container);
+  margin-top: 1px;
+  margin-bottom: 1px;
+  border-radius: 8px;
+  padding: 1px;
+  min-width: 24px;
+  min-height: 24px;
+  transition: background-color 0.1s ease;
+}
+
+#update:hover {
+  background-color: var(--surface-bright);
+}
+
+#update:active {
+  color: var(--shadow);
+  background-color: var(--primary);
+}
 
 #update-icon {
-  color: @primary;
-  font-size: 22px;
+  color: var(--primary);
+  font-size: 20px;
   padding: 1px;
   border-radius: 11px;
   transition: all 0.1s ease;
 }
 
 #updated-icon {
-  color: @primary;
+  color: var(--primary);
   font-size: 20px;
   padding: 4px;
-  border-radius: 99px;
+  border-radius: 8px;
   transition: all 0.1s ease;
 }
 
 #update-label {
-  color: @primary;
+  color: var(--primary);
   font-size: 10px;
   font-weight: bold;
   padding: 0px;
   margin-right: 4px;
-  border-radius: 11px;
+  border-radius: 8px;
   transition: all 0.1s ease;
 }
 
-/*
+/**
  * ── Clock ─────────────────────────────────────────────────────────────
-*/
-
+ */
 #datetime {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
+  background-color: var(--surface-container);
+  margin-top: 1px;
+  margin-bottom: 1px;
+  padding: 4px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
 }
 
-/*
- * ── battery ───────────────────────────────────────────────────────────
-*/
-
-#battery {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
+#datetime:hover {
+  background-color: var(--surface-bright);
 }
 
-#battery-circle {
-  color: @surfaceBright;
-  border: 3px solid @primary;
-}
-
-#battery-circle.alert {
-  border: 2px solid @error;
-}
-
-#battery-icon {
-  font-size: 20px;
-}
-
-#battery-icon.alert {
-  color: @onError;
-}
-
-#battery-save,
-#battery-balanced,
-#battery-performance {
-  min-width: 30px;
-  min-height: 28px;
-  margin: 2px 0px;
-  border-radius: 100px;
-}
-
-#battery-save-label,
-#battery-balanced-label,
-#battery-performance-label {
-  color: @outline;
-  font-size: 20px;
-}
-
-#battery-save:hover,
-#battery-balanced:hover,
-#battery-performance:hover {
-  background-color: @surfaceBright;
-}
-
-#battery-save:hover #battery-save-label,
-#battery-balanced:hover #battery-balanced-label,
-#battery-performance:hover #battery-performance-label {
-  color: @primary;
-}
-
-#battery-save.active,
-#battery-balanced.active,
-#battery-performance.active {
-  background-color: @primary;
-}
-
-#battery-save.active #battery-save-label,
-#battery-balanced.active #battery-balanced-label,
-#battery-performance.active #battery-performance-label {
-  color: @shadow;
-}
-
-#battery-level {
-  color: @primary;
-  font-weight: bold;
-  margin: 0 4px;
-  font-size: 11px;
-}
-
-/*
- * ── metric ────────────────────────────────────────────────────────
-*/
-
-#metrics {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-}
-
-#metric-icon {
-  font-size: 20px;
-}
-
-#metric-circle {
-  color: @surfaceBright;
-  border: 3px solid @primary;
-}
-
-/*
- * ── tray ──────────────────────────────────────────────────────────────
-*/
-
-#tray-revealer {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 2px 0px;
-  border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
-  font-size: 20px;
-}
-
+/**
+ * ── Tray ──────────────────────────────────────────────────────────────
+ */
 #tray {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-left: 4px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
+  background-color: var(--surface-container);
+  margin-top: 1px;
+  margin-bottom: 1px;
+  padding: 4px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
 }
 
 #tray > button {
@@ -257,9 +110,9 @@
 }
 
 menu {
-  border: solid 1px @outlineVariant;
+  border: solid 1px var(--outline-variant);
   border-radius: 16px;
-  background-color: @surface;
+  background-color: var(--surface);
   padding: 6px;
 }
 
@@ -269,101 +122,93 @@ menu > menuitem {
 }
 
 menu > menuitem:hover {
-  background-color: @surfaceBright;
+  background-color: var(--surface-bright);
 }
 
 menu > menuitem:hover > label {
-  color: @onSurface;
+  color: var(--on-surface);
 }
 
-/*
- * ── logo ──────────────────────────────────────────────────────────────
-*/
-#logo {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
+/**
+ * ── Logo ──────────────────────────────────────────────────────────────
+ */
+#button-bar {
+  background-color: var(--surface-container);
+  margin-top: 1px;
+  padding: 4px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
+  margin-bottom: 1px;
+  transition: all 0.1s ease;
 }
 
-#logo-name {
-  color: darker(@primary);
-}
-
-#logo:hover {
-  background-color: @surfaceBright;
-  box-shadow: 0px 3px 3px -2px rgba(0, 0, 0, 0.2);
-}
-
-/*
- * ── status indicator ───────────────────────────────────────────────────────────
-*/
-
-#system-indicators {
-  background-color: @surfaceContainer;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 8px 0px;
+#button-bar-label {
+  color: var(--primary);
+  font-size: 24px;
   border-radius: 8px;
-  min-width: 24px;
-  min-height: 24px;
+  transition: all 0.1s ease;
+}
+
+#button-bar:hover #button-bar-label {
+  background-color: var(--surface_bright);
+}
+
+#button-bar:active #button-bar-label {
+  color: var(--shadow);
+  background-color: var(--primary);
+}
+
+/**
+ * ── System Indicator ─────────────────────────────────────────────────
+ */
+#system-indicator {
+  background-color: var(--surface-container);
+  margin-top: 1px;
+  padding: 4px;
+  margin-bottom: 1px;
+  border-radius: 8px;
 }
 
 #system-indicator-icon {
   font-size: 20px;
 }
 
-/*
- * ── taskbar ───────────────────────────────────────────────────────────
-*/
-
-#taskbar {
-  border-radius: 100px;
-  color: @onSurface;
-  background: @surfaceContainer;
-  padding-left: 4px;
-  padding-right: 4px;
+#system-notif-label {
+  font-size: 18px;
 }
 
-#taskbar > button.activated {
-  border-radius: 100px;
-  background: @surfaceVariant;
-}
-
-#taskbar > button:hover {
-  background: @surfaceBright;
-}
-
-#taskbar > button {
-  padding: 0px 4px;
-  margin: 4px 0px;
-  border-radius: 100px;
-  border: 0px;
-}
-
-#taskbar > button:last-child {
-  margin-right: 0px;
-}
-
-/*
- * ── recording indicator ───────────────────────────────────────────────
-*/
-
-#recorder {
-  color: @error;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0px 6px 0px;
+/**
+ * ── Metric ────────────────────────────────────────────────────────────
+ */
+#metrics {
+  background-color: var(--surface-container);
   border-radius: 8px;
-  font-size: 20px;
-  animation: error 2s infinite;
 }
 
-@keyframes error {
-  to {
-    background-color: @onError;
-  }
+#metrics-circle {
+  color: var(--surface-bright);
+  border: 3px solid var(--primary);
+}
+
+#metrics-circle.bat {
+  border: 3px solid var(--green);
+}
+
+#metrics-circle.alert {
+  border: 3px solid var(--red-dim);
+}
+
+#metrics-icon {
+  font-size: 15px;
+}
+
+#metrics-icon.alert {
+  color: var(--red-dim);
+}
+
+#metrics-level {
+  font-weight: bold;
+}
+
+#metrics-sep {
+  min-width: 6px;
 }

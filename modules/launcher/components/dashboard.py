@@ -1,12 +1,13 @@
 import subprocess
 from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.button import Button
-from fabric.utils.helpers import exec_shell_command_async, exec_shell_command
+from fabric.utils.helpers import exec_shell_command_async
 import gi
-from gi.repository import Gtk, Gdk, GLib  # Added Gdk import
-from fabric.utils import get_relative_path
+from gi.repository import Gtk, Gdk, GLib
+from services import network_client
+from services.powerprofile import PowerProfiles
+from fabric import Fabricator
 
 gi.require_version("Gtk", "3.0")
 import utils.icons as icons
@@ -31,9 +32,14 @@ def add_hover_cursor(widget):
 
 class NetworkButton(Box):
     def __init__(self):
+        self.network_client = network_client
+        self._animation_timeout_id = None
+        self._animation_step = 0
+        self._animation_direction = 1
+
         self.network_icon = Label(
             name="network-icon",
-            markup=icons.wifi,
+            markup=None,
         )
         self.network_label = Label(
             name="network-label",
@@ -43,7 +49,6 @@ class NetworkButton(Box):
         self.network_label_box = Box(children=[self.network_label, Box(h_expand=True)])
         self.network_ssid = Label(
             name="network-ssid",
-            label="Hello_World!!",
             justification="left",
         )
         self.network_ssid_box = Box(children=[self.network_ssid, Box(h_expand=True)])
@@ -64,6 +69,9 @@ class NetworkButton(Box):
             name="network-status-button",
             h_expand=True,
             child=self.network_status_box,
+            on_clicked=lambda *_: self.network_client.wifi_device.toggle_wifi()
+            if self.network_client.wifi_device
+            else None,
         )
         add_hover_cursor(self.network_status_button)  # <-- Added hover
 
@@ -87,6 +95,148 @@ class NetworkButton(Box):
             spacing=0,
             children=[self.network_status_button, self.network_menu_button],
         )
+
+        self.widgets = [
+            self,
+            self.network_icon,
+            self.network_label,
+            self.network_ssid,
+            self.network_status_button,
+            self.network_menu_button,
+            self.network_menu_label,
+        ]
+
+        # Connect to wifi device signals when ready
+        self.network_client.connect("device-ready", self._on_wifi_ready)
+
+        # Check initial state using idle_add to defer until GTK loop is running
+        GLib.idle_add(self._initial_update)
+
+    def _initial_update(self):
+        self.update_state()
+        return False  # Run only once
+
+    def _on_wifi_ready(self, *args):
+        if self.network_client.wifi_device:
+            self.network_client.wifi_device.connect(
+                "notify::enabled", self.update_state
+            )
+            self.network_client.wifi_device.connect("notify::ssid", self.update_state)
+            self.update_state()
+
+    def _animate_searching(self):
+        """Animate wifi icon when searching for networks"""
+        wifi_icons = [
+            icons.wifi_0,
+            icons.wifi_1,
+            icons.wifi_2,
+            icons.wifi_3,
+            icons.wifi_2,
+            icons.wifi_1,
+        ]
+
+        # Si el widget no existe o el WiFi está desactivado, detener la animación
+        wifi = self.network_client.wifi_device
+        if not self.network_icon or not wifi or not wifi.enabled:
+            self._stop_animation()
+            return False
+
+        # Si estamos conectados, detener la animación
+        if wifi.state == "activated" and wifi.ssid != "Disconnected":
+            self._stop_animation()
+            return False
+
+        GLib.idle_add(self.network_icon.set_markup, wifi_icons[self._animation_step])
+
+        # Reiniciar al principio cuando llegamos al final
+        self._animation_step = (self._animation_step + 1) % len(wifi_icons)
+
+        return True  # Mantener la animación activa
+
+    def _start_animation(self):
+        if self._animation_timeout_id is None:
+            self._animation_step = 0
+            self._animation_direction = 1
+            # Ejecuta la animación cada 500ms sin usar idle_add
+            self._animation_timeout_id = GLib.timeout_add(500, self._animate_searching)
+
+    def _stop_animation(self):
+        if self._animation_timeout_id is not None:
+            GLib.source_remove(self._animation_timeout_id)
+            self._animation_timeout_id = None
+
+    def update_state(self, *args):
+        """Update the button state based on network status"""
+        wifi = self.network_client.wifi_device
+        ethernet = self.network_client.ethernet_device
+
+        # Update enabled/disabled state
+        if wifi and not wifi.enabled:
+            self._stop_animation()
+            self.network_icon.set_markup(icons.wifi_off)
+            for widget in self.widgets:
+                widget.add_style_class("disabled")
+            self.network_ssid.set_label("Disabled")
+            return
+
+        # Remove disabled class if we got here
+        for widget in self.widgets:
+            widget.remove_style_class("disabled")
+
+        # Update text and animation based on state
+        if wifi and wifi.enabled:
+            if wifi.state == "activated" and wifi.ssid != "Disconnected":
+                self._stop_animation()
+                self.network_ssid.set_label(wifi.ssid)
+                # Update icon based on signal strength
+                if wifi.strength > 0:
+                    strength = wifi.strength
+                    if strength < 25:
+                        self.network_icon.set_markup(icons.wifi_0)
+                    elif strength < 50:
+                        self.network_icon.set_markup(icons.wifi_1)
+                    elif strength < 75:
+                        self.network_icon.set_markup(icons.wifi_2)
+                    else:
+                        self.network_icon.set_markup(icons.wifi_3)
+            else:
+                self.network_ssid.set_label("Enabled")
+                self._start_animation()
+
+        # Handle primary device check safely
+        try:
+            primary_device = self.network_client.primary_device
+        except AttributeError:
+            primary_device = "wireless"  # Default to wireless if error occurs
+
+        # Handle wired connection case
+        if primary_device == "wired":
+            self._stop_animation()
+            if ethernet and ethernet.internet == "activated":
+                self.network_icon.set_markup(icons.world)
+            else:
+                self.network_icon.set_markup(icons.world_off)
+        else:
+            if not wifi:
+                self._stop_animation()
+                self.network_icon.set_markup(icons.wifi_off)
+            elif (
+                wifi.state == "activated"
+                and wifi.ssid != "Disconnected"
+                and wifi.strength > 0
+            ):
+                self._stop_animation()
+                strength = wifi.strength
+                if strength < 25:
+                    self.network_icon.set_markup(icons.wifi_0)
+                elif strength < 50:
+                    self.network_icon.set_markup(icons.wifi_1)
+                elif strength < 75:
+                    self.network_icon.set_markup(icons.wifi_2)
+                else:
+                    self.network_icon.set_markup(icons.wifi_3)
+            else:
+                self._start_animation()
 
 
 class BluetoothButton(Box):
@@ -205,7 +355,16 @@ class NightModeButton(Button):
             self.night_mode_status,
             self.night_mode_icon,
         ]
-        self.check_hyprsunset()
+        # self.check_hyprsunset()
+        # **Monitor external changes every 3 seconds**
+        self.hyprsunset_watcher = Fabricator(
+            self.is_hyprsunset_running,
+            interval=3000,
+            stream=False,
+            default_value=False,
+        )
+        self.hyprsunset_watcher.changed.connect(self.update_night_mode_status)
+        self.update_night_mode_status(None, self.is_hyprsunset_running())
 
     def toggle_hyprsunset(self, *args):
         """
@@ -225,16 +384,21 @@ class NightModeButton(Button):
             for widget in self.widgets:
                 widget.remove_style_class("disabled")
 
-    def check_hyprsunset(self, *args):
-        """
-        Update the button state based on whether hyprsunset is running.
-        """
+    def is_hyprsunset_running(self, *args):
+        """Returns True if hyprsunset is running."""
         try:
             subprocess.check_output(["pgrep", "hyprsunset"])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+    def update_night_mode_status(self, _, is_running):
+        """Update UI based on hyprsunset status."""
+        if is_running:
             self.night_mode_status.set_label("Enabled")
             for widget in self.widgets:
                 widget.remove_style_class("disabled")
-        except subprocess.CalledProcessError:
+        else:
             self.night_mode_status.set_label("Disabled")
             for widget in self.widgets:
                 widget.add_style_class("disabled")
@@ -289,117 +453,128 @@ class CaffeineButton(Button):
             self.caffeine_status,
             self.caffeine_icon,
         ]
-        self.check_wlinhibit()
+        # **Monitor external changes every 3 seconds**
+        self.wlinhibit_watcher = Fabricator(
+            self.is_wlinhibit_running,
+            interval=3000,
+            stream=False,
+            default_value=False,
+        )
+        self.wlinhibit_watcher.changed.connect(self.update_wlinhibit_status)
+        self.update_wlinhibit_status(None, self.is_wlinhibit_running())
 
     def toggle_wlinhibit(self, *args):
-        """
-        Toggle the 'wlinhibit' process:
-          - If running, kill it and mark as 'Disabled' (add 'disabled' class).
-          - If not running, start it and mark as 'Enabled' (remove 'disabled' class).
-        """
-        try:
-            subprocess.check_output(["pgrep", "wlinhibit"])
+        """Toggle the 'wlinhibit' process."""
+        if self.is_wlinhibit_running():
             exec_shell_command_async("pkill wlinhibit")
-            self.caffeine_status.set_label("Disabled")
-            for i in self.widgets:
-                i.add_style_class("disabled")
-        except subprocess.CalledProcessError:
+        else:
             exec_shell_command_async("wlinhibit")
-            self.caffeine_status.set_label("Enabled")
-            for i in self.widgets:
-                i.remove_style_class("disabled")
 
-    def check_wlinhibit(self, *args):
+    def is_wlinhibit_running(self, *args):
+        """Returns True if wlinhibit is running. Accepts extra arguments to avoid Fabricator errors."""
         try:
             subprocess.check_output(["pgrep", "wlinhibit"])
-            self.caffeine_status.set_label("Enabled")
-            for i in self.widgets:
-                i.remove_style_class("disabled")
+            return True
         except subprocess.CalledProcessError:
+            return False
+
+    def update_wlinhibit_status(self, _, is_running):
+        """Update UI based on wlinhibit status."""
+        if is_running:
+            self.caffeine_status.set_label("Enabled")
+            for widget in self.widgets:
+                widget.remove_style_class("disabled")
+        else:
             self.caffeine_status.set_label("Disabled")
-            for i in self.widgets:
-                i.add_style_class("disabled")
+            for widget in self.widgets:
+                widget.add_style_class("disabled")
 
 
-class DarkModeButton(Button):
+class PowerProfileButton(Button):
     def __init__(self):
-        self.dark_mode_icon = Label(
-            name="dark-mode-icon",
-            markup=icons.darkmode,
+        self.power_profile_service = PowerProfiles.get_default()
+        
+        self.power_profile_icon = Label(
+            name="power-profile-icon",
+            markup=icons.power_balanced,  # Default icon
         )
-        self.dark_mode_label = Label(
-            name="dark-mode-label", label="Dark Mode", justification="left"
+        self.power_profile_label = Label(
+            name="power-profile-label",
+            label="Power Profile",
+            justification="left",
         )
-
-        self.dark_mode_label_box = Box(
-            children=[self.dark_mode_label, Box(h_expand=True)]
+        self.power_profile_label_box = Box(
+            children=[self.power_profile_label, Box(h_expand=True)]
         )
-        self.dark_mode_status = Label(
-            name="dark-mode-status", label="Enabled", justification="left"
+        self.power_profile_status = Label(
+            name="power-profile-status",
+            label="Balanced",
+            justification="left",
         )
-        self.dark_mode_status_box = Box(
-            children=[self.dark_mode_status, Box(h_expand=True)]
+        self.power_profile_status_box = Box(
+            children=[self.power_profile_status, Box(h_expand=True)]
         )
-        self.dark_mode_text = Box(
-            name="dark-mode-text",
+        self.power_profile_text = Box(
+            name="power-profile-text",
             orientation="v",
             h_align="start",
             v_align="center",
-            children=[self.dark_mode_label_box, self.dark_mode_status_box],
+            children=[self.power_profile_label_box, self.power_profile_status_box],
         )
-        self.dark_mode_box = Box(
+        self.power_profile_box = Box(
             h_align="start",
             v_align="center",
             spacing=10,
-            children=[self.dark_mode_icon, self.dark_mode_text],
+            children=[self.power_profile_icon, self.power_profile_text],
         )
 
         super().__init__(
-            name="dark-mode-button",
+            name="power-profile-button",
             h_expand=True,
-            child=self.dark_mode_box,
-            on_clicked=self.toggle_darkmode,
+            child=self.power_profile_box,
+            on_clicked=self.toggle_power_profile,
         )
         add_hover_cursor(self)
 
         self.widgets = [
             self,
-            self.dark_mode_label,
-            self.dark_mode_status,
-            self.dark_mode_icon,
+            self.power_profile_label,
+            self.power_profile_status,
+            self.power_profile_icon,
         ]
-        self.check_darkmode()
 
-    def toggle_darkmode(self, *_):
-        current_state = self.check_darkmode()
-        new_mode = "dark" if not current_state else "light"
-        command = f"bash {get_relative_path('../../../config/scripts/dark-theme.sh')} --set {new_mode}"
-        GLib.spawn_command_line_async(command)
+        # Connect to power profile service signals
+        self.power_profile_service.connect("profile", self.update_power_profile_status)
+        
+        # Initial update
+        self.update_power_profile_status(None, self.power_profile_service.get_current_profile())
 
-        self.dark_mode_status.set_label("Enabled" if new_mode == "dark" else "Disabled")
+    def toggle_power_profile(self, *args):
+        current_profile = self.power_profile_service.get_current_profile()
+        profiles = ["power-saver", "balanced", "performance"]
+        current_index = profiles.index(current_profile)
+        next_profile = profiles[(current_index + 1) % len(profiles)]
+        self.power_profile_service.set_power_profile(next_profile)
 
-        # Apply or remove 'disabled' class
-        if new_mode == "light":
+    def update_power_profile_status(self, _, profile):
+        # Map profiles to their display names and icons
+        profile_map = {
+            "power-saver": {"name": "Power Saver", "icon": icons.power_saving},
+            "balanced": {"name": "Balanced", "icon": icons.power_balanced},
+            "performance": {"name": "Performance", "icon": icons.power_performance},
+        }
+        
+        profile_info = profile_map.get(profile, profile_map["balanced"])
+        self.power_profile_status.set_label(profile_info["name"])
+        self.power_profile_icon.set_markup(profile_info["icon"])
+        
+        if profile == "balanced":
             for widget in self.widgets:
                 widget.add_style_class("disabled")
         else:
             for widget in self.widgets:
                 widget.remove_style_class("disabled")
 
-    def check_darkmode(self):
-        result = exec_shell_command(
-            "gsettings get org.gnome.desktop.interface color-scheme"
-        )
-        is_dark_mode = result.strip().replace("'", "") == "prefer-dark"
-
-        if not is_dark_mode:
-            for widget in self.widgets:
-                widget.add_style_class("disabled")
-        else:
-            for widget in self.widgets:
-                widget.remove_style_class("disabled")
-
-        return is_dark_mode
 
 
 class Dashboard(Gtk.Grid):
@@ -418,12 +593,12 @@ class Dashboard(Gtk.Grid):
         self.bluetooth_button = BluetoothButton(self.launcher)
         self.night_mode_button = NightModeButton()
         self.caffeine_button = CaffeineButton()
-        self.dark_mode_button = DarkModeButton()
+        self.power_profile_button = PowerProfileButton()
 
-        # Attach buttons into the grid (one row, four columns)
+        # Attach buttons into the grid (two rows, three columns)
         self.attach(self.network_button, 0, 0, 1, 1)
         self.attach(self.bluetooth_button, 1, 0, 1, 1)
-        self.attach(self.dark_mode_button, 2, 0, 1, 1)
+        self.attach(self.power_profile_button, 2, 0, 1, 1)
         self.attach(self.night_mode_button, 0, 1, 1, 1)
         self.attach(self.caffeine_button, 1, 1, 1, 1)
 
