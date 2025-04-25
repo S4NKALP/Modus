@@ -124,5 +124,6 @@ A big thank you to the following people for their incredible help with code and 
 - [darsh](https://github.com/its-darsh): for creating Fabric, which made everything possible.
 - [gummy bear album](https://github.com/muhchaudhary): for sharing fantastic code snippets that saved me time and effort.
 - [axenide](https://github.com/Axenide): for the amazing config that not only inspired parts of mine but also provided some gems I couldn’t resist borrowing.
+- [koeqaife](https://github.com/koeqaife): thanks for material-colors scripts
 
 I truly appreciate your support
