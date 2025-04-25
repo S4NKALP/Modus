@@ -5,8 +5,12 @@ from .dashboard import *
 from .emoji import *
 from .power import *
 from .sh import *
-from .todo import *
 from .wallpapers import *
 from .wifi import *
 from .calendar import *
 from .dashboard import *
+from .tools import *
+from .kanban import *
+from .tmux import *
+from .window_switcher import *
+from .notification_center import *

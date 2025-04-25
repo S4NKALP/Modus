@@ -6,12 +6,9 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
+import config.data as data
 
-
-CACHE_DIR = os.getenv(
-    "XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache", "modus")
-)
-BINS = os.path.join(CACHE_DIR, "binaries")
+BINS = f"{data.CACHE_DIR}/binaries"
 
 
 class Sh(Box):
@@ -29,10 +26,12 @@ class Sh(Box):
 
         self.search_entry = Entry(
             name="search-entry",
+            placeholder="Search Shell Commands...",
             h_expand=True,
             notify_text=lambda entry, *_: self.handle_search_input(entry.get_text()),
             on_activate=lambda entry, *_: self.handle_search_input(entry.get_text()),
         )
+        self.search_entry.props.xalign = 0.5
 
         self.header_box = Box(
             spacing=10,
@@ -49,7 +48,7 @@ class Sh(Box):
 
         self.add(self.launcher_box)
 
-    def open_launcher(self):
+    def open_sh(self):
         if not self.viewport:
             self.viewport = Box(name="viewport", spacing=10, orientation="v")
             self.scrolled_window = ScrolledWindow(
@@ -112,7 +111,7 @@ class ShellCommandManager:
     def query_binaries(self, filter_str: str) -> List[str]:
         filter_str = filter_str.lower()
         filtered_bins = (cmd for cmd in self.binaries if filter_str in cmd)
-        return list(dict.fromkeys(filtered_bins))[:16]
+        return list(dict.fromkeys(filtered_bins))[:8]
 
     def display_results(self, viewport, results: List[str]):
         for command in results:
@@ -123,7 +122,7 @@ class ShellCommandManager:
                     h_align="start",
                 ),
                 on_clicked=lambda _, cmd=command: self.execute_command(cmd),
-                name="sh-item",
+                name="app-slot-button",
             )
             viewport.add(button)
 

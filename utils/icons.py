@@ -5,7 +5,7 @@ font_weight: str = "normal"
 span: str = f"<span font-family='{font_family}' font-weight='{font_weight}'>"
 
 # Panels
-apps: str = "&#xf1fd;"
+apps: str = "&#xebde;"
 dashboard: str = "&#xea87;"
 chat: str = "&#xf59f;"
 wallpapers: str = "&#xeb01;"
@@ -23,6 +23,23 @@ memory: str = "&#xfa97;"
 cpu: str = "&#xef8e;"
 swap: str = "&#xeb31;"
 
+# Toolbox
+toolbox: str = "&#xebca;"
+ssfull: str = "&#xec3c;"
+ssregion: str = "&#xf201;"
+screenshots: str = "&#xeb0a;"
+screenrecord: str = "&#xed22;"
+recordings: str = "&#xeafa;"
+ocr: str = "&#xfcc3;"
+gamemode: str = "&#xf026;"
+gamemode_off: str = "&#xf111;"
+close: str = "&#xeb55;"
+bell: str = "&#xeb55;"
+bell_off: str = "&#xece9"
+notifications_on: str = "&#xea35;"
+notifications_off: str = "&#xece9;"
+notifications_clear: str = "&#xf814;"
+notifications: str = "&#xeafe;"
 
 # Wallpapers
 add: str = "&#xeb0b;"
@@ -55,22 +72,38 @@ power_balanced: str = "&#xfa77;"
 power_performance: str = "&#xec45;"
 charging: str = "&#xefef;"
 discharging: str = "&#xefe9;"
-alert: str = "&#xefb4;"
+alert: str = "&#xea06;"
+bat_charging: str = "&#xeeca;"
+bat_discharging: str = "&#xf0a1;"
+bat_low: str = "&#xff1d;"
+bat_full: str = "&#xea38;"
 
+
+moderate_signal: str = "&#xeba4;"
+good_signal: str = "&#xeba5;"
+no_signal: str = "&#xf063;"
+weak_signal: str = "&#xeba3;"
 # Applets
+lan: str = "&#xeb9d;"
+wifi_0: str = "&#xeba3;"
+wifi_1: str = "&#xeba4;"
+wifi_2: str = "&#xeba5;"
+wifi_3: str = "&#xeb52;"
 wifi: str = "&#xeb52;"
+world: str = "&#xeb54;"
+world_off: str = "&#xf1ca;"
 bluetooth: str = "&#xea37;"
 night: str = "&#xeaf8;"
 coffee: str = "&#xef0e;"
 dnd: str = "&#xea35;"
 darkmode: str = "&#xfe56;"
-world: str = "&#xeb54;"
+
 
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"
 night_off: str = "&#xf162;"
 dnd_off: str = "&#xece9;"
-mic_off: str = "&#xed16;"
+
 
 # Bluetooth
 bluetooth_connected: str = "&#xecea;"
@@ -97,19 +130,20 @@ vol_mute: str = "&#xeb50;"
 vol_medium: str = "&#xeb4f;"
 vol_high: str = "&#xeb51;"
 
-# Network
-lan: str = "&#xeb9d;"
-moderate_signal: str = "&#xeba4;"
-good_signal: str = "&#xeba5;"
-no_signal: str = "&#xf063;"
-weak_signal: str = "&#xeba3;"
+
+mic: str = "&#xeaf0;"
+mic_muted: str = "&#xed16;"
+
 
 # Overview
 circle_plus: str = "&#xea69;"
 
 # Pins
 copy_plus: str = "&#xfdae;"
-paperclip: str = "&#xeb02;"
+
+# Clipboard Manager
+clipboard: str = "&#xea6f;"
+clip_text: str = "&#xf089;"
 
 # Confirm
 accept: str = "&#xea5e;"
@@ -130,6 +164,13 @@ disc_off: str = "&#xf118;"
 # Misc
 dot: str = "&#xf698;"
 palette: str = "&#xeb01;"
+cloud_off: str = "&#xed3e;"
+loader: str = "&#xeca3;"
+radar: str = "&#xf017;"
+emoji: str = "&#xeaf7;"
+keyboard: str = "&#xebd6;"
+terminal: str = "&#xebef;"
+
 
 exceptions: list[str] = ["font_family", "font_weight", "span"]
 

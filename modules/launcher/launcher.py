@@ -5,15 +5,19 @@ from fabric.widgets.box import Box
 from modules.launcher.components import (
     AppLauncher,
     BluetoothConnections,
-    Cliphist,
-    Emoji,
+    EmojiPicker,
     PowerMenu,
     Sh,
-    TodoManager,
     WallpaperSelector,
     WifiManager,
     Calendar,
     Dashboard,
+    Toolbox,
+    Kanban,
+    TmuxManager,
+    WindowSwitcher,
+    NotificationCenter,
+    ClipHistory,
 )
 
 
@@ -22,6 +26,8 @@ class Launcher(Window):
         super().__init__(
             layer="top",
             anchor="center",
+            keyboard_mode="none",
+            exclusivity="normal",
             visible=False,
             all_visible=False,
             **kwargs,
@@ -30,13 +36,17 @@ class Launcher(Window):
         self.dashboard = Dashboard(launcher=self)
         self.wallpapers = WallpaperSelector(launcher=self)
         self.power = PowerMenu(launcher=self)
-        self.emoji = Emoji(launcher=self)
-        self.cliphist = Cliphist(launcher=self)
-        self.todo = TodoManager()
+        self.emoji = EmojiPicker(launcher=self)
         self.bluetooth = BluetoothConnections(launcher=self)
         self.sh = Sh(launcher=self)
         self.wifi = WifiManager()
         self.calendar = Calendar()
+        self.tools = Toolbox(launcher=self)
+        self.kanban = Kanban()
+        self.tmux = TmuxManager(launcher=self)
+        self.window_switcher = WindowSwitcher(launcher=self)
+        self.notification_center = NotificationCenter(launcher=self)
+        self.cliphist = ClipHistory(launcher=self)
 
         # Wrap the dashboard in a Box container
         self.dashboard = Box(
@@ -59,11 +69,15 @@ class Launcher(Window):
                 self.power,
                 self.emoji,
                 self.cliphist,
-                self.todo,
                 self.bluetooth,
                 self.sh,
                 self.wifi,
                 self.calendar,
+                self.tools,
+                self.kanban,
+                self.tmux,
+                self.window_switcher,
+                self.notification_center,
             ],
         )
 
@@ -77,10 +91,7 @@ class Launcher(Window):
         self.add(self.launcher_box)
         self.show_all()
         self.hide()
-        self.add_keybinding("Escape", self._on_escape)
-
-    def _on_escape(self, *args):
-        return self.close()
+        self.add_keybinding("Escape", lambda *_: self.close())
 
     def close(self):
         self.set_keyboard_mode("none")
@@ -92,11 +103,15 @@ class Launcher(Window):
             self.power,
             self.emoji,
             self.cliphist,
-            self.todo,
             self.bluetooth,
             self.sh,
             self.wifi,
             self.calendar,
+            self.tools,
+            self.kanban,
+            self.tmux,
+            self.window_switcher,
+            self.notification_center,
         ]:
             if hasattr(widget, "viewport") and widget.viewport:
                 widget.viewport.hide()
@@ -107,32 +122,39 @@ class Launcher(Window):
             "power",
             "emoji",
             "cliphist",
-            "todo",
             "bluetooth",
             "sh",
             "wifi",
             "calendar",
+            "tools",
+            "kanban",
+            "tmux",
+            "window-switcher",
+            "notification-center",
         ]:
             self.stack.remove_style_class(style)
 
         return True
 
     def open(self, widget):
-        self.set_keyboard_mode("exclusive")
-        self.show()
-
         widgets = {
             "launcher": self.launcher,
             "wallpapers": self.wallpapers,
             "power": self.power,
             "emoji": self.emoji,
             "cliphist": self.cliphist,
-            "todo": self.todo,
             "bluetooth": self.bluetooth,
             "sh": self.sh,
             "wifi": self.wifi,
             "calendar": self.calendar,
+            "tools": self.tools,
+            "kanban": self.kanban,
+            "tmux": self.tmux,
+            "window-switcher": self.window_switcher,
+            "notification-center": self.notification_center,
         }
+        self.set_keyboard_mode("exclusive")
+        self.show()
 
         for w in widgets.values():
             w.hide()
@@ -156,22 +178,24 @@ class Launcher(Window):
                 self.wallpapers.search_entry.grab_focus()
                 self.wallpapers.viewport.show()
 
+            elif widget == "tmux":
+                self.tmux.open_manager()
+                self.tmux.search_entry.set_text("")
+                self.tmux.search_entry.grab_focus()
+
             elif widget == "emoji":
-                self.emoji.open_launcher()
+                self.emoji.open_picker()
                 self.emoji.search_entry.set_text("")
                 self.emoji.search_entry.grab_focus()
 
             elif widget == "cliphist":
-                self.cliphist.open_launcher()
-                self.cliphist.search_entry.set_text("")
-                self.cliphist.search_entry.grab_focus()
-
-            elif widget == "todo":
-                self.todo.open_launcher()
-                self.todo.todo_entry.set_text("")
-                self.todo.todo_entry.grab_focus()
+                self.cliphist.open()
 
             elif widget == "sh":
-                self.sh.open_launcher()
-                self.sh.search_entry.set_text("")
-                self.sh.search_entry.grab_focus()
+                self.sh.open_sh()
+
+            elif widget == "window-switcher":
+                self.window_switcher.open_switcher()
+
+            elif widget == "notification-center":
+                self.notification_center.open_center()

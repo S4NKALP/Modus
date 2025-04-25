@@ -4,12 +4,12 @@ from fabric.widgets.image import Image
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from services import NetworkClient
+from services import network_client
 import utils.icons as icons
 
 
 class WifiNetworkSlot(CenterBox):
-    def __init__(self, network, client: NetworkClient, **kwargs):
+    def __init__(self, network, client: network_client, **kwargs):
         super().__init__(name="wifi-device", **kwargs)
         self.network = network
         self.client = client
@@ -81,7 +81,7 @@ class WifiManager(Box):
             **kwargs,
         )
 
-        self.client = NetworkClient()
+        self.client = network_client
         self.scan_icon = Label(name="wifi-scan-icon", markup=icons.scan)
         self.toggle_icon = Label(name="wifi-toggle-icon", markup=icons.wifi_off)
 
