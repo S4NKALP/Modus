@@ -1,14 +1,14 @@
+from fabric.utils import get_relative_path
+from gi.repository import Gdk, GLib
 import os
 import json
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, GLib
 
-from fabric.utils import get_relative_path
 
-APP_NAME = "modus"
-APP_NAME_CAP = "Modus"
+APP_NAME = "modusv2"
+APP_NAME_CAP = "Modusv2"
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
 STATE_DIR = str(GLib.get_user_state_dir() + f"/{APP_NAME}")
@@ -19,6 +19,7 @@ HOSTNAME = os.uname().nodename
 HOME_DIR = os.path.expanduser("~")
 
 CONFIG_DIR = os.path.expanduser(f"~/{APP_NAME}")
+MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
 screen = Gdk.Screen.get_default()
 CURRENT_WIDTH = screen.get_width()
@@ -31,19 +32,27 @@ if os.path.exists(CONFIG_FILE):
     with open(CONFIG_FILE, "r") as f:
         config = json.load(f)
     WALLPAPERS_DIR = config.get("wallpapers_dir", WALLPAPERS_DIR_DEFAULT)
-    VERTICAL = config.get("vertical", False)  # Use saved value or False as default
-    VERTICAL_RIGHT_ALIGN = config.get("vertical_right_align", False)  # Right side by default
-    BOTTOM_BAR = config.get("bottom_bar", False)  # Use saved value or False as default
-    CENTERED_BAR = config.get("centered_bar", False)  # Load centered bar setting
+    # Use saved value or False as default
+    VERTICAL = config.get("vertical", False)
+    VERTICAL_RIGHT_ALIGN = config.get(
+        "vertical_right_align", False
+    )  # Right side by default
+    # Use saved value or False as default
+    BOTTOM_BAR = config.get("bottom_bar", False)
+    # Load centered bar setting
+    CENTERED_BAR = config.get("centered_bar", False)
     TERMINAL_COMMAND = config.get(
         "terminal_command", "kitty -e"
     )  # Load terminal command
-    DOCK_ENABLED = config.get("dock_enabled", True)  # Load dock visibility setting
+    # Load dock visibility setting
+    DOCK_ENABLED = config.get("dock_enabled", True)
     DOCK_ALWAYS_OCCLUDED = config.get(
         "dock_always_occluded", False
     )  # Load dock hover-only setting
-    DOCK_ICON_SIZE = config.get("dock_icon_size", 28)  # Load dock icon size setting
-    OSD_ENABLED = config.get("osd_enabled", True)  # Load OSD visibility setting
+    # Load dock icon size setting
+    DOCK_ICON_SIZE = config.get("dock_icon_size", 28)
+    # Load OSD visibility setting
+    OSD_ENABLED = config.get("osd_enabled", True)
 
     # Load bar component visibility settings
     BAR_COMPONENTS_VISIBILITY = {

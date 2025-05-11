@@ -2,61 +2,49 @@ import subprocess
 from fabric import Fabricator
 from fabric.widgets.label import Label
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
 from fabric.bluetooth import BluetoothClient
-from services import network_client, audio, notification_service
+from services import network_client, audio
 import utils.icons as icons
-import config.data as data
+from fabric.hyprland.widgets import Language, HyprlandEvent, get_hyprland_connection
 
 
 class SystemIndicators(Box):
     def __init__(self, **kwargs):
-        # Determine if we should use vertical layout for components
-        is_vertical_layout = data.VERTICAL
-
         super().__init__(
-            orientation="h" if not is_vertical_layout else "v", spacing=0, **kwargs
+            orientation="h", spacing=2, name="system-indicator", **kwargs
         )
-        self.launcher = kwargs.get("launcher", None)
 
         self.bluetooth_icon = Label(name="system-indicator-icon")
         self.wifi_icon = Label(name="system-indicator-icon")
         self.volume_icon_button = Label(name="system-indicator-icon")
-        self.microphone_icon = Label(name="system-indicator-icon")
+        self.language_icon = Label(name="lang-label")
         self.idle_label = Label(name="system-indicator-icon")
         self.night_label = Label(name="system-indicator-icon")
         self.power_label = Label(name="system-indicator-icon")
-        self.notification_icon = Button(name="system-indicator-icon")
-        self.notification_label = Label(name="system-notif-label")
-        self.notification_icon.add(self.notification_label)
-        self.notification_icon.connect("clicked", self.open_notif_center)
+
 
         for widget in [
+            self.language_icon,
             self.bluetooth_icon,
             self.wifi_icon,
             self.volume_icon_button,
-            self.microphone_icon,
             self.idle_label,
             self.night_label,
             self.power_label,
-            self.notification_icon,
         ]:
             self.add(widget)
 
         self.audio_service = audio
         self.bluetooth_client = BluetoothClient()
         self.network_client = network_client
-        self.notification_service = notification_service
+        self.hyprland = get_hyprland_connection()
 
         # Connect signals
         self.bluetooth_client.connect("changed", self.update_bluetooth_status)
-        self.audio_service.connect("microphone_changed", self.update_mic_status)
         self.audio_service.connect("changed", self.update_volume_status)
         self.network_client.connect("device_ready", self.update_network_status)
-        self.notification_service.connect("dnd", self.update_notification_status)
-        self.notification_service.connect(
-            "notification_count", self.update_notification_status
-        )
+        self.hyprland.connect("event::activelayout", self.update_language)
+
 
         if self.network_client.wifi_device:
             self.network_client.wifi_device.connect(
@@ -70,13 +58,21 @@ class SystemIndicators(Box):
 
         Fabricator(interval=1000, poll_from=self.update_all_statuses)
 
+        # Initial updates
         self.update_bluetooth_status()
-        self.update_notification_status()
+        self.update_language()
+        self.update_idle_night_status()
 
     def update_all_statuses(self, *_args):
         self.update_idle_night_status()
         self.update_power_profile()
         self.update_network_status()
+
+    def update_language(self, _=None, event: HyprlandEvent = None):
+        """Update the language indicator based on Hyprland events."""
+        lang = event.data[1] if event else Language().get_label()
+        self.language_icon.set_tooltip_text(lang)
+        self.language_icon.set_label(lang[:2].lower())
 
     def update_idle_night_status(self, *_):
         # Update idle status
@@ -127,26 +123,6 @@ class SystemIndicators(Box):
         tooltip_text = "Muted" if is_muted else f"Volume: {volume_level}%"
         self.volume_icon_button.set_tooltip_text(tooltip_text)
 
-    def update_mic_status(self, *_):
-        mic = self.audio_service.microphone
-        if not mic:
-            self.microphone_icon.set_visible(False)
-            return
-
-        self.microphone_icon.set_visible(True)
-        # Normalize volume to integer percentage (0-100)
-        volume_level = mic.volume
-        if volume_level > 1:
-            volume_level = min(int(volume_level), 100)
-        else:
-            volume_level = int(volume_level * 100)
-
-        is_muted = mic.muted
-        icon = icons.mic_muted if is_muted else icons.mic
-
-        self.microphone_icon.set_markup(icon)
-        tooltip_text = "Muted" if is_muted else f"Microphone: {volume_level}%"
-        self.microphone_icon.set_tooltip_text(tooltip_text)
 
     def update_bluetooth_status(self, *_):
         if self.bluetooth_client.enabled:
@@ -236,23 +212,3 @@ class SystemIndicators(Box):
             self.power_label.set_visible(False)
             self.power_label.set_tooltip_text(f"Error fetching power profile: {e}")
 
-    def update_notification_status(self, *_):
-        """Update the notification icon based on DND state and notification count."""
-        count = self.notification_service.count
-
-        if count == 0 and not self.notification_service.dont_disturb:
-            self.notification_icon.set_visible(False)
-            return
-
-        if self.notification_service.dont_disturb:
-            self.notification_label.set_markup(icons.notifications_off)
-            self.notification_icon.set_tooltip_text("Do Not Disturb: On")
-            self.notification_icon.set_visible(True)
-        else:
-            # At this point count must be > 0
-            self.notification_label.set_markup(icons.notifications_clear)
-            self.notification_icon.set_tooltip_text(f"Notifications: {count}")
-            self.notification_icon.set_visible(True)
-
-    def open_notif_center(self, *_):
-        self.launcher.open("notification-center")

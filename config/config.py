@@ -37,9 +37,9 @@ try:
 except ImportError as e:
     print(f"Error importing data constants: {e}")
     # Provide fallback defaults if import fails
-    APP_NAME = "modus"
-    APP_NAME_CAP = "Modus"
-    CONFIG_DIR = "~/Modus"
+    APP_NAME = "modusv2"
+    APP_NAME_CAP = "Modusv2"
+    CONFIG_DIR = "~/Modusv2"
     HOME_DIR = "~"
     WALLPAPERS_DIR_DEFAULT = "~/Pictures/wallpapers"
 

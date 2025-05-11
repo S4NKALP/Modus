@@ -6,21 +6,6 @@
   transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
-#dock.vertical {
-  margin: 8px 79px 8px 8px;
-  border-radius: 20px 0 0 20px;
-}
-
-#dock.vertical-left {
-  margin: 8px 39px 8px 0px;
-  border-radius: 0 20px 20px 0;
-}
-
-#dock.vertical-right{
-  margin: 8px 79px 8px 8px;
-  border-radius: 20px 0 0 20px;
-}
-
 #dock-full {
   transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
   opacity: 1;
@@ -28,6 +13,7 @@
 
 #dock-full.occluded {
   @apply dock_nmargin();
+  /* opacity: 0; */
 }
 
 #dock-separator {
@@ -56,7 +42,7 @@
 
 #dock-app-button.instance {
   background: linear-gradient(to top, transparent, var(--surface-bright));
-  border-bottom: 1px solid var(--surface-container);
+  border-bottom: 1px solid var(--surface);
   border-top: 1px solid var(--outline);
   padding: 3px 4px;
 }
