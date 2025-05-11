@@ -1,0 +1,17 @@
+{
+    "commands": {
+        "/wp": "launcher.open(\"wallpapers\")",
+        "/em": "launcher.open(\"emoji\")",
+        "/ch": "launcher.open(\"cliphist\")",
+        "/kb": "launcher.open(\"kanban\")",
+        "/bt": "launcher.open(\"bluetooth\")",
+        "/sh": "launcher.open(\"sh\")",
+        "/pw": "launcher.open(\"power\")",
+        "/nw": "launcher.open(\"wifi\")",
+        "/cl": "launcher.open(\"calendar\")",
+        "/tl": "launcher.open(\"tools\")",
+        "/tx": "launcher.open(\"tmux\")",
+        "/ws": "launcher.open(\"window-switcher\")"
+    },
+    "pinned_apps": []
+}

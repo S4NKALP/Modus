@@ -1,0 +1,50 @@
+@import url("./colors.css");
+@import url("./bar.css");
+@import url("./dock.css");
+
+* {
+  all: unset;
+  color: var(--foreground);
+  font-size: 15px;
+  font-family: "Zed Sans","Jost*", sans-serif;
+}
+
+#corner {
+  background-color: var(--surface);
+  border-radius: 0;
+}
+
+#corner-container {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+/*
+ * ── tooltip ───────────────────────────────────────────────────────────
+*/
+tooltip {
+  border-radius: 16px;
+  background-color: var(--surface);
+  animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+@keyframes tooltipShow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+tooltip > * {
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+
+
+
+
+
