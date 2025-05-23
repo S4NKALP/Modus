@@ -67,14 +67,14 @@ class Power(Button):
             self.icon_stack.add_named(
                 Label(
                     markup=data["icon"],
-                    style_classes=["power-icon"],
+                    style_classes="powericon",
                 ),
                 name=action,
             )
             self.label_stack.add_named(
                 Label(
                     label=data["label"],
-                    style_classes=["power-label"]
+                    style_classes="powerlabel"
                 ),
                 name=action,
             )
