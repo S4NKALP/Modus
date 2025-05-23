@@ -1,7 +1,9 @@
 import subprocess
+from gi.repository import Gtk, Gdk
 from fabric import Fabricator
 from fabric.widgets.label import Label
 from fabric.widgets.box import Box
+from fabric.widgets.revealer import Revealer
 from fabric.bluetooth import BluetoothClient
 from services import network_client, audio
 import utils.icons as icons
@@ -22,17 +24,56 @@ class SystemIndicators(Box):
         self.night_label = Label(name="system-indicator-icon")
         self.power_label = Label(name="system-indicator-icon")
 
+        # Create event box to wrap indicators
+        self.event_box = Gtk.EventBox()
+        self.indicators_box = Box(name="indicators-container", orientation="h", spacing=2)
+        self.event_box.add(self.indicators_box)
 
-        for widget in [
-            self.language_icon,
-            self.bluetooth_icon,
-            self.wifi_icon,
-            self.volume_icon_button,
-            self.idle_label,
-            self.night_label,
-            self.power_label,
-        ]:
-            self.add(widget)
+        # Create revealers for additional indicators
+        self.volume_revealer = Revealer(
+            name="volume-revealer",
+            transition_duration=250,
+            transition_type="slide-left",
+            child=self.volume_icon_button,
+            child_revealed=False,
+        )
+        self.idle_revealer = Revealer(
+            name="idle-revealer",
+            transition_duration=250,
+            transition_type="slide-left",
+            child=self.idle_label,
+            child_revealed=False,
+        )
+        self.night_revealer = Revealer(
+            name="night-revealer",
+            transition_duration=250,
+            transition_type="slide-left",
+            child=self.night_label,
+            child_revealed=False,
+        )
+        self.power_revealer = Revealer(
+            name="power-revealer",
+            transition_duration=250,
+            transition_type="slide-left",
+            child=self.power_label,
+            child_revealed=False,
+        )
+
+        # Add all indicators with revealers
+        self.indicators_box.add(self.language_icon)
+        self.indicators_box.add(self.wifi_icon)
+        self.indicators_box.add(self.bluetooth_icon)
+        self.indicators_box.add(self.volume_revealer)
+        self.indicators_box.add(self.idle_revealer)
+        self.indicators_box.add(self.night_revealer)
+        self.indicators_box.add(self.power_revealer)
+
+        # Add event box to main container
+        self.add(self.event_box)
+
+        # Connect click events
+        self.event_box.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        self.event_box.connect("button-press-event", self.on_button_press)
 
         self.audio_service = audio
         self.bluetooth_client = BluetoothClient()
@@ -44,7 +85,6 @@ class SystemIndicators(Box):
         self.audio_service.connect("changed", self.update_volume_status)
         self.network_client.connect("device_ready", self.update_network_status)
         self.hyprland.connect("event::activelayout", self.update_language)
-
 
         if self.network_client.wifi_device:
             self.network_client.wifi_device.connect(
@@ -62,6 +102,43 @@ class SystemIndicators(Box):
         self.update_bluetooth_status()
         self.update_language()
         self.update_idle_night_status()
+        self.showing_all_indicators = False
+
+    def on_button_press(self, widget, event):
+        if event.button == 3:  # Right click
+            self.toggle_labels()
+            return True  # Stop event propagation
+        elif event.button == 1:  # Left click
+            self.toggle_all_indicators()
+            return True  # Stop event propagation
+        return False
+
+    def toggle_all_indicators(self):
+        self.showing_all_indicators = not self.showing_all_indicators
+        
+        # Toggle revealers
+        self.volume_revealer.set_reveal_child(self.showing_all_indicators)
+        self.idle_revealer.set_reveal_child(self.showing_all_indicators)
+        self.night_revealer.set_reveal_child(self.showing_all_indicators)
+        self.power_revealer.set_reveal_child(self.showing_all_indicators)
+
+    def toggle_labels(self):
+        # Toggle tooltips for all visible indicators
+        for child in self.indicators_box.get_children():
+            if isinstance(child, Label):
+                current_tooltip = child.get_tooltip_text()
+                if current_tooltip:
+                    child.set_tooltip_text("")
+                else:
+                    # Restore original tooltip based on the indicator type
+                    if child == self.wifi_icon:
+                        self.update_network_status()
+                    elif child == self.bluetooth_icon:
+                        self.update_bluetooth_status()
+                    elif child == self.volume_icon_button:
+                        self.update_volume_status()
+                    elif child == self.language_icon:
+                        self.update_language()
 
     def update_all_statuses(self, *_args):
         self.update_idle_night_status()
