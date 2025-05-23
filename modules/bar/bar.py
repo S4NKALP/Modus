@@ -3,6 +3,8 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.revealer import Revealer
+from fabric.widgets.label import Label
 from fabric.system_tray.widgets import SystemTray
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.hyprland.widgets import ActiveWindow
@@ -15,6 +17,7 @@ from modules.corners import MyCorner
 from modules.bar.components.power_menu import Power
 from modules.bar.components.system_indicators import SystemIndicators
 from modules.bar.components.metrics import Metrics
+import utils.icons as icons
 
 
 class Bar(Window):
@@ -43,30 +46,43 @@ class Bar(Window):
 
         self.language = LanguageWidget()
         self.date_time = DateTime(name="date-time", formatters=["%-I:%M:%p 󰧞 %a %d %b"])
-        self.tray = SystemTray(name="tray", spacing=4, icon_size=16)
+
+        # Tray setup
+        self._setup_tray()
+
         self.power_menu = Power()
         self.system_indicators = SystemIndicators()
         self.metrics = Metrics()
-        
+
         # Main bar content
 
         self.bar = CenterBox(
             name="bar",
-            start_children=Box(spacing=4, orientation="h", children=self.workspaces),
+            # start_children=Box(spacing=4, orientation="h", children=self.workspaces),
             center_children=Box(
-                spacing=4, orientation="h", children=self.active_window
-            ),
-            end_children=Box(
                 spacing=4,
                 orientation="h",
                 children=[
+                    self.workspaces,
+                    self.active_window,
                     self.date_time,
                     self.metrics,
                     self.system_indicators,
-                    self.tray,
+                    self.tray_button,
+                    self.tray_revealer,
                     self.power_menu,
                 ],
             ),
+            # end_children=Box(
+            #     spacing=4,
+            #     orientation="h",
+            #     children=[
+            #         self.date_time,
+            #         self.tray_button,
+            #         self.tray_revealer,
+            #         self.power_menu,
+            #     ],
+            # ),
         )
 
         # Event handling and corners
@@ -126,3 +142,25 @@ class Bar(Window):
         )
 
         self.show_all()
+
+    def _setup_tray(self):
+        """Setup the system tray with reveal functionality."""
+        self.tray = SystemTray(name="tray", spacing=4, icon_size=16)
+        self.tray_revealer = Revealer(
+            name="tray-revealer",
+            transition_type="slide-left",
+            transition_duration=200,
+            child=self.tray,
+            reveal_child=False,
+        )
+        self.tray_label = Label(markup=icons.chevron_left)
+        self.tray_button = EventBox(name="tray-button", child=self.tray_label)
+        self.tray_button.connect("button-press-event", self._toggle_tray)
+
+    def _toggle_tray(self, *args):
+        """Toggle the tray visibility and update the icon."""
+        is_revealed = not self.tray_revealer.get_reveal_child()
+        self.tray_revealer.set_reveal_child(is_revealed)
+        self.tray_label.set_markup(
+            icons.chevron_right if is_revealed else icons.chevron_left
+        )
