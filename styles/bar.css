@@ -1,7 +1,7 @@
 #bar {
-  padding: 4px;
+  padding: 8px;
   background-color: var(--surface);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 16px 16px;
 }
 
 
@@ -9,31 +9,32 @@
     transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
     opacity: 1;
   }
-  
+
   #bar-container.hide-bar {
-    margin-top: -32px;
+    margin-top: -45px;
   }
-  
+
   #bar-container.show-bar {
     margin-top: 0;
   }
-  
+
   #bar-container.occluded {
-    margin-top: -32px;
+    margin-top: -45px;
   }
-  
-  
+
+
   #bar-corner-left {
     margin-left: -16px;
   }
-  
+
   #bar-corner-right {
     margin-right: -16px;
   }
 
   #active-window {
     padding: 0px 8px;
-    margin: 0 200px 0 0;
+    background-color: var(--surface-container);
+    border-radius: 8px;
   }
 
 
@@ -45,35 +46,44 @@
   }
 
   #date-time {
-    padding: 4px;
-    margin: 0 200px 0 0;
+    background-color: var(--surface-container);
+    border-radius: 8px;
+    padding: 0px 8px;
   }
 
   #tray {
+    background-color: var(--surface-container);
     padding: 4px;
+    border-radius: 0 8px 8px 0px;
   }
-  
+
+#tray-button{
+    background-color: var(--surface-container);
+    padding: 4px;
+    border-radius: 8px 0 0 8px;
+}
+
   #tray > button {
     margin: 0px;
     padding: 0px;
   }
-  
+
   menu {
     border: solid 1px var(--outline-variant);
     border-radius: 16px;
     background-color: var(--surface);
     padding: 6px;
   }
-  
+
   menu > menuitem {
     border-radius: 10px;
     padding: 6px 10px;
   }
-  
+
   menu > menuitem:hover {
     background-color: var(--surface-bright);
   }
-  
+
   menu > menuitem:hover > label {
     color: var(--on-surface);
   }
@@ -87,11 +97,11 @@
 
 #metrics-circle {
   color: var(--surface-bright);
-  border: 3px solid var(--primary);
+  border: 2px solid var(--primary);
 }
 
 #metrics-circle.bat {
-  border: 3px solid var(--green);
+  border: 2px solid var(--green);
 }
 
 #metrics-circle.alert {
@@ -114,7 +124,7 @@
 #metrics-sep {
   min-width: 6px;
 }
-  
+
 #system-indicator {
   padding: 4px;
   background-color: var(--surface-container);
@@ -125,7 +135,7 @@
   font-size: 20px;
 }
 
-  
+
 #power-menu {
   padding: 4px;
   border-radius: 8px;
@@ -138,8 +148,8 @@
 }
 
 #power-menu.locked {
-  opacity: 0.5;
-  background-color: var(--surface-container-low);
+  /* opacity: 0.5; */
+  background-color: var(--surface-container);
 }
 
 #power-menu.locked:hover {
@@ -158,5 +168,13 @@
 #power-menu:not(.locked) .power-label {
   color: var(--on-surface);
 }
-  
-  
+
+
+.powerlabel{
+  margin-left: 4px;
+}
+
+.powericon{
+  font-size: 20px;
+}
+
