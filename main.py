@@ -9,6 +9,7 @@ from modules.dock import Dock
 from modules.corners import Corners
 
 
+
 # Disable unnecessary logging immediately
 for log in [
     "fabric.hyprland.widgets",
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     bar = Bar()
     dock = Dock() 
     corners = Corners()
-
+ 
     app = Application(f"{APP_NAME}", bar, dock)
 
     css_file = monitor_file(get_relative_path("styles"))
