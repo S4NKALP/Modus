@@ -1,312 +1,166 @@
-from fabric.hyprland.widgets import Language, get_hyprland_connection
-from fabric.hyprland.service import HyprlandEvent
-from fabric.system_tray.widgets import SystemTray
-from fabric.widgets.shapes import Corner
 from fabric.widgets.box import Box
+from fabric.widgets.eventbox import EventBox
+from fabric.widgets.datetime import DateTime
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.datetime import DateTime
+from fabric.widgets.revealer import Revealer
 from fabric.widgets.label import Label
+from fabric.system_tray.widgets import SystemTray
 from fabric.widgets.wayland import WaylandWindow as Window
-from modules.bar.components import Metrics, workspace, SystemIndicators, UpdatesWidget
-import config.data as data
-from gi.repository import Gdk, GLib
+from fabric.hyprland.widgets import ActiveWindow
+from fabric.utils import truncate, FormattedString
+
+from modules.bar.components.workspaces import workspace
+from modules.bar.components.language import LanguageWidget
+from modules.bar.components.auto_hide import AutoHideBarController
+from modules.corners import MyCorner
+from modules.bar.components.power_menu import Power
+from modules.bar.components.system_indicators import SystemIndicators
+from modules.bar.components.metrics import Metrics
 import utils.icons as icons
-import os
-import json
 
 
 class Bar(Window):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="bar",
-            layer="top",
-            anchor="left top right"
-            if not data.VERTICAL and not data.BOTTOM_BAR
-            else "top right bottom"
-            if data.VERTICAL and data.VERTICAL_RIGHT_ALIGN
-            else "top left bottom"
-            if data.VERTICAL
-            else "bottom left right",
-            exclusivity="auto",
-            visible=True,
-            all_visible=True,
-        )
+    """Main bar widget for the desktop environment."""
 
-        self.launcher = kwargs.get("launcher", None)
-        self.component_visibility = data.BAR_COMPONENTS_VISIBILITY
-
-        # Determine if we should use vertical layout for components
-        is_vertical_layout = data.VERTICAL
-
-        self.workspaces = Button(
-            child=workspace,
-            name="workspaces",
-        )
-
-        self.connection = get_hyprland_connection()
-        self.tray = SystemTray(
-            name="tray",
-            spacing=4,
-            icon_size=16,
-            orientation="h" if not is_vertical_layout else "v",
-        )
-
-        self.date_time = Button(
-            name="datetime",
-            child=DateTime(
-                formatters=["%-I:%M:%p 󰧞 %a %d %b"]
-                if not is_vertical_layout
-                else ["%I\n%M\n%p"],
-                h_align="center" if not is_vertical_layout else "fill",
-                v_align="center",
-            ),
-            on_clicked=lambda *_: self.calendar(),
-        )
-        self.date_time.connect("enter_notify_event", self.on_button_enter)
-        self.date_time.connect("leave_notify_event", self.on_button_leave)
-
-        self.button_app = Button(
-            name="button-bar",
-            child=Label(name="button-bar-label", markup=icons.apps),
-            on_clicked=lambda *_: self.search_apps(),
-        )
-        self.button_app.connect("enter_notify_event", self.on_button_enter)
-        self.button_app.connect("leave_notify_event", self.on_button_leave)
-
-        self.updates = UpdatesWidget()
-        self.updates.connect("enter_notify_event", self.on_button_enter)
-        self.updates.connect("leave_notify_event", self.on_button_leave)
-
-        self.lang_label = Label(name="lang-label")
-        self.language = Button(
-            name="language", h_align="center", v_align="center", child=self.lang_label
-        )
-        self.on_language_switch()
-        self.connection.connect("event::activelayout", self.on_language_switch)
-
-        self.metrics = Metrics()
-        self.indicators = SystemIndicators(launcher=self.launcher)
-
-        self.applets = Box(
-            name="system-indicator",
-            spacing=4,
-            orientation="h" if not is_vertical_layout else "v",
-            children=[self.language, self.indicators],
-        )
-
-        # Apply visibility settings to components
-        self.apply_component_visibility()
-
-        self.h_start_children = [self.button_app, self.updates]
-
-        self.h_center_children = [
-            self.date_time,
-            self.workspaces,
-            self.metrics,
-            self.applets,
-        ]
-
-        self.h_end_children = [self.tray]
-
-        self.v_start_children = [
-            self.button_app,
-            self.updates,
-            self.workspaces,
-            self.metrics,
-        ]
-        self.v_end_children = [self.tray, self.applets, self.date_time]
-
-        self.v_all_children = []
-        self.v_all_children.extend(self.v_start_children)
-        self.v_all_children.extend(self.v_end_children)
-
-        # Use centered layout when both vertical and centered_bar are enabled
-        is_centered_bar = is_vertical_layout and getattr(data, "CENTERED_BAR", False)
-
-        self.bar = CenterBox(
-            name="bar",
-            orientation="h" if not is_vertical_layout else "v",
-            h_align="fill",
-            v_align="fill",
-            start_children=None
-            if is_centered_bar
-            else Box(
-                name="start-container",
-                spacing=4,
-                orientation="h" if not is_vertical_layout else "v",
-                children=self.h_start_children
-                if not is_vertical_layout
-                else self.v_start_children,
-            ),
-            center_children=Box(
-                orientation="v",
-                spacing=4,
-                children=self.v_all_children
-                if is_centered_bar
-                else Box(
-                    name="center-container",
-                    spacing=4,
-                    orientation="h" if not is_vertical_layout else "v",
-                    children=self.h_center_children if not is_vertical_layout else None,
-                ),
-            )
-            if is_vertical_layout
-            else Box(
-                name="center-container",
-                spacing=4,
-                orientation="h" if not is_vertical_layout else "v",
-                children=self.h_center_children if not is_vertical_layout else None,
-            ),
-            end_children=None
-            if is_centered_bar
-            else Box(
-                name="end-container",
-                spacing=4,
-                orientation="h" if not is_vertical_layout else "v",
-                children=self.h_end_children
-                if not is_vertical_layout
-                else self.v_end_children,
-            ),
-        )
-
-        self.children = self.bar
-
-    def apply_component_visibility(self):
-        """Apply saved visibility settings to all components"""
-        components = {
-            "metrics": self.metrics,
-            "indicators": self.applets,
-            "updates": self.updates,
-            "workspaces": self.workspaces,
-            "button_app": self.button_app,
-            # "button_tools": self.button_tools,
-            "language": self.language,
-            "date_time": self.date_time,
-            "tray": self.tray,
-        }
-
-        for component_name, widget in components.items():
-            if component_name in self.component_visibility:
-                widget.set_visible(self.component_visibility[component_name])
-
-    def toggle_component_visibility(self, component_name):
-        """Toggle visibility for a specific component"""
-        components = {
-            "metrics": self.metrics,
-            "indicators": self.applets,
-            "updates": self.updates,
-            "workspaces": self.workspaces,
-            "button_app": self.button_app,
-            # "button_tools": self.button_tools,
-            "language": self.language,
-            "date_time": self.date_time,
-            "tray": self.tray,
-        }
-
-        if component_name in components and component_name in self.component_visibility:
-            # Toggle the visibility state
-            self.component_visibility[component_name] = not self.component_visibility[
-                component_name
-            ]
-            # Apply the new state
-            components[component_name].set_visible(
-                self.component_visibility[component_name]
-            )
-
-            # Update the configuration
-            config_file = os.path.expanduser(
-                f"~/{data.APP_NAME}/config/assets/config.json"
-            )
-            try:
-                if os.path.exists(config_file):
-                    with open(config_file, "r") as f:
-                        config = json.load(f)
-
-                    # Update the config with the new visibility state
-                    config[f"bar_{component_name}_visible"] = self.component_visibility[
-                        component_name
-                    ]
-
-                    # Write the updated config back to file
-                    with open(config_file, "w") as f:
-                        json.dump(config, f, indent=4)
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Error updating config file: {e}")
-                # Revert the visibility change if config update fails
-                self.component_visibility[
-                    component_name
-                ] = not self.component_visibility[component_name]
-                components[component_name].set_visible(
-                    self.component_visibility[component_name]
-                )
-
-            return self.component_visibility[component_name]
-
-        return None
-
-    def on_button_enter(self, widget, event):
-        window = widget.get_window()
-        if window:
-            window.set_cursor(Gdk.Cursor(Gdk.CursorType.HAND2))
-
-    def on_button_leave(self, widget, event):
-        window = widget.get_window()
-        if window:
-            window.set_cursor(None)
-
-    def search_apps(self):
-        self.launcher.open("launcher")
-
-    def calendar(self):
-        self.launcher.open("calendar")
-
-    def on_language_switch(self, _=None, event: HyprlandEvent = None):
-        lang = event.data[1] if event else Language().get_label()
-        self.language.set_tooltip_text(lang)
-        if not data.VERTICAL:
-            self.lang_label.set_label(lang[:2].lower())
-        else:
-            self.lang_label.add_style_class("icon")
-            self.lang_label.set_markup(icons.keyboard)
-
-
-class MyCorner(Box):
-    def __init__(self, position):
-        super().__init__(
-            name="corner-container",
-            children=Corner(
-                name="corner",
-                orientation=position,
-                size=20,
-            ),
-        )
-
-
-class Corners(Window):
     def __init__(self):
         super().__init__(
             layer="top",
-            anchor="top left bottom right",
-            pass_through=True,
-            child=Box(
-                orientation="vertical",
+            anchor="top",
+            visible=True,
+        )
+
+        self.active_window = ActiveWindow(
+            name="active-window",
+            h_expand=True,
+            h_align="fill",
+            formatter=FormattedString(
+                f"{{'Desktop' if not win_class or win_class == 'unknown' else win_class}}",
+                truncate=truncate,
+            ),
+        )
+        self.workspaces = Button(
+            name="workspaces",
+            child=workspace,
+        )
+
+        self.language = LanguageWidget()
+        self.date_time = DateTime(name="date-time", formatters=["%-I:%M:%p 󰧞 %a %d %b"])
+
+        # Tray setup
+        self._setup_tray()
+
+        self.power_menu = Power()
+        self.system_indicators = SystemIndicators()
+        self.metrics = Metrics()
+
+        # Main bar content
+
+        self.bar = CenterBox(
+            name="bar",
+            # start_children=Box(spacing=4, orientation="h", children=self.workspaces),
+            center_children=Box(
+                spacing=4,
+                orientation="h",
                 children=[
-                    Box(
-                        children=[
-                            MyCorner("top-left"),
-                            Box(h_expand=True),
-                            MyCorner("top-right"),
-                        ]
-                    ),
-                    Box(v_expand=True),
-                    Box(
-                        children=[
-                            MyCorner("bottom-left"),
-                            Box(h_expand=True),
-                            MyCorner("bottom-right"),
-                        ]
-                    ),
+                    self.workspaces,
+                    self.active_window,
+                    self.date_time,
+                    self.metrics,
+                    self.system_indicators,
+                    self.tray_button,
+                    self.tray_revealer,
+                    self.power_menu,
                 ],
             ),
+            # end_children=Box(
+            #     spacing=4,
+            #     orientation="h",
+            #     children=[
+            #         self.date_time,
+            #         self.tray_button,
+            #         self.tray_revealer,
+            #         self.power_menu,
+            #     ],
+            # ),
+        )
+
+        # Event handling and corners
+        self.eventbox = EventBox()
+        self.eventbox.add(self.bar)
+
+        self.corner_left = Box(
+            name="bar-corner-left",
+            orientation="v",
+            h_align="start",
+            children=[
+                MyCorner("top-right"),
+                Box(),
+            ],
+        )
+        self.corner_left.set_margin_start(56)
+
+        self.corner_right = Box(
+            name="bar-corner-right",
+            orientation="v",
+            h_align="end",
+            children=[
+                MyCorner("top-left"),
+                Box(),
+            ],
+        )
+        self.corner_right.set_margin_end(56)
+        self.main_box = Box(
+            name="bar-container",
+            orientation="h",
+            h_expand=True,
+            children=[
+                self.corner_left,
+                self.eventbox,
+                self.corner_right,
+            ],
+        )
+
+        # Add hover activator
+        self.hover_activator = EventBox(name="hover-activator", v_align="start")
+        self.hover_activator.set_size_request(-1, 1)
+
+        # Root container
+        self.root_box = Box(
+            orientation="v", children=[self.main_box, self.hover_activator]
+        )
+        self.add(self.root_box)
+
+        # Setup auto-hide controller
+        self.auto_hide = AutoHideBarController(self)
+
+        # Connect event handlers for hover
+        self.eventbox.connect("enter-notify-event", self.auto_hide.on_bar_enter)
+        self.eventbox.connect("leave-notify-event", self.auto_hide.on_bar_leave)
+        self.hover_activator.connect(
+            "enter-notify-event", self.auto_hide.on_hover_enter
+        )
+
+        self.show_all()
+
+    def _setup_tray(self):
+        """Setup the system tray with reveal functionality."""
+        self.tray = SystemTray(name="tray", spacing=4, icon_size=16)
+        self.tray_revealer = Revealer(
+            name="tray-revealer",
+            transition_type="slide-left",
+            transition_duration=200,
+            child=self.tray,
+            reveal_child=False,
+        )
+        self.tray_label = Label(markup=icons.chevron_left)
+        self.tray_button = EventBox(name="tray-button", child=self.tray_label)
+        self.tray_button.connect("button-press-event", self._toggle_tray)
+
+    def _toggle_tray(self, *args):
+        """Toggle the tray visibility and update the icon."""
+        is_revealed = not self.tray_revealer.get_reveal_child()
+        self.tray_revealer.set_reveal_child(is_revealed)
+        self.tray_label.set_markup(
+            icons.chevron_right if is_revealed else icons.chevron_left
         )
