@@ -102,7 +102,6 @@ DEFAULTS = {
         "ram": True,
         "disk": True,
         "swap": True,
-        "gpu": False,
     },
 }
 
@@ -911,7 +910,6 @@ class HyprConfGUI(Window):
             "ram": "RAM",
             "disk": "Disk",
             "swap": "Swap",
-            "gpu": "GPU",
         }
 
         # metrics toggles
