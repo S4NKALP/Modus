@@ -10,7 +10,7 @@ from fabric.widgets.entry import Entry
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.label import Label
 from fabric.utils.helpers import exec_shell_command_async
-import modules.icons as icons
+import utils.icons as icons
 import config.data as data
 import config.config
 from PIL import Image
