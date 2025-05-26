@@ -19,7 +19,6 @@ class MetricsProvider:
         self.mem = 0.0
         self.swap = 0.0
         self.disk = []
-        self.gpu = []
         self.bat_percent = 0.0
         self.bat_charging = None
 
@@ -34,8 +33,6 @@ class MetricsProvider:
         swap = psutil.swap_memory()
         self.swap = swap.percent
         self.disk = [psutil.disk_usage(path).percent for path in data.BAR_METRICS_DISKS]
-        info = self.get_gpu_info()
-        self.gpu = [int(v["gpu_util"][:-1]) for v in info]
 
         battery = psutil.sensors_battery()
         if battery is None:
@@ -51,12 +48,6 @@ class MetricsProvider:
 
     def get_battery(self):
         return (self.bat_percent, self.bat_charging)
-
-    def get_gpu_info(self):
-        try:
-            return json.loads(subprocess.check_output(["nvtop", "-s"]))
-        except:
-            return []
 
 
 shared_provider = MetricsProvider()
@@ -177,7 +168,7 @@ class Metrics(Box):
         visible = getattr(
             data,
             "METRICS_VISIBLE",
-            {"cpu": True, "ram": True, "disk": True, "gpu": False, "swap": True},
+            {"cpu": True, "ram": True, "disk": True, "swap": True},
         )
         disks = (
             [
@@ -189,19 +180,6 @@ class Metrics(Box):
                 for path in data.BAR_METRICS_DISKS
             ]
             if visible.get("disk", True)
-            else []
-        )
-        gpu_info = shared_provider.get_gpu_info()
-        gpus = (
-            [
-                SingularMetric(
-                    f"gpu",
-                    f"GPU ({v['device_name']})" if len(gpu_info) != 1 else "GPU",
-                    icons.gpu,
-                )
-                for v in gpu_info
-            ]
-            if visible.get("gpu", True)
             else []
         )
 
@@ -226,7 +204,6 @@ class Metrics(Box):
             else None
         )
         self.disk = disks
-        self.gpu = gpus
 
         # Add only enabled metrics
         for disk in self.disk:
@@ -237,9 +214,6 @@ class Metrics(Box):
             self.add(Box(name="metrics-sep"))
         if self.cpu:
             self.add(self.cpu.box)
-        for gpu in self.gpu:
-            self.add(Box(name="metrics-sep"))
-            self.add(gpu.box)
         if self.swap:
             self.add(Box(name="metrics-sep"))
             self.add(self.swap.box)
@@ -275,8 +249,6 @@ class Metrics(Box):
                 self.ram.revealer.set_reveal_child(True)
             for disk in self.disk:
                 disk.revealer.set_reveal_child(True)
-            for gpu in self.gpu:
-                gpu.revealer.set_reveal_child(True)
             if self.swap:
                 self.swap.revealer.set_reveal_child(True)
             if self.bat:
@@ -305,14 +277,11 @@ class Metrics(Box):
                 self.ram.revealer.set_reveal_child(False)
             for disk in self.disk:
                 disk.revealer.set_reveal_child(False)
-            for gpu in self.gpu:
-                gpu.revealer.set_reveal_child(False)
             self.hide_timer = None
             return False
 
     def update_metrics(self):
         cpu, mem, swap, disk = shared_provider.get_metrics()
-        gpu = shared_provider.gpu
         if self.cpu:
             self.cpu.circle.set_value(cpu / 100.0)
             value_text = self._format_percentage(int(cpu))
@@ -329,12 +298,6 @@ class Metrics(Box):
                 disk_metric.circle.set_value(disk[i] / 100.0)
                 disk_metric.level.set_label(value_text)
                 disk_metric.update_tooltip(value_text)
-        for i, gpu_metric in enumerate(self.gpu):
-            if i < len(gpu):
-                value_text = self._format_percentage(int(gpu[i]))
-                gpu_metric.circle.set_value(gpu[i] / 100.0)
-                gpu_metric.level.set_label(value_text)
-                gpu_metric.update_tooltip(value_text)
         if self.swap:
             self.swap.circle.set_value(swap / 100.0)
             value_text = self._format_percentage(int(swap))
@@ -354,7 +317,6 @@ class Metrics(Box):
         if self.bat: tooltip_metrics.append(self.bat)
         if self.ram: tooltip_metrics.append(self.ram)
         if self.cpu: tooltip_metrics.append(self.cpu)
-        if self.gpu: tooltip_metrics.extend(self.gpu)
         self.set_tooltip_markup((" - " if not data.VERTICAL else "\n").join([v.markup() for v in tooltip_metrics]))
 
         return True
