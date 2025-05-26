@@ -25,6 +25,7 @@ CURRENT_WIDTH = screen.get_width()
 CURRENT_HEIGHT = screen.get_height()
 
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpaper")
+MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 CONFIG_FILE = get_relative_path("../config/assets/config.json")
 
 if os.path.exists(CONFIG_FILE):
@@ -61,7 +62,7 @@ if os.path.exists(CONFIG_FILE):
     BAR_METRICS_DISKS = config.get("bar_metrics_disks", ["/"])
     METRICS_VISIBLE = config.get(
         "metrics_visible",
-        {"cpu": True, "ram": True, "disk": True, "swap": True, "gpu": False},
+        {"cpu": True, "ram": True, "disk": True, "swap": True},
     )
 else:
     WALLPAPERS_DIR = WALLPAPERS_DIR_DEFAULT
@@ -94,7 +95,6 @@ else:
         "ram": True,
         "disk": True,
         "swap": True,
-        "gpu": False,
     }
 
 
