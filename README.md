@@ -1,3 +1,7 @@
+<div align="center">
+  <h1>It may not work on your machine</h1>
+</div>
+
 <p align="center">
   <img src="assets/logo.svg" height="200" alt="Logo">
 </p>
