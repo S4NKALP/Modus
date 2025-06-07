@@ -1,12 +1,3 @@
 {
-  "pinned_apps": [
-    {
-      "name": "Brave",
-      "display_name": "Brave",
-      "window_class": "brave-browser",
-      "executable": "brave",
-      "command_line": "brave %U",
-      "icon_name": "brave-desktop"
-    }
-  ]
+    "pinned_apps": []
 }

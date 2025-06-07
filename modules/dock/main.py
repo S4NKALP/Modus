@@ -19,7 +19,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk
 from modules.corners import MyCorner
-from modules.dock.components import DockSystemTray
+from modules.dock.components import DockComponents
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
@@ -146,24 +146,20 @@ class Dock(Window):
         self.dock_eventbox.connect("enter-notify-event", self._on_dock_enter)
         self.dock_eventbox.connect("leave-notify-event", self._on_dock_leave)
 
-        # Create system tray section
+        # Create components section
         separator_orientation = (
             Gtk.Orientation.VERTICAL
             if self.view.get_orientation() == Gtk.Orientation.HORIZONTAL
             else Gtk.Orientation.HORIZONTAL
         )
-        
-        # Initialize system tray with proper orientation
-        self.system_tray = DockSystemTray(
-            orientation_val=dock_wrapper_orientation_val
-        )
 
-        # Initialize system tray with proper orientation
-        self.system_tray = DockSystemTray(
-            orientation_val=dock_wrapper_orientation_val
-        )
+        # Initialize components with proper orientation
+        self.components = DockComponents(orientation_val=dock_wrapper_orientation_val)
 
-        # Add system tray to dock
+        # Initialize components with proper orientation
+        self.components = DockComponents(orientation_val=dock_wrapper_orientation_val)
+
+        # Add components to dock
         if data.DOCK_POSITION == "Right":
             self.view.add(
                 Box(
@@ -175,9 +171,9 @@ class Dock(Window):
                     name="dock-separator",
                 )
             )
-            self.view.add(self.system_tray)
+            self.view.add(self.components)
         else:
-            self.view.pack_start(self.system_tray, False, False, 0)
+            self.view.pack_start(self.components, False, False, 0)
             self.view.add(
                 Box(
                     orientation=separator_orientation,
@@ -765,9 +761,9 @@ class Dock(Window):
                         name="dock-separator",
                     )
                 )
-            children.append(self.system_tray)
+            children.append(self.components)
         else:  # Bottom or Left position
-            children.append(self.system_tray)
+            children.append(self.components)
             if pinned_buttons or open_buttons:
                 children.append(
                     Box(
@@ -917,16 +913,15 @@ class Dock(Window):
             seat = display.get_default_seat()
             pointer = seat.get_pointer()
             window = self.get_window()
-            
+
             if window:
                 screen, x, y = pointer.get_position()  # Fix: Unpack all three values
                 win_x, win_y = window.get_position()
                 win_w = window.get_width()
                 win_h = window.get_height()
-                
+
                 # If pointer is outside dock window bounds
-                if (x < win_x or x > win_x + win_w or 
-                    y < win_y or y > win_y + win_h):
+                if x < win_x or x > win_x + win_w or y < win_y or y > win_y + win_h:
                     app_id_dragged = widget.app_identifier
                     instances_dragged = widget.instances
 
@@ -935,7 +930,9 @@ class Dock(Window):
                         if isinstance(app_id_dragged, dict) and isinstance(
                             pinned_app_item, dict
                         ):
-                            if app_id_dragged.get("name") == pinned_app_item.get("name"):
+                            if app_id_dragged.get("name") == pinned_app_item.get(
+                                "name"
+                            ):
                                 app_index_dragged = i
                                 break
                         elif app_id_dragged == pinned_app_item:

@@ -34,7 +34,6 @@ MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 DOCK_THEME = "Pills"
 
 
-
 def load_config():
     """Load the configuration from config.json"""
     config_path = os.path.expanduser(f"~/{APP_NAME_CAP}/config/config.json")
@@ -74,7 +73,10 @@ if os.path.exists(CONFIG_FILE):
     }
 
     METRICS_DISKS = config.get("metrics_disks", ["/"])
-    METRICS_VISIBLE = config.get("metrics_visible", {"cpu": True, "ram": True, "disk": True, "swap": True, "gpu": False})
+    METRICS_VISIBLE = config.get(
+        "metrics_visible",
+        {"cpu": True, "ram": True, "disk": True, "swap": True, "gpu": False},
+    )
 else:
     WALLPAPERS_DIR = WALLPAPERS_DIR_DEFAULT
     DOCK_POSITION = "Bottom"
@@ -87,7 +89,6 @@ else:
 
     NOTIF_POS = NOTIF_POS_DEFAULT
 
-
     DOCK_COMPONENTS_VISIBILITY = {
         "workspaces": True,
         "metrics": True,
@@ -98,4 +99,10 @@ else:
     }
 
     METRICS_DISKS = ["/"]
-    METRICS_VISIBLE = {"cpu": True, "ram": True, "disk": True, "swap": True, "gpu": False}
+    METRICS_VISIBLE = {
+        "cpu": True,
+        "ram": True,
+        "disk": True,
+        "swap": True,
+        "gpu": False,
+    }

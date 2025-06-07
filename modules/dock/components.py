@@ -1,23 +1,21 @@
-import os
 import json
+import os
+
 import config.data as data
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.datetime import DateTime
 from modules.dock.battery import Battery
-from modules.dock.metrics import Metrics
 from modules.dock.controls import Controls
-from modules.dock.workspaces import create_workspace_widget
 from modules.dock.indicators import Indicators
+from modules.dock.metrics import Metrics
+from modules.dock.workspaces import create_workspace_widget
 
 
-class DockSystemTray(Box):
+class DockComponents(Box):
     def __init__(self, orientation_val="h", **kwargs):
         super().__init__(
-            name="system-tray",
-            orientation=orientation_val,
-            spacing=4,
-            **kwargs
+            name="dock-components", orientation=orientation_val, spacing=4, **kwargs
         )
 
         # Initialize component visibility from data
@@ -57,7 +55,6 @@ class DockSystemTray(Box):
             self.add(self.battery)
             self.add(self.date_time)
 
-
         # Apply initial visibility
         self.apply_component_props()
 
@@ -86,16 +83,24 @@ class DockSystemTray(Box):
         }
 
         if component_name in components and component_name in self.component_visibility:
-            self.component_visibility[component_name] = not self.component_visibility[component_name]
-            components[component_name].set_visible(self.component_visibility[component_name])
+            self.component_visibility[component_name] = not self.component_visibility[
+                component_name
+            ]
+            components[component_name].set_visible(
+                self.component_visibility[component_name]
+            )
 
-            config_file = os.path.expanduser(f"~/.config/{data.APP_NAME}/config/config.json")
+            config_file = os.path.expanduser(
+                f"~/.config/{data.APP_NAME}/config/config.json"
+            )
             if os.path.exists(config_file):
                 try:
                     with open(config_file, "r") as f:
                         config = json.load(f)
 
-                    config[f"dock_{component_name}_visible"] = self.component_visibility[component_name]
+                    config[f"dock_{component_name}_visible"] = (
+                        self.component_visibility[component_name]
+                    )
 
                     with open(config_file, "w") as f:
                         json.dump(config, f, indent=4)
@@ -104,4 +109,4 @@ class DockSystemTray(Box):
 
             return self.component_visibility[component_name]
 
-        return None 
+        return None
