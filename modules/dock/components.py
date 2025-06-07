@@ -1,0 +1,107 @@
+import os
+import json
+import config.data as data
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.datetime import DateTime
+from modules.dock.battery import Battery
+from modules.dock.metrics import Metrics
+from modules.dock.controls import Controls
+from modules.dock.workspaces import create_workspace_widget
+from modules.dock.indicators import Indicators
+
+
+class DockSystemTray(Box):
+    def __init__(self, orientation_val="h", **kwargs):
+        super().__init__(
+            name="system-tray",
+            orientation=orientation_val,
+            spacing=4,
+            **kwargs
+        )
+
+        # Initialize component visibility from data
+        self.component_visibility = data.DOCK_COMPONENTS_VISIBILITY
+
+        # Create components
+        self.workspaces = Button(
+            child=create_workspace_widget(),
+            name="workspaces",
+        )
+        self.metrics = Metrics()
+        self.battery = Battery()
+        self.date_time = DateTime(
+            name="date-time",
+            formatters=["%I:%M"] if not data.VERTICAL else ["%I\n%M"],
+            h_align="center" if not data.VERTICAL else "fill",
+            v_align="center",
+            h_expand=True,
+            v_expand=True,
+        )
+        self.controls = Controls()
+        self.indicators = Indicators()
+
+        # Add components based on position
+        if data.DOCK_POSITION == "Right":
+            self.add(self.date_time)
+            self.add(self.controls)
+            self.add(self.indicators)
+            self.add(self.battery)
+            self.add(self.metrics)
+            self.add(self.workspaces)
+        else:  # Bottom or Left position
+            self.add(self.workspaces)
+            self.add(self.metrics)
+            self.add(self.controls)
+            self.add(self.indicators)
+            self.add(self.battery)
+            self.add(self.date_time)
+
+
+        # Apply initial visibility
+        self.apply_component_props()
+
+    def apply_component_props(self):
+        components = {
+            "workspaces": self.workspaces,
+            "metrics": self.metrics,
+            "battery": self.battery,
+            "date_time": self.date_time,
+            "controls": self.controls,
+            "indicators": self.indicators,
+        }
+
+        for component_name, widget in components.items():
+            if component_name in self.component_visibility:
+                widget.set_visible(self.component_visibility[component_name])
+
+    def toggle_component_visibility(self, component_name):
+        components = {
+            "workspaces": self.workspaces,
+            "metrics": self.metrics,
+            "battery": self.battery,
+            "date_time": self.date_time,
+            "controls": self.controls,
+            "indicators": self.indicators,
+        }
+
+        if component_name in components and component_name in self.component_visibility:
+            self.component_visibility[component_name] = not self.component_visibility[component_name]
+            components[component_name].set_visible(self.component_visibility[component_name])
+
+            config_file = os.path.expanduser(f"~/.config/{data.APP_NAME}/config/config.json")
+            if os.path.exists(config_file):
+                try:
+                    with open(config_file, "r") as f:
+                        config = json.load(f)
+
+                    config[f"dock_{component_name}_visible"] = self.component_visibility[component_name]
+
+                    with open(config_file, "w") as f:
+                        json.dump(config, f, indent=4)
+                except Exception as e:
+                    print(f"Error updating config file: {e}")
+
+            return self.component_visibility[component_name]
+
+        return None 
