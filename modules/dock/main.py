@@ -19,10 +19,10 @@ from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk
 from modules.corners import MyCorner
-from modules.dock.components import DockComponents
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
+from modules.dock.components import DockComponents
 
 
 def read_config():
@@ -91,7 +91,7 @@ class Dock(Window):
             layer="top",
             anchor=anchor_to_set,
             margin="0px 0px 0px 0px",
-            exclusivity="auto" if not data.DOCK_AUTO_HIDE else "none",
+            exclusivity="none",
             **kwargs,
         )
         Dock._instances.append(self)
@@ -146,20 +146,25 @@ class Dock(Window):
         self.dock_eventbox.connect("enter-notify-event", self._on_dock_enter)
         self.dock_eventbox.connect("leave-notify-event", self._on_dock_leave)
 
-        # Create components section
+        # Define separator orientation
         separator_orientation = (
             Gtk.Orientation.VERTICAL
             if self.view.get_orientation() == Gtk.Orientation.HORIZONTAL
             else Gtk.Orientation.HORIZONTAL
         )
 
-        # Initialize components with proper orientation
-        self.components = DockComponents(orientation_val=dock_wrapper_orientation_val)
+        # Create components using DockComponents
+        self.components = DockComponents(orientation_val="h" if not data.VERTICAL else "v")
 
-        # Initialize components with proper orientation
-        self.components = DockComponents(orientation_val=dock_wrapper_orientation_val)
+        # Add components based on position
+        if self.actual_dock_is_horizontal:  # Bottom dock
+            self.view.add(self.components)
+        elif data.DOCK_POSITION == "Left":
+            self.view.add(self.components)
+        else:  # Right position
+            self.view.add(self.components)
 
-        # Add components to dock
+        # Add system tray to dock
         if data.DOCK_POSITION == "Right":
             self.view.add(
                 Box(
@@ -171,9 +176,7 @@ class Dock(Window):
                     name="dock-separator",
                 )
             )
-            self.view.add(self.components)
         else:
-            self.view.pack_start(self.components, False, False, 0)
             self.view.add(
                 Box(
                     orientation=separator_orientation,
@@ -563,7 +566,6 @@ class Dock(Window):
             not self.is_mouse_over_dock_area
             and not self._drag_in_progress
             and not self._prevent_occlusion
-            and data.DOCK_AUTO_HIDE
         ):
             if self.always_occluded:
                 self.dock_revealer.set_reveal_child(False)
@@ -582,7 +584,6 @@ class Dock(Window):
             self.is_mouse_over_dock_area
             or self._drag_in_progress
             or self._prevent_occlusion
-            or not data.DOCK_AUTO_HIDE
         ):
             return
 
@@ -736,33 +737,7 @@ class Dock(Window):
         )
 
         # Add components based on position
-        if data.DOCK_POSITION == "Right":
-            children.extend(pinned_buttons)
-            if pinned_buttons and open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.extend(open_buttons)
-            if pinned_buttons or open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.append(self.components)
-        else:  # Bottom or Left position
+        if self.actual_dock_is_horizontal:  # Bottom dock
             children.append(self.components)
             if pinned_buttons or open_buttons:
                 children.append(
@@ -788,6 +763,58 @@ class Dock(Window):
                     )
                 )
             children.extend(open_buttons)
+        elif data.DOCK_POSITION == "Left":
+            children.append(self.components)
+            if pinned_buttons or open_buttons:
+                children.append(
+                    Box(
+                        orientation=separator_orientation,
+                        v_expand=False,
+                        h_expand=False,
+                        h_align="center",
+                        v_align="center",
+                        name="dock-separator",
+                    )
+                )
+            children.extend(pinned_buttons)
+            if pinned_buttons and open_buttons:
+                children.append(
+                    Box(
+                        orientation=separator_orientation,
+                        v_expand=False,
+                        h_expand=False,
+                        h_align="center",
+                        v_align="center",
+                        name="dock-separator",
+                    )
+                )
+            children.extend(open_buttons)
+        else:  # Right position
+            children.extend(pinned_buttons)
+            if pinned_buttons and open_buttons:
+                children.append(
+                    Box(
+                        orientation=separator_orientation,
+                        v_expand=False,
+                        h_expand=False,
+                        h_align="center",
+                        v_align="center",
+                        name="dock-separator",
+                    )
+                )
+            children.extend(open_buttons)
+            if pinned_buttons or open_buttons:
+                children.append(
+                    Box(
+                        orientation=separator_orientation,
+                        v_expand=False,
+                        h_expand=False,
+                        h_align="center",
+                        v_align="center",
+                        name="dock-separator",
+                    )
+                )
+            children.append(self.components)
 
         self.view.children = children
         idle_add(self._update_size)
@@ -821,7 +848,6 @@ class Dock(Window):
             self.is_mouse_over_dock_area
             or self._drag_in_progress
             or self._prevent_occlusion
-            or not data.DOCK_AUTO_HIDE
         ):
             if not self.dock_revealer.get_reveal_child():
                 self.dock_revealer.set_reveal_child(True)
@@ -908,51 +934,40 @@ class Dock(Window):
             return
 
         def process_drag_end():
-            # Check if dropped outside the dock by checking the pointer position
-            display = self.get_display()
-            seat = display.get_default_seat()
-            pointer = seat.get_pointer()
-            window = self.get_window()
+            if self.get_mapped():
+                display = Gdk.Display.get_default()
+                _, x, y, _ = display.get_pointer()
+                window = self.get_window()
+                
+                # Only proceed if pointer is outside dock window
+                if window:
+                    win_x, win_y, width, height = window.get_geometry()
+                    if not (win_x <= x <= win_x + width and win_y <= y <= win_y + height):
+                        app_id_dragged = widget.app_identifier
+                        instances_dragged = widget.instances
 
-            if window:
-                screen, x, y = pointer.get_position()  # Fix: Unpack all three values
-                win_x, win_y = window.get_position()
-                win_w = window.get_width()
-                win_h = window.get_height()
-
-                # If pointer is outside dock window bounds
-                if x < win_x or x > win_x + win_w or y < win_y or y > win_y + win_h:
-                    app_id_dragged = widget.app_identifier
-                    instances_dragged = widget.instances
-
-                    app_index_dragged = -1
-                    for i, pinned_app_item in enumerate(self.pinned):
-                        if isinstance(app_id_dragged, dict) and isinstance(
-                            pinned_app_item, dict
-                        ):
-                            if app_id_dragged.get("name") == pinned_app_item.get(
-                                "name"
-                            ):
+                        # Remove pinned app
+                        app_index_dragged = -1
+                        for i, pinned_app_item in enumerate(self.pinned):
+                            if isinstance(app_id_dragged, dict) and isinstance(pinned_app_item, dict):
+                                if app_id_dragged.get("name") == pinned_app_item.get("name"):
+                                    app_index_dragged = i
+                                    break
+                            elif app_id_dragged == pinned_app_item:
                                 app_index_dragged = i
                                 break
-                        elif app_id_dragged == pinned_app_item:
-                            app_index_dragged = i
-                            break
-
-                    if app_index_dragged >= 0:
-                        self.pinned.pop(app_index_dragged)
-                        self.config["pinned_apps"] = self.pinned
-                        self.update_pinned_apps_file()
-                        self.update_dock()
-                    elif instances_dragged:
-                        address = instances_dragged[0].get("address")
-                        if address:
-                            exec_shell_command(
-                                f"hyprctl dispatch focuswindow address:{address}"
-                            )
+                        
+                        if app_index_dragged >= 0:
+                            self.pinned.pop(app_index_dragged)
+                            self.config["pinned_apps"] = self.pinned
+                            self.update_pinned_apps_file()
+                            self.update_dock()
+                        elif instances_dragged:
+                            address = instances_dragged[0].get("address")
+                            if address:
+                                exec_shell_command(f"hyprctl dispatch focuswindow address:{address}")
 
             self._drag_in_progress = False
-            self.check_occlusion_state()
 
         GLib.idle_add(process_drag_end)
 

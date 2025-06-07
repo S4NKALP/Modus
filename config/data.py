@@ -7,7 +7,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 
-APP_NAME = "modus"
+APP_NAME = "modusv1"
 APP_NAME_CAP = "Modus"
 
 
@@ -70,6 +70,7 @@ if os.path.exists(CONFIG_FILE):
         "date_time": config.get("dock_date_time_visible", True),
         "controls": config.get("dock_controls_visible", True),
         "indicators": config.get("dock_indicators_visible", True),
+        "tray": config.get("dock_tray_visible", True),
     }
 
     METRICS_DISKS = config.get("metrics_disks", ["/"])
@@ -96,6 +97,7 @@ else:
         "date_time": True,
         "controls": True,
         "indicators": True,
+        "tray": True,
     }
 
     METRICS_DISKS = ["/"]

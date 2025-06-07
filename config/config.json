@@ -51,6 +51,7 @@
     "dock_battery_visible": true,
     "dock_controls_visible": true,
     "dock_indicators_visible": true,
+    "dock_tray_visible": true,
     "metrics_visible": {
         "cpu": true,
         "ram": true,
