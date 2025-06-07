@@ -1,5 +1,6 @@
 from typing import cast
 
+import fabric
 from fabric import Property, Service, Signal
 from gi.repository import GLib, Gtk
 

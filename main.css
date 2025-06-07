@@ -1,0 +1,45 @@
+@import url("./styles/dock.css");
+@import url("./styles/colors.css");
+@import url("./styles/components.css");
+@import url("./styles/controls.css");
+@import url("./styles/indicators.css");
+
+* {
+  all: unset;
+  color: var(--foreground);
+  font-size: unset;
+  font-family: unset;
+  border-radius: 16px;
+}
+
+#corner {
+  background-color: var(--shadow);
+  border-radius: 0;
+}
+
+#corner-container {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+tooltip {
+  border: solid 1px;
+  border-color: var(--surface);
+  background-color: var(--shadow);
+  animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+@keyframes tooltipShow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+tooltip > * {
+  padding: 6px 10px;
+  border-radius: 10px;
+}
