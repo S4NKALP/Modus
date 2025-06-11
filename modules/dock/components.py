@@ -16,20 +16,16 @@ from modules.dock.applications import Applications
 class DockComponents(Box):
     def __init__(self, orientation_val="h", dock_instance=None, **kwargs):
         super().__init__(
-            name="dock-components",
-            orientation=orientation_val,
-            spacing=8,
-            **kwargs
+            name="dock-components", orientation=orientation_val, spacing=8, **kwargs
         )
-        
+
         self.dock_instance = dock_instance
-        
+
         # Create applications with dock reference
         self.applications = Applications(
-            orientation_val=orientation_val,
-            dock_instance=dock_instance
+            orientation_val=orientation_val, dock_instance=dock_instance
         )
-        
+
         # Initialize component visibility from data
         self.component_visibility = data.DOCK_COMPONENTS_VISIBILITY
 
@@ -56,41 +52,30 @@ class DockComponents(Box):
             name="tray",
             orientation="h" if not data.VERTICAL else "v",
         )
-        
+
         # Add methods to connect drag signals
         self.connect_drag_signals()
-        
+
     def connect_drag_signals(self):
         # Method to connect drag signals from applications to parent
         pass
-        
+
     def set_drag_callback(self, on_drag_begin_cb, on_drag_end_cb):
         """Set callbacks for drag operations from applications component"""
         # Connect to applications drag signals
-        self.applications.connect("drag-begin", 
-            lambda widget, context: on_drag_begin_cb())
-        self.applications.connect("drag-end", 
-            lambda widget, context: on_drag_end_cb())
+        self.applications.connect(
+            "drag-begin", lambda widget, context: on_drag_begin_cb()
+        )
+        self.applications.connect("drag-end", lambda widget, context: on_drag_end_cb())
 
-        # Add components based on position
-        if data.DOCK_POSITION == "Right":
-            self.add(self.date_time)
-            self.add(self.controls)
-            self.add(self.indicators)
-            self.add(self.applications)
-            self.add(self.battery)
-            self.add(self.metrics)
-            self.add(self.workspaces)
-            self.add(self.systray)
-        else:  # Bottom or Left position
-            self.add(self.workspaces)
-            self.add(self.metrics)
-            self.add(self.controls)
-            self.add(self.applications)
-            self.add(self.indicators)
-            self.add(self.battery)
-            self.add(self.date_time)
-            self.add(self.systray)
+        self.add(self.workspaces)
+        self.add(self.metrics)
+        self.add(self.controls)
+        self.add(self.applications)
+        self.add(self.indicators)
+        self.add(self.battery)
+        self.add(self.date_time)
+        self.add(self.systray)
 
         # Apply initial visibility
         self.apply_component_props()
