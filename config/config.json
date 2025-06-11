@@ -1,17 +1,4 @@
-from config.data import (
-    APP_NAME,
-    APP_NAME_CAP,
-    NOTIF_POS_DEFAULT,
-    NOTIF_POS_KEY,
-    WALLPAPERS_DIR_DEFAULT,
-)
-
-SOURCE_STRING = f"""
-# {APP_NAME_CAP}
-source = ~/{APP_NAME_CAP}/config/hypr/{APP_NAME}.conf
-"""
-
-DEFAULTS = {
+{
     "prefix_restart": "SUPER ALT",
     "suffix_restart": "B",
     "prefix_axmsg": "SUPER",
@@ -49,29 +36,31 @@ DEFAULTS = {
     "prefix_restart_inspector": "SUPER CTRL ALT",
     "suffix_restart_inspector": "B",
     "wallpapers_dir": "/home/sankalp/Pictures/wallpapers",
-    "vertical": True,
-    "dock_enabled": True,
-    "dock_always_occluded": False,
-    "dock_auto_hide": True,
+    "dock_position": "Bottom",
+    "vertical": false,
+    "dock_enabled": true,
+    "dock_auto_hide": true,
+    "dock_always_occluded": false,
+    "dock_icon_size": 20,
     "terminal_command": "kitty -e",
-    "corners_visible": False,
+    "corners_visible": true,
     "dock_theme": "Pills",
     "notif_pos": "Top",
-    "dock_position": "Bottom",
-    "dock_icon_size": 20,
-    "dock_workspaces_visible": True,
-    "dock_metrics_visible": True,
-    "dock_battery_visible": True,
-    "dock_date_time_visible": True,
-    "dock_controls_visible": True,
-    "dock_indicators_visible": True,
-    "dock_applications_visible": True,
+    "dock_workspace_visible": true,
+    "dock_metrics_visible": true,
+    "dock_date_time_visible": true,
+    "dock_battery_visible": true,
+    "dock_controls_visible": true,
+    "dock_indicators_visible": true,
+    "dock_applications_visible": true,
     "metrics_visible": {
-        "cpu": True,
-        "ram": True,
-        "disk": True,
-        "swap": True,
-        "gpu": False,
+        "cpu": true,
+        "ram": true,
+        "swap": true,
+        "disk": false,
+        "gpu": false
     },
-    "metrics_disks": ["/"],
+    "metrics_disks": [
+        "/"
+    ]
 }

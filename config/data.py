@@ -7,7 +7,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 
-APP_NAME = "modusv1"
+APP_NAME = "modus"
 APP_NAME_CAP = "Modus"
 
 
@@ -60,6 +60,7 @@ if os.path.exists(CONFIG_FILE):
     DOCK_AUTO_HIDE = config.get("dock_auto_hide", True)
     DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", False)
     DOCK_THEME = config.get("dock_theme", "Pills")
+    DOCK_ICON_SIZE = config.get("dock_icon_size", 20)
 
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
@@ -70,7 +71,8 @@ if os.path.exists(CONFIG_FILE):
         "date_time": config.get("dock_date_time_visible", True),
         "controls": config.get("dock_controls_visible", True),
         "indicators": config.get("dock_indicators_visible", True),
-        "tray": config.get("dock_tray_visible", True),
+        "systray": config.get("dock_tray_visible", True),
+        "applications": config.get("dock_applications_visible", True),
     }
 
     METRICS_DISKS = config.get("metrics_disks", ["/"])
@@ -87,6 +89,7 @@ else:
     DOCK_AUTO_HIDE = True
     TERMINAL_COMMAND = "kitty -e"
     DOCK_THEME = "Pills"
+    DOCK_ICON_SIZE = 20
 
     NOTIF_POS = NOTIF_POS_DEFAULT
 
@@ -97,7 +100,8 @@ else:
         "date_time": True,
         "controls": True,
         "indicators": True,
-        "tray": True,
+        "systray": True,
+        "applications": True,
     }
 
     METRICS_DISKS = ["/"]

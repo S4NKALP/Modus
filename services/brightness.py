@@ -6,12 +6,7 @@ from gi.repository import GLib
 from loguru import logger
 
 
-
-
 def exec_brightnessctl_async(args: str):
-    if not helpers.executable_exists("brightnessctl"):
-        logger.error(f"Command brightnessctl not found")
-
     exec_shell_command_async(f"brightnessctl {args}", lambda _: None)
 
 
@@ -20,9 +15,7 @@ try:
     screen_device = os.listdir("/sys/class/backlight")
     screen_device = screen_device[0] if screen_device else ""
 except FileNotFoundError:
-    logger.error(
-        f"No backlight devices found, brightness control disabled"
-    )
+    logger.error(f"No backlight devices found, brightness control disabled")
     screen_device = ""
 
 
@@ -67,9 +60,7 @@ class Brightness(Service):
         )
 
         # Log the initialization of the service
-        logger.info(
-            f"Brightness service initialized for device: {screen_device}"
-        )
+        logger.info(f"Brightness service initialized for device: {screen_device}")
 
     def do_read_max_brightness(self, path: str) -> int:
         # Reads the maximum brightness value from the specified path.
@@ -86,9 +77,7 @@ class Brightness(Service):
         if os.path.exists(brightness_path):
             with open(brightness_path) as f:
                 return int(f.readline())
-        logger.warning(
-            f"Brightness file does not exist: {brightness_path}"
-        )
+        logger.warning(f"Brightness file does not exist: {brightness_path}")
         return -1  # Return -1 if file doesn't exist, indicating error.
 
     @screen_brightness.setter
@@ -100,10 +89,7 @@ class Brightness(Service):
         try:
             exec_brightnessctl_async(f"--device '{screen_device}' set {value}")
             self.emit("screen", int((value / self.max_screen) * 100))
-            logger.info(
-                f"Set screen brightness to {value} "
-                f"(out of {self.max_screen})"
-            )
+            logger.info(f"Set screen brightness to {value} (out of {self.max_screen})")
         except GLib.Error as e:
             logger.error(f"Error setting screen brightness: {e.message}")
         except Exception as e:

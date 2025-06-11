@@ -10,15 +10,13 @@ from modules.dock.metrics import Metrics
 from modules.dock.controls import Controls
 from modules.dock.workspaces import workspace
 from modules.dock.indicators import Indicators
+from modules.dock.applications import Applications
 
 
 class DockComponents(Box):
     def __init__(self, orientation_val="h", **kwargs):
         super().__init__(
-            name="system-tray",
-            orientation=orientation_val,
-            spacing=4,
-            **kwargs
+            name="system-tray", orientation=orientation_val, spacing=4, **kwargs
         )
 
         # Initialize component visibility from data
@@ -42,7 +40,13 @@ class DockComponents(Box):
         self.controls = Controls()
         self.indicators = Indicators()
         self.systray = SystemTray(
-            icon_size=16, name="tray", orientation="h" if not data.VERTICAL else "v"
+            icon_size=18,
+            spacing=4,
+            name="tray",
+            orientation="h" if not data.VERTICAL else "v",
+        )
+        self.applications = Applications(
+            orientation_val=orientation_val
         )
 
         # Add components based on position
@@ -50,6 +54,7 @@ class DockComponents(Box):
             self.add(self.date_time)
             self.add(self.controls)
             self.add(self.indicators)
+            self.add(self.applications)
             self.add(self.battery)
             self.add(self.metrics)
             self.add(self.workspaces)
@@ -58,6 +63,7 @@ class DockComponents(Box):
             self.add(self.workspaces)
             self.add(self.metrics)
             self.add(self.controls)
+            self.add(self.applications)
             self.add(self.indicators)
             self.add(self.battery)
             self.add(self.date_time)
@@ -75,6 +81,7 @@ class DockComponents(Box):
             "controls": self.controls,
             "indicators": self.indicators,
             "systray": self.systray,
+            "applications": self.applications,
         }
 
         for component_name, widget in components.items():
@@ -90,19 +97,28 @@ class DockComponents(Box):
             "controls": self.controls,
             "indicators": self.indicators,
             "systray": self.systray,
+            "applications": self.applications,
         }
 
         if component_name in components and component_name in self.component_visibility:
-            self.component_visibility[component_name] = not self.component_visibility[component_name]
-            components[component_name].set_visible(self.component_visibility[component_name])
+            self.component_visibility[component_name] = not self.component_visibility[
+                component_name
+            ]
+            components[component_name].set_visible(
+                self.component_visibility[component_name]
+            )
 
-            config_file = os.path.expanduser(f"~/.config/{data.APP_NAME}/config/config.json")
+            config_file = os.path.expanduser(
+                f"~/.config/{data.APP_NAME}/config/config.json"
+            )
             if os.path.exists(config_file):
                 try:
                     with open(config_file, "r") as f:
                         config = json.load(f)
 
-                    config[f"dock_{component_name}_visible"] = self.component_visibility[component_name]
+                    config[f"dock_{component_name}_visible"] = (
+                        self.component_visibility[component_name]
+                    )
 
                     with open(config_file, "w") as f:
                         json.dump(config, f, indent=4)
@@ -111,4 +127,4 @@ class DockComponents(Box):
 
             return self.component_visibility[component_name]
 
-        return None 
+        return None

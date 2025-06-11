@@ -211,7 +211,13 @@ class Battery(Box):
 
         # Update circle progress
         self.circle.set_value(percentage / 100.0)
-        self.level.set_label(f"{int(percentage)}%")
+        
+        # Only show percentage label if not at 100%
+        if percentage < 100:
+            self.level.set_label(f"{int(percentage)}%")
+            self.level.set_visible(True)
+        else:
+            self.level.set_visible(False)
 
         # Remove any existing profile classes
         self.circle.remove_style_class("power-saver")

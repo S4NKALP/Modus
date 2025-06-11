@@ -1,51 +1,16 @@
 import json
-import logging
-
-import cairo
 import config.data as data
 from fabric.hyprland.widgets import get_hyprland_connection
-from fabric.utils import (
-    exec_shell_command,
-    exec_shell_command_async,
-    get_relative_path,
-    idle_add,
-    remove_handler,
-)
-from fabric.utils.helpers import get_desktop_applications
+
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
-from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk
 from modules.corners import MyCorner
-from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
 from modules.dock.components import DockComponents
 
-
-def read_config():
-    config_path = get_relative_path("../../config/dock.json")
-
-    with open(config_path, "r") as file:
-        data = json.load(file)
-    return data
-
-
-def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
-    alloc = widget.get_allocation()
-    surface = cairo.ImageSurface(
-        cairo.Format.ARGB32,
-        alloc.width,
-        alloc.height,
-    )
-    cr = cairo.Context(surface)
-    cr.set_source_rgba(255, 255, 255, 0)
-    cr.rectangle(0, 0, alloc.width, alloc.height)
-    cr.fill()
-    widget.draw(cr)
-    return surface
 
 
 class Dock(Window):
@@ -72,12 +37,13 @@ class Dock(Window):
             main_box_h_align_val = "center"
             dock_wrapper_orientation_val = Gtk.Orientation.HORIZONTAL
         else:
-            if data.DOCK_POSITION == "Right":
-                anchor_to_set = "right"
-                revealer_transition_type = "slide-left"
-            elif data.DOCK_POSITION == "Left":
+            # Use DOCK_POSITION directly instead of BAR_POSITION
+            if data.DOCK_POSITION == "Left":
                 anchor_to_set = "left"
                 revealer_transition_type = "slide-right"
+            elif data.DOCK_POSITION == "Right":
+                anchor_to_set = "right"
+                revealer_transition_type = "slide-left"
             else:
                 anchor_to_set = "right"
                 revealer_transition_type = "slide-left"
@@ -90,20 +56,13 @@ class Dock(Window):
             name="dock-window",
             layer="top",
             anchor=anchor_to_set,
-            margin="0px 0px 0px 0px",
-            exclusivity="none",
+            margin="0px 0px 0px 0px",  # Set all margins to 0
+            exclusivity="auto" if not data.DOCK_AUTO_HIDE else "none",
             **kwargs,
         )
         Dock._instances.append(self)
 
-        self.config = read_config()
         self.conn = get_hyprland_connection()
-        self.icon_resolver = IconResolver()
-        self.pinned = self.config.get("pinned_apps", [])
-        self.config_path = get_relative_path("../../config/dock.json")
-        self.app_map = {}
-        self._all_apps = get_desktop_applications()
-        self.app_identifiers = self._build_app_identifiers_map()
 
         self.hide_id = None
         self._arranger_handler = None
@@ -146,15 +105,10 @@ class Dock(Window):
         self.dock_eventbox.connect("enter-notify-event", self._on_dock_enter)
         self.dock_eventbox.connect("leave-notify-event", self._on_dock_leave)
 
-        # Define separator orientation
-        separator_orientation = (
-            Gtk.Orientation.VERTICAL
-            if self.view.get_orientation() == Gtk.Orientation.HORIZONTAL
-            else Gtk.Orientation.HORIZONTAL
-        )
-
         # Create components using DockComponents
-        self.components = DockComponents(orientation_val="h" if not data.VERTICAL else "v")
+        self.components = DockComponents(
+            orientation_val="h" if not data.VERTICAL else "v"
+        )
 
         # Add components based on position
         if self.actual_dock_is_horizontal:  # Bottom dock
@@ -163,30 +117,6 @@ class Dock(Window):
             self.view.add(self.components)
         else:  # Right position
             self.view.add(self.components)
-
-        # Add system tray to dock
-        if data.DOCK_POSITION == "Right":
-            self.view.add(
-                Box(
-                    orientation=separator_orientation,
-                    v_expand=False,
-                    h_expand=False,
-                    h_align="center",
-                    v_align="center",
-                    name="dock-separator",
-                )
-            )
-        else:
-            self.view.add(
-                Box(
-                    orientation=separator_orientation,
-                    v_expand=False,
-                    h_expand=False,
-                    h_align="center",
-                    v_align="center",
-                    name="dock-separator",
-                )
-            )
 
         self.corner_left = Box()
         self.corner_right = Box()
@@ -255,6 +185,7 @@ class Dock(Window):
                 orientation=Gtk.Orientation.VERTICAL,
                 v_expand=True,
                 v_align="fill",
+                margin=0,  # Add explicit margin=0
                 children=[self.corner_top, self.dock_eventbox, self.corner_bottom],
             )
 
@@ -268,20 +199,41 @@ class Dock(Window):
 
         self.hover_activator = EventBox()
 
-        self.hover_activator.set_size_request(
-            -1 if self.actual_dock_is_horizontal else 1,
-            1 if self.actual_dock_is_horizontal else -1,
-        )
+        # Adjust hover activator size based on position and dock position
+        if self.actual_dock_is_horizontal:
+            # Bottom dock
+            self.hover_activator.set_size_request(-1, 1)
+        else:
+            # Vertical dock (Left or Right)
+            self.hover_activator.set_size_request(1, -1)
+
         self.hover_activator.connect("enter-notify-event", self._on_hover_enter)
         self.hover_activator.connect("leave-notify-event", self._on_hover_leave)
 
-        self.main_box = Box(
-            orientation=main_box_orientation_val,
-            children=[self.hover_activator, self.dock_revealer]
-            if data.DOCK_POSITION != "Right"
-            else [self.dock_revealer, self.hover_activator],
-            h_align=main_box_h_align_val,
-        )
+        # Create main box with correct child order based on position
+        if self.actual_dock_is_horizontal:
+            # Bottom dock
+            self.main_box = Box(
+                orientation=main_box_orientation_val,
+                children=[self.hover_activator, self.dock_revealer],
+                h_align=main_box_h_align_val,
+            )
+        else:
+            # Vertical dock
+            if data.DOCK_POSITION == "Left":
+                # Left dock - revealer first, then hover activator
+                self.main_box = Box(
+                    orientation=main_box_orientation_val,
+                    children=[self.dock_revealer, self.hover_activator],
+                    h_align=main_box_h_align_val,
+                )
+            else:
+                # Right dock - hover activator first, then revealer
+                self.main_box = Box(
+                    orientation=main_box_orientation_val,
+                    children=[self.hover_activator, self.dock_revealer],
+                    h_align=main_box_h_align_val,
+                )
         self.add(self.main_box)
 
         if data.DOCK_THEME in ["Edge", "Dense"]:
@@ -299,73 +251,17 @@ class Dock(Window):
         if self.always_occluded:
             self.dock_full.add_style_class("occluded")
 
-        self.view.drag_source_set(
-            Gdk.ModifierType.BUTTON1_MASK,
-            [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)],
-            Gdk.DragAction.MOVE,
-        )
-        self.view.drag_dest_set(
-            Gtk.DestDefaults.ALL,
-            [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)],
-            Gdk.DragAction.MOVE,
-        )
-        self.view.connect("drag-data-get", self.on_drag_data_get)
-        self.view.connect("drag-data-received", self.on_drag_data_received)
-        self.view.connect("drag-begin", self.on_drag_begin)
-        self.view.connect("drag-end", self.on_drag_end)
-
         if self.conn.ready:
-            self.update_dock()
             GLib.timeout_add(250, self.check_occlusion_state)
         else:
-            self.conn.connect("event::ready", self.update_dock)
             self.conn.connect(
                 "event::ready",
                 lambda *args: GLib.timeout_add(250, self.check_occlusion_state),
             )
 
-        for ev in ("activewindow", "openwindow", "closewindow", "changefloatingmode"):
-            self.conn.connect(f"event::{ev}", self.update_dock)
-
         self.conn.connect("event::workspace", self.check_hide)
 
         GLib.timeout_add_seconds(1, self.check_config_change)
-
-    def _build_app_identifiers_map(self):
-        identifiers = {}
-        for app in self._all_apps:
-            if app.name:
-                identifiers[app.name.lower()] = app
-            if app.display_name:
-                identifiers[app.display_name.lower()] = app
-            if app.window_class:
-                identifiers[app.window_class.lower()] = app
-            if app.executable:
-                identifiers[app.executable.split("/")[-1].lower()] = app
-            if app.command_line:
-                identifiers[app.command_line.split()[0].split("/")[-1].lower()] = app
-        return identifiers
-
-    def _normalize_window_class(self, class_name):
-        if not class_name:
-            return ""
-        normalized = class_name.lower()
-        suffixes = [".bin", ".exe", ".so", "-bin", "-gtk"]
-        for suffix in suffixes:
-            if normalized.endswith(suffix):
-                normalized = normalized[: -len(suffix)]
-        return normalized
-
-    def _classes_match(self, class1, class2):
-        if not class1 or not class2:
-            return False
-        norm1 = self._normalize_window_class(class1)
-        norm2 = self._normalize_window_class(class2)
-        return norm1 == norm2
-
-    def on_drag_begin(self, widget, drag_context):
-        self._drag_in_progress = True
-        Gtk.drag_set_icon_surface(drag_context, createSurfaceFromWidget(widget))
 
     def _on_hover_enter(self, *args):
         self.is_mouse_over_dock_area = True
@@ -400,160 +296,6 @@ class Dock(Window):
         if self.always_occluded:
             self.dock_full.add_style_class("occluded")
         return True
-
-    def find_app(self, app_identifier):
-        if not app_identifier:
-            return None
-        if isinstance(app_identifier, dict):
-            for key in [
-                "window_class",
-                "executable",
-                "command_line",
-                "name",
-                "display_name",
-            ]:
-                if key in app_identifier and app_identifier[key]:
-                    app = self.find_app_by_key(app_identifier[key])
-                    if app:
-                        return app
-            return None
-        return self.find_app_by_key(app_identifier)
-
-    def find_app_by_key(self, key_value):
-        if not key_value:
-            return None
-        normalized_id = str(key_value).lower()
-        if normalized_id in self.app_identifiers:
-            return self.app_identifiers[normalized_id]
-        for app in self._all_apps:
-            if app.name and normalized_id in app.name.lower():
-                return app
-            if app.display_name and normalized_id in app.display_name.lower():
-                return app
-            if app.window_class and normalized_id in app.window_class.lower():
-                return app
-            if app.executable and normalized_id in app.executable.lower():
-                return app
-            if app.command_line and normalized_id in app.command_line.lower():
-                return app
-        return None
-
-    def update_app_map(self):
-        self._all_apps = get_desktop_applications()
-        self.app_map = {app.name: app for app in self._all_apps if app.name}
-        self.app_identifiers = self._build_app_identifiers_map()
-
-    def create_button(self, app_identifier, instances):
-        desktop_app = self.find_app(app_identifier)
-        icon_img = None
-        display_name = None
-
-        if desktop_app:
-            icon_img = desktop_app.get_icon_pixbuf(size=self.icon_size)
-            display_name = desktop_app.display_name or desktop_app.name
-
-        id_value = (
-            app_identifier["name"]
-            if isinstance(app_identifier, dict)
-            else app_identifier
-        )
-
-        if not icon_img:
-            icon_img = self.icon_resolver.get_icon_pixbuf(id_value, self.icon_size)
-
-        if not icon_img:
-            icon_img = self.icon_resolver.get_icon_pixbuf(
-                "application-x-executable-symbolic", self.icon_size
-            )
-            if not icon_img:
-                icon_img = self.icon_resolver.get_icon_pixbuf(
-                    "image-missing", self.icon_size
-                )
-
-        items = [Image(pixbuf=icon_img)]
-        tooltip = display_name or (id_value if isinstance(id_value, str) else "Unknown")
-        if not display_name and instances and instances[0].get("title"):
-            tooltip = instances[0]["title"]
-
-        button = Button(
-            child=Box(
-                name="dock-icon", orientation="v", h_align="center", children=items
-            ),
-            on_clicked=lambda *a: self.handle_app(
-                app_identifier, instances, desktop_app
-            ),
-            tooltip_text=tooltip,
-            name="dock-app-button",
-        )
-        button.app_identifier = app_identifier
-        button.desktop_app = desktop_app
-        button.instances = instances
-        if instances:
-            button.add_style_class("instance")
-
-        button.drag_source_set(
-            Gdk.ModifierType.BUTTON1_MASK,
-            [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)],
-            Gdk.DragAction.MOVE,
-        )
-        button.connect("drag-begin", self.on_drag_begin)
-        button.connect("drag-end", self.on_drag_end)
-        button.drag_dest_set(
-            Gtk.DestDefaults.ALL,
-            [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)],
-            Gdk.DragAction.MOVE,
-        )
-        button.connect("drag-data-get", self.on_drag_data_get)
-        button.connect("drag-data-received", self.on_drag_data_received)
-        button.connect("enter-notify-event", self._on_child_enter)
-        return button
-
-    def handle_app(self, app_identifier, instances, desktop_app=None):
-        if not instances:
-            if not desktop_app:
-                desktop_app = self.find_app(app_identifier)
-            if desktop_app:
-                launch_success = desktop_app.launch()
-                if not launch_success:
-                    if desktop_app.command_line:
-                        exec_shell_command_async(f"nohup {desktop_app.command_line} &")
-                    elif desktop_app.executable:
-                        exec_shell_command_async(f"nohup {desktop_app.executable} &")
-            else:
-                cmd_to_run = None
-                if isinstance(app_identifier, dict):
-                    if (
-                        "command_line" in app_identifier
-                        and app_identifier["command_line"]
-                    ):
-                        cmd_to_run = app_identifier["command_line"]
-                    elif (
-                        "executable" in app_identifier and app_identifier["executable"]
-                    ):
-                        cmd_to_run = app_identifier["executable"]
-                    elif "name" in app_identifier and app_identifier["name"]:
-                        cmd_to_run = app_identifier["name"]
-                elif isinstance(app_identifier, str):
-                    cmd_to_run = app_identifier
-                if cmd_to_run:
-                    exec_shell_command_async(f"nohup {cmd_to_run} &")
-        else:
-            focused = self.get_focused()
-            idx = next(
-                (i for i, inst in enumerate(instances) if inst["address"] == focused),
-                -1,
-            )
-            next_inst = instances[(idx + 1) % len(instances)]
-            exec_shell_command(
-                f"hyprctl dispatch focuswindow address:{next_inst['address']}"
-            )
-
-    def _on_child_enter(self, widget, event):
-        self.is_mouse_over_dock_area = True
-        if self.hide_id:
-            GLib.source_remove(self.hide_id)
-            self.hide_id = None
-        return False
 
     def delay_hide(self):
         if self.hide_id:
@@ -609,218 +351,6 @@ class Dock(Window):
                 self.dock_revealer.set_reveal_child(False)
             self.dock_full.add_style_class("occluded")
 
-    def update_dock(self, *args):
-        self.update_app_map()
-        arranger_handler = getattr(self, "_arranger_handler", None)
-        if arranger_handler:
-            remove_handler(arranger_handler)
-        clients = self.get_clients()
-
-        running_windows = {}
-        for c in clients:
-            window_id = None
-            if class_name := c.get("initialClass", "").lower():
-                window_id = class_name
-            elif class_name := c.get("class", "").lower():
-                window_id = class_name
-            elif title := c.get("title", "").lower():
-                possible_name = title.split(" - ")[0].strip()
-                if possible_name and len(possible_name) > 1:
-                    window_id = possible_name
-                else:
-                    window_id = title
-            if not window_id:
-                window_id = "unknown-app"
-            running_windows.setdefault(window_id, []).append(c)
-            normalized_id = self._normalize_window_class(window_id)
-            if normalized_id != window_id:
-                running_windows.setdefault(normalized_id, []).extend(
-                    running_windows[window_id]
-                )
-
-        pinned_buttons = []
-        used_window_classes = set()
-
-        for app_data_item in self.pinned:
-            app = self.find_app(app_data_item)
-            instances = []
-            matched_class = None
-            possible_identifiers = []
-
-            if isinstance(app_data_item, dict):
-                for key in [
-                    "window_class",
-                    "executable",
-                    "command_line",
-                    "name",
-                    "display_name",
-                ]:
-                    if key in app_data_item and app_data_item[key]:
-                        possible_identifiers.append(app_data_item[key].lower())
-            elif isinstance(app_data_item, str):
-                possible_identifiers.append(app_data_item.lower())
-
-            if app:
-                if app.window_class:
-                    possible_identifiers.append(app.window_class.lower())
-                if app.executable:
-                    possible_identifiers.append(app.executable.split("/")[-1].lower())
-                if app.command_line:
-                    cmd_parts = app.command_line.split()
-                    if cmd_parts:
-                        possible_identifiers.append(cmd_parts[0].split("/")[-1].lower())
-                if app.name:
-                    possible_identifiers.append(app.name.lower())
-                if app.display_name:
-                    possible_identifiers.append(app.display_name.lower())
-
-            possible_identifiers = list(set(possible_identifiers))
-
-            for identifier in possible_identifiers:
-                if identifier in running_windows:
-                    instances = running_windows[identifier]
-                    matched_class = identifier
-                    break
-                normalized = self._normalize_window_class(identifier)
-                if normalized in running_windows:
-                    instances = running_windows[normalized]
-                    matched_class = normalized
-                    break
-                for window_class_key in running_windows:
-                    if len(identifier) >= 3 and identifier in window_class_key:
-                        instances = running_windows[window_class_key]
-                        matched_class = window_class_key
-                        break
-                if matched_class:
-                    break
-
-            if matched_class:
-                used_window_classes.add(matched_class)
-                used_window_classes.add(self._normalize_window_class(matched_class))
-
-            pinned_buttons.append(self.create_button(app_data_item, instances))
-
-        open_buttons = []
-        for class_name, instances in running_windows.items():
-            if class_name not in used_window_classes:
-                app = None
-                app = self.app_identifiers.get(class_name)
-                if not app:
-                    norm_class = self._normalize_window_class(class_name)
-                    app = self.app_identifiers.get(norm_class)
-                if not app:
-                    app = self.find_app_by_key(class_name)
-                if not app and instances and instances[0].get("title"):
-                    title = instances[0].get("title", "")
-                    potential_name = title.split(" - ")[0].strip()
-                    if len(potential_name) > 2:
-                        app = self.find_app_by_key(potential_name)
-
-                if app:
-                    app_data_obj = {
-                        "name": app.name,
-                        "display_name": app.display_name,
-                        "window_class": app.window_class,
-                        "executable": app.executable,
-                        "command_line": app.command_line,
-                    }
-                    identifier = app_data_obj
-                else:
-                    identifier = class_name
-                open_buttons.append(self.create_button(identifier, instances))
-
-        children = []
-        separator_orientation = (
-            Gtk.Orientation.VERTICAL
-            if self.view.get_orientation() == Gtk.Orientation.HORIZONTAL
-            else Gtk.Orientation.HORIZONTAL
-        )
-
-        # Add components based on position
-        if self.actual_dock_is_horizontal:  # Bottom dock
-            children.append(self.components)
-            if pinned_buttons or open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.extend(pinned_buttons)
-            if pinned_buttons and open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.extend(open_buttons)
-        elif data.DOCK_POSITION == "Left":
-            children.append(self.components)
-            if pinned_buttons or open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.extend(pinned_buttons)
-            if pinned_buttons and open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.extend(open_buttons)
-        else:  # Right position
-            children.extend(pinned_buttons)
-            if pinned_buttons and open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.extend(open_buttons)
-            if pinned_buttons or open_buttons:
-                children.append(
-                    Box(
-                        orientation=separator_orientation,
-                        v_expand=False,
-                        h_expand=False,
-                        h_align="center",
-                        v_align="center",
-                        name="dock-separator",
-                    )
-                )
-            children.append(self.components)
-
-        self.view.children = children
-        idle_add(self._update_size)
-        self._drag_in_progress = False
-        self.check_occlusion_state()
-
     def get_clients(self):
         try:
             return json.loads(self.conn.send_command("j/clients").reply.decode())
@@ -855,6 +385,13 @@ class Dock(Window):
                 self.dock_full.remove_style_class("occluded")
             return True
 
+        if not data.DOCK_AUTO_HIDE:
+            if not self.dock_revealer.get_reveal_child():
+                self.dock_revealer.set_reveal_child(True)
+            if not self.always_occluded:
+                self.dock_full.remove_style_class("occluded")
+            return True
+
         if self.always_occluded:
             if self.dock_revealer.get_reveal_child():
                 self.dock_revealer.set_reveal_child(False)
@@ -880,165 +417,25 @@ class Dock(Window):
 
         return True
 
-    def _find_drag_target(self, widget):
-        children = self.view.get_children()
-        while widget is not None and widget not in children:
-            widget = widget.get_parent() if hasattr(widget, "get_parent") else None
-        return widget
-
-    def on_drag_data_get(self, widget, drag_context, data_obj, info, time):
-        target = self._find_drag_target(
-            widget.get_parent() if isinstance(widget, Box) else widget
-        )
-        if target is not None:
-            index = self.view.get_children().index(target)
-            data_obj.set_text(str(index), -1)
-
-    def on_drag_data_received(self, widget, drag_context, x, y, data_obj, info, time):
-        target = self._find_drag_target(
-            widget.get_parent() if isinstance(widget, Box) else widget
-        )
-        if target is None:
-            return
-        try:
-            source_index = int(data_obj.get_text())
-        except (TypeError, ValueError):
-            return
-
-        children = self.view.get_children()
-        try:
-            target_index = children.index(target)
-        except ValueError:
-            return
-
-        if source_index != target_index:
-            separator_index = -1
-            for i, child_item_loop in enumerate(children):
-                if child_item_loop.get_name() == "dock-separator":
-                    separator_index = i
-                    break
-            cross_section_drag = separator_index != -1 and (
-                (source_index < separator_index and target_index > separator_index)
-                or (source_index > separator_index and target_index < separator_index)
-            )
-
-            child_item_to_move = children.pop(source_index)
-            children.insert(target_index, child_item_to_move)
-            self.view.children = children
-            self.update_pinned_apps(skip_update=not cross_section_drag)
-            if cross_section_drag:
-                GLib.idle_add(self.update_dock)
-
-    def on_drag_end(self, widget, drag_context):
-        if not self._drag_in_progress:
-            return
-
-        def process_drag_end():
-            if self.get_mapped():
-                display = Gdk.Display.get_default()
-                _, x, y, _ = display.get_pointer()
-                window = self.get_window()
-                
-                # Only proceed if pointer is outside dock window
-                if window:
-                    win_x, win_y, width, height = window.get_geometry()
-                    if not (win_x <= x <= win_x + width and win_y <= y <= win_y + height):
-                        app_id_dragged = widget.app_identifier
-                        instances_dragged = widget.instances
-
-                        # Remove pinned app
-                        app_index_dragged = -1
-                        for i, pinned_app_item in enumerate(self.pinned):
-                            if isinstance(app_id_dragged, dict) and isinstance(pinned_app_item, dict):
-                                if app_id_dragged.get("name") == pinned_app_item.get("name"):
-                                    app_index_dragged = i
-                                    break
-                            elif app_id_dragged == pinned_app_item:
-                                app_index_dragged = i
-                                break
-                        
-                        if app_index_dragged >= 0:
-                            self.pinned.pop(app_index_dragged)
-                            self.config["pinned_apps"] = self.pinned
-                            self.update_pinned_apps_file()
-                            self.update_dock()
-                        elif instances_dragged:
-                            address = instances_dragged[0].get("address")
-                            if address:
-                                exec_shell_command(f"hyprctl dispatch focuswindow address:{address}")
-
-            self._drag_in_progress = False
-
-        GLib.idle_add(process_drag_end)
-
     def _update_size(self):
         width, _ = self.view.get_preferred_width()
         self.set_size_request(width, -1)
         return False
 
     def check_config_change(self):
-        new_config = read_config()
         new_always_occluded = data.DOCK_ALWAYS_OCCLUDED
         if self.always_occluded != new_always_occluded:
             self.always_occluded = new_always_occluded
             self.check_occlusion_state()
-
-        if new_config.get("pinned_apps", []) != self.config.get("pinned_apps", []):
-            self.config = new_config
-            self.pinned = self.config.get("pinned_apps", [])
-            self.update_app_map()
-            self.update_dock()
         return True
 
     def check_config_change_immediate(self):
-        new_config = read_config()
         previous_always_occluded = self.always_occluded
         self.always_occluded = data.DOCK_ALWAYS_OCCLUDED
 
         if previous_always_occluded != self.always_occluded:
             self.check_occlusion_state()
-
-        if new_config.get("pinned_apps", []) != self.config.get("pinned_apps", []):
-            self.config = new_config
-            self.pinned = self.config.get("pinned_apps", [])
-            self.update_app_map()
-            self.update_dock()
         return False
-
-    def update_pinned_apps_file(self):
-        config_path = get_relative_path("../../config/dock.json")
-        try:
-            with open(config_path, "w") as file:
-                json.dump(self.config, file, indent=4)
-            return True
-        except Exception as e:
-            logging.error(f"Failed to write dock config: {e}")
-            return False
-
-    def update_pinned_apps(self, skip_update=False):
-        pinned_children_data = []
-        for child_widget in self.view.get_children():
-            if child_widget.get_name() == "dock-separator":
-                break
-            if hasattr(child_widget, "app_identifier"):
-                if hasattr(child_widget, "desktop_app") and child_widget.desktop_app:
-                    app = child_widget.desktop_app
-                    app_data_obj = {
-                        "name": app.name,
-                        "display_name": app.display_name,
-                        "window_class": app.window_class,
-                        "executable": app.executable,
-                        "command_line": app.command_line,
-                    }
-                    pinned_children_data.append(app_data_obj)
-                else:
-                    pinned_children_data.append(child_widget.app_identifier)
-
-        self.config["pinned_apps"] = pinned_children_data
-        self.pinned = pinned_children_data
-        file_updated = self.update_pinned_apps_file()
-        if file_updated and not skip_update:
-            self.update_dock()
 
     @staticmethod
     def notify_config_change():

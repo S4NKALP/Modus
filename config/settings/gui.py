@@ -286,6 +286,29 @@ class HyprConfGUI(Window):
         dock_theme_combo_container.add(self.dock_theme_combo)
         layout_grid.attach(dock_theme_combo_container, 3, 0, 1, 1)
 
+        # Add icon size scale
+        icon_size_label = Label(label="Icon Size", h_align="start", v_align="center")
+        layout_grid.attach(icon_size_label, 0, 3, 1, 1)
+        
+        icon_size_scale_container = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.START,
+            valign=Gtk.Align.CENTER,
+            hexpand=True
+        )
+        
+        self.icon_size_scale = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 20, 30, 2
+        )
+        self.icon_size_scale.set_value(bind_vars.get("dock_icon_size", 20))
+        self.icon_size_scale.set_size_request(150, -1)
+        self.icon_size_scale.set_draw_value(True)
+        self.icon_size_scale.set_value_pos(Gtk.PositionType.RIGHT)
+        self.icon_size_scale.set_tooltip_text("Adjust the size of dock icons")
+        
+        icon_size_scale_container.add(self.icon_size_scale)
+        layout_grid.attach(icon_size_scale_container, 1, 3, 3, 1)
+
         dock_label = Label(label="Show Dock", h_align="start", v_align="center")
         layout_grid.attach(dock_label, 0, 1, 1, 1)
         dock_switch_container = Gtk.Box(
@@ -388,6 +411,7 @@ class HyprConfGUI(Window):
             "battery": "Battery Indicator",
             "controls": "Control Panel",
             "indicators": "Indicators",
+            "applications": "Taskbar"
         }
 
         self.corners_switch = Gtk.Switch(active=bind_vars.get("corners_visible", True))
@@ -535,8 +559,8 @@ class HyprConfGUI(Window):
         metric_names = {
             "cpu": "CPU",
             "ram": "RAM",
-            "disk": "Disk",
             "swap": "Swap",
+            "disk": "Disk",
             "gpu": "GPU",
         }
 
@@ -633,18 +657,18 @@ class HyprConfGUI(Window):
         repo_box.add(repo_link)
         vbox.add(repo_box)
 
-        def on_kofi_clicked(_):
-            import webbrowser
+        # def on_kofi_clicked(_):
+        #     import webbrowser
 
-            webbrowser.open("https://ko-fi.com/S4NKALP")
+        #     webbrowser.open("https://github.com/S4NKALP")
 
-        kofi_btn = Button(
-            label="Support on Ko-Fi ❤️",
-            on_clicked=on_kofi_clicked,
-            tooltip_text="Support S4NKALP on Ko-Fi",
-            style="margin-top: 18px; min-width: 160px;",
-        )
-        vbox.add(kofi_btn)
+        # kofi_btn = Button(
+        #     label="Support on Ko-Fi ❤️",
+        #     on_clicked=on_kofi_clicked,
+        #     tooltip_text="Support S4NKALP on Ko-Fi",
+        #     style="margin-top: 18px; min-width: 160px;",
+        # )
+        # vbox.add(kofi_btn)
         vbox.add(Box(v_expand=True))
         return vbox
 
@@ -727,6 +751,7 @@ class HyprConfGUI(Window):
         current_bind_vars_snapshot["dock_always_occluded"] = (
             self.dock_hover_switch.get_active()
         )
+        current_bind_vars_snapshot["dock_icon_size"] = int(self.icon_size_scale.get_value())
         current_bind_vars_snapshot["terminal_command"] = self.terminal_entry.get_text()
         current_bind_vars_snapshot["corners_visible"] = self.corners_switch.get_active()
         current_bind_vars_snapshot["dock_theme"] = (
@@ -1016,6 +1041,8 @@ class HyprConfGUI(Window):
                 self.lock_switch.set_active(False)
             if self.idle_switch:
                 self.idle_switch.set_active(False)
+            # Add reset for icon size scale
+            self.icon_size_scale.set_value(utils.bind_vars.get("dock_icon_size", 20))
             print("Settings reset to defaults.")
 
     def on_close(self, widget):

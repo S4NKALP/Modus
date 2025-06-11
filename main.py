@@ -8,7 +8,7 @@ from loguru import logger
 
 from config.data import APP_NAME, APP_NAME_CAP, CONFIG_FILE
 from modules.corners import Corners
-from modules.dock.main import Dock
+from modules.dock.main import Dock 
 
 gi.require_version("GLib", "2.0")
 
