@@ -1,3 +1,18 @@
 {
-    "pinned_apps": []
+    "pinned_apps": [
+        {
+            "name": "kitty",
+            "display_name": "kitty",
+            "window_class": null,
+            "executable": "kitty",
+            "command_line": "kitty"
+        },
+        {
+            "name": "Visual Studio Code",
+            "display_name": "Visual Studio Code",
+            "window_class": "Code",
+            "executable": "/usr/bin/code",
+            "command_line": "/usr/bin/code %F"
+        }
+    ]
 }

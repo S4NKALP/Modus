@@ -14,11 +14,22 @@ from modules.dock.applications import Applications
 
 
 class DockComponents(Box):
-    def __init__(self, orientation_val="h", **kwargs):
+    def __init__(self, orientation_val="h", dock_instance=None, **kwargs):
         super().__init__(
-            name="system-tray", orientation=orientation_val, spacing=4, **kwargs
+            name="dock-components",
+            orientation=orientation_val,
+            spacing=8,
+            **kwargs
         )
-
+        
+        self.dock_instance = dock_instance
+        
+        # Create applications with dock reference
+        self.applications = Applications(
+            orientation_val=orientation_val,
+            dock_instance=dock_instance
+        )
+        
         # Initialize component visibility from data
         self.component_visibility = data.DOCK_COMPONENTS_VISIBILITY
 
@@ -45,9 +56,21 @@ class DockComponents(Box):
             name="tray",
             orientation="h" if not data.VERTICAL else "v",
         )
-        self.applications = Applications(
-            orientation_val=orientation_val
-        )
+        
+        # Add methods to connect drag signals
+        self.connect_drag_signals()
+        
+    def connect_drag_signals(self):
+        # Method to connect drag signals from applications to parent
+        pass
+        
+    def set_drag_callback(self, on_drag_begin_cb, on_drag_end_cb):
+        """Set callbacks for drag operations from applications component"""
+        # Connect to applications drag signals
+        self.applications.connect("drag-begin", 
+            lambda widget, context: on_drag_begin_cb())
+        self.applications.connect("drag-end", 
+            lambda widget, context: on_drag_end_cb())
 
         # Add components based on position
         if data.DOCK_POSITION == "Right":

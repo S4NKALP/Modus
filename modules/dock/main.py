@@ -12,7 +12,6 @@ from utils.wayland import WaylandWindow as Window
 from modules.dock.components import DockComponents
 
 
-
 class Dock(Window):
     _instances = []
 
@@ -107,7 +106,14 @@ class Dock(Window):
 
         # Create components using DockComponents
         self.components = DockComponents(
-            orientation_val="h" if not data.VERTICAL else "v"
+            orientation_val="h" if not data.VERTICAL else "v",
+            dock_instance=self
+        )
+        
+        # Connect drag signals from applications component
+        self.components.set_drag_callback(
+            on_drag_begin_cb=self.on_app_drag_begin,
+            on_drag_end_cb=self.on_app_drag_end
         )
 
         # Add components based on position
@@ -454,3 +460,29 @@ class Dock(Window):
                     and dock.dock_revealer.get_reveal_child()
                 ):
                     dock.dock_revealer.set_reveal_child(False)
+
+    def on_app_drag_begin(self):
+        """Called when application drag begins"""
+        self._drag_in_progress = True
+        # Ensure dock is visible during drag
+        self.dock_revealer.set_reveal_child(True)
+        if not self.always_occluded:
+            self.dock_full.remove_style_class("occluded")
+
+    def on_app_drag_end(self):
+        """Called when application drag ends"""
+        self._drag_in_progress = False
+        # Check if we should hide the dock
+        GLib.idle_add(self.check_occlusion_state)
+
+    def prevent_hiding(self, prevent=True):
+        """Prevent the dock from hiding"""
+        self._prevent_occlusion = prevent
+        if prevent:
+            # Force dock to be visible
+            self.dock_revealer.set_reveal_child(True)
+            if not self.always_occluded:
+                self.dock_full.remove_style_class("occluded")
+        else:
+            # Check if we should hide
+            GLib.idle_add(self.check_occlusion_state)
