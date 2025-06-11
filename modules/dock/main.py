@@ -9,7 +9,7 @@ from gi.repository import Gdk, GLib, Gtk
 from modules.corners import MyCorner
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
-from modules.dock.components import DockComponents
+from modules.dock.components.components import DockComponents
 
 
 class Dock(Window):
@@ -106,10 +106,8 @@ class Dock(Window):
 
         # Create components using DockComponents
         self.components = DockComponents(
-            orientation_val="h" if not data.VERTICAL else "v",
-            dock_instance=self
+            orientation_val="h" if not data.VERTICAL else "v", dock_instance=self
         )
-        
 
         # Add components based on position
         if self.actual_dock_is_horizontal:  # Bottom dock

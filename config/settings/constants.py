@@ -66,6 +66,9 @@ DEFAULTS = {
     "dock_controls_visible": True,
     "dock_indicators_visible": True,
     "dock_applications_visible": True,
+    "workspace_nums": False,
+    "workspace_use_chinese_numerals": False,
+    "workspace_dots": False,
     "metrics_visible": {
         "cpu": True,
         "ram": True,

@@ -5,12 +5,12 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.datetime import DateTime
 from fabric.system_tray.widgets import SystemTray
-from modules.dock.battery import Battery
-from modules.dock.metrics import Metrics
-from modules.dock.controls import Controls
-from modules.dock.workspaces import workspace
-from modules.dock.indicators import Indicators
-from modules.dock.applications import Applications
+from .battery import Battery
+from .metrics import Metrics
+from .controls import Controls
+from .workspaces import workspace
+from .indicators import Indicators
+from .applications import Applications
 
 
 class DockComponents(Box):
@@ -30,10 +30,7 @@ class DockComponents(Box):
         self.component_visibility = data.DOCK_COMPONENTS_VISIBILITY
 
         # Create components
-        self.workspaces = Button(
-            child=workspace,
-            name="workspaces",
-        )
+        self.workspaces = workspace  # Use the workspace instance directly
         self.metrics = Metrics()
         self.battery = Battery()
         self.date_time = DateTime(
@@ -53,7 +50,6 @@ class DockComponents(Box):
             orientation="h" if not data.VERTICAL else "v",
         )
 
-
         # Create list of components to add
         self.themed_children = [
             self.workspaces,
@@ -65,21 +61,21 @@ class DockComponents(Box):
             self.date_time,
             self.systray,
         ]
-        
+
         # Add each child individually
         for child in self.themed_children:
             self.add(child)
 
         # Apply initial visibility
         self.apply_component_props()
-        
-        if data.DOCK_THEME == "Dense" or data.DOCK_THEME == "Edge":
-            for child in self.themed_children:
-                if hasattr(child, "add_style_class"):
-                    child.add_style_class("invert")
 
-        # Apply invert style for Pills theme when dock is on left or right
-        if data.DOCK_THEME == "Pills" and (data.DOCK_POSITION == "Left" or data.DOCK_POSITION == "Right"):
+        # Apply invert style for specific themes and positions
+        should_invert = (
+            data.DOCK_THEME in ["Dense", "Edge"] or
+            (data.DOCK_THEME == "Pills" and data.DOCK_POSITION in ["Left", "Right"])
+        )
+
+        if should_invert:
             for child in self.themed_children:
                 if hasattr(child, "add_style_class"):
                     child.add_style_class("invert")
@@ -140,5 +136,3 @@ class DockComponents(Box):
             return self.component_visibility[component_name]
 
         return None
-
-

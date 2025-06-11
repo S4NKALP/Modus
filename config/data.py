@@ -31,6 +31,10 @@ WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example")
 CONFIG_FILE = get_relative_path("../config/config.json")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
+WORKSPACE_NUMS = False
+WORKSPACE_USE_CHINESE_NUMERAL = False
+WORKSPACE_DOTS = False
+
 DOCK_THEME = "Pills"
 
 
@@ -61,6 +65,9 @@ if os.path.exists(CONFIG_FILE):
     DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", False)
     DOCK_THEME = config.get("dock_theme", "Pills")
     DOCK_ICON_SIZE = config.get("dock_icon_size", 20)
+    WORKSPACE_NUMS = config.get("workspace_nums", False)
+    WORKSPACE_USE_CHINESE_NUMERAL = config.get("workspace_use_chinese_numerals", False)
+    WORKSPACE_DOTS = config.get("workspace_dots", False)
 
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 

@@ -246,8 +246,58 @@ class HyprConfGUI(Window):
         layout_grid.set_margin_top(5)
         vbox.add(layout_grid)
 
+        # Workspace mode
+        ws_mode_label = Label(label="Workspace Mode", h_align="start", v_align="center")
+        layout_grid.attach(ws_mode_label, 0, 0, 1, 1)
+
+        ws_mode_combo_container = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.START,
+            valign=Gtk.Align.CENTER,
+        )
+        self.ws_mode_combo = Gtk.ComboBoxText()
+        self.ws_mode_combo.set_tooltip_text("Select how workspaces are displayed")
+        ws_modes = ["Dots", "Numbers", "Single Button"]
+        for mode in ws_modes:
+            self.ws_mode_combo.append_text(mode)
+
+        # Set current mode based on config
+        current_dots = bind_vars.get("workspace_dots", True)
+        current_nums = bind_vars.get("workspace_nums", False)
+        if current_dots:
+            current_mode = "Dots"
+        elif current_nums:
+            current_mode = "Numbers"
+        else:
+            current_mode = "Single Button"
+
+        try:
+            self.ws_mode_combo.set_active(ws_modes.index(current_mode))
+        except ValueError:
+            self.ws_mode_combo.set_active(0)
+
+        self.ws_mode_combo.connect("changed", self.on_ws_mode_changed)
+        ws_mode_combo_container.add(self.ws_mode_combo)
+        layout_grid.attach(ws_mode_combo_container, 1, 0, 1, 1)
+
+        # Chinese numerals option
+        ws_chinese_label = Label(label="Use Chinese Numerals", h_align="start", v_align="center")
+        layout_grid.attach(ws_chinese_label, 2, 0, 1, 1)
+        ws_chinese_switch_container = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.START,
+            valign=Gtk.Align.CENTER,
+        )
+        self.ws_chinese_switch = Gtk.Switch(
+            active=bind_vars.get("workspace_use_chinese_numerals", False),
+            sensitive=current_nums  # Only enabled when numbers mode is selected
+        )
+        self.ws_chinese_switch.set_tooltip_text("Use Chinese numerals (一, 二, 三...) instead of Arabic numbers")
+        ws_chinese_switch_container.add(self.ws_chinese_switch)
+        layout_grid.attach(ws_chinese_switch_container, 3, 0, 1, 1)
+
         position_label = Label(label="Dock Position", h_align="start", v_align="center")
-        layout_grid.attach(position_label, 0, 0, 1, 1)
+        layout_grid.attach(position_label, 0, 1, 1, 1)
         position_combo_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
@@ -265,10 +315,10 @@ class HyprConfGUI(Window):
             self.position_combo.set_active(0)
         self.position_combo.connect("changed", self.on_position_changed)
         position_combo_container.add(self.position_combo)
-        layout_grid.attach(position_combo_container, 1, 0, 1, 1)
+        layout_grid.attach(position_combo_container, 1, 1, 1, 1)
 
         dock_theme_label = Label(label="Dock Theme", h_align="start", v_align="center")
-        layout_grid.attach(dock_theme_label, 2, 0, 1, 1)
+        layout_grid.attach(dock_theme_label, 2, 1, 1, 1)
         dock_theme_combo_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
@@ -284,11 +334,11 @@ class HyprConfGUI(Window):
         except ValueError:
             self.dock_theme_combo.set_active(0)
         dock_theme_combo_container.add(self.dock_theme_combo)
-        layout_grid.attach(dock_theme_combo_container, 3, 0, 1, 1)
+        layout_grid.attach(dock_theme_combo_container, 3, 1, 1, 1)
 
         # Add icon size scale
         icon_size_label = Label(label="Icon Size", h_align="start", v_align="center")
-        layout_grid.attach(icon_size_label, 0, 3, 1, 1)
+        layout_grid.attach(icon_size_label, 0, 4, 1, 1)
         
         icon_size_scale_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -307,10 +357,10 @@ class HyprConfGUI(Window):
         self.icon_size_scale.set_tooltip_text("Adjust the size of dock icons")
         
         icon_size_scale_container.add(self.icon_size_scale)
-        layout_grid.attach(icon_size_scale_container, 1, 3, 3, 1)
+        layout_grid.attach(icon_size_scale_container, 1, 4, 3, 1)
 
         dock_label = Label(label="Show Dock", h_align="start", v_align="center")
-        layout_grid.attach(dock_label, 0, 1, 1, 1)
+        layout_grid.attach(dock_label, 0, 2, 1, 1)
         dock_switch_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
@@ -319,12 +369,12 @@ class HyprConfGUI(Window):
         self.dock_switch = Gtk.Switch(active=bind_vars.get("dock_enabled", True))
         self.dock_switch.connect("notify::active", self.on_dock_enabled_changed)
         dock_switch_container.add(self.dock_switch)
-        layout_grid.attach(dock_switch_container, 1, 1, 1, 1)
+        layout_grid.attach(dock_switch_container, 1, 2, 1, 1)
 
         dock_auto_hide_label = Label(
             label="Auto-hide Dock", h_align="start", v_align="center"
         )
-        layout_grid.attach(dock_auto_hide_label, 0, 2, 1, 1)
+        layout_grid.attach(dock_auto_hide_label, 0, 3, 1, 1)
         dock_auto_hide_switch_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
@@ -335,12 +385,12 @@ class HyprConfGUI(Window):
             sensitive=self.dock_switch.get_active(),
         )
         dock_auto_hide_switch_container.add(self.dock_auto_hide_switch)
-        layout_grid.attach(dock_auto_hide_switch_container, 1, 2, 1, 1)
+        layout_grid.attach(dock_auto_hide_switch_container, 1, 3, 1, 1)
 
         dock_hover_label = Label(
             label="Show Dock Only on Hover", h_align="start", v_align="center"
         )
-        layout_grid.attach(dock_hover_label, 2, 1, 1, 1)
+        layout_grid.attach(dock_hover_label, 2, 2, 1, 1)
         dock_hover_switch_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
@@ -351,12 +401,12 @@ class HyprConfGUI(Window):
             sensitive=self.dock_switch.get_active(),
         )
         dock_hover_switch_container.add(self.dock_hover_switch)
-        layout_grid.attach(dock_hover_switch_container, 3, 1, 1, 1)
+        layout_grid.attach(dock_hover_switch_container, 3, 2, 1, 1)
 
         notification_pos_label = Label(
             label="Notification Position", h_align="start", v_align="center"
         )
-        layout_grid.attach(notification_pos_label, 0, 7, 1, 1)
+        layout_grid.attach(notification_pos_label, 0, 8, 1, 1)
 
         notification_pos_combo_container = Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -386,7 +436,7 @@ class HyprConfGUI(Window):
         )
 
         notification_pos_combo_container.add(self.notification_pos_combo)
-        layout_grid.attach(notification_pos_combo_container, 1, 7, 3, 1)
+        layout_grid.attach(notification_pos_combo_container, 1, 8, 3, 1)
 
         separator2 = Box(
             style="min-height: 1px; background-color: alpha(@fg_color, 0.2); margin: 5px 0px;",
@@ -456,6 +506,8 @@ class HyprConfGUI(Window):
             components_grid.attach(switch_container, col + 1, row, 1, 1)
             self.component_switches[name] = component_switch
             item_idx += 1
+
+
 
         return scrolled_window
 
@@ -672,6 +724,13 @@ class HyprConfGUI(Window):
         vbox.add(Box(v_expand=True))
         return vbox
 
+    def on_ws_mode_changed(self, combo):
+        mode = combo.get_active_text()
+        is_numbers_mode = mode == "Numbers"
+        self.ws_chinese_switch.set_sensitive(is_numbers_mode)
+        if not is_numbers_mode:
+            self.ws_chinese_switch.set_active(False)
+
     def on_ws_num_changed(self, switch, gparam):
         is_active = switch.get_active()
         self.ws_chinese_switch.set_sensitive(is_active)
@@ -768,6 +827,14 @@ class HyprConfGUI(Window):
             current_bind_vars_snapshot[f"dock_{component_name}_visible"] = (
                 switch.get_active()
             )
+
+        # Save workspace settings
+        ws_mode = self.ws_mode_combo.get_active_text()
+        current_bind_vars_snapshot["workspace_dots"] = ws_mode == "Dots"
+        current_bind_vars_snapshot["workspace_nums"] = ws_mode == "Numbers"
+        current_bind_vars_snapshot["workspace_use_chinese_numerals"] = (
+            self.ws_chinese_switch.get_active()
+        )
 
         current_bind_vars_snapshot["metrics_visible"] = {
             k: s.get_active() for k, s in self.metrics_switches.items()
@@ -997,6 +1064,27 @@ class HyprConfGUI(Window):
 
             for name, switch in self.component_switches.items():
                 switch.set_active(utils.bind_vars.get(f"dock_{name}_visible", True))
+
+            # Reset workspace settings
+            default_dots = DEFAULTS.get("workspace_dots", True)
+            default_nums = DEFAULTS.get("workspace_nums", False)
+            if default_dots:
+                default_mode = "Dots"
+            elif default_nums:
+                default_mode = "Numbers"
+            else:
+                default_mode = "Single Button"
+
+            ws_modes = ["Dots", "Numbers", "Single Button"]
+            try:
+                self.ws_mode_combo.set_active(ws_modes.index(default_mode))
+            except ValueError:
+                self.ws_mode_combo.set_active(0)
+
+            self.ws_chinese_switch.set_active(
+                utils.bind_vars.get("workspace_use_chinese_numerals", False)
+            )
+            self.ws_chinese_switch.set_sensitive(default_nums)
             self.corners_switch.set_active(utils.bind_vars.get("corners_visible", True))
 
             metrics_vis_defaults = DEFAULTS.get("metrics_visible", {})
