@@ -9,7 +9,7 @@ from gi.repository import Gdk, GLib, Gtk
 from modules.corners import MyCorner
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
-from modules.dock.components.components import DockComponents
+from modules.dock.components import DockComponents
 
 
 class Dock(Window):
