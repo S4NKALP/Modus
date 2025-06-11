@@ -1,14 +1,21 @@
 #workspaces {
-  padding: 8px;
-  border-radius: 12px;
+  min-width: 34px;
   background-color: var(--surface);
-  min-width: 18px;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#workspaces.invert {
+  min-height: 34px;
+  border-radius: 12px;
 }
 
 #battery {
   background-color: var(--surface);
   padding: 4px;
+}
+
+#battery.invert {
+  border-radius: 12px;
 }
 
 #battery-circle {
@@ -111,7 +118,9 @@
   background-color: var(--surface);
   padding: 8px;
 }
-
+#date-time.vertical {
+  padding: 8px 0;
+}
 #date-time.invert {
   background-color: var(--surface);
   border-radius: 12px;
@@ -119,8 +128,11 @@
 
 #tray {
   background-color: var(--surface);
-  border-radius: 12px;
   padding: 8px;
+}
+
+#tray.invert {
+  border-radius: 12px;
 }
 
 menu {

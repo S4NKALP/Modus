@@ -53,32 +53,36 @@ class DockComponents(Box):
             orientation="h" if not data.VERTICAL else "v",
         )
 
-        # Add methods to connect drag signals
-        self.connect_drag_signals()
 
-    def connect_drag_signals(self):
-        # Method to connect drag signals from applications to parent
-        pass
-
-    def set_drag_callback(self, on_drag_begin_cb, on_drag_end_cb):
-        """Set callbacks for drag operations from applications component"""
-        # Connect to applications drag signals
-        self.applications.connect(
-            "drag-begin", lambda widget, context: on_drag_begin_cb()
-        )
-        self.applications.connect("drag-end", lambda widget, context: on_drag_end_cb())
-
-        self.add(self.workspaces)
-        self.add(self.metrics)
-        self.add(self.controls)
-        self.add(self.applications)
-        self.add(self.indicators)
-        self.add(self.battery)
-        self.add(self.date_time)
-        self.add(self.systray)
+        # Create list of components to add
+        self.themed_children = [
+            self.workspaces,
+            self.metrics,
+            self.controls,
+            self.applications,
+            self.indicators,
+            self.battery,
+            self.date_time,
+            self.systray,
+        ]
+        
+        # Add each child individually
+        for child in self.themed_children:
+            self.add(child)
 
         # Apply initial visibility
         self.apply_component_props()
+        
+        if data.DOCK_THEME == "Dense" or data.DOCK_THEME == "Edge":
+            for child in self.themed_children:
+                if hasattr(child, "add_style_class"):
+                    child.add_style_class("invert")
+
+        # Apply invert style for Pills theme when dock is on left or right
+        if data.DOCK_THEME == "Pills" and (data.DOCK_POSITION == "Left" or data.DOCK_POSITION == "Right"):
+            for child in self.themed_children:
+                if hasattr(child, "add_style_class"):
+                    child.add_style_class("invert")
 
     def apply_component_props(self):
         components = {
@@ -136,3 +140,5 @@ class DockComponents(Box):
             return self.component_visibility[component_name]
 
         return None
+
+

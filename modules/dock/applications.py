@@ -69,10 +69,10 @@ class Applications(Box):
         super().__init__(
             name="applications-dock", orientation=orientation_val, spacing=4, **kwargs
         )
-
+        
         # Store reference to the dock instance
         self.dock_instance = dock_instance
-
+        
         self.config = read_config()
         self.conn = get_hyprland_connection()
         self.icon_resolver = IconResolver()
@@ -426,7 +426,7 @@ class Applications(Box):
     def on_drag_begin(self, widget, drag_context):
         self._drag_in_progress = True
         Gtk.drag_set_icon_surface(drag_context, createSurfaceFromWidget(widget))
-
+        
         # Prevent dock from hiding during drag
         if self.dock_instance:
             self.dock_instance.prevent_hiding(True)
@@ -454,22 +454,22 @@ class Applications(Box):
                 if child.get_name() == "dock-separator":
                     separator_index = i
                     break
-
+            
             # Check if we're dragging from unpinned to pinned section
             cross_section_drag_to_pin = separator_index != -1 and (
-                source_index > separator_index and target_index < separator_index
+                (source_index > separator_index and target_index < separator_index)
             )
-
+            
             # Check if we're dragging from pinned to unpinned section
             cross_section_drag_to_unpin = separator_index != -1 and (
-                source_index < separator_index and target_index > separator_index
+                (source_index < separator_index and target_index > separator_index)
             )
-
+            
             # If dragging from unpinned to pinned, add to pinned apps
             if cross_section_drag_to_pin:
                 source_widget = children[source_index]
                 app_identifier = source_widget.app_identifier
-
+                
                 # Add to pinned apps if not already pinned
                 if hasattr(source_widget, "desktop_app") and source_widget.desktop_app:
                     app = source_widget.desktop_app
@@ -483,7 +483,7 @@ class Applications(Box):
                     self.pinned.insert(target_index, app_data_obj)
                 else:
                     self.pinned.insert(target_index, app_identifier)
-
+                
                 self.config["pinned_apps"] = self.pinned
                 self.update_pinned_apps_file()
                 self.update_applications()
@@ -509,7 +509,7 @@ class Applications(Box):
                     # since unpinned apps aren't stored in config
                     child_to_move = children.pop(source_index)
                     children.insert(target_index, child_to_move)
-
+                    
                     # Update the UI
                     for child in self.get_children():
                         self.remove(child)
@@ -520,11 +520,11 @@ class Applications(Box):
     def on_drag_end(self, widget, drag_context):
         if not self._drag_in_progress:
             return
-
+        
         # Process drag end...
-
+        
         self._drag_in_progress = False
-
+        
         # Allow dock to hide again
         if self.dock_instance:
             self.dock_instance.prevent_hiding(False)

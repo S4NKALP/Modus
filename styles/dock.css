@@ -49,6 +49,10 @@
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+#applications-dock.invert {
+  border-radius: 12px;
+}
+
 #dock.integrated {
   background-color: var(--shadow);
   padding: 4px;

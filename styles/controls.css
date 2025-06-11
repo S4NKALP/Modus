@@ -1,13 +1,11 @@
-
-
 #control {
   padding: 4px;
   background-color: var(--surface);
 }
 
 #control.invert {
-  background-color: var(--surface);
   border-radius: 12px;
+  background-color: var(--surface);
 }
 
 #button-volume,
@@ -33,4 +31,3 @@
 #mic-label.muted {
   color: var(--outline);
 }
-

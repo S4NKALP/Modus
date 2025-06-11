@@ -1,32 +1,31 @@
 #indicator {
-    padding: 4px;
-    background-color: var(--surface);
-  }
-  
-  #indicator.invert {
-    background-color: var(--surface);
-    border-radius: 12px;
-  }
-  
-  #button-network,
-  #button-bluetooth {
-    color: var(--surface-bright);
-    border: 3px solid var(--primary);
-  }
-  
-  #button-network.muted,
-  #button-bluetooth.muted {
-    color: var(--surface-bright);
-    border: 3px solid var(--outline);
-  }
-  
-  #network-label,
-  #bluetooth-label {
-    font-size: 20px;
-  }
-  
-  #network-label.muted,
-  #bluetooth-label.muted {
-    color: var(--outline);
-  }
-  
+  padding: 4px;
+  background-color: var(--surface);
+}
+
+#indicator.invert {
+  background-color: var(--surface);
+  border-radius: 12px;
+}
+
+#button-network,
+#button-bluetooth {
+  color: var(--surface-bright);
+  border: 3px solid var(--primary);
+}
+
+#button-network.muted,
+#button-bluetooth.muted {
+  color: var(--surface-bright);
+  border: 3px solid var(--outline);
+}
+
+#network-label,
+#bluetooth-label {
+  font-size: 20px;
+}
+
+#network-label.muted,
+#bluetooth-label.muted {
+  color: var(--outline);
+}

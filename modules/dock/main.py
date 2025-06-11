@@ -110,11 +110,6 @@ class Dock(Window):
             dock_instance=self
         )
         
-        # Connect drag signals from applications component
-        self.components.set_drag_callback(
-            on_drag_begin_cb=self.on_app_drag_begin,
-            on_drag_end_cb=self.on_app_drag_end
-        )
 
         # Add components based on position
         if self.actual_dock_is_horizontal:  # Bottom dock
