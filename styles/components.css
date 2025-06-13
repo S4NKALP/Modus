@@ -1,0 +1,279 @@
+/*
+ * ── language indicator ────────────────────────────────────────────────
+*/
+
+#language {
+  background-color: var(--surface);
+  padding: 8px;
+}
+
+#language.invert {
+  border-radius: 12px;
+}
+
+#lang-label {
+  font-weight: bold;
+}
+
+#lang-label.icon {
+  color: var(--primary);
+  font-size: 20px;
+}
+
+/*
+ * ── battery ───────────────────────────────────────────────────────────
+*/
+
+#battery {
+  background-color: var(--surface);
+  padding: 4px;
+}
+
+#battery.invert {
+  border-radius: 12px;
+}
+
+#battery-circle {
+  color: var(--surface-bright);
+  border: 3px solid var(--primary);
+}
+
+#battery-circle.alert {
+  border: 2px solid var(--red-dim);
+}
+
+#battery-icon {
+  font-size: 16px;
+}
+
+#battery-icon.alert {
+  color: var(--red-dim);
+}
+
+#battery-level {
+  color: var(--primary);
+  font-weight: bold;
+  margin: 0 4px;
+}
+
+#battery-circle.power-saver {
+  border: 3px solid var(--green);
+}
+
+#battery-circle.performance {
+  border: 3px solid var(--red);
+}
+
+/*
+ * ── metrics ───────────────────────────────────────────────────────────
+*/
+
+#metrics {
+  background-color: var(--surface);
+  padding: 4px;
+}
+
+#metrics.invert {
+  background-color: var(--surface);
+  border-radius: 12px;
+}
+
+#metrics-circle {
+  padding: 4px;
+  color: var(--surface-bright);
+  border: 3px solid var(--primary);
+}
+
+#metrics-icon {
+  font-size: 16px;
+}
+
+#metrics-icon.alert {
+  color: var(--red-dim);
+}
+
+#metrics-level {
+  color: var(--primary);
+  font-weight: bold;
+  margin: 0 4px;
+}
+
+#metrics-sep {
+  min-width: 4px;
+}
+
+/*
+ * ── datetime ──────────────────────────────────────────────────────────
+*/
+
+#date-time {
+  background-color: var(--surface);
+  padding: 8px;
+  font-weight: bold;
+}
+#date-time.vertical {
+  padding: 8px 0;
+}
+#date-time.invert {
+  background-color: var(--surface);
+  border-radius: 12px;
+}
+
+/*
+ * ── tray ──────────────────────────────────────────────────────────────
+*/
+
+#tray {
+  background-color: var(--surface);
+  padding: 8px;
+}
+
+#tray.invert {
+  border-radius: 12px;
+}
+
+menu {
+  border: solid 1px;
+  border-radius: 16px;
+  border-color: var(--surface);
+  background-color: var(--shadow);
+  padding: 6px;
+}
+
+menu > menuitem {
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+menu > menuitem:hover {
+  background-color: var(--primary);
+}
+
+menu > menuitem:hover > label {
+  color: var(--shadow);
+}
+
+/*
+ * ── music player ──────────────────────────────────────────────────────────
+*/
+
+#music-player {
+  background-color: var(--surface);
+  padding: 4px;
+}
+
+#music-player.invert {
+  border-radius: 12px;
+}
+
+/* Track info styles */
+#music-track {
+  color: var(--primary);
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* Control buttons base styles */
+#music-prev,
+#music-next {
+  background: none;
+  border: none;
+  padding: 4px;
+}
+
+#music-prev:hover,
+#music-next:hover {
+  background-color: var(--surface-bright);
+}
+
+#music-prev:active,
+#music-next:active {
+  background-color: var(--primary);
+}
+
+#music-prev label,
+#music-next label {
+  color: var(--primary);
+  font-size: 14px;
+}
+
+#music-prev:hover label,
+#music-next:hover label {
+  color: var(--primary);
+}
+
+#music-prev:active label,
+#music-next:active label {
+  color: var(--shadow);
+}
+
+/* Play/Pause button styling */
+#music-play-pause {
+  background-color: var(--surface);
+  border-radius: 12px;
+  padding: 6px;
+  border: none;
+}
+
+#music-play-pause label {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+#music-play-pause:hover {
+  background-color: var(--surface-bright);
+}
+
+#music-play-pause:hover label {
+  color: var(--primary);
+}
+
+#music-play-pause:active {
+  background-color: var(--primary);
+}
+
+#music-play-pause:active label {
+  color: var(--shadow);
+}
+
+/* Player indicators container */
+#music-player-indicators {
+  padding: 4px;
+}
+
+/* Player indicator buttons */
+#music-player-indicator-button {
+  background: none;
+  border: none;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+#music-player-indicator-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#music-player-indicator-button:active {
+  background-color: var(--primary);
+}
+
+/* Player indicator labels */
+#music-player-indicator {
+  color: var(--surface-bright);
+  font-size: 12px;
+}
+
+#music-player-indicator-active {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+#music-player-indicator-button:hover #music-player-indicator {
+  color: var(--primary);
+}
+
+#music-player-indicator-button:active #music-player-indicator,
+#music-player-indicator-button:active #music-player-indicator-active {
+  color: var(--shadow);
+}

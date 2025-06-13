@@ -1,4 +1,4 @@
-from .custom_image import *
-from .icon_resolver import *
-from .occlusion import *
-from .animator import *
+"""
+Modus services package.
+Contains background services and utilities for the shell.
+"""
