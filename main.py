@@ -8,7 +8,8 @@ from loguru import logger
 
 from config.data import APP_NAME, APP_NAME_CAP, CONFIG_FILE
 from modules.corners import Corners
-from modules.dock.main import Dock 
+from modules.dock.main import Dock
+from modules.launcher.main import Launcher
 
 gi.require_version("GLib", "2.0")
 
@@ -16,6 +17,8 @@ for log in [
     "fabric.hyprland.widgets",
     "fabric.audio.service",
     "fabric.bluetooth.service",
+    "services.network",
+    "services.mpris",
 ]:
     logger.disable(log)
 
@@ -40,6 +43,7 @@ if __name__ == "__main__":
 
     corners = Corners()
     dock = Dock()
+    launcher = Launcher()
 
     # Set corners visibility based on config
     corners_visible = config.get("corners_visible", True)
@@ -53,7 +57,10 @@ if __name__ == "__main__":
     _ = color_css_file.connect("changed", lambda *_: set_css())
 
     app = Application(
-        f"{APP_NAME}", dock, corners
+        f"{APP_NAME}",
+        dock,
+        corners,
+        launcher,
     )  # Make sure corners is added to the app
 
     def set_css():

@@ -1,6 +1,6 @@
 {
-    "prefix_restart": "SUPER ALT",
-    "suffix_restart": "B",
+    "prefix_restart": "SHIFT ALT",
+    "suffix_restart": "W",
     "prefix_axmsg": "SUPER",
     "suffix_axmsg": "A",
     "prefix_dash": "SUPER",
@@ -53,6 +53,8 @@
     "dock_controls_visible": true,
     "dock_indicators_visible": true,
     "dock_applications_visible": true,
+    "dock_language_visible": true,
+    "dock_music_player_visible": true,
     "workspace_dots": false,
     "workspace_nums": false,
     "workspace_use_chinese_numerals": false,

@@ -281,7 +281,9 @@ class HyprConfGUI(Window):
         layout_grid.attach(ws_mode_combo_container, 1, 0, 1, 1)
 
         # Chinese numerals option
-        ws_chinese_label = Label(label="Use Chinese Numerals", h_align="start", v_align="center")
+        ws_chinese_label = Label(
+            label="Use Chinese Numerals", h_align="start", v_align="center"
+        )
         layout_grid.attach(ws_chinese_label, 2, 0, 1, 1)
         ws_chinese_switch_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -290,9 +292,11 @@ class HyprConfGUI(Window):
         )
         self.ws_chinese_switch = Gtk.Switch(
             active=bind_vars.get("workspace_use_chinese_numerals", False),
-            sensitive=current_nums  # Only enabled when numbers mode is selected
+            sensitive=current_nums,  # Only enabled when numbers mode is selected
         )
-        self.ws_chinese_switch.set_tooltip_text("Use Chinese numerals (一, 二, 三...) instead of Arabic numbers")
+        self.ws_chinese_switch.set_tooltip_text(
+            "Use Chinese numerals (一, 二, 三...) instead of Arabic numbers"
+        )
         ws_chinese_switch_container.add(self.ws_chinese_switch)
         layout_grid.attach(ws_chinese_switch_container, 3, 0, 1, 1)
 
@@ -339,14 +343,14 @@ class HyprConfGUI(Window):
         # Add icon size scale
         icon_size_label = Label(label="Icon Size", h_align="start", v_align="center")
         layout_grid.attach(icon_size_label, 0, 4, 1, 1)
-        
+
         icon_size_scale_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
             valign=Gtk.Align.CENTER,
-            hexpand=True
+            hexpand=True,
         )
-        
+
         self.icon_size_scale = Gtk.Scale.new_with_range(
             Gtk.Orientation.HORIZONTAL, 20, 30, 2
         )
@@ -355,7 +359,7 @@ class HyprConfGUI(Window):
         self.icon_size_scale.set_draw_value(True)
         self.icon_size_scale.set_value_pos(Gtk.PositionType.RIGHT)
         self.icon_size_scale.set_tooltip_text("Adjust the size of dock icons")
-        
+
         icon_size_scale_container.add(self.icon_size_scale)
         layout_grid.attach(icon_size_scale_container, 1, 4, 3, 1)
 
@@ -461,7 +465,9 @@ class HyprConfGUI(Window):
             "battery": "Battery Indicator",
             "controls": "Control Panel",
             "indicators": "Indicators",
-            "applications": "Taskbar"
+            "applications": "Taskbar",
+            "language": "Language Indicator",
+            "music_player": "Music Player"
         }
 
         self.corners_switch = Gtk.Switch(active=bind_vars.get("corners_visible", True))
@@ -506,8 +512,6 @@ class HyprConfGUI(Window):
             components_grid.attach(switch_container, col + 1, row, 1, 1)
             self.component_switches[name] = component_switch
             item_idx += 1
-
-
 
         return scrolled_window
 
@@ -810,7 +814,9 @@ class HyprConfGUI(Window):
         current_bind_vars_snapshot["dock_always_occluded"] = (
             self.dock_hover_switch.get_active()
         )
-        current_bind_vars_snapshot["dock_icon_size"] = int(self.icon_size_scale.get_value())
+        current_bind_vars_snapshot["dock_icon_size"] = int(
+            self.icon_size_scale.get_value()
+        )
         current_bind_vars_snapshot["terminal_command"] = self.terminal_entry.get_text()
         current_bind_vars_snapshot["corners_visible"] = self.corners_switch.get_active()
         current_bind_vars_snapshot["dock_theme"] = (

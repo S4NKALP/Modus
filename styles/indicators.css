@@ -14,18 +14,7 @@
   border: 3px solid var(--primary);
 }
 
-#button-network.muted,
-#button-bluetooth.muted {
-  color: var(--surface-bright);
-  border: 3px solid var(--outline);
-}
-
 #network-label,
 #bluetooth-label {
   font-size: 20px;
-}
-
-#network-label.muted,
-#bluetooth-label.muted {
-  color: var(--outline);
 }

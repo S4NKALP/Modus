@@ -100,15 +100,19 @@ class Applications(Box):
         GLib.timeout_add_seconds(1, self.check_config_change)
 
     def _build_app_identifiers_map(self):
-        app_map = {}
+        identifiers = {}
         for app in self._all_apps:
-            if app.window_class:
-                app_map[app.window_class.lower()] = app
-            if app.executable:
-                app_map[app.executable.lower()] = app
             if app.name:
-                app_map[app.name.lower()] = app
-        return app_map
+                identifiers[app.name.lower()] = app
+            if app.display_name:
+                identifiers[app.display_name.lower()] = app
+            if app.window_class:
+                identifiers[app.window_class.lower()] = app
+            if app.executable:
+                identifiers[app.executable.split("/")[-1].lower()] = app
+            if app.command_line:
+                identifiers[app.command_line.split()[0].split("/")[-1].lower()] = app
+        return identifiers
 
     def find_app_by_key(self, key):
         if not key:
@@ -230,14 +234,20 @@ class Applications(Box):
                         cmd_to_run = app_identifier["executable"]
                     elif "name" in app_identifier and app_identifier["name"]:
                         cmd_to_run = app_identifier["name"]
-                else:
+                elif isinstance(app_identifier, str):
                     cmd_to_run = app_identifier
                 if cmd_to_run:
                     exec_shell_command_async(f"nohup {cmd_to_run} &")
         else:
-            address = instances[0].get("address")
-            if address:
-                exec_shell_command(f"hyprctl dispatch focuswindow address:{address}")
+            focused = self.get_focused()
+            idx = next(
+                (i for i, inst in enumerate(instances) if inst["address"] == focused),
+                -1,
+            )
+            next_inst = instances[(idx + 1) % len(instances)]
+            exec_shell_command(
+                f"hyprctl dispatch focuswindow address:{next_inst['address']}"
+            )
 
     def update_pinned_apps_file(self):
         config_path = get_relative_path("../../../config/dock.json")
@@ -263,8 +273,14 @@ class Applications(Box):
         self.app_identifiers = self._build_app_identifiers_map()
 
     def _normalize_window_class(self, class_name):
-        # Implementation from dock.py
-        return class_name.lower()
+        if not class_name:
+            return ""
+        normalized = class_name.lower()
+        suffixes = [".bin", ".exe", ".so", "-bin", "-gtk"]
+        for suffix in suffixes:
+            if normalized.endswith(suffix):
+                normalized = normalized[: -len(suffix)]
+        return normalized
 
     def update_applications(self):
         # Clear existing children
@@ -368,7 +384,7 @@ class Applications(Box):
                 )
             )
 
-        children.extend(open_buttons)
+        children += open_buttons
 
         # Add all children to the dock
         for child in children:
@@ -382,44 +398,51 @@ class Applications(Box):
 
         return True
 
+    def update_pinned_apps(self, app_identifier, index=None):
+        # Check if app is already pinned
+        is_pinned = False
+        for pinned_app in self.pinned:
+            if (
+                isinstance(app_identifier, dict)
+                and isinstance(pinned_app, dict)
+                and app_identifier.get("name") == pinned_app.get("name")
+            ):
+                is_pinned = True
+                break
+            elif app_identifier == pinned_app:
+                is_pinned = True
+                break
+
+        # If not pinned, add to pinned apps
+        if not is_pinned:
+            if hasattr(app_identifier, "desktop_app") and app_identifier.desktop_app:
+                app = app_identifier.desktop_app
+                app_data_obj = {
+                    "name": app.name,
+                    "display_name": app.display_name,
+                    "window_class": app.window_class,
+                    "executable": app.executable,
+                    "command_line": app.command_line,
+                }
+                if index is not None:
+                    self.pinned.insert(index, app_data_obj)
+                else:
+                    self.pinned.append(app_data_obj)
+            else:
+                if index is not None:
+                    self.pinned.insert(index, app_identifier)
+                else:
+                    self.pinned.append(app_identifier)
+
+            self.config["pinned_apps"] = self.pinned
+            self.update_pinned_apps_file()
+            self.update_applications()
+
     def on_button_press(self, widget, event):
         # Handle right-click to pin/unpin applications
         if event.button == 3:  # Right mouse button
             app_identifier = widget.app_identifier
-            instances = widget.instances
-
-            # Check if app is already pinned
-            is_pinned = False
-            for pinned_app in self.pinned:
-                if (
-                    isinstance(app_identifier, dict)
-                    and isinstance(pinned_app, dict)
-                    and app_identifier.get("name") == pinned_app.get("name")
-                ):
-                    is_pinned = True
-                    break
-                elif app_identifier == pinned_app:
-                    is_pinned = True
-                    break
-
-            # If not pinned, add to pinned apps
-            if not is_pinned:
-                if hasattr(widget, "desktop_app") and widget.desktop_app:
-                    app = widget.desktop_app
-                    app_data_obj = {
-                        "name": app.name,
-                        "display_name": app.display_name,
-                        "window_class": app.window_class,
-                        "executable": app.executable,
-                        "command_line": app.command_line,
-                    }
-                    self.pinned.append(app_data_obj)
-                else:
-                    self.pinned.append(app_identifier)
-
-                self.config["pinned_apps"] = self.pinned
-                self.update_pinned_apps_file()
-                self.update_applications()
+            self.update_pinned_apps(app_identifier)
             return True
         return False
 
@@ -521,10 +544,14 @@ class Applications(Box):
         if not self._drag_in_progress:
             return
 
-        # Process drag end...
-
         self._drag_in_progress = False
-
-        # Allow dock to hide again
         if self.dock_instance:
             self.dock_instance.prevent_hiding(False)
+
+    def get_focused(self):
+        try:
+            return json.loads(
+                self.conn.send_command("j/activewindow").reply.decode()
+            ).get("address", "")
+        except json.JSONDecodeError:
+            return ""

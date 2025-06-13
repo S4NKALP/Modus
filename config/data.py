@@ -80,6 +80,7 @@ if os.path.exists(CONFIG_FILE):
         "indicators": config.get("dock_indicators_visible", True),
         "systray": config.get("dock_tray_visible", True),
         "applications": config.get("dock_applications_visible", True),
+        "music_player": config.get("dock_music_player_visible", True),
     }
 
     METRICS_DISKS = config.get("metrics_disks", ["/"])
@@ -109,6 +110,7 @@ else:
         "indicators": True,
         "systray": True,
         "applications": True,
+        "music_player": True,
     }
 
     METRICS_DISKS = ["/"]

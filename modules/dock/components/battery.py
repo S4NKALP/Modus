@@ -37,7 +37,6 @@ class Battery(Box):
         self.circle_button = Button(
             name="battery-button",
             child=self.circle,
-            style="padding: 0; margin: 0; background: none;",
         )
 
         # Add event handling for hover effects
@@ -147,7 +146,6 @@ class Battery(Box):
 
         percentage = self._battery.percentage
         state = self._battery.state
-        charging = state in ["CHARGING", "FULLY_CHARGED"]
         # Get capacity as integer by converting from float
         capacity = int(float(self._battery.capacity.rstrip("%")))
         tooltip_points = []
@@ -211,7 +209,7 @@ class Battery(Box):
 
         # Update circle progress
         self.circle.set_value(percentage / 100.0)
-        
+
         # Only show percentage label if not at 100%
         if percentage < 100:
             self.level.set_label(f"{int(percentage)}%")
@@ -224,9 +222,17 @@ class Battery(Box):
         self.circle.remove_style_class("performance")
         self.circle.remove_style_class("balanced")
 
-        # Apply power profile styling
+        # Apply power profile styling and icons
         if power_profile:
             self.circle.add_style_class(power_profile)
+            if power_profile == "power-saver":
+                self.icon.set_markup(icons.power_saving)
+            elif power_profile == "performance":
+                self.icon.set_markup(icons.power_performance)
+            else:  # balanced
+                self.icon.set_markup(icons.battery)
+        else:
+            self.icon.set_markup(icons.battery)
 
         # Apply alert styling if battery is low AND not charging
         if percentage <= 15 and not charging:
@@ -236,17 +242,18 @@ class Battery(Box):
             self.icon.remove_style_class("alert")
             self.circle.remove_style_class("alert")
 
-        # Update icon based on battery state
-        if state == "FULLY_CHARGED":
-            self.icon.set_markup(icons.battery)
-        elif state == "CHARGING":
-            self.icon.set_markup(icons.charging)
-        elif percentage <= 15 and state == "DISCHARGING":
-            self.icon.set_markup(icons.alert)
-        elif state == "DISCHARGING":
-            self.icon.set_markup(icons.discharging)
-        else:
-            self.icon.set_markup(icons.battery)
+        # Update icon based on battery state if not in power profile mode
+        if not power_profile:
+            if state == "FULLY_CHARGED":
+                self.icon.set_markup(icons.battery)
+            elif state == "CHARGING":
+                self.icon.set_markup(icons.charging)
+            elif percentage <= 15 and state == "DISCHARGING":
+                self.icon.set_markup(icons.alert)
+            elif state == "DISCHARGING":
+                self.icon.set_markup(icons.discharging)
+            else:
+                self.icon.set_markup(icons.battery)
 
         self.set_visible(True)
         return True
