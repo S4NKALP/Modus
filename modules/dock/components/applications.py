@@ -70,6 +70,9 @@ class Applications(Box):
             name="applications-dock", orientation=orientation_val, spacing=4, **kwargs
         )
 
+        # Initially hide the widget
+        self.hide()
+
         # Store reference to the dock instance
         self.dock_instance = dock_instance
 
