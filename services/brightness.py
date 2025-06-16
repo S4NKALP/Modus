@@ -89,7 +89,6 @@ class Brightness(Service):
         try:
             exec_brightnessctl_async(f"--device '{screen_device}' set {value}")
             self.emit("screen", int((value / self.max_screen) * 100))
-            logger.info(f"Set screen brightness to {value} (out of {self.max_screen})")
         except GLib.Error as e:
             logger.error(f"Error setting screen brightness: {e.message}")
         except Exception as e:

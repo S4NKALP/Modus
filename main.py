@@ -9,8 +9,8 @@ from loguru import logger
 from config.data import APP_NAME, APP_NAME_CAP, CONFIG_FILE
 from modules.corners import Corners
 from modules.dock.main import Dock
-from modules.launcher.main import Launcher
 from modules.switcher import ApplicationSwitcher
+from modules.osd import OSD 
 
 gi.require_version("GLib", "2.0")
 
@@ -44,9 +44,8 @@ if __name__ == "__main__":
 
     corners = Corners()
     dock = Dock()
-    launcher = Launcher()
     switcher = ApplicationSwitcher()
-
+    osd = OSD()
     # Set corners visibility based on config
     corners_visible = config.get("corners_visible", True)
     corners.set_visible(corners_visible)
@@ -62,8 +61,8 @@ if __name__ == "__main__":
         f"{APP_NAME}",
         dock,
         corners,
-        launcher,
         switcher,
+        osd,
     )  # Make sure corners is added to the app
 
     def set_css():

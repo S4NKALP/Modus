@@ -1,0 +1,426 @@
+import time
+from typing import ClassVar, Literal
+
+import utils.icons as icons
+from fabric.audio import Audio
+from fabric.widgets.box import Box
+from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
+from fabric.widgets.scale import Scale, ScaleMark
+from gi.repository import GLib, GObject
+from services.brightness import Brightness
+from utils.animator import Animator
+from utils.wayland import WaylandWindow as Window
+
+
+class AnimatedScale(Scale):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.animator = None  # Lazily initialized
+
+    def animate_value(self, value: float):
+        if not self.animator:
+            self.animator = Animator(
+                bezier_curve=(0.34, 1.56, 0.64, 1.0),
+                duration=0.8,
+                min_value=self.min_value,
+                max_value=self.value,
+                tick_widget=self,
+                notify_value=lambda p, *_: self.set_value(p.value),
+            )
+        self.animator.pause()
+        self.animator.min_value = self.value
+        self.animator.max_value = value
+        self.animator.play()
+
+
+class BrightnessOSDContainer(Box):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, orientation="h", spacing=12, name="osd")
+        self.brightness_service = Brightness.get_initial()
+        self.icon = Label(markup=icons.brightness, name="brighntess-icons")
+        self.scale = AnimatedScale(
+            marks=(ScaleMark(value=i) for i in range(0, 101, 10)),
+            value=70,
+            min_value=0,
+            max_value=100,
+            increments=(1, 1),
+            orientation="h",
+        )
+
+        self.add(self.icon)
+        self.add(self.scale)
+        self.update_brightness()
+
+        self.scale.connect("value-changed", lambda *_: self.update_brightness())
+        self.brightness_service.connect("screen", self.on_brightness_changed)
+
+    def update_brightness(self) -> None:
+        current_brightness = self.brightness_service.screen_brightness
+        if current_brightness != 0:
+            normalized_brightness = self._normalize_brightness(current_brightness)
+            self.scale.animate_value(normalized_brightness)
+        self.update_icon(normalized_brightness)
+
+    def update_icon(self, brightness_percentage: float) -> None:
+        icon_name = self.get_brightness_icon(brightness_percentage)
+        self.icon.set_label(icon_name)
+
+    def on_brightness_changed(self, _sender: any, value: float, *_args) -> None:
+        normalized_brightness = self._normalize_brightness(value)
+        self.scale.animate_value(normalized_brightness)
+        self.update_icon(normalized_brightness)
+
+    def _normalize_brightness(self, brightness: float) -> float:
+        return (brightness / self.brightness_service.max_screen) * 100
+
+    def get_brightness_icon(self, brightness_percentage: float) -> str:
+        if brightness_percentage >= 67:
+            return icons.brightness_high
+        elif brightness_percentage >= 34:
+            return icons.brightness_medium
+        else:
+            return icons.brightness_low
+
+
+class AudioOSDContainer(Box):
+    __gsignals__: ClassVar[dict] = {
+        "volume-changed": (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, orientation="h", spacing=13, name="osd")
+        self.audio = Audio()
+        self.icon = Label(markup=icons.vol_high, name="vol-icon")
+        self.scale = AnimatedScale(
+            marks=(ScaleMark(value=i) for i in range(1, 100, 10)),
+            value=70,
+            min_value=0,
+            max_value=100,
+            increments=(1, 1),
+            orientation="h",
+        )
+
+        self.add(self.icon)
+        self.add(self.scale)
+        self.sync_with_audio()
+
+        self.scale.connect("value-changed", self.on_volume_changed)
+        self.audio.connect("notify::speaker", self.on_audio_speaker_changed)
+        
+        # Connect to speaker-changed signal directly
+        self.audio.connect("speaker-changed", self.on_speaker_changed)
+        
+        # Connect to current speaker if available
+        if self.audio.speaker:
+            self.audio.speaker.connect("changed", self.on_speaker_changed)
+            self.audio.speaker.connect("notify::muted", self.on_mute_changed)
+
+    def sync_with_audio(self):
+        if self.audio.speaker:
+            volume = round(self.audio.speaker.volume)
+            self.scale.set_value(volume)
+            self.update_icon(volume)
+
+    def on_volume_changed(self, *_):
+        if self.audio.speaker:
+            volume = self.scale.value
+            if 0 <= volume <= 100:
+                self.audio.speaker.set_volume(volume)
+                self.update_icon(volume)
+                
+                # Apply muted style based on volume and mute state
+                if volume == 0 or (self.audio.speaker and self.audio.speaker.muted):
+                    self.scale.add_style_class("muted")
+                    self.icon.add_style_class("muted")
+                else:
+                    self.scale.remove_style_class("muted")
+                    self.icon.remove_style_class("muted")
+                    
+                self.emit("volume-changed")
+
+    def on_audio_speaker_changed(self, *_):
+        if self.audio.speaker:
+            self.audio.speaker.connect("changed", self.on_speaker_changed)
+            self.update_volume()
+
+    def on_speaker_changed(self, *_):
+        # This will be called when any property of the speaker changes, including mute
+        self.update_volume()
+        self.update_icon(round(self.audio.speaker.volume))
+        self.emit("volume-changed")
+
+    def update_volume(self, *_):
+        if self.audio.speaker and not self.is_hovered():
+            volume = round(self.audio.speaker.volume)
+            self.scale.set_value(volume)
+            self.update_icon(volume)
+            
+            # Apply muted style based on volume and mute state
+            if volume == 0 or (self.audio.speaker and self.audio.speaker.muted):
+                self.scale.add_style_class("muted")
+                self.icon.add_style_class("muted")
+            else:
+                self.scale.remove_style_class("muted")
+                self.icon.remove_style_class("muted")
+
+    def update_icon(self, volume):
+        # Check if muted first, regardless of volume level
+        if not self.audio.speaker:
+            return
+            
+        # Get appropriate icons based on device type
+        vol_high_icon = icons.vol_high
+        vol_medium_icon = icons.vol_medium
+        vol_mute_icon = icons.vol_off
+        vol_off_icon = icons.vol_mute
+        
+        # Check if it's a bluetooth device
+        if self.audio.speaker and "bluetooth" in self.audio.speaker.icon_name:
+            vol_high_icon = icons.bluetooth_connected
+            vol_medium_icon = icons.bluetooth
+            vol_mute_icon = icons.bluetooth_off
+            vol_off_icon = icons.bluetooth_disconnected
+            
+        # Set the appropriate icon based on mute state and volume
+        if self.audio.speaker.muted:
+            self.icon.set_label(vol_mute_icon)
+            self.scale.add_style_class("muted")
+            self.icon.add_style_class("muted")
+        else:
+            if volume == 0:
+                self.scale.add_style_class("muted")
+                self.icon.add_style_class("muted")
+            else:
+                self.scale.remove_style_class("muted")
+                self.icon.remove_style_class("muted")
+                
+            if volume >= 67:
+                self.icon.set_label(vol_high_icon)
+            elif volume >= 34:
+                self.icon.set_label(vol_medium_icon)
+            elif volume >= 1:
+                self.icon.set_label(vol_medium_icon)  # Use medium for low volumes too
+            else:
+                self.icon.set_label(vol_off_icon)
+
+    def _get_audio_icon_name(self, volume: int) -> str:
+        # This method is now deprecated in favor of update_icon
+        # but kept for compatibility
+        if volume >= 67:
+            return icons.vol_high
+        elif volume >= 34:
+            return icons.vol_medium
+        elif volume >= 1:
+            return icons.vol_mute
+        else:
+            return icons.vol_off
+
+    def on_mute_changed(self, *_):
+        if self.audio.speaker:
+            self.update_icon(round(self.audio.speaker.volume))
+            # Ensure we emit the signal immediately
+            GLib.idle_add(lambda: self.emit("volume-changed"))
+
+
+class MicrophoneOSDContainer(Box):
+    __gsignals__: ClassVar[dict] = {
+        "mic-changed": (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, orientation="h", spacing=13, name="osd")
+        self.audio = Audio()
+        self.icon = Label(markup=icons.mic, name="mic-icon")
+        self.scale = AnimatedScale(
+            marks=(ScaleMark(value=i) for i in range(1, 100, 10)),
+            value=70,
+            min_value=0,
+            max_value=100,
+            increments=(1, 1),
+            orientation="h",
+        )
+
+        self.add(self.icon)
+        self.add(self.scale)
+        self.sync_with_audio()
+
+        self.scale.connect("value-changed", self.on_volume_changed)
+        self.audio.connect("notify::microphone", self.on_audio_microphone_changed)
+        
+        # Connect to microphone-changed signal directly
+        self.audio.connect("microphone-changed", self.on_microphone_changed)
+        
+        # Connect to current microphone if available
+        if self.audio.microphone:
+            self.audio.microphone.connect("changed", self.on_microphone_changed)
+            self.audio.microphone.connect("notify::muted", self.on_mute_changed)
+
+    def sync_with_audio(self):
+        if self.audio.microphone:
+            volume = round(self.audio.microphone.volume)
+            self.scale.set_value(volume)
+            self.update_icon(volume)
+
+    def on_volume_changed(self, *_):
+        if self.audio.microphone:
+            volume = self.scale.value
+            if 0 <= volume <= 100:
+                self.audio.microphone.set_volume(volume)
+                self.update_icon(volume)
+                
+                # Apply muted style based on volume and mute state
+                if volume == 0 or (self.audio.microphone and self.audio.microphone.muted):
+                    self.scale.add_style_class("muted")
+                    self.icon.add_style_class("muted")
+                else:
+                    self.scale.remove_style_class("muted")
+                    self.icon.remove_style_class("muted")
+                    
+                self.emit("mic-changed")
+
+    def on_audio_microphone_changed(self, *_):
+        if self.audio.microphone:
+            self.audio.microphone.connect("changed", self.on_microphone_changed)
+            self.update_volume()
+
+    def on_microphone_changed(self, *_):
+        # This will be called when any property of the microphone changes, including mute
+        self.update_volume()
+        self.update_icon(round(self.audio.microphone.volume))
+        self.emit("mic-changed")
+
+    def update_volume(self, *_):
+        if self.audio.microphone and not self.is_hovered():
+            volume = round(self.audio.microphone.volume)
+            self.scale.set_value(volume)
+            self.update_icon(volume)
+            
+            # Apply muted style based on volume and mute state
+            if volume == 0 or (self.audio.microphone and self.audio.microphone.muted):
+                self.scale.add_style_class("muted")
+                self.icon.add_style_class("muted")
+            else:
+                self.scale.remove_style_class("muted")
+                self.icon.remove_style_class("muted")
+
+    def update_icon(self, volume):
+        # Check if muted first, regardless of volume level
+        if not self.audio.microphone:
+            return
+            
+        if self.audio.microphone.muted:
+            self.icon.set_label(icons.mic_mute)
+            self.scale.add_style_class("muted")
+            self.icon.add_style_class("muted")
+        else:
+            if volume == 0:
+                self.scale.add_style_class("muted")
+                self.icon.add_style_class("muted")
+            else:
+                self.scale.remove_style_class("muted")
+                self.icon.remove_style_class("muted")
+                
+            if volume >= 67:
+                self.icon.set_label(icons.mic)
+            elif volume >= 34:
+                self.icon.set_label(icons.mic)
+            elif volume >= 1:
+                self.icon.set_label(icons.mic)
+            else:
+                self.icon.set_label(icons.mic_mute)
+
+    def on_mute_changed(self, *_):
+        if self.audio.microphone:
+            self.update_icon(round(self.audio.microphone.volume))
+            # Ensure we emit the signal immediately
+            GLib.idle_add(lambda: self.emit("mic-changed"))
+
+
+class OSD(Window):
+    def __init__(self, **kwargs):
+        self.audio_container = AudioOSDContainer()
+        self.brightness_container = BrightnessOSDContainer()
+        self.microphone_container = MicrophoneOSDContainer()
+
+        self.timeout = 1000
+
+        self.revealer = Revealer(
+            transition_type="slide-up",
+            transition_duration=100,
+            child_revealed=False,
+        )
+
+        self.main_box = Box(
+            orientation="v",
+            spacing=13,
+            children=[self.revealer],
+        )
+
+        super().__init__(
+            layer="overlay",
+            anchor="bottom",
+            child=self.main_box,
+            visible=False,
+            pass_through=True,
+            keyboard_mode="on-demand",
+            **kwargs,
+        )
+
+        self.last_activity_time = time.time()
+
+        # Connect to audio and brightness signals
+        self.audio_container.audio.connect("notify::speaker", self.show_audio)
+        self.brightness_container.brightness_service.connect("screen", self.show_brightness)
+        self.audio_container.connect("volume-changed", self.show_audio)
+        self.microphone_container.connect("mic-changed", self.show_microphone)
+        
+        # Connect to speaker changes to handle new speakers
+        self.audio_container.audio.connect("speaker-changed", self.show_audio)
+        
+        # Connect to microphone changes to handle new microphones
+        self.microphone_container.audio.connect("microphone-changed", self.show_microphone)
+        
+        # Connect to the current speaker if available
+        if self.audio_container.audio.speaker:
+            self.audio_container.audio.speaker.connect("changed", self.show_audio)
+            
+        # Connect to the current microphone if available
+        if self.microphone_container.audio.microphone:
+            self.microphone_container.audio.microphone.connect("changed", self.show_microphone)
+
+        GLib.timeout_add(100, self.check_inactivity)
+
+    def show_audio(self, *_):
+        self.show_box(box_to_show="audio")
+        self.reset_inactivity_timer()
+
+    def show_brightness(self, *_):
+        self.show_box(box_to_show="brightness")
+        self.reset_inactivity_timer()
+        
+    def show_microphone(self, *_):
+        self.show_box(box_to_show="microphone")
+        self.reset_inactivity_timer()
+
+    def show_box(self, box_to_show: Literal["audio", "brightness", "microphone"]):
+        self.set_visible(True)
+        if box_to_show == "audio":
+            self.revealer.children = self.audio_container
+        elif box_to_show == "brightness":
+            self.revealer.children = self.brightness_container
+        elif box_to_show == "microphone":
+            self.revealer.children = self.microphone_container
+        self.revealer.set_reveal_child(True)
+        self.reset_inactivity_timer()
+
+    def start_hide_timer(self):
+        self.set_visible(False)
+
+    def reset_inactivity_timer(self):
+        self.last_activity_time = time.time()
+
+    def check_inactivity(self):
+        if time.time() - self.last_activity_time >= (self.timeout / 1000):
+            self.start_hide_timer()
+        return True

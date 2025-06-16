@@ -2,10 +2,10 @@
 @import url("./styles/colors.css");
 @import url("./styles/components.css");
 @import url("./styles/controls.css");
-@import url("./styles/launcher.css");
 @import url("./styles/indicators.css");
 @import url("./styles/workspaces.css");
 @import url("./styles/switcher.css");
+@import url("./styles/osd.css");
 
 * {
   all: unset;

@@ -10,13 +10,13 @@ from gi.repository import Gdk, GLib
 
 import config.data as data
 import utils.icons as icons
-from services.brightness import Brightness
+from services.brightness import Brightness as BrightnessService
 
 
-class BrightnessSmall(Box):
+class Brightness(Box):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-brightness", **kwargs)
-        self.brightness = Brightness.get_initial()
+        self.brightness = BrightnessService.get_initial()
         if self.brightness.screen_brightness == -1:
             self.destroy()
             return
@@ -46,19 +46,24 @@ class BrightnessSmall(Box):
         self.brightness.connect("screen", self.on_brightness_changed)
         self.on_brightness_changed()
 
-    def on_scroll(self, widget, event):
+    def on_scroll(self, _, event):
         if self.brightness.max_screen == -1:
             return
+        
+        current_brightness = self.brightness.screen_brightness
+        max_brightness = self.brightness.max_screen
+        step = max(1, int(max_brightness * 0.01))  # 1% of max brightness
+        
+        if event.direction == Gdk.ScrollDirection.SMOOTH:
+            if hasattr(event, 'delta_y') and abs(event.delta_y) > 0:
+                new_brightness = current_brightness - int(event.delta_y * step)
+                self.brightness.screen_brightness = new_brightness
+            # Remove delta_x handling
+        elif event.direction == Gdk.ScrollDirection.UP:
+            self.brightness.screen_brightness = current_brightness + step
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            self.brightness.screen_brightness = current_brightness - step
 
-        step_size = 5
-        current_norm = self.progress_bar.value
-        if event.delta_y < 0:
-            new_norm = min(current_norm + (step_size / self.brightness.max_screen), 1)
-        elif event.delta_y > 0:
-            new_norm = max(current_norm - (step_size / self.brightness.max_screen), 0)
-        else:
-            return
-        self.progress_bar.value = new_norm
 
     def on_progress_value_changed(self, widget, pspec):
         if self._updating_from_brightness:
@@ -100,7 +105,7 @@ class BrightnessSmall(Box):
             GLib.source_remove(self._update_source_id)
         super().destroy()
 
-class VolumeSmall(Box):
+class Volume(Box):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-vol", **kwargs)
         self.audio = Audio()
@@ -143,11 +148,19 @@ class VolumeSmall(Box):
     def on_scroll(self, _, event):
         if not self.audio.speaker:
             return
+        
+        current_volume = self.audio.speaker.volume
+        step = 1
+        
         if event.direction == Gdk.ScrollDirection.SMOOTH:
-            if abs(event.delta_y) > 0:
-                self.audio.speaker.volume -= event.delta_y
-            if abs(event.delta_x) > 0:
-                self.audio.speaker.volume += event.delta_x
+            if hasattr(event, 'delta_y') and abs(event.delta_y) > 0:
+                new_volume = current_volume - int(event.delta_y * step)
+                self.audio.speaker.volume = new_volume
+            # Remove delta_x handling
+        elif event.direction == Gdk.ScrollDirection.UP:
+            self.audio.speaker.volume = current_volume + step
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            self.audio.speaker.volume = current_volume - step
 
     def on_speaker_changed(self, *_):
         if not self.audio.speaker:
@@ -183,7 +196,7 @@ class VolumeSmall(Box):
         else:
             self.vol_label.set_markup(vol_off_icon)
 
-class MicSmall(Box):
+class MicroPhone(Box):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-mic", **kwargs)
         self.audio = Audio()
@@ -227,10 +240,13 @@ class MicSmall(Box):
         if not self.audio.microphone:
             return
         if event.direction == Gdk.ScrollDirection.SMOOTH:
-            if abs(event.delta_y) > 0:
+            if hasattr(event, 'delta_y') and abs(event.delta_y) > 0:
                 self.audio.microphone.volume -= event.delta_y
-            if abs(event.delta_x) > 0:
-                self.audio.microphone.volume += event.delta_x
+            # Remove delta_x handling
+        elif event.direction == Gdk.ScrollDirection.UP:
+            self.audio.microphone.volume += 1
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            self.audio.microphone.volume -= 1
 
     def on_microphone_changed(self, *_):
         if not self.audio.microphone:
@@ -257,11 +273,11 @@ class MicSmall(Box):
 
 class Controls(Box):
     def __init__(self, **kwargs):
-        brightness = Brightness.get_initial()
+        brightness = BrightnessService.get_initial()
         children = []
         if (brightness.screen_brightness != -1):
-            children.append(BrightnessSmall())
-        children.extend([VolumeSmall(), MicSmall()])
+            children.append(Brightness())
+        children.extend([Volume(), MicroPhone()])
         super().__init__(
             name="control",
             orientation="h" if not data.VERTICAL else "v",
