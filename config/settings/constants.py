@@ -16,6 +16,8 @@ DEFAULTS = {
     "suffix_restart": "B",
     "prefix_axmsg": "SUPER",
     "suffix_axmsg": "A",
+    "prefix_application_switcher": "ALT",
+    "suffix_application_switcher": "TAB",
     "prefix_dash": "SUPER",
     "suffix_dash": "D",
     "prefix_bluetooth": "SUPER SHIFT",
@@ -71,6 +73,7 @@ DEFAULTS = {
     "workspace_use_chinese_numerals": False,
     "workspace_dots": False,
     "dock_music_player": True,
+    "window_switcher_items_per_row": 13,
     "metrics_visible": {
         "cpu": True,
         "ram": True,

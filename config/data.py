@@ -68,6 +68,7 @@ if os.path.exists(CONFIG_FILE):
     WORKSPACE_NUMS = config.get("workspace_nums", False)
     WORKSPACE_USE_CHINESE_NUMERAL = config.get("workspace_use_chinese_numerals", False)
     WORKSPACE_DOTS = config.get("workspace_dots", False)
+    WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 13)
 
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
@@ -98,7 +99,7 @@ else:
     TERMINAL_COMMAND = "kitty -e"
     DOCK_THEME = "Pills"
     DOCK_ICON_SIZE = 20
-
+    WINDOW_SWITCHER_ITEMS_PER_ROW = 13
     NOTIF_POS = NOTIF_POS_DEFAULT
 
     DOCK_COMPONENTS_VISIBILITY = {

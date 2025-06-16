@@ -124,6 +124,7 @@ class HyprConfGUI(Window):
         bindings = [
             (f"Reload {APP_NAME_CAP}", "prefix_restart", "suffix_restart"),
             ("Message", "prefix_axmsg", "suffix_axmsg"),
+            ("Application Switcher", "prefix_application_switcher", "suffix_application_switcher"),
             ("Dashboard", "prefix_dash", "suffix_dash"),
             ("Bluetooth", "prefix_bluetooth", "suffix_bluetooth"),
             ("Pins", "prefix_pins", "suffix_pins"),
@@ -341,7 +342,7 @@ class HyprConfGUI(Window):
         layout_grid.attach(dock_theme_combo_container, 3, 1, 1, 1)
 
         # Add icon size scale
-        icon_size_label = Label(label="Icon Size", h_align="start", v_align="center")
+        icon_size_label = Label(label="Taskbar Icon Size", h_align="start", v_align="center")
         layout_grid.attach(icon_size_label, 0, 4, 1, 1)
 
         icon_size_scale_container = Gtk.Box(
@@ -361,7 +362,30 @@ class HyprConfGUI(Window):
         self.icon_size_scale.set_tooltip_text("Adjust the size of dock icons")
 
         icon_size_scale_container.add(self.icon_size_scale)
-        layout_grid.attach(icon_size_scale_container, 1, 4, 3, 1)
+        layout_grid.attach(icon_size_scale_container, 1, 4, 1, 1)
+
+        # Add application switcher items scale
+        application_switcher_label = Label(label="Application Switcher Items", h_align="start", v_align="center")
+        layout_grid.attach(application_switcher_label, 2, 4, 1, 1)
+
+        application_switcher_scale_container = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.START,
+            valign=Gtk.Align.CENTER,
+            hexpand=True,
+        )
+
+        self.application_switcher_scale = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 5, 20, 1
+        )
+        self.application_switcher_scale.set_value(bind_vars.get("window_switcher_items_per_row", 13))
+        self.application_switcher_scale.set_size_request(150, -1)
+        self.application_switcher_scale.set_draw_value(True)
+        self.application_switcher_scale.set_value_pos(Gtk.PositionType.RIGHT)
+        self.application_switcher_scale.set_tooltip_text("Adjust the number of items per row in the application switcher")
+
+        application_switcher_scale_container.add(self.application_switcher_scale)
+        layout_grid.attach(application_switcher_scale_container, 3, 4, 1, 1)
 
         dock_label = Label(label="Show Dock", h_align="start", v_align="center")
         layout_grid.attach(dock_label, 0, 2, 1, 1)
@@ -817,6 +841,9 @@ class HyprConfGUI(Window):
         current_bind_vars_snapshot["dock_icon_size"] = int(
             self.icon_size_scale.get_value()
         )
+        current_bind_vars_snapshot["window_switcher_items_per_row"] = int(
+            self.window_switcher_scale.get_value()
+        )
         current_bind_vars_snapshot["terminal_command"] = self.terminal_entry.get_text()
         current_bind_vars_snapshot["corners_visible"] = self.corners_switch.get_active()
         current_bind_vars_snapshot["dock_theme"] = (
@@ -1137,6 +1164,7 @@ class HyprConfGUI(Window):
                 self.idle_switch.set_active(False)
             # Add reset for icon size scale
             self.icon_size_scale.set_value(utils.bind_vars.get("dock_icon_size", 20))
+            self.application_switcher_scale.set_value(utils.bind_vars.get("window_switcher_items_per_row", 13))
             print("Settings reset to defaults.")
 
     def on_close(self, widget):

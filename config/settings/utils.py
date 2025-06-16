@@ -259,6 +259,8 @@ $axMessage = notify-send "Axenide" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i
 bind = {bind_vars.get("prefix_restart", "SUPER ALT")}, {bind_vars.get("suffix_restart", "B")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
 # Message
 bind = {bind_vars.get("prefix_axmsg", "SUPER")}, {bind_vars.get("suffix_axmsg", "A")}, exec, $axMessage
+# Application Switcher
+bind = {bind_vars.get("prefix_application_switcher", "ALT")}, {bind_vars.get("suffix_application_switcher", "TAB")}, exec, $fabricSend 'switcher.show_switcher()'
 # Dashboard
 bind = {bind_vars.get("prefix_dash", "SUPER")}, {bind_vars.get("suffix_dash", "D")}, exec, $fabricSend 'notch.open_notch("dashboard")'
 # Bluetooth
