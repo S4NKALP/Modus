@@ -10,6 +10,7 @@ from config.data import APP_NAME, APP_NAME_CAP, CONFIG_FILE
 from modules.corners import Corners
 from modules.dock.main import Dock
 from modules.launcher.main import Launcher
+from modules.switcher import ApplicationSwitcher
 
 gi.require_version("GLib", "2.0")
 
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     corners = Corners()
     dock = Dock()
     launcher = Launcher()
+    switcher = ApplicationSwitcher()
 
     # Set corners visibility based on config
     corners_visible = config.get("corners_visible", True)
@@ -61,6 +63,7 @@ if __name__ == "__main__":
         dock,
         corners,
         launcher,
+        switcher,
     )  # Make sure corners is added to the app
 
     def set_css():

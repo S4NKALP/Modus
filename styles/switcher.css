@@ -1,0 +1,36 @@
+#application-switcher {
+  background-color: var(--shadow);
+}
+
+#application-switcher-view {
+  min-height: 120px;
+  padding: 4px;
+}
+
+#switcher-button {
+  padding: 4px;
+  min-width: 100px;
+}
+
+#window-button {
+  background-color: var(--surface);
+}
+
+#switcher-button:hover {
+  background-color: var(--surface);
+}
+
+#window-button.active {
+  background-color: var(--surface-bright);
+  border: 3px solid var(--surface-bright);
+}
+
+#switcher-button label {
+  color: var(--foreground);
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+#window-row {
+  padding: 18px;
+}
