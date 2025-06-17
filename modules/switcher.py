@@ -24,7 +24,7 @@ class ApplicationSwitcher(Window):
             layer="top",
             anchor="center",
             exclusivity="auto",
-            keyboard_mode="on-demand",
+            keyboard_mode="exclusive",
             **kwargs,
         )
 
@@ -143,7 +143,6 @@ class ApplicationSwitcher(Window):
                     style_classes=["active"] if i == self.current_index else None,
                     child=button_content,
                 )
-                event_box.connect("button-press-event", self.on_button_clicked, i)
                 current_row.add(event_box)
 
                 # Create new row if needed
@@ -161,14 +160,6 @@ class ApplicationSwitcher(Window):
             self.update_selection()
         except Exception as e:
             print(f"Failed to update windows: {e}")
-
-    def on_button_clicked(self, widget, event, index):
-        self.current_index = index
-        self.update_selection()
-        if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
-            self.activate_selected()
-            self.hide_switcher()
-        return True
 
     def on_key_press(self, widget, event):
         keyval = event.keyval

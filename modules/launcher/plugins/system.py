@@ -3,13 +3,14 @@ System plugin for the launcher.
 Provides system commands and actions.
 """
 
-import subprocess
 import os
 import time
-from typing import List, Set
-from ..plugin_base import PluginBase
-from ..result import Result
+from typing import List
+
+from fabric.utils import exec_shell_command_async
 import utils.icons as icons
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
 
 
 class SystemPlugin(PluginBase):
@@ -31,7 +32,6 @@ class SystemPlugin(PluginBase):
         """Initialize the system plugin."""
         # Set up triggers for system commands
         self.set_triggers(["bin", "bin "])
-        print("Initializing System plugin...")
         self._update_bin_cache()
 
     def cleanup(self):
@@ -101,8 +101,4 @@ class SystemPlugin(PluginBase):
 
     def _execute_command(self, command: List[str]):
         """Execute a system command."""
-        try:
-            subprocess.Popen(command)
-            print(f"Executed command: {' '.join(command)}")
-        except Exception as e:
-            print(f"Failed to execute command {' '.join(command)}: {e}")
+        exec_shell_command_async(command)

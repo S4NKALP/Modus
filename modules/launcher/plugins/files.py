@@ -64,13 +64,10 @@ class FilesPlugin(PluginBase):
             [
                 "file",
                 "find",
-                "/",
                 "file ",
                 "find ",
-                "/ ",
             ]
         )
-        print("Initializing Files plugin...")
         self._warm_cache()
 
     def cleanup(self):
@@ -300,7 +297,6 @@ class FilesPlugin(PluginBase):
             subprocess.Popen(
                 ["xdg-open", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
-            print(f"Opened: {path}")
         except Exception as e:
             print(f"Failed to open {path}: {e}")
 

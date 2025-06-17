@@ -3,21 +3,19 @@ Power management plugin for the launcher.
 Handles system power operations like shutdown, restart, sleep, etc.
 """
 
-import subprocess
-from typing import List, Dict, Any
-import os
-import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GdkPixbuf, GLib
-from ..plugin_base import PluginBase
-from ..result import Result
+from typing import List
+
 import utils.icons as icons
+from fabric.utils import exec_shell_command_async
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
+
 
 class PowerPlugin(PluginBase):
     """
     Plugin for system power management operations.
     """
-    
+
     def __init__(self):
         super().__init__()
         self.display_name = "Power"
@@ -26,33 +24,28 @@ class PowerPlugin(PluginBase):
             "shutdown": {
                 "description": "Shutdown the system",
                 "icon": icons.shutdown,
-                "action": self.shutdown
+                "action": self.shutdown,
             },
             "restart": {
                 "description": "Restart the system",
                 "icon": icons.reboot,
-                "action": self.restart
-            },
-            "sleep": {
-                "description": "Put system to sleep",
-                "icon": icons.suspend,
-                "action": self.sleep
+                "action": self.restart,
             },
             "lock": {
                 "description": "Lock the screen",
                 "icon": icons.lock,
-                "action": self.lock
+                "action": self.lock,
             },
             "suspend": {
                 "description": "Suspend the system",
                 "icon": icons.suspend,
-                "action": self.suspend
+                "action": self.suspend,
             },
             "logout": {
                 "description": "Logout from current session",
                 "icon": icons.logout,
-                "action": self.logout
-            }
+                "action": self.logout,
+            },
         }
 
     def initialize(self):
@@ -80,32 +73,23 @@ class PowerPlugin(PluginBase):
                     action=info["action"],
                     relevance=1.0 if query == cmd else 0.7,
                     plugin_name=self.display_name,
-                    data={"command": cmd}
+                    data={"command": cmd},
                 )
                 results.append(result)
 
         return results
 
-    def shutdown(self) -> None:
-        """Shutdown the system"""
-        subprocess.run(["shutdown", "now"])
+    def shutdown(self, *args) -> None:
+        exec_shell_command_async("systemctl poweroff")
 
-    def restart(self) -> None:
-        """Restart the system"""
-        subprocess.run(["shutdown", "-r", "now"])
+    def restart(self, *args) -> None:
+        exec_shell_command_async("systemctl reboot")
 
-    def sleep(self) -> None:
-        """Put system to sleep"""
-        subprocess.run(["systemctl", "suspend"])
+    def lock(self, *args) -> None:
+        exec_shell_command_async("loginctl lock-session")
 
-    def lock(self) -> None:
-        """Lock the screen using hyprlock"""
-        subprocess.run(["hyprlock"])
+    def suspend(self, *args) -> None:
+        exec_shell_command_async("systemctl suspend")
 
-    def suspend(self) -> None:
-        """Suspend the system"""
-        subprocess.run(["systemctl", "suspend"])
-
-    def logout(self) -> None:
-        """Logout from current session"""
-        subprocess.run(["loginctl", "terminate-session", os.environ.get("XDG_SESSION_ID")]) 
+    def logout(self, *args) -> None:
+        exec_shell_command_async("hyprctl dispatch exit")

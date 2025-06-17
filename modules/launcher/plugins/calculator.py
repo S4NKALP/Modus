@@ -3,15 +3,16 @@ Calculator plugin for the launcher.
 Evaluates mathematical expressions and converts units.
 """
 
-import re
 import math
-import time
+import re
 import subprocess
-from typing import List, Dict, Tuple
-from ..plugin_base import PluginBase
-from ..result import Result
-from utils.conversion import Conversion
+import time
+from typing import List
+
 import utils.icons as icons
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
+from utils.conversion import Conversion
 
 
 class CalculatorPlugin(PluginBase):

@@ -189,6 +189,16 @@ dice_4: str = "&#xf08e;"
 dice_5: str = "&#xf08f;"
 dice_6: str = "&#xf090;"
 
+# search engine
+reddit: str = "&#xec8e;"
+youtube: str = "&#xec90;"
+duckduckgo: str = "&#xec8f;"
+github: str = "&#xec1c;"
+stackoverflow: str = "&#xef58;"
+google: str = "&#xec1f;"
+linkedin: str = "&#xec8c;"
+wikipedia: str = "&#xfa79;"
+
 exceptions: list[str] = ["font_family", "font_weight", "span"]
 
 

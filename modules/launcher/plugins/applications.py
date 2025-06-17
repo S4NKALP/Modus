@@ -1,22 +1,15 @@
-"""
-Applications plugin for the launcher.
-Searches and launches desktop applications.
-"""
-
-import re
 import json
+import re
 from typing import List
+
+from fabric.utils import DesktopApp
 from fabric.utils.helpers import get_desktop_applications, get_relative_path
-from ..plugin_base import PluginBase
-from ..result import Result
 from modules.dock.main import Dock
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
 
 
 class ApplicationsPlugin(PluginBase):
-    """
-    Plugin for searching and launching desktop applications.
-    """
-
     def __init__(self):
         super().__init__()
         self.display_name = "Applications"
@@ -24,21 +17,16 @@ class ApplicationsPlugin(PluginBase):
         self.applications = []
 
     def initialize(self):
-        """Initialize the applications plugin."""
         # Set up triggers for applications - both with and without spaces
         self.set_triggers(["app", "app "])
-        print("Initializing Applications plugin...")
         self._load_applications()
 
     def cleanup(self):
-        """Cleanup the applications plugin."""
         self.applications = []
 
     def _load_applications(self):
-        """Load all desktop applications."""
         try:
             self.applications = get_desktop_applications(include_hidden=False)
-            print(f"Loaded {len(self.applications)} applications")
         except Exception as e:
             print(f"Failed to load applications: {e}")
             self.applications = []
@@ -99,16 +87,21 @@ class ApplicationsPlugin(PluginBase):
         for app in self.applications:
             relevance = self._calculate_relevance(app, query)
             if relevance > 0:
+                # Truncate description to prevent overflow beyond 550px window
+                description = app.description or app.generic_name or ""
+                if len(description) > 80:  # Limit to ~80 characters to fit in 550px
+                    description = description[:70] + "..."
+
                 result = Result(
                     title=app.display_name or app.name,
-                    subtitle=app.description or app.generic_name or "",
+                    subtitle=description,
                     icon=app.get_icon_pixbuf(size=48),
                     action=lambda a=app: self._launch_application(a),
                     relevance=relevance,
                     plugin_name=self.display_name,
                     data={
                         "app": app,
-                        "pin_action": lambda a=app: self._pin_application(a)
+                        "pin_action": lambda a=app: self._pin_application(a),
                     },
                 )
                 results.append(result)
@@ -167,29 +160,5 @@ class ApplicationsPlugin(PluginBase):
         pattern = ".*".join(re.escape(char) for char in query)
         return bool(re.search(pattern, text, re.IGNORECASE))
 
-    def _launch_application(self, app):
-        """Launch a desktop application."""
-        try:
-            success = app.launch()
-            if not success:
-                # Fallback to command line execution
-                if app.command_line:
-                    import subprocess
-
-                    subprocess.Popen(
-                        app.command_line,
-                        shell=True,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                elif app.executable:
-                    import subprocess
-
-                    subprocess.Popen(
-                        [app.executable],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-            print(f"Launched application: {app.name}")
-        except Exception as e:
-            print(f"Failed to launch application {app.name}: {e}")
+    def _launch_application(self, app: DesktopApp):
+        app.launch()

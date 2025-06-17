@@ -4,27 +4,28 @@ Prevents system from going idle for a specified duration.
 """
 
 import subprocess
-import os
 from typing import List
+
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GdkPixbuf, GLib
-from ..plugin_base import PluginBase
-from ..result import Result
-from fabric.widgets.label import Label
 import utils.icons as icons
+from fabric.utils import get_relative_path
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
+
+gi.require_version("Gtk", "3.0")
+
 
 class CaffeinePlugin(PluginBase):
     """
     Plugin for preventing system idle using the inhibit script.
     """
-    
+
     def __init__(self):
         super().__init__()
         self.display_name = "Caffeine"
         self.description = "Prevent system from going idle"
-        self.inhibit_script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "utils", "inhibit.py")
-        
+        self.inhibit_script = get_relative_path("../../../utils/inhibit.py")
+
         # Predefined durations
         self.durations = {
             "30m": "30 minutes",
@@ -32,8 +33,8 @@ class CaffeinePlugin(PluginBase):
             "2h": "2 hours",
             "4h": "4 hours",
             "8h": "8 hours",
-            "indefinite": "Indefinitely",
-            "off": "Off"
+            "on": "On",
+            "off": "Off",
         }
 
     def initialize(self):
@@ -46,6 +47,7 @@ class CaffeinePlugin(PluginBase):
 
     def _create_inhibit_action(self, duration: str):
         """Create an inhibit action that properly captures the duration."""
+
         def action():
             try:
                 # Run the script in the background without waiting
@@ -53,10 +55,11 @@ class CaffeinePlugin(PluginBase):
                     ["python3", self.inhibit_script, duration],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                    start_new_session=True  # Run in a new session to prevent hanging
+                    start_new_session=True,  # Run in a new session to prevent hanging
                 )
             except Exception as e:
                 print(f"Error starting inhibit script: {e}")
+
         return action
 
     def _is_valid_duration(self, query: str) -> bool:
@@ -65,7 +68,7 @@ class CaffeinePlugin(PluginBase):
             return True
         if query.isdigit():
             return True
-        if query.endswith(('h', 'm', 's')) and query[:-1].replace('.', '').isdigit():
+        if query.endswith(("h", "m", "s")) and query[:-1].replace(".", "").isdigit():
             return True
         return False
 
@@ -77,8 +80,9 @@ class CaffeinePlugin(PluginBase):
 
     def query(self, query_string: str) -> List[Result]:
         """Search caffeine durations based on query."""
+        # For empty queries, show all available durations
         if not query_string.strip():
-            return []
+            query_string = ""  # Will match all durations in the loop below
 
         query = query_string.lower().strip()
         results = []
@@ -86,15 +90,32 @@ class CaffeinePlugin(PluginBase):
         # Handle direct search entry (e.g., "caffeine 30m" or just "30m")
         if query.startswith("caffeine "):
             query = query[9:].strip()  # Remove "caffeine " prefix
-        elif query in self.durations or (query.endswith(('h', 'm', 's')) and query[:-1].replace('.', '').isdigit()):
+            # If query becomes empty after removing prefix, show all durations
+            if not query:
+                query = ""  # Will match all durations in the loop below
+        elif query == "caffeine":
+            # Handle just "caffeine" without space - show all durations
+            query = ""
+        elif not query:
+            # Handle empty query - show all durations
+            pass
+        elif (
+            query in self.durations
+            or query.isdigit()
+            or (
+                query.endswith(("h", "m", "s"))
+                and query[:-1].replace(".", "").isdigit()
+            )
+        ):
             # If query is a valid duration without prefix, use it directly
             pass
         else:
             return []
 
-
         # Add custom duration option
-        if query.isdigit() or (query.endswith(('h', 'm', 's')) and query[:-1].replace('.', '').isdigit()):
+        if query.isdigit() or (
+            query.endswith(("h", "m", "s")) and query[:-1].replace(".", "").isdigit()
+        ):
             result = Result(
                 title=f"Custom: {query}",
                 subtitle="Set custom duration",
@@ -102,21 +123,28 @@ class CaffeinePlugin(PluginBase):
                 action=self._create_inhibit_action(query),
                 relevance=1.0,
                 plugin_name=self.display_name,
-                data={"duration": query}
+                data={"duration": query},
             )
             results.append(result)
 
         # Add predefined durations
         for duration, description in self.durations.items():
-            if query in duration or query in description.lower():
+            # If query is empty, show all durations; otherwise filter by query
+            if not query or query in duration or query in description.lower():
+                # Special handling for "off" - it should stop inhibition
+                if duration.lower() == "off":
+                    subtitle = "Stop idle inhibition"
+                else:
+                    subtitle = f"Prevent idle for {description.lower()}"
+
                 result = Result(
                     title=description,
-                    subtitle=f"Prevent idle for {description.lower()}",
+                    subtitle=subtitle,
                     icon_markup=icons.coffee,
                     action=self._create_inhibit_action(duration),
                     relevance=0.9 if query == duration else 0.7,
                     plugin_name=self.display_name,
-                    data={"duration": duration}
+                    data={"duration": duration},
                 )
                 results.append(result)
 
@@ -124,4 +152,4 @@ class CaffeinePlugin(PluginBase):
         if results:
             results[0].default_action = self._get_default_action(query)
 
-        return results 
+        return results

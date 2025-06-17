@@ -3,14 +3,13 @@ Clipboard plugin using cliphist for clipboard history management.
 """
 
 import os
-import re
 import subprocess
 import sys
 import tempfile
 from typing import List, Dict
-from ..plugin_base import PluginBase
-from ..result import Result
-from gi.repository import GdkPixbuf, GLib, Gdk
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
+from gi.repository import GdkPixbuf, GLib
 
 
 class ClipboardPlugin(PluginBase):
@@ -19,7 +18,6 @@ class ClipboardPlugin(PluginBase):
         self.name = "clipboard"
         self.display_name = "Clipboard History"
         self.description = "Search and manage clipboard history using cliphist"
-        self.set_triggers(["clip"])
 
         # Initialize cache and temp directory
         self.tmp_dir = tempfile.mkdtemp(prefix="cliphist-")
@@ -29,6 +27,7 @@ class ClipboardPlugin(PluginBase):
         self._pending_updates = False
 
     def initialize(self):
+        self.set_triggers(["clip", "clip "])
         """Initialize the plugin."""
         try:
             subprocess.run(["cliphist", "list"], capture_output=True, check=True)
@@ -154,7 +153,7 @@ class ClipboardPlugin(PluginBase):
                             relevance=1.0,
                             plugin_name=self.name,
                             action=lambda id=item_id: self._copy_to_clipboard(id),
-                            data={"bypass_max_results": True}
+                            data={"bypass_max_results": True},
                         )
                         results.append(result)
                         continue
@@ -169,7 +168,7 @@ class ClipboardPlugin(PluginBase):
                     relevance=1.0,
                     plugin_name=self.name,
                     action=lambda id=item_id: self._copy_to_clipboard(id),
-                    data={"bypass_max_results": True}
+                    data={"bypass_max_results": True},
                 )
                 results.append(result)
 
@@ -182,7 +181,7 @@ class ClipboardPlugin(PluginBase):
                     icon_name="dialog-error",
                     relevance=0.0,
                     plugin_name=self.name,
-                    data={"bypass_max_results": True}
+                    data={"bypass_max_results": True},
                 )
             )
 

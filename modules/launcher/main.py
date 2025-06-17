@@ -1,47 +1,45 @@
-"""
-Main launcher window implementation.
-Provides a search interface with plugin-based results.
-"""
+from typing import List
 
-import gi
-from typing import List, Optional
-from fabric.widgets.window import Window
+from fabric.core.service import Property
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
-from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.core.service import Property
-from utils.wayland import WaylandWindow
-from .plugin_manager import PluginManager
-from .result_item import ResultItem
-from .result import Result
-from .trigger_config import TriggerConfig
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+from fabric.utils import exec_shell_command_async, get_relative_path
+from gi.repository import Gdk, GLib
+from modules.launcher.plugin_manager import PluginManager
+from modules.launcher.result import Result
+from modules.launcher.result_item import ResultItem
+from modules.launcher.trigger_config import TriggerConfig
+from utils.wayland import WaylandWindow as Window
+import utils.icons as icons
 
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib
 
-
-class Launcher(WaylandWindow):
+class Launcher(Window):
     """
     Main launcher window with search functionality and plugin system.
     Similar to Albert Launcher interface.
     """
-    
+
     # Properties
     query = Property(str, flags="read-write", default_value="")
     visible = Property(bool, flags="read-write", default_value=False)
     active_trigger = Property(str, flags="read-write", default_value="")
-    
+
     def __init__(self, **kwargs):
         super().__init__(
             name="launcher-window",
-            layer="overlay",
+            layer="top",
             anchor="center",
-            exclusivity="auto",
-            keyboard_mode="on-demand",
+            exclusivity="none",
+            keyboard_mode="exclusive",
             **kwargs,
         )
-        
+
+        # Initialization flag to prevent callbacks during setup
+        self._initializing = True
+
         # Initialize plugin manager
         self.plugin_manager = PluginManager()
 
@@ -56,48 +54,64 @@ class Launcher(WaylandWindow):
         # Trigger system
         self.triggered_plugin = None  # Currently active triggered plugin
 
-        
         # Setup UI
-        self._setup_ui()
-        
-        # Connect signals
-        self.connect("key-press-event", self._on_key_press)
-
-        
-        # Initially hide
-        self.hide()
-        
-    def _setup_ui(self):
-        """Setup the launcher UI components."""
-        # Main container
         main_box = Box(
-            name="launcher-main",
+            name="launcher",
             orientation="v",
             spacing=0,
             h_align="center",
             v_align="center",
         )
         self.add(main_box)
-        
+
         # Search entry with overlay for trigger indication
         self.search_entry = Entry(
             name="launcher-search",
             placeholder="Type to search...",
             h_expand=True,
+            h_align="fill",
+            notify_text=lambda entry, *_: self._on_search_changed(entry),
         )
         self.search_entry.connect("changed", self._on_search_changed)
         self.search_entry.connect("activate", self._on_entry_activate)
-        main_box.add(self.search_entry)
-        
+
+        self.header_box = Box(
+            name="header_box",
+            spacing=10,
+            orientation="h",
+            children=[
+                Button(
+                    name="config-button",
+                    child=Label(name="config-label", markup=icons.config),
+                    on_clicked=lambda *_: (
+                        exec_shell_command_async(
+                            f"python {get_relative_path('../../config/config.py')}"
+                        ),
+                        self.close_launcher(),
+                    ),
+                ),
+                self.search_entry,
+                Button(
+                    name="close-button",
+                    child=Label(name="close-label", markup=icons.cancel),
+                    tooltip_text="Exit",
+                    on_clicked=lambda *_: self.close_launcher(),
+                ),
+            ],
+        )
+
+        main_box.add(self.header_box)
+
         # Results container
         self.results_scroll = ScrolledWindow(
             name="launcher-results-scroll",
             h_scrollbar_policy="never",
-            v_scrollbar_policy="automatic",
-            min_content_size=(-1, 550),
-            max_content_size=(-1, 550),
+            min_content_size=(550, 260),
+            max_content_size=(550, 260),
+            propagate_width=False,
+            propagate_height=False,
         )
-        
+
         self.results_box = Box(
             name="launcher-results",
             orientation="v",
@@ -109,16 +123,26 @@ class Launcher(WaylandWindow):
         # Initially hide the results container
         self.results_scroll.hide()
 
-        
+        self.connect("key-press-event", self._on_key_press)
+        self.hide()
+
+        # Mark initialization as complete
+        self._initializing = False
+
+        # Hide trigger suggestions at startup
+        self._clear_results()
+
     def show_launcher(self):
         """Show the launcher and focus the search entry."""
         self.show_all()
-        # Show available triggers when first opened
-        self._show_available_triggers()
+        self.search_entry.set_text("")
         self.search_entry.grab_focus()
+        # Do not show available triggers at startup
+        # self._show_available_triggers()
+        self._clear_results()
         self.visible = True
-        
-    def hide_launcher(self):
+
+    def close_launcher(self):
         """Hide the launcher and clear search."""
         self.hide()
         self.search_entry.set_text("")
@@ -126,19 +150,30 @@ class Launcher(WaylandWindow):
         self.triggered_plugin = None
         self.active_trigger = ""
         self.visible = False
-        
+
     def _on_search_changed(self, entry):
         """Handle search text changes."""
+        # Skip if still initializing
+        if getattr(self, '_initializing', True):
+            return
+
         query = entry.get_text().strip()
         self.query = query
 
-        if query:
+        # If query is exactly ':', show all triggers
+        if query == ":":
+            self._show_available_triggers()
+        # If query matches a trigger exactly (with or without space), do not re-show suggestions
+        elif any(query == trig or query == f"{trig} " for trig in [t.strip() for p in self.plugin_manager.get_active_plugins() for t in p.get_triggers()]):
+            # Do nothing, let the user type after the trigger
+            GLib.timeout_add(150, self._perform_search, query)
+        elif query:
             # Debounce search to avoid too many queries
             GLib.timeout_add(150, self._perform_search, query)
         else:
-            # Show available triggers when query is empty
-            self._show_available_triggers()
-            
+            # Hide results when query is empty
+            self._clear_results()
+
     def _perform_search(self, query: str) -> bool:
         """Perform search across all plugins."""
         # Only search if query hasn't changed
@@ -157,7 +192,9 @@ class Launcher(WaylandWindow):
             # We're in trigger mode - search within the triggered plugin
             try:
                 # Extract the search query after the trigger
-                remaining_query = self._extract_query_after_trigger(query, self.active_trigger)
+                remaining_query = self._extract_query_after_trigger(
+                    query, self.active_trigger
+                )
                 all_results = self.triggered_plugin.query(remaining_query)
             except Exception as e:
                 print(f"Error in triggered plugin {self.triggered_plugin.name}: {e}")
@@ -174,15 +211,12 @@ class Launcher(WaylandWindow):
                 # Extract search query after trigger
                 remaining_query = self._extract_query_after_trigger(query, trigger)
 
-                if remaining_query:
-                    # Search with remaining content
-                    try:
-                        all_results = triggered_plugin.query(remaining_query)
-                    except Exception as e:
-                        print(f"Error in triggered plugin {triggered_plugin.name}: {e}")
-                        all_results = []
-                else:
-                    # Just trigger keyword - show empty results or trigger help
+                # Always call the plugin's query method, even with empty remaining query
+                # This allows plugins to show default options when just the trigger is typed
+                try:
+                    all_results = triggered_plugin.query(remaining_query)
+                except Exception as e:
+                    print(f"Error in triggered plugin {triggered_plugin.name}: {e}")
                     all_results = []
             else:
                 # No trigger detected - try global search across all plugins
@@ -204,14 +238,19 @@ class Launcher(WaylandWindow):
 
         # Check if any results have bypass_max_results flag
         has_bypass = any(
-            hasattr(r, 'data') and r.data and r.data.get('bypass_max_results')
+            hasattr(r, "data") and r.data and r.data.get("bypass_max_results")
             for r in all_results
         )
 
-        # Only limit results if no bypass flag is present
-        if not has_bypass:
-            self.results = all_results[:self.max_results]
+        # Don't limit results for triggered plugin queries, only for global searches and trigger suggestions
+        if self.triggered_plugin and self.active_trigger:
+            # In trigger mode - show all results from the triggered plugin
+            self.results = all_results
+        elif not has_bypass:
+            # Global search or trigger suggestions - apply max_results limit
+            self.results = all_results[: self.max_results]
         else:
+            # Has bypass flag - show all results
             self.results = all_results
         self.selected_index = 0
 
@@ -238,8 +277,8 @@ class Launcher(WaylandWindow):
         trigger_lower = trigger.lower()
 
         # Handle trigger with space (e.g., "app ")
-        if trigger_lower.endswith(' ') and query_lower.startswith(trigger_lower):
-            return query[len(trigger):].strip()
+        if trigger_lower.endswith(" ") and query_lower.startswith(trigger_lower):
+            return query[len(trigger) :].strip()
 
         # Handle trigger without space (e.g., "app")
         trigger_word = trigger.strip().lower()
@@ -247,11 +286,11 @@ class Launcher(WaylandWindow):
             # Check if it's followed by space or end of string
             if len(query) == len(trigger_word):
                 return ""
-            elif len(query) > len(trigger_word) and query[len(trigger_word)] == ' ':
-                return query[len(trigger_word) + 1:].strip()
+            elif len(query) > len(trigger_word) and query[len(trigger_word)] == " ":
+                return query[len(trigger_word) + 1 :].strip()
             elif len(query) > len(trigger_word):
                 # No space after trigger word, extract rest
-                return query[len(trigger_word):].strip()
+                return query[len(trigger_word) :].strip()
 
         return ""
 
@@ -280,7 +319,7 @@ class Launcher(WaylandWindow):
     def _show_available_triggers(self):
         """Show available triggers when launcher is first opened."""
         trigger_suggestions = self._get_trigger_suggestions("")
-        self.results = trigger_suggestions[:self.max_results]
+        self.results = trigger_suggestions  # Show all available triggers without limit
         self.selected_index = 0
         self._update_results_display()
 
@@ -328,9 +367,9 @@ class Launcher(WaylandWindow):
                 trigger_clean = trigger.strip()
                 if trigger_clean not in all_triggers:
                     all_triggers[trigger_clean] = {
-                        'plugin': plugin,
-                        'trigger': trigger,
-                        'examples': []
+                        "plugin": plugin,
+                        "trigger": trigger,
+                        "examples": [],
                     }
 
         # Get max examples to show from configuration
@@ -343,16 +382,21 @@ class Launcher(WaylandWindow):
                 if trigger_clean.lower().startswith(query_lower):
                     examples = self.trigger_config.get_trigger_examples(trigger_clean)
                     icon_name = self.trigger_config.get_trigger_icon(trigger_clean)
-                    description = self.trigger_config.get_trigger_description(trigger_clean)
+                    description = self.trigger_config.get_trigger_description(
+                        trigger_clean
+                    )
 
                     # Create result for this trigger
                     result = Result(
                         title=f"{trigger_clean}",
-                        subtitle=f"{description} - {', '.join(examples[:max_examples])}",
+                        subtitle=f"{description} - {
+                            ', '.join(examples[:max_examples])
+                        }",
                         icon_markup=icon_name,
                         action=lambda t=trigger_clean: self._activate_trigger(t),
-                        relevance=100 - len(trigger_clean),  # Shorter triggers get higher relevance
-                        data={"type": "trigger_suggestion", "trigger": trigger_clean}
+                        # Shorter triggers get higher relevance
+                        relevance=100 - len(trigger_clean),
+                        data={"type": "trigger_suggestion", "trigger": trigger_clean},
                     )
                     suggestions.append(result)
         else:
@@ -368,12 +412,13 @@ class Launcher(WaylandWindow):
                     subtitle=f"{description} - {', '.join(examples[:max_examples])}",
                     icon_markup=icon_name,
                     action=lambda t=trigger_clean: self._activate_trigger(t),
-                    relevance=100 - len(trigger_clean),  # Shorter triggers get higher relevance
-                    data={"type": "trigger_suggestion", "trigger": trigger_clean}
+                    # Shorter triggers get higher relevance
+                    relevance=100 - len(trigger_clean),
+                    data={"type": "trigger_suggestion", "trigger": trigger_clean},
                 )
                 suggestions.append(result)
 
-        return suggestions[:self.max_results]
+        return suggestions  # Return all trigger suggestions without limit
 
     def _activate_trigger(self, trigger: str):
         """
@@ -385,7 +430,15 @@ class Launcher(WaylandWindow):
         # Set the trigger text in the search entry
         trigger_text = f"{trigger} "
         self.search_entry.set_text(trigger_text)
-        self.search_entry.set_position(-1)  # Move cursor to end
+        self.search_entry.grab_focus()
+
+        def clear_selection():
+            if hasattr(self.search_entry, 'set_position'):
+                self.search_entry.set_position(-1)  # Move caret to end
+            if hasattr(self.search_entry, 'select_region'):
+                self.search_entry.select_region(len(trigger_text), len(trigger_text))  # No selection
+            return False  # Only run once
+        GLib.idle_add(clear_selection)
 
         # Manually set the trigger mode to avoid search processing issues
         triggered_plugin, detected_trigger = self._detect_trigger(trigger_text)
@@ -405,6 +458,10 @@ class Launcher(WaylandWindow):
 
     def _update_results_display(self):
         """Update the results display."""
+        # Skip if still initializing or results_box not ready
+        if getattr(self, '_initializing', True) or not hasattr(self, 'results_box'):
+            return
+
         # Update input field with trigger indication (Albert-style)
         self._update_input_action_text()
 
@@ -414,12 +471,24 @@ class Launcher(WaylandWindow):
 
         # Add new results
         for i, result in enumerate(self.results):
-            result_item = ResultItem(
-                result=result,
-                selected=(i == self.selected_index)
-            )
-            result_item.clicked.connect(lambda _, idx=i: self._on_result_clicked(result_item, idx))
-            self.results_box.add(result_item)
+            # Check if this result has a custom widget
+            if result.custom_widget:
+                # Ensure the widget is not already parented
+                parent = result.custom_widget.get_parent()
+                if parent:
+                    parent.remove(result.custom_widget)
+
+                result.custom_widget.show_all()  # Ensure widget is visible
+                self.results_box.add(result.custom_widget)
+            else:
+                # Create normal result item
+                result_item = ResultItem(
+                    result=result, selected=(i == self.selected_index)
+                )
+                result_item.clicked.connect(
+                    lambda _, idx=i: self._on_result_clicked(result_item, idx)
+                )
+                self.results_box.add(result_item)
 
         self.results_box.show_all()
 
@@ -431,6 +500,10 @@ class Launcher(WaylandWindow):
 
     def _update_input_action_text(self):
         """Update the input field with action text (Albert-style)."""
+        # Check if search_entry is initialized
+        if not hasattr(self, 'search_entry') or self.search_entry is None:
+            return
+
         # Get the current input text
         current_text = self.search_entry.get_text()
 
@@ -441,29 +514,43 @@ class Launcher(WaylandWindow):
                 action_text = first_result.title
 
                 # For calculator results, show the evaluation
-                if hasattr(first_result, 'data') and 'result' in first_result.data:
-                    action_text = str(first_result.data['result'])
+                if hasattr(first_result, "data") and "result" in first_result.data:
+                    action_text = str(first_result.data["result"])
 
                 # Set placeholder to show the action text
                 if action_text and action_text != current_text:
-                    self.search_entry.set_placeholder_text(f"{current_text} → {action_text}")
+                    self.search_entry.set_placeholder_text(
+                        f"{current_text} → {action_text}"
+                    )
                 else:
-                    self.search_entry.set_placeholder_text(f"[{self.active_trigger.strip()}] searching...")
+                    self.search_entry.set_placeholder_text(
+                        f"[{self.active_trigger.strip()}] searching..."
+                    )
             else:
                 # In trigger mode but no results yet
                 if current_text == self.active_trigger.strip():
                     # Just the trigger keyword
-                    self.search_entry.set_placeholder_text(f"[{self.active_trigger.strip()}] ready - type to search")
+                    self.search_entry.set_placeholder_text(
+                        f"[{self.active_trigger.strip()}] ready - type to search"
+                    )
                 else:
                     # Searching within trigger
-                    self.search_entry.set_placeholder_text(f"[{self.active_trigger.strip()}] searching...")
+                    self.search_entry.set_placeholder_text(
+                        f"[{self.active_trigger.strip()}] searching..."
+                    )
         else:
             # Not in trigger mode - show trigger help
-            if current_text:
-                self.search_entry.set_placeholder_text("Type trigger keyword (calc, app, file, system...)")
+            if current_text == ":":
+                self.search_entry.set_placeholder_text("Showing all available triggers.")
+            elif current_text:
+                self.search_entry.set_placeholder_text(
+                    "Type trigger keyword (calc, app, file, system...)"
+                )
             else:
-                self.search_entry.set_placeholder_text("Type trigger keyword: calc, app, file, system...")
-            
+                self.search_entry.set_placeholder_text(
+                    "Type trigger keyword: calc, app, file, system..."
+                )
+
     def _clear_results(self):
         """Clear all results."""
         self.results = []
@@ -471,11 +558,11 @@ class Launcher(WaylandWindow):
         for child in self.results_box.get_children():
             self.results_box.remove(child)
         self.results_scroll.hide()
-        
+
     def _on_key_press(self, widget, event):
         """Handle key press events."""
         keyval = event.keyval
-        
+
         # Escape - exit trigger mode or hide launcher
         if keyval == Gdk.KEY_Escape:
             if self.triggered_plugin:
@@ -487,22 +574,22 @@ class Launcher(WaylandWindow):
                 return True
             else:
                 # Hide launcher
-                self.hide_launcher()
+                self.close_launcher()
                 return True
-            
+
         # Up/Down - navigate results
         if keyval == Gdk.KEY_Up:
             if self.results:
                 self.selected_index = (self.selected_index - 1) % len(self.results)
                 self._update_selection()
             return True
-            
+
         if keyval == Gdk.KEY_Down:
             if self.results:
                 self.selected_index = (self.selected_index + 1) % len(self.results)
                 self._update_selection()
             return True
-            
+
         # Enter - activate selected result
         if keyval == Gdk.KEY_Return:
             # Check for Shift+Enter to pin application
@@ -515,7 +602,7 @@ class Launcher(WaylandWindow):
             # Normal Enter behavior
             self._activate_selected()
             return True
-            
+
         # Tab - cycle through results
         if keyval == Gdk.KEY_Tab:
             if self.results:
@@ -524,24 +611,21 @@ class Launcher(WaylandWindow):
             return True
 
         return False
-        
+
     def _on_entry_activate(self, entry):
         """Handle entry activation (Enter key)."""
         self._activate_selected()
-        
+
     def _on_result_clicked(self, result_item, index):
         """Handle result item click."""
         self.selected_index = index
         self._activate_selected()
-        
-  
 
     def _is_mouse_over_results(self):
         """Check if mouse is over the results area."""
         # Simple check - if we have results visible, assume user might be interacting
         return len(self.results) > 0 and self.results_scroll.get_visible()
 
-        
     def _update_selection(self):
         """Update the visual selection of results."""
         children = self.results_box.get_children()
@@ -549,10 +633,12 @@ class Launcher(WaylandWindow):
 
         for i, child in enumerate(children):
             if isinstance(child, ResultItem):
-                is_selected = (i == self.selected_index)
+                is_selected = i == self.selected_index
                 child.set_selected(is_selected)
                 if is_selected:
                     selected_widget = child
+            # For custom widgets, we don't need to handle selection visually
+            # since they manage their own interaction
 
         # Scroll to make the selected item visible
         if selected_widget and self.results_scroll.get_visible():
@@ -622,7 +708,11 @@ class Launcher(WaylandWindow):
 
     def _ensure_selected_visible(self):
         """Alternative method to ensure selected item is visible using GTK methods."""
-        if not self.results or self.selected_index < 0 or self.selected_index >= len(self.results):
+        if (
+            not self.results
+            or self.selected_index < 0
+            or self.selected_index >= len(self.results)
+        ):
             return False
 
         children = self.results_box.get_children()
@@ -637,8 +727,12 @@ class Launcher(WaylandWindow):
                     if vadjustment:
                         # Calculate the position to center the selected item
                         page_size = vadjustment.get_page_size()
-                        target_pos = allocation.y - (page_size / 2) + (allocation.height / 2)
-                        target_pos = max(0, min(target_pos, vadjustment.get_upper() - page_size))
+                        target_pos = (
+                            allocation.y - (page_size / 2) + (allocation.height / 2)
+                        )
+                        target_pos = max(
+                            0, min(target_pos, vadjustment.get_upper() - page_size)
+                        )
                         vadjustment.set_value(target_pos)
             except Exception as e:
                 print(f"Error in _ensure_selected_visible: {e}")
@@ -650,10 +744,15 @@ class Launcher(WaylandWindow):
         if self.results and 0 <= self.selected_index < len(self.results):
             result = self.results[self.selected_index]
             try:
+                # Check if this result has a custom widget
+                if result.custom_widget:
+                    # For custom widgets, we don't activate them since they're already displayed
+                    # The widget handles its own interactions
+                    return
+
                 # Check if this is a trigger suggestion
                 is_trigger_suggestion = (
-                    result.data and
-                    result.data.get("type") == "trigger_suggestion"
+                    result.data and result.data.get("type") == "trigger_suggestion"
                 )
 
                 # Activate the result
@@ -661,7 +760,7 @@ class Launcher(WaylandWindow):
 
                 # Only hide launcher for non-trigger suggestions
                 if not is_trigger_suggestion:
-                    self.hide_launcher()
+                    self.close_launcher()
                 # For trigger suggestions, the launcher stays open and
                 # the user can continue typing after the trigger
 

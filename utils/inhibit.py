@@ -2,8 +2,10 @@
 # License: WTFPL Version 2
 
 import sys
+import os
 import time
 import argparse
+import subprocess
 from dataclasses import dataclass
 from signal import SIGINT, SIGTERM, signal
 from threading import Event, Timer
@@ -25,10 +27,10 @@ class GlobalRegistry:
 
 def parse_duration(duration_str: str) -> int:
     """Parse duration string into seconds.
-    Examples: '1h', '30m', '45s', '1.5h', '1.5m', '30.5s', 'off'
+    Examples: '1h', '30m', '45s', '1.5h', '1.5m', '30.5s', 'on', 'off'
     """
     try:
-        if duration_str.lower() == 'off':
+        if duration_str.lower() in ['on', 'off']:
             return 0
         elif duration_str.endswith('h'):
             return int(float(duration_str[:-1]) * 3600)
@@ -39,7 +41,40 @@ def parse_duration(duration_str: str) -> int:
         else:
             return int(duration_str)
     except ValueError:
-        raise ValueError("Invalid duration format. Use '1h', '30m', '45s', 'off', etc.")
+        raise ValueError("Invalid duration format. Use '1h', '30m', '45s', 'on', 'off', etc.")
+
+
+def kill_existing_inhibit_processes():
+    """Kill any existing modus-inhibit processes."""
+    try:
+        # Find all modus-inhibit processes except the current one
+        output = subprocess.check_output(["pgrep", "-f", "modus-inhibit"], text=True)
+        pids = output.strip().split('\n')
+        current_pid = str(os.getpid())
+
+        killed_count = 0
+        for pid in pids:
+            pid = pid.strip()
+            if pid and pid != current_pid:
+                try:
+                    subprocess.run(["kill", pid], check=True)
+                    killed_count += 1
+                except subprocess.CalledProcessError:
+                    pass  # Process might have already exited
+
+        if killed_count > 0:
+            print(f"Stopped {killed_count} existing inhibit process(es)")
+        else:
+            print("No existing inhibit processes were running")
+        return killed_count
+
+    except subprocess.CalledProcessError:
+        # No processes found
+        print("No existing inhibit processes were running")
+        return 0
+    except Exception as e:
+        print(f"Error stopping existing processes: {e}")
+        return 0
 
 
 def handle_registry_global(
@@ -59,8 +94,13 @@ def handle_registry_global(
 def main() -> None:
     parser = argparse.ArgumentParser(description='Inhibit system idle for a specified duration')
     parser.add_argument('duration', nargs='?', default='0',
-                      help='Duration to inhibit (e.g., "1h", "30m", "45s", "3600"). Use 0 for indefinite.')
+                      help='Duration to inhibit (e.g., "1h", "30m", "45s", "on", "off"). Use "on" for indefinite, "off" to stop.')
     args = parser.parse_args()
+
+    # Handle "off" argument - kill existing processes and exit
+    if args.duration.lower() == 'off':
+        kill_existing_inhibit_processes()
+        sys.exit(0)
 
     done = Event()
     signal(SIGINT, lambda _, __: done.set())

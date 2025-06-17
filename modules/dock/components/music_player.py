@@ -164,13 +164,13 @@ class MusicPlayer(EventBox):
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
                         temp_file.write(response.content)
                         temp_path = temp_file.name
-                    
+
                     # Load the image from the temporary file
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file(temp_path)
                     self.album_thumbnail.set_image_from_pixbuf(pixbuf)
                     self._show_album_art()
                     self._last_art_url = art_url
-                    
+
                     # Clean up the temporary file
                     os.unlink(temp_path)
                 else:
@@ -463,7 +463,7 @@ class MusicPlayer(EventBox):
             self._marquee_timeout_id = None
 
         if self._title_needs_marquee:
-            self._marquee_timeout_id = GLib.timeout_add(250, self._animate_marquee) 
+            self._marquee_timeout_id = GLib.timeout_add(250, self._animate_marquee)
 
     def _animate_marquee(self):
         """Animate the marquee scrolling"""
@@ -568,8 +568,7 @@ class MusicPlayer(EventBox):
 
     def _on_music_player_clicked(self, _widget, _event):
         """Handle music player click to toggle between text and visualizer view"""
-        # Only allow toggling if we have a current player and the click is not on the album thumbnail or player indicators
-        if self._current_player and _event.get_source() not in [self.album_thumbnail, self.player_indicators_box]:
+        if self._current_player:
             self._show_visualizer = not self._show_visualizer
             self._update_stack_display()
         return True

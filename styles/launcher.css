@@ -1,0 +1,155 @@
+#launcher {
+  background: var(--shadow);
+  padding: 12px;
+  border-radius: 34px;
+  min-width: 550px;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#close-button,
+#config-button {
+  background-color: var(--surface);
+  border-radius: 40px;
+  padding: 8px;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#close-button:hover,
+#close-button:focus,
+#config-button:hover,
+#config-button:focus {
+  background-color: var(--surface-bright);
+  border-radius: 16px;
+}
+
+#close-button:active {
+  background-color: var(--red-dim);
+  border-radius: 40px;
+}
+
+#close-label {
+  color: var(--red-dim);
+  font-size: 24px;
+}
+
+#close-button:active #close-label {
+  color: var(--shadow);
+}
+
+#config-button:active {
+  background-color: var(--primary);
+  border-radius: 40px;
+}
+
+#config-label {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+#config-button:active #config-label {
+  color: var(--shadow);
+}
+
+#launcher-icon-label {
+  font-size: 32px;
+  padding: 8px;
+}
+
+#launcher-search {
+  font-weight: bold;
+  background-color: var(--surface);
+  color: var(--foreground);
+  border-radius: 16px;
+  padding: 10px;
+}
+
+#launcher-search selection {
+  color: var(--background);
+  background-color: var(--primary);
+}
+
+#launcher-results-scroll {
+  margin-top: 10px;
+  border-radius: 16px;
+}
+
+#launcher-results-scroll scrollbar {
+  border-radius: 10px;
+  background-color: var(--surface);
+  padding: 4px;
+  margin-left: 6px;
+}
+
+#launcher-results-scroll slider {
+  border-radius: 8px;
+  min-width: 10px;
+  min-height: 38px;
+  background-color: var(--primary);
+}
+
+#launcher-results {
+  background: transparent;
+}
+
+#launcher-result-item {
+  border-radius: 40px;
+  padding: 0 16px;
+  animation: loadSlot 0.5s ease;
+  min-height: 52px;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes loadSlot {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+#launcher-result-item:focus,
+#launcher-result-item:selected,
+#launcher-result-item:hover,
+#launcher-result-item.selected {
+  border-radius: 16px;
+  background-color: var(--surface);
+  padding-left: 20px;
+}
+
+#result-item-main {
+  min-height: 48px;
+}
+
+#launcher-result-item {
+  min-height: 48px;
+}
+
+#result-item-icon {
+  min-width: 48px;
+  min-height: 48px;
+  margin-right: 12px;
+}
+
+#result-item-text {
+}
+
+#result-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+#result-item-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+#result-item-plugin {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+  margin-bottom: 8px;
+}
