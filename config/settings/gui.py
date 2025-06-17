@@ -27,8 +27,8 @@ gi.require_version("Gtk", "3.0")
 class HyprConfGUI(Window):
     def __init__(self, show_lock_checkbox: bool, show_idle_checkbox: bool, **kwargs):
         super().__init__(
-            title="Ax-Shell Settings",
-            name="axshell-settings-window",
+            title="Modus Settings",
+            name="modus-settings-window",
             size=(640, 640),
             **kwargs,
         )
@@ -124,7 +124,11 @@ class HyprConfGUI(Window):
         bindings = [
             (f"Reload {APP_NAME_CAP}", "prefix_restart", "suffix_restart"),
             ("Message", "prefix_axmsg", "suffix_axmsg"),
-            ("Application Switcher", "prefix_application_switcher", "suffix_application_switcher"),
+            (
+                "Application Switcher",
+                "prefix_application_switcher",
+                "suffix_application_switcher",
+            ),
             ("Dashboard", "prefix_dash", "suffix_dash"),
             ("Bluetooth", "prefix_bluetooth", "suffix_bluetooth"),
             ("Pins", "prefix_pins", "suffix_pins"),
@@ -342,7 +346,9 @@ class HyprConfGUI(Window):
         layout_grid.attach(dock_theme_combo_container, 3, 1, 1, 1)
 
         # Add icon size scale
-        icon_size_label = Label(label="Taskbar Icon Size", h_align="start", v_align="center")
+        icon_size_label = Label(
+            label="Taskbar Icon Size", h_align="start", v_align="center"
+        )
         layout_grid.attach(icon_size_label, 0, 4, 1, 1)
 
         icon_size_scale_container = Gtk.Box(
@@ -365,7 +371,9 @@ class HyprConfGUI(Window):
         layout_grid.attach(icon_size_scale_container, 1, 4, 1, 1)
 
         # Add application switcher items scale
-        application_switcher_label = Label(label="Application Switcher Items", h_align="start", v_align="center")
+        application_switcher_label = Label(
+            label="Application Switcher Items", h_align="start", v_align="center"
+        )
         layout_grid.attach(application_switcher_label, 2, 4, 1, 1)
 
         application_switcher_scale_container = Gtk.Box(
@@ -378,11 +386,15 @@ class HyprConfGUI(Window):
         self.application_switcher_scale = Gtk.Scale.new_with_range(
             Gtk.Orientation.HORIZONTAL, 5, 20, 1
         )
-        self.application_switcher_scale.set_value(bind_vars.get("window_switcher_items_per_row", 13))
+        self.application_switcher_scale.set_value(
+            bind_vars.get("window_switcher_items_per_row", 13)
+        )
         self.application_switcher_scale.set_size_request(150, -1)
         self.application_switcher_scale.set_draw_value(True)
         self.application_switcher_scale.set_value_pos(Gtk.PositionType.RIGHT)
-        self.application_switcher_scale.set_tooltip_text("Adjust the number of items per row in the application switcher")
+        self.application_switcher_scale.set_tooltip_text(
+            "Adjust the number of items per row in the application switcher"
+        )
 
         application_switcher_scale_container.add(self.application_switcher_scale)
         layout_grid.attach(application_switcher_scale_container, 3, 4, 1, 1)
@@ -491,7 +503,7 @@ class HyprConfGUI(Window):
             "indicators": "Indicators",
             "applications": "Taskbar",
             "language": "Language Indicator",
-            "music_player": "Music Player"
+            "music_player": "Music Player",
         }
 
         self.corners_switch = Gtk.Switch(active=bind_vars.get("corners_visible", True))
@@ -599,7 +611,7 @@ class HyprConfGUI(Window):
                 valign=Gtk.Align.CENTER,
             )
             self.lock_switch = Gtk.Switch(
-                tooltip_text="Replace Hyprlock configuration with Ax-Shell's custom config"
+                tooltip_text="Replace Hyprlock configuration with Modus's custom config"
             )
             lock_switch_container.add(self.lock_switch)
             system_grid.attach(lock_switch_container, 3, row, 1, 1)
@@ -616,7 +628,7 @@ class HyprConfGUI(Window):
                 valign=Gtk.Align.CENTER,
             )
             self.idle_switch = Gtk.Switch(
-                tooltip_text="Replace Hypridle configuration with Ax-Shell's custom config"
+                tooltip_text="Replace Hypridle configuration with Modus's custom config"
             )
             idle_switch_container.add(self.idle_switch)
             system_grid.attach(idle_switch_container, 3, row, 1, 1)
@@ -842,7 +854,7 @@ class HyprConfGUI(Window):
             self.icon_size_scale.get_value()
         )
         current_bind_vars_snapshot["window_switcher_items_per_row"] = int(
-            self.window_switcher_scale.get_value()
+            self.application_switcher_scale.get_value()
         )
         current_bind_vars_snapshot["terminal_command"] = self.terminal_entry.get_text()
         current_bind_vars_snapshot["corners_visible"] = self.corners_switch.get_active()
@@ -973,7 +985,7 @@ class HyprConfGUI(Window):
             start_config()
             print(f"{time.time():.4f}: Finished start_config().")
 
-            print(f"{time.time():.4f}: Initiating Ax-Shell restart using Popen...")
+            print(f"{time.time():.4f}: Initiating Modus restart using Popen...")
             main_py = os.path.expanduser(f"~/{APP_NAME_CAP}/main.py")
             kill_cmd = f"killall {APP_NAME}"
             start_cmd = ["uwsm", "app", "--", "python", main_py]
@@ -1004,7 +1016,7 @@ class HyprConfGUI(Window):
             except Exception as e:
                 print(f"Error restarting {APP_NAME_CAP} via Popen: {e}")
 
-            print(f"{time.time():.4f}: Ax-Shell restart commands issued via Popen.")
+            print(f"{time.time():.4f}: Modus restart commands issued via Popen.")
             end_time = time.time()
             print(
                 f"{end_time:.4f}: Background task finished (Total: {
@@ -1061,7 +1073,7 @@ class HyprConfGUI(Window):
             self.wall_dir_chooser.set_filename(utils.bind_vars["wallpapers_dir"])
 
             positions = ["Bottom", "Left", "Right"]
-            default_position = DEFAULTS.get("dock_position", "Top")
+            default_position = DEFAULTS.get("dock_position", "Bottom")
             try:
                 self.position_combo.set_active(positions.index(default_position))
             except ValueError:
@@ -1069,7 +1081,7 @@ class HyprConfGUI(Window):
 
             self.dock_switch.set_active(utils.bind_vars.get("dock_enabled", True))
             self.dock_auto_hide_switch.set_active(
-                utils.bind_vars.get("dock_auto_hide", False)
+                utils.bind_vars.get("dock_auto_hide", True)
             )
             self.dock_hover_switch.set_active(
                 utils.bind_vars.get("dock_always_occluded", False)
@@ -1164,7 +1176,9 @@ class HyprConfGUI(Window):
                 self.idle_switch.set_active(False)
             # Add reset for icon size scale
             self.icon_size_scale.set_value(utils.bind_vars.get("dock_icon_size", 20))
-            self.application_switcher_scale.set_value(utils.bind_vars.get("window_switcher_items_per_row", 13))
+            self.application_switcher_scale.set_value(
+                utils.bind_vars.get("window_switcher_items_per_row", 13)
+            )
             print("Settings reset to defaults.")
 
     def on_close(self, widget):

@@ -91,7 +91,8 @@ class Applications(Box):
 
         # Connect to Hyprland events for live updates
         if self.conn.ready:
-            self.update_applications()
+            # Only update again if not already updated above
+            pass
         else:
             self.conn.connect("event::ready", lambda *args: self.update_applications())
 
@@ -393,8 +394,13 @@ class Applications(Box):
         for child in children:
             self.add(child)
 
-        # Show or hide based on whether there are any applications
-        if len(children) > 0:
+        # Check if the applications component is enabled in the dock configuration
+        # Import here to avoid circular imports
+        import config.data as data
+        applications_visible = data.DOCK_COMPONENTS_VISIBILITY.get("applications", True)
+
+        # Show or hide based on whether there are any applications AND if component is enabled
+        if len(children) > 0 and applications_visible:
             self.show_all()
         else:
             self.hide()
@@ -456,6 +462,9 @@ class Applications(Box):
         # Prevent dock from hiding during drag
         if self.dock_instance:
             self.dock_instance.prevent_hiding(True)
+
+        # Store the source widget for later use
+        self._dragged_widget = widget
 
     def on_drag_data_get(self, widget, drag_context, data_obj, info, time):
         # Find the index of the button being dragged
@@ -550,6 +559,31 @@ class Applications(Box):
         self._drag_in_progress = False
         if self.dock_instance:
             self.dock_instance.prevent_hiding(False)
+
+        # Check if the drag ended outside the dock
+        if hasattr(self, '_dragged_widget') and self._dragged_widget:
+            children = self.get_children()
+            source_index = children.index(self._dragged_widget)
+            
+            # Find separator index
+            separator_index = -1
+            for i, child in enumerate(children):
+                if child.get_name() == "dock-separator":
+                    separator_index = i
+                    break
+
+            # If the dragged item was in the pinned section (before separator)
+            if separator_index != -1 and source_index < separator_index:
+                # Remove from pinned apps
+                if source_index < len(self.pinned):
+                    self.pinned.pop(source_index)
+                    self.config["pinned_apps"] = self.pinned
+                    self.update_pinned_apps_file()
+                    self.update_applications()
+
+        # Clear the dragged widget reference
+        if hasattr(self, '_dragged_widget'):
+            delattr(self, '_dragged_widget')
 
     def get_focused(self):
         try:

@@ -6,6 +6,7 @@
 @import url("./styles/workspaces.css");
 @import url("./styles/switcher.css");
 @import url("./styles/osd.css");
+@import url("./styles/launcher_simple.css");
 
 * {
   all: unset;

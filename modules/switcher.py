@@ -23,7 +23,7 @@ class ApplicationSwitcher(Window):
             name="application-switcher",
             layer="top",
             anchor="center",
-            exclusivity="normal",
+            exclusivity="auto",
             keyboard_mode="on-demand",
             **kwargs,
         )

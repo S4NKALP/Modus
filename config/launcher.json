@@ -1,0 +1,53 @@
+{
+  "launcher_config": {
+    "clip": {
+      "icon": "clipboard",
+      "description": "Clipboard - Search and manage clipboard history"
+    },
+    "=": {
+      "examples": ["= 10*5", "= 2^8", "= sin(30)"],
+      "icon": "calculator",
+      "description": "Quick Math - Fast mathematical expressions"
+    },
+    "app": {
+      "icon": "apps",
+      "description": "Applications - Launch installed applications"
+    },
+    "file": {
+      "icon": "file",
+      "description": "Files - Search for files and documents"
+    },
+    "find": {
+      "icon": "apps",
+      "description": "Find - Locate files and folders"
+    },
+    "/": {
+      "icon": "file",
+      "description": "Root Path - Navigate from filesystem root"
+    },
+    "bin": {
+      "icon": "terminal",
+      "description": "System Control - Quick system actions and power management"
+    },
+    "power": {
+      "icon": "shutdown",
+      "description": "Power - System power management and session control"
+    },
+    "caffeine": {
+      "examples": [
+        "caffeine 30m",
+        "caffeine 1h",
+        "caffeine 2h",
+        "caffeine indefinite"
+      ],
+      "icon": "coffee",
+      "description": "Caffeine - Prevent system from going idle"
+    }
+  },
+  "settings": {
+    "max_examples_shown": 2,
+    "default_icon": "apps",
+    "fallback_example_template": "{trigger} <search>",
+    "config_version": "1.0"
+  }
+}
