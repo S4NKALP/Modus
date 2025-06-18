@@ -94,6 +94,8 @@ class PluginManager:
             "pomodoro",
             "websearch",
             "kanban",
+            "calendar",
+            "reminders",
         ]
 
         for plugin_name in default_plugins:

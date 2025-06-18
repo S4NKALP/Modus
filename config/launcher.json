@@ -98,6 +98,19 @@
         "kanban": {
             "icon": "kanban",
             "description": "Kanban - Task management with kanban-style columns"
+        },
+        "cal": {
+            "examples": [
+                "cal today",
+                "cal next (press Enter to continue)",
+                "cal previous (press Enter to continue)"
+            ],
+            "icon": "calendar",
+            "description": "Calendar - View calendar, navigate dates, and get date/time info"
+        },
+        "remind": {
+            "icon": "timer_on",
+            "description": "Reminders - Set time-based reminders with notifications"
         }
     },
     "settings": {
