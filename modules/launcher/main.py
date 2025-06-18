@@ -33,7 +33,7 @@ class Launcher(Window):
             layer="top",
             anchor="center",
             exclusivity="none",
-            keyboard_mode="exclusive",
+            keyboard_mode="on-demand",
             **kwargs,
         )
 
@@ -151,9 +151,6 @@ class Launcher(Window):
                 self.triggered_plugin = triggered_plugin
                 self.active_trigger = detected_trigger
 
-                # Add trigger mode styling
-                self.search_entry.add_style_class("trigger-mode")
-
                 # Query the plugin with empty string to show default options
                 try:
                     results = triggered_plugin.query("")
@@ -161,13 +158,14 @@ class Launcher(Window):
                     self.selected_index = 0
                     self._update_results_display()
                 except Exception as e:
-                    print(f"Error querying triggered plugin {triggered_plugin.name}: {e}")
+                    print(
+                        f"Error querying triggered plugin {triggered_plugin.name}: {e}"
+                    )
                     self._clear_results()
             else:
                 # Trigger not found, clear and show error or fallback
                 self.search_entry.set_text("")
                 self._clear_results()
-                print(f"Trigger keyword '{trigger_keyword}' not found")
         else:
             # Normal launcher opening - clear everything
             self.search_entry.set_text("")
@@ -177,10 +175,12 @@ class Launcher(Window):
 
         # Position cursor at the end if there's text
         if trigger_keyword:
+
             def position_cursor():
-                if hasattr(self.search_entry, 'set_position'):
+                if hasattr(self.search_entry, "set_position"):
                     self.search_entry.set_position(-1)  # Move caret to end
                 return False  # Only run once
+
             GLib.idle_add(position_cursor)
 
         self.visible = True
@@ -197,7 +197,7 @@ class Launcher(Window):
     def _on_search_changed(self, entry):
         """Handle search text changes."""
         # Skip if still initializing
-        if getattr(self, '_initializing', True):
+        if getattr(self, "_initializing", True):
             return
 
         query = entry.get_text().strip()
@@ -207,7 +207,14 @@ class Launcher(Window):
         if query == ":":
             self._show_available_triggers()
         # If query matches a trigger exactly (with or without space), do not re-show suggestions
-        elif any(query == trig or query == f"{trig} " for trig in [t.strip() for p in self.plugin_manager.get_active_plugins() for t in p.get_triggers()]):
+        elif any(
+            query == trig or query == f"{trig} "
+            for trig in [
+                t.strip()
+                for p in self.plugin_manager.get_active_plugins()
+                for t in p.get_triggers()
+            ]
+        ):
             # Do nothing, let the user type after the trigger
             GLib.timeout_add(150, self._perform_search, query)
         elif query:
@@ -331,8 +338,6 @@ class Launcher(Window):
 
         return ""
 
-
-
     def _show_available_triggers(self):
         """Show available triggers when launcher is first opened."""
         trigger_suggestions = self._get_trigger_suggestions("")
@@ -450,11 +455,14 @@ class Launcher(Window):
         self.search_entry.grab_focus()
 
         def clear_selection():
-            if hasattr(self.search_entry, 'set_position'):
+            if hasattr(self.search_entry, "set_position"):
                 self.search_entry.set_position(-1)  # Move caret to end
-            if hasattr(self.search_entry, 'select_region'):
-                self.search_entry.select_region(len(trigger_text), len(trigger_text))  # No selection
+            if hasattr(self.search_entry, "select_region"):
+                self.search_entry.select_region(
+                    len(trigger_text), len(trigger_text)
+                )  # No selection
             return False  # Only run once
+
         GLib.idle_add(clear_selection)
 
         # Manually set the trigger mode to avoid search processing issues
@@ -476,7 +484,7 @@ class Launcher(Window):
     def _update_results_display(self):
         """Update the results display."""
         # Skip if still initializing or results_box not ready
-        if getattr(self, '_initializing', True) or not hasattr(self, 'results_box'):
+        if getattr(self, "_initializing", True) or not hasattr(self, "results_box"):
             return
 
         # Update input field with trigger indication (Albert-style)
@@ -518,7 +526,7 @@ class Launcher(Window):
     def _update_input_action_text(self):
         """Update the input field with action text (Albert-style)."""
         # Check if search_entry is initialized
-        if not hasattr(self, 'search_entry') or self.search_entry is None:
+        if not hasattr(self, "search_entry") or self.search_entry is None:
             return
 
         # Get the current input text
@@ -558,7 +566,9 @@ class Launcher(Window):
         else:
             # Not in trigger mode - show trigger help
             if current_text == ":":
-                self.search_entry.set_placeholder_text("Showing all available triggers.")
+                self.search_entry.set_placeholder_text(
+                    "Showing all available triggers."
+                )
             elif current_text:
                 self.search_entry.set_placeholder_text(
                     "Type trigger keyword (calc, app, file, system...)"
@@ -580,9 +590,15 @@ class Launcher(Window):
         """Handle key press events."""
         keyval = event.keyval
 
-        # Escape - exit trigger mode or hide launcher
+        # Escape - handle password entry, exit trigger mode, or hide launcher
         if keyval == Gdk.KEY_Escape:
-            if self.triggered_plugin:
+            # First check if there's a password entry widget that should handle Escape
+            password_entry_widget = self._find_password_entry_widget()
+            if password_entry_widget:
+                # Cancel the password entry
+                password_entry_widget.cancel_password_entry()
+                return True
+            elif self.triggered_plugin:
                 # Exit trigger mode
                 self.triggered_plugin = None
                 self.active_trigger = ""
@@ -594,20 +610,36 @@ class Launcher(Window):
                 self.close_launcher()
                 return True
 
-        # Backspace - exit trigger mode if at trigger boundary
+        # Backspace - handle trigger mode backspace behavior
         if keyval == Gdk.KEY_BackSpace:
             if self.triggered_plugin:
                 current_text = self.search_entry.get_text()
                 trigger_text = self.active_trigger.strip()
 
-                # Check if we're at the trigger boundary (only trigger text or trigger + space)
-                if current_text == trigger_text or current_text == f"{trigger_text} ":
-                    # Exit trigger mode
-                    self.triggered_plugin = None
-                    self.active_trigger = ""
-                    self.search_entry.set_text("")
-                    self._clear_results()
-                    return True
+                # Allow normal backspace behavior first, then check if we need to exit trigger mode
+                # Don't intercept the backspace - let GTK handle it normally
+
+                # Schedule a check after the backspace is processed
+                def check_trigger_after_backspace():
+                    # Get the text after backspace has been processed
+                    new_text = self.search_entry.get_text()
+
+                    # If the text no longer starts with the trigger, exit trigger mode
+                    if not new_text.lower().startswith(trigger_text.lower()):
+                        self.triggered_plugin = None
+                        self.active_trigger = ""
+                        self._clear_results()
+                        # Don't clear the text - let the user's edit stand
+
+                    return False  # Don't repeat
+
+                # Use idle_add to check after the backspace is processed
+                from gi.repository import GLib
+                GLib.idle_add(check_trigger_after_backspace)
+
+                # Allow the normal backspace to proceed
+                return False
+
             # Let normal backspace behavior continue for other cases
             return False
 
@@ -633,6 +665,20 @@ class Launcher(Window):
                     if result.data and result.data.get("pin_action"):
                         result.data["pin_action"]()
                         return True
+
+            # Check if the selected result has a custom widget with Entry fields
+            if self.results and 0 <= self.selected_index < len(self.results):
+                result = self.results[self.selected_index]
+                if result.custom_widget:
+                    # Check if the custom widget contains Entry widgets that should handle Enter
+                    if self._custom_widget_has_entry(result.custom_widget):
+                        # Let the custom widget handle the Enter key
+                        # Find the focused Entry widget and trigger its activate signal
+                        focused_entry = self._find_focused_entry_in_widget(result.custom_widget)
+                        if focused_entry:
+                            focused_entry.emit("activate")
+                            return True
+
             # Normal Enter behavior
             self._activate_selected()
             return True
@@ -645,6 +691,57 @@ class Launcher(Window):
             return True
 
         return False
+
+    def _custom_widget_has_entry(self, widget):
+        """Check if a custom widget contains Entry widgets."""
+        from fabric.widgets.entry import Entry
+
+        if isinstance(widget, Entry):
+            return True
+
+        # Check children recursively
+        if hasattr(widget, 'get_children'):
+            for child in widget.get_children():
+                if self._custom_widget_has_entry(child):
+                    return True
+
+        return False
+
+    def _find_focused_entry_in_widget(self, widget):
+        """Find the focused Entry widget within a custom widget."""
+        from fabric.widgets.entry import Entry
+
+        if isinstance(widget, Entry):
+            # Try multiple ways to check if this Entry is focused
+            try:
+                if widget.has_focus() or widget.is_focus():
+                    return widget
+                # Also check if this is the only Entry in the widget (likely to be the target)
+                return widget
+            except:
+                # If focus checking fails, assume this Entry should handle the event
+                return widget
+
+        # Check children recursively
+        if hasattr(widget, 'get_children'):
+            for child in widget.get_children():
+                focused_entry = self._find_focused_entry_in_widget(child)
+                if focused_entry:
+                    return focused_entry
+
+        return None
+
+    def _find_password_entry_widget(self):
+        """Find a NetworkPasswordEntry widget in the current results."""
+        for result in self.results:
+            if result.custom_widget:
+                # Check if this is a NetworkPasswordEntry widget
+                if hasattr(result.custom_widget, '__class__') and result.custom_widget.__class__.__name__ == 'NetworkPasswordEntry':
+                    return result.custom_widget
+                # Also check if it has the cancel_password_entry method (duck typing)
+                elif hasattr(result.custom_widget, 'cancel_password_entry'):
+                    return result.custom_widget
+        return None
 
     def _on_entry_activate(self, entry):
         """Handle entry activation (Enter key)."""
@@ -788,8 +885,8 @@ class Launcher(Window):
                 is_trigger_suggestion = (
                     result.data and result.data.get("type") == "trigger_suggestion"
                 )
-                keep_launcher_open = (
-                    result.data and result.data.get("keep_launcher_open", False)
+                keep_launcher_open = result.data and result.data.get(
+                    "keep_launcher_open", False
                 )
 
                 # Activate the result

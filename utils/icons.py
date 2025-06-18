@@ -179,7 +179,9 @@ timer_on: str = "&#xf756;"
 spy: str = "&#xf227;"
 calculator: str = "&#xeb80;"
 file: str = "&#xeaa4;"
-
+calendar: str = "&#xea53;"
+connect: str = "&#xeade;"
+disconnect: str = "&#xfd16;"
 
 # Dice
 dice_1: str = "&#xf08b;"

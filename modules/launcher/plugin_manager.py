@@ -96,6 +96,7 @@ class PluginManager:
             "kanban",
             "calendar",
             "reminders",
+            "network",
         ]
 
         for plugin_name in default_plugins:

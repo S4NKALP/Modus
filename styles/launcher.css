@@ -5,6 +5,7 @@
   min-width: 550px;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
 #close-button,
 #config-button {
   background-color: var(--surface);
@@ -130,26 +131,31 @@
   margin-right: 12px;
 }
 
-#result-item-text {
-}
-
 #result-item-title {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--foreground);
   margin-top: 8px;
   margin-bottom: 2px;
 }
 
 #result-item-subtitle {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--outline);
   margin-bottom: 8px;
 }
 
 #result-item-plugin {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--outline);
   font-style: italic;
   margin-bottom: 8px;
+  opacity: 0.7;
+}
+
+#network-password-entry {
+  border: 1px solid var(--outline);
+  padding: 8px;
+  border-radius: 8px;
+  margin-bottom: 4px;
 }

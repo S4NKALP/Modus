@@ -141,7 +141,7 @@ class MusicPlayer(EventBox):
             return
 
         if not art_url:
-            self._hide_album_art()
+            self._load_fallback_image()
             self._last_art_url = None
             return
 
@@ -154,7 +154,7 @@ class MusicPlayer(EventBox):
                     self._show_album_art()
                     self._last_art_url = art_url
                 else:
-                    self._hide_album_art()
+                    self._load_fallback_image()
                     self._last_art_url = None
             elif art_url.startswith(('http://', 'https://')):
                 # Handle remote URLs by downloading them first
@@ -174,14 +174,27 @@ class MusicPlayer(EventBox):
                     # Clean up the temporary file
                     os.unlink(temp_path)
                 else:
-                    self._hide_album_art()
+                    self._load_fallback_image()
                     self._last_art_url = None
             else:
-                self._hide_album_art()
+                self._load_fallback_image()
                 self._last_art_url = None
         except Exception:
-            self._hide_album_art()
+            self._load_fallback_image()
             self._last_art_url = None
+
+    def _load_fallback_image(self):
+        """Load fallback image from current wallpaper when no album art is available"""
+        fallback = os.path.expanduser("~/.current.wall")
+
+        try:
+            if os.path.exists(fallback):
+                self.album_thumbnail.set_image_from_file(fallback)
+                self._show_album_art()
+            else:
+                self._hide_album_art()
+        except Exception:
+            self._hide_album_art()
 
     def _show_album_art(self):
         """Show album art thumbnail"""
@@ -406,13 +419,13 @@ class MusicPlayer(EventBox):
 
         self.set_visible(True)
 
-        # Try to load album art, hide if not available
+        # Try to load album art, use fallback if not available
         album_art_url = self._current_player.album_image_url
         if album_art_url:
             self._load_album_art(album_art_url)
         else:
-            # No album art available, hide thumbnails
-            self._hide_album_art()
+            # No album art available, use fallback image
+            self._load_fallback_image()
 
         # Update stack display (text vs visualizer)
         self._update_stack_display()
