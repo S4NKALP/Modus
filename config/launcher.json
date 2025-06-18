@@ -1,140 +1,112 @@
 {
-    "launcher_config": {
-        "emoji": {
-            "icon": "emoji",
-            "description": "Emoji - Search and copy emojis"
-        },
-        ";": {
-            "icon": "emoji",
-            "description": "Emoji - Search and copy emojis"
-        },
-        "clip": {
-            "icon": "clipboard",
-            "description": "Clipboard - Search and manage clipboard history"
-        },
-        "=": {
-            "examples": [
-                "= 10*5",
-                "= 2^8",
-                "= sin(30)"
-            ],
-            "icon": "calculator",
-            "description": "Quick Math - Fast mathematical expressions"
-        },
-        "app": {
-            "icon": "apps",
-            "description": "Applications - Launch installed applications"
-        },
-        "bin": {
-            "icon": "terminal",
-            "description": "Bins - Search and run executable binaries"
-        },
-        "power": {
-            "icon": "shutdown",
-            "description": "Power - System power management and session control"
-        },
-        "caffeine": {
-            "examples": [
-                "caffeine 30m",
-                "caffeine 1h",
-                "caffeine 2h",
-                "caffeine on"
-            ],
-            "icon": "coffee",
-            "description": "Caffeine - Prevent system from going idle"
-        },
-        "sc": {
-            "icon": "camera-video-symbolic",
-            "description": "Screencapture - Record screen and audio"
-        },
-        "wall": {
-            "icon": "wallpapers",
-            "description": "Wallpapers - Set wallpapers, and tons of features"
-        },
-        "pomo": {
-            "icon": "timer_on",
-            "description": "Pomodoro - Productivity timer with notifications"
-        },
-        "web": {
-            "icon": "world",
-            "description": "Web Search - Search the web using various search engines"
-        },
-        "?": {
-            "icon": "world",
-            "description": "Quick Web Search - Fast web search with question mark"
-        },
-        "google": {
-            "icon": "google",
-            "description": "Google Search - Search with Google"
-        },
-        "reddit": {
-            "icon": "reddit",
-            "description": "Reddit Search - Search discussions on Reddit"
-        },
-        "youtube": {
-            "icon": "youtube",
-            "description": "YouTube Search - Search videos on YouTube"
-        },
-        "github": {
-            "icon": "github",
-            "description": "GitHub Search - Search repositories on GitHub"
-        },
-        "duckduckgo": {
-            "icon": "duckduckgo",
-            "description": "DuckDuckGo Search - Privacy-focused search"
-        },
-        "stackoverflow": {
-            "icon": "stackoverflow",
-            "description": "Stack Overflow Search - Programming questions"
-        },
-        "wikipedia": {
-            "icon": "wikipedia",
-            "description": "Wikipedia Search - Search articles on Wikipedia"
-        },
-        "linkedin": {
-            "icon": "linkedin",
-            "description": "LinkedIn Search - Search professionals and jobs"
-        },
-        "kanban": {
-            "icon": "kanban",
-            "description": "Kanban - Task management with kanban-style columns"
-        },
-        "cal": {
-            "icon": "calendar",
-            "description": "Calendar - View calendar, navigate dates, and get date/time info"
-        },
-        "remind": {
-            "icon": "timer_on",
-            "description": "Reminders - Set time-based reminders with notifications"
-        },
-        "wifi": {
-            "examples": [
-                "wifi list",
-                "wifi scan",
-                "wifi disconnect",
-                "wifi MyNetwork"
-            ],
-            "icon": "wifi_3",
-            "description": "WiFi - Manage wireless networks and connections"
-        },
-        "network": {
-            "examples": [
-                "network list",
-                "network scan",
-                "network toggle"
-            ],
-            "icon": "world",
-            "description": "Network - Manage WiFi and network connections"
-        },
-        "net": {
-            "icon": "wifi_3",
-            "description": "Network - Quick access to network management"
-        }
+  "launcher_config": {
+    "emoji": {
+      "icon": "emoji",
+      "description": "Emoji - Search and copy emojis"
     },
-    "settings": {
-        "max_examples_shown": 2,
-        "default_icon": "apps",
-        "fallback_example_template": "{trigger} <search>",
-        "config_version": "1.0"
+    ";": {
+      "icon": "emoji",
+      "description": "Emoji - Search and copy emojis"
+    },
+    "clip": {
+      "icon": "clipboard",
+      "description": "Clipboard - Search and manage clipboard history"
+    },
+    "=": {
+      "examples": ["= 10*5", "= 2^8", "= sin(30)"],
+      "icon": "calculator",
+      "description": "Quick Math - Fast mathematical expressions"
+    },
+    "app": {
+      "icon": "apps",
+      "description": "Applications - Launch installed applications"
+    },
+    "bin": {
+      "icon": "terminal",
+      "description": "Bins - Search and run executable binaries"
+    },
+    "power": {
+      "icon": "shutdown",
+      "description": "Power - System power management and session control"
+    },
+    "caffeine": {
+      "examples": ["caffeine 30m", "caffeine 1h", "caffeine 2h", "caffeine on"],
+      "icon": "coffee",
+      "description": "Caffeine - Prevent system from going idle"
+    },
+    "sc": {
+      "icon": "camera-video-symbolic",
+      "description": "Screencapture - Record screen and audio"
+    },
+    "wall": {
+      "icon": "wallpapers",
+      "description": "Wallpapers - Set wallpapers, and tons of features"
+    },
+    "pomo": {
+      "icon": "timer_on",
+      "description": "Pomodoro - Productivity timer with notifications"
+    },
+    "web": {
+      "icon": "world",
+      "description": "Web Search - Search the web using various search engines"
+    },
+    "?": {
+      "icon": "world",
+      "description": "Quick Web Search - Fast web search with question mark"
+    },
+    "google": {
+      "icon": "google",
+      "description": "Google Search - Search with Google"
+    },
+    "reddit": {
+      "icon": "reddit",
+      "description": "Reddit Search - Search discussions on Reddit"
+    },
+    "youtube": {
+      "icon": "youtube",
+      "description": "YouTube Search - Search videos on YouTube"
+    },
+    "github": {
+      "icon": "github",
+      "description": "GitHub Search - Search repositories on GitHub"
+    },
+    "duckduckgo": {
+      "icon": "duckduckgo",
+      "description": "DuckDuckGo Search - Privacy-focused search"
+    },
+    "stackoverflow": {
+      "icon": "stackoverflow",
+      "description": "Stack Overflow Search - Programming questions"
+    },
+    "wikipedia": {
+      "icon": "wikipedia",
+      "description": "Wikipedia Search - Search articles on Wikipedia"
+    },
+    "linkedin": {
+      "icon": "linkedin",
+      "description": "LinkedIn Search - Search professionals and jobs"
+    },
+    "kanban": {
+      "icon": "kanban",
+      "description": "Kanban - Task management with kanban-style columns"
+    },
+    "cal": {
+      "icon": "calendar",
+      "description": "Calendar - View calendar, navigate dates, and get date/time info"
+    },
+    "remind": {
+      "icon": "timer_on",
+      "description": "Reminders - Set time-based reminders with notifications"
+    },
+    "net": {
+      "icon": "wifi_3",
+      "description": "Network - Quick access to network management"
     }
+  },
+  "settings": {
+    "max_examples_shown": 2,
+    "default_icon": "apps",
+    "fallback_example_template": "{trigger} <search>",
+    "config_version": "1.0"
+  }
 }
