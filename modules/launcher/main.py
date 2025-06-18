@@ -132,14 +132,57 @@ class Launcher(Window):
         # Hide trigger suggestions at startup
         self._clear_results()
 
-    def show_launcher(self):
-        """Show the launcher and focus the search entry."""
+    def show_launcher(self, trigger_keyword: str = None):
+        """Show the launcher and focus the search entry.
+
+        Args:
+            trigger_keyword: Optional trigger keyword to activate immediately (e.g., "google", "calc", "app")
+        """
         self.show_all()
-        self.search_entry.set_text("")
+
+        if trigger_keyword:
+            # Set the trigger keyword with a space and activate trigger mode
+            trigger_text = f"{trigger_keyword} "
+            self.search_entry.set_text(trigger_text)
+
+            # Detect and activate the trigger
+            triggered_plugin, detected_trigger = self._detect_trigger(trigger_text)
+            if triggered_plugin:
+                self.triggered_plugin = triggered_plugin
+                self.active_trigger = detected_trigger
+
+                # Add trigger mode styling
+                self.search_entry.add_style_class("trigger-mode")
+
+                # Query the plugin with empty string to show default options
+                try:
+                    results = triggered_plugin.query("")
+                    self.results = results
+                    self.selected_index = 0
+                    self._update_results_display()
+                except Exception as e:
+                    print(f"Error querying triggered plugin {triggered_plugin.name}: {e}")
+                    self._clear_results()
+            else:
+                # Trigger not found, clear and show error or fallback
+                self.search_entry.set_text("")
+                self._clear_results()
+                print(f"Trigger keyword '{trigger_keyword}' not found")
+        else:
+            # Normal launcher opening - clear everything
+            self.search_entry.set_text("")
+            self._clear_results()
+
         self.search_entry.grab_focus()
-        # Do not show available triggers at startup
-        # self._show_available_triggers()
-        self._clear_results()
+
+        # Position cursor at the end if there's text
+        if trigger_keyword:
+            def position_cursor():
+                if hasattr(self.search_entry, 'set_position'):
+                    self.search_entry.set_position(-1)  # Move caret to end
+                return False  # Only run once
+            GLib.idle_add(position_cursor)
+
         self.visible = True
 
     def close_launcher(self):
