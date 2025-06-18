@@ -1,0 +1,79 @@
+/* Main calendar widget container */
+#calendar-widget {
+    border: 4px solid var(--surface);
+    padding: 4px;
+}
+
+#calendar-header-box {
+  border-radius: 16px;
+  border: 2px solid var(--surface);
+  padding: 4px;
+}
+
+/* Navigation buttons */
+#calendar-nav-button {
+   background-color: var(--surface);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+#calendar-nav-button:hover {
+      background-color: var(--surface-bright);
+}
+
+#calendar-nav-button:active {
+      background-color: var(--primary);
+
+}
+
+/* Month/Year header */
+#calendar-month-year {
+    color: var(--foreground);
+    font-weight: 700;
+    font-size: 12px;
+    padding: 4px 0;
+    margin-bottom: 2px;
+}
+
+/* Calendar grid */
+#calendar-grid {
+    border-radius: 16px;
+    padding: 4px;
+}
+
+/* Day headers (Mon, Tue, Wed, etc.) */
+#calendar-day-header {
+  color: var(--primary);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+
+#calendar-day-label,
+#calendar-day-empty {
+    padding: 2px;
+    min-width: 23px;
+    min-height: 23px;
+}
+
+
+#calendar-day-label.today {
+  background-color: var(--foreground);
+  color: var(--shadow);
+  border-radius: 20px;
+}
+
+#calendar-day-label.weekend {
+    color: var(--red-dim);
+    font-weight: 600;
+}
+
+
+
+
+
+
+
+
+
+

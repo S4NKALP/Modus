@@ -8,6 +8,7 @@
 @import url("./styles/osd.css");
 @import url("./styles/launcher.css");
 @import url("./styles/kanban.css");
+@import url("./styles/calendar.css");
 
 * {
   all: unset;
