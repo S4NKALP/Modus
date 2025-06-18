@@ -431,7 +431,7 @@ class KanbanPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the Kanban plugin."""
-        self.set_triggers(["todo", "kanban", "task"])
+        self.set_triggers(["kanban" "kanban ",])
         self.description = "Kanban board for task management. Use 'kanban add <text>' to quickly add tasks."
 
     def cleanup(self):

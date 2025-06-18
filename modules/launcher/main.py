@@ -219,19 +219,13 @@ class Launcher(Window):
                     print(f"Error in triggered plugin {triggered_plugin.name}: {e}")
                     all_results = []
             else:
-                # No trigger detected - try global search across all plugins
+                # No trigger detected - only show trigger suggestions
                 self.triggered_plugin = None
                 self.active_trigger = ""
 
-                # First try trigger suggestions if query matches trigger prefixes
+                # Show trigger suggestions if query matches trigger prefixes
                 trigger_suggestions = self._get_trigger_suggestions(query)
-
-                if trigger_suggestions:
-                    # Show trigger suggestions
-                    all_results = trigger_suggestions
-                else:
-                    # No trigger suggestions - do global search across all plugins
-                    all_results = self._global_search(query)
+                all_results = trigger_suggestions
 
         # Sort results by relevance score
         all_results.sort(key=lambda r: r.relevance, reverse=True)
@@ -294,27 +288,7 @@ class Launcher(Window):
 
         return ""
 
-    def _global_search(self, query: str):
-        """
-        Perform global search across all plugins.
 
-        Args:
-            query: The search query
-
-        Returns:
-            List of Result objects from all plugins
-        """
-        all_results = []
-
-        # Search in all active plugins
-        for plugin in self.plugin_manager.get_active_plugins():
-            try:
-                plugin_results = plugin.query(query)
-                all_results.extend(plugin_results)
-            except Exception as e:
-                print(f"Error searching in plugin {plugin.name}: {e}")
-
-        return all_results
 
     def _show_available_triggers(self):
         """Show available triggers when launcher is first opened."""
@@ -373,7 +347,7 @@ class Launcher(Window):
                     }
 
         # Get max examples to show from configuration
-        max_examples = self.trigger_config.get_max_examples_shown()
+        max_examples = self.trigger_config.settings.get("max_examples_shown", 2)
 
         # Show trigger suggestions based on query
         if query_lower:
@@ -577,6 +551,23 @@ class Launcher(Window):
                 self.close_launcher()
                 return True
 
+        # Backspace - exit trigger mode if at trigger boundary
+        if keyval == Gdk.KEY_BackSpace:
+            if self.triggered_plugin:
+                current_text = self.search_entry.get_text()
+                trigger_text = self.active_trigger.strip()
+
+                # Check if we're at the trigger boundary (only trigger text or trigger + space)
+                if current_text == trigger_text or current_text == f"{trigger_text} ":
+                    # Exit trigger mode
+                    self.triggered_plugin = None
+                    self.active_trigger = ""
+                    self.search_entry.set_text("")
+                    self._clear_results()
+                    return True
+            # Let normal backspace behavior continue for other cases
+            return False
+
         # Up/Down - navigate results
         if keyval == Gdk.KEY_Up:
             if self.results:
@@ -750,19 +741,21 @@ class Launcher(Window):
                     # The widget handles its own interactions
                     return
 
-                # Check if this is a trigger suggestion
+                # Check if this is a trigger suggestion or should keep launcher open
                 is_trigger_suggestion = (
                     result.data and result.data.get("type") == "trigger_suggestion"
+                )
+                keep_launcher_open = (
+                    result.data and result.data.get("keep_launcher_open", False)
                 )
 
                 # Activate the result
                 result.activate()
 
-                # Only hide launcher for non-trigger suggestions
-                if not is_trigger_suggestion:
+                # Only hide launcher if it's not a trigger suggestion and doesn't have keep_launcher_open flag
+                if not is_trigger_suggestion and not keep_launcher_open:
                     self.close_launcher()
-                # For trigger suggestions, the launcher stays open and
-                # the user can continue typing after the trigger
+                # For trigger suggestions and keep_launcher_open actions, the launcher stays open
 
             except Exception as e:
                 print(f"Error activating result: {e}")

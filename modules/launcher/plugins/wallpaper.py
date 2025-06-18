@@ -8,7 +8,8 @@ import random
 import hashlib
 import colorsys
 import re
-from typing import List, Dict
+import json
+from typing import List
 from PIL import Image
 from gi.repository import GdkPixbuf
 from modules.launcher.plugin_base import PluginBase
@@ -25,6 +26,7 @@ class WallpaperPlugin(PluginBase):
 
     def __init__(self):
         super().__init__()
+        self.display_name = "Wallpaper"
         self.wallpapers = []
         self.cache_dir = f"{data.CACHE_DIR}/thumbs"
         self.schemes = {
@@ -67,32 +69,50 @@ class WallpaperPlugin(PluginBase):
         )
 
     def _get_matugen_state(self) -> bool:
-        """Get current matugen state from file."""
+        """Get current matugen state from config.json."""
+        self.matugen_enabled = True  # Default to True
         try:
-            if os.path.exists(data.MATUGEN_STATE_FILE):
-                with open(data.MATUGEN_STATE_FILE, "r") as f:
-                    content = f.read().strip().lower()
-                    return content == "true"
-            return True  # Default to True
+            with open(data.CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+                self.matugen_enabled = config.get("matugen_enabled", True)
+        except FileNotFoundError:
+            # File doesn't exist, keep default True
+            pass
         except Exception as e:
-            print(f"Error reading matugen state: {e}")
-            return True
+            print(f"Error reading config file: {e}")
+            # Keep default True on error
+
+        return self.matugen_enabled
 
     def _set_matugen_state(self, enabled: bool):
-        """Set matugen state to file."""
+        """Set matugen state and save to config.json."""
+        self.matugen_enabled = enabled
+
+        # Save the state to config.json
         try:
-            os.makedirs(os.path.dirname(data.MATUGEN_STATE_FILE), exist_ok=True)
-            with open(data.MATUGEN_STATE_FILE, "w") as f:
-                f.write("true" if enabled else "false")
-            # Show notification for immediate feedback
-            status = "enabled" if enabled else "disabled"
-            exec_shell_command_async(
-                f"notify-send '🎨 Matugen' 'Dynamic colors {status}' -a '{
-                    data.APP_NAME_CAP
-                }' -e"
-            )
+            # Read current config
+            config = {}
+            if os.path.exists(data.CONFIG_FILE):
+                with open(data.CONFIG_FILE, 'r') as f:
+                    config = json.load(f)
+
+            # Update matugen state
+            config["matugen_enabled"] = enabled
+
+            # Write back to config file
+            with open(data.CONFIG_FILE, 'w') as f:
+                json.dump(config, f, indent=4)
+
         except Exception as e:
-            print(f"Error setting matugen state: {e}")
+            print(f"Error writing matugen state to config: {e}")
+
+        # Send notification
+        status = "enabled" if enabled else "disabled"
+        exec_shell_command_async(
+            f"notify-send '🎨 Matugen' 'Dynamic colors {status}' -a '{
+                data.APP_NAME_CAP
+            }' -e"
+        )
 
     def _get_cache_path(self, filename: str) -> str:
         """Get cache path for wallpaper thumbnail."""
@@ -133,11 +153,22 @@ class WallpaperPlugin(PluginBase):
         matugen_enabled = self._get_matugen_state()
         if matugen_enabled:
             exec_shell_command_async(f'matugen image "{full_path}" -t {scheme}')
+            scheme_name = self.schemes.get(scheme, scheme)
+            exec_shell_command_async(
+                f"notify-send '🖼️ Wallpaper Applied' 'File: {filename}\\nScheme: {scheme_name}' -a '{
+                    data.APP_NAME_CAP
+                }' -e"
+            )
         else:
             exec_shell_command_async(
                 f'swww img "{
                     full_path
                 }" -t outer --transition-duration 1.5 --transition-step 255 --transition-fps 60 -f Nearest'
+            )
+            exec_shell_command_async(
+                f"notify-send '🖼️ Wallpaper Applied' 'File: {filename}\\nMatugen: Disabled' -a '{
+                    data.APP_NAME_CAP
+                }' -e"
             )
 
     def _set_random_wallpaper(self):
@@ -195,7 +226,7 @@ class WallpaperPlugin(PluginBase):
             )
 
     def _apply_hex_color(self, hex_color: str, scheme: str = None):
-        """Apply hex color using matugen."""
+        """Apply hex color using matugen. Assumes matugen is enabled."""
         if not hex_color.startswith("#"):
             hex_color = "#" + hex_color
 
@@ -243,13 +274,12 @@ class WallpaperPlugin(PluginBase):
         )
 
         # Special commands
-        if query == "random" or query.startswith("random"):
-            # Execute immediately when this result is created/selected
-            self._set_random_wallpaper()
+        if query.strip() == "random":
+            # Show result for random wallpaper (execute on Enter)
             results.append(
                 Result(
-                    title=f"Random Wallpaper Applied{indicator_text}",
-                    subtitle=f"A random wallpaper has been set • {status_text}",
+                    title=f"Random Wallpaper{indicator_text}",
+                    subtitle=f"Set a random wallpaper • {status_text}",
                     icon_markup=random.choice(
                         [
                             icons.dice_1,
@@ -260,13 +290,39 @@ class WallpaperPlugin(PluginBase):
                             icons.dice_6,
                         ]
                     ),
-                    action=lambda: None,  # No action needed since already executed
+                    action=lambda: self._set_random_wallpaper(),
                     relevance=1.0,
                     plugin_name=self.display_name,
                     data={
                         "action": "random",
-                        "executed": True,
                         "bypass_max_results": True,
+                        "keep_launcher_open": True,
+                    },
+                )
+            )
+        elif query.startswith("random") and query.strip() != "random":
+            # Show suggestion for random wallpaper (partial match)
+            results.append(
+                Result(
+                    title=f"Random Wallpaper{indicator_text}",
+                    subtitle=f"Set a random wallpaper • {status_text}",
+                    icon_markup=random.choice(
+                        [
+                            icons.dice_1,
+                            icons.dice_2,
+                            icons.dice_3,
+                            icons.dice_4,
+                            icons.dice_5,
+                            icons.dice_6,
+                        ]
+                    ),
+                    action=lambda: self._set_random_wallpaper(),
+                    relevance=0.9,
+                    plugin_name=self.display_name,
+                    data={
+                        "action": "random_suggestion",
+                        "bypass_max_results": True,
+                        "keep_launcher_open": True,
                     },
                 )
             )
@@ -287,48 +343,151 @@ class WallpaperPlugin(PluginBase):
             hex_match = re.search(r"#?([0-9A-Fa-f]{6})", query)
             if hex_match:
                 hex_color = "#" + hex_match.group(1)
-                # Execute immediately
-                self._apply_hex_color(hex_color, scheme)
                 scheme_name = self.schemes.get(scheme, scheme)
-                results.append(
-                    Result(
-                        title=f"Hex Color Applied: {hex_color}{indicator_text}",
-                        subtitle=f"Applied with {scheme_name} scheme • {status_text}",
-                        icon_markup=icons.palette,
-                        action=lambda: None,  # No action needed since already executed
-                        relevance=1.0,
-                        plugin_name=self.display_name,
-                        data={
-                            "action": "hex_color",
-                            "color": hex_color,
-                            "scheme": scheme,
-                            "executed": True,
-                            "bypass_max_results": True,
-                        },
+
+                # Check if this is a complete hex color input (6 digits)
+                # Execute immediately when we have a complete 6-digit hex color
+                if len(hex_match.group(1)) == 6:
+                    # Check if there's additional text after the hex color
+                    hex_end_pos = hex_match.end()
+                    remaining_text = query[hex_end_pos:].strip()
+
+                    # Only show result if no additional text after hex color (exact match)
+                    if not remaining_text:
+                        # Check if matugen is enabled
+                        if matugen_enabled:
+                            # Show result for hex color (execute on Enter)
+                            results.append(
+                                Result(
+                                    title=f"Apply Hex Color: {hex_color}{indicator_text}",
+                                    subtitle=f"Apply with {scheme_name} scheme • {status_text}",
+                                    icon_markup=icons.palette,
+                                    action=lambda c=hex_color, s=scheme: self._apply_hex_color(c, s),
+                                    relevance=1.0,
+                                    plugin_name=self.display_name,
+                                    data={
+                                        "action": "hex_color",
+                                        "color": hex_color,
+                                        "scheme": scheme,
+                                        "bypass_max_results": True,
+                                        "keep_launcher_open": True,
+                                    },
+                                )
+                            )
+                        else:
+                            # Show error result when matugen is disabled
+                            results.append(
+                                Result(
+                                    title=f"Cannot Apply Hex Color: {hex_color}{indicator_text}",
+                                    subtitle=f"Matugen is disabled • Enable matugen to use hex colors",
+                                    icon_markup=icons.palette,
+                                    action=lambda: None,
+                                    relevance=1.0,
+                                    plugin_name=self.display_name,
+                                    data={
+                                        "action": "hex_color_failed",
+                                        "color": hex_color,
+                                        "scheme": scheme,
+                                        "bypass_max_results": True,
+                                    },
+                                )
+                            )
+                    else:
+                        # Show suggestion for hex color with additional text (partial match)
+                        results.append(
+                            Result(
+                                title=f"Apply Hex Color: {hex_color}{indicator_text}",
+                                subtitle=f"Apply with {scheme_name} scheme • {status_text}",
+                                icon_markup=icons.palette,
+                                action=lambda c=hex_color, s=scheme: self._apply_hex_color(c, s) if matugen_enabled else None,
+                                relevance=0.9,
+                                plugin_name=self.display_name,
+                                data={
+                                    "action": "hex_color_suggestion",
+                                    "color": hex_color,
+                                    "scheme": scheme,
+                                    "bypass_max_results": True,
+                                    "keep_launcher_open": True,
+                                },
+                            )
+                        )
+                else:
+                    # Incomplete hex color, show as suggestion
+                    results.append(
+                        Result(
+                            title=f"Hex Color (incomplete): {hex_color}",
+                            subtitle=f"Complete the 6-digit hex color to apply",
+                            icon_markup=icons.palette,
+                            action=lambda: None,
+                            relevance=0.7,
+                            plugin_name=self.display_name,
+                            data={
+                                "action": "hex_color_incomplete",
+                                "color": hex_color,
+                                "bypass_max_results": True,
+                            },
+                        )
                     )
-                )
-            elif "random" in query:
-                # Random hex color
-                hex_color = self._generate_random_hex_color()
-                self._apply_hex_color(hex_color, scheme)
-                scheme_name = self.schemes.get(scheme, scheme)
-                results.append(
-                    Result(
-                        title=f"Random Color Applied: {hex_color}{indicator_text}",
-                        subtitle=f"Applied with {scheme_name} scheme • {status_text}",
-                        icon_markup=icons.palette,
-                        action=lambda: None,  # No action needed since already executed
-                        relevance=1.0,
-                        plugin_name=self.display_name,
-                        data={
-                            "action": "random_hex",
-                            "color": hex_color,
-                            "scheme": scheme,
-                            "executed": True,
-                            "bypass_max_results": True,
-                        },
+            elif "random" in query and ("color" in query or "hex" in query):
+                # Check for exact matches for random color commands
+                if (query.strip() == "color random" or
+                    query.strip() == "hex random" or
+                    query.strip() == "random color" or
+                    query.strip() == "random hex"):
+                    # Random hex color - show result (execute on Enter)
+                    scheme_name = self.schemes.get(scheme, scheme)
+
+                    # Check if matugen is enabled
+                    if matugen_enabled:
+                        results.append(
+                            Result(
+                                title=f"Random Hex Color{indicator_text}",
+                                subtitle=f"Generate and apply random color with {scheme_name} scheme • {status_text}",
+                                icon_markup=icons.palette,
+                                action=lambda s=scheme: self._apply_hex_color(self._generate_random_hex_color(), s),
+                                relevance=1.0,
+                                plugin_name=self.display_name,
+                                data={
+                                    "action": "random_hex",
+                                    "scheme": scheme,
+                                    "bypass_max_results": True,
+                                    "keep_launcher_open": True,
+                                },
+                            )
+                        )
+                    else:
+                        # Show error result when matugen is disabled
+                        results.append(
+                            Result(
+                                title=f"Cannot Apply Random Color{indicator_text}",
+                                subtitle=f"Matugen is disabled • Enable matugen to use hex colors",
+                                icon_markup=icons.palette,
+                                action=lambda: None,
+                                relevance=1.0,
+                                plugin_name=self.display_name,
+                                data={
+                                    "action": "random_hex_failed",
+                                    "bypass_max_results": True,
+                                },
+                            )
+                        )
+                else:
+                    # Show suggestion for random hex color (partial match)
+                    results.append(
+                        Result(
+                            title=f"Random Hex Color{indicator_text}",
+                            subtitle=f"Generate and apply random color • {status_text}",
+                            icon_markup=icons.palette,
+                            action=lambda: self._apply_hex_color(self._generate_random_hex_color(), scheme) if matugen_enabled else None,
+                            relevance=0.8,
+                            plugin_name=self.display_name,
+                            data={
+                                "action": "random_hex_suggestion",
+                                "bypass_max_results": True,
+                                "keep_launcher_open": True,
+                            },
+                        )
                     )
-                )
             else:
                 # Show hex color help
                 results.append(
@@ -384,6 +543,7 @@ class WallpaperPlugin(PluginBase):
                                 "action": "scheme_select",
                                 "scheme": scheme_id,
                                 "bypass_max_results": True,
+                                "keep_launcher_open": True,
                             },
                         )
                     )
@@ -391,78 +551,108 @@ class WallpaperPlugin(PluginBase):
         # Matugen controls
         if "matugen" in query:
             current_state = self._get_matugen_state()
-            if "on" in query or "enable" in query:
-                # Execute immediately
-                self._set_matugen_state(True)
-                # Get updated status after change
-                new_indicator_text, new_status_text, _, _ = (
-                    self._get_status_indicators()
-                )
+
+            # Check for exact command matches
+            if query.strip() == "matugen on" or query.strip() == "matugen enable":
+                # Show result for enabling matugen (execute on Enter)
                 results.append(
                     Result(
-                        title=f"Matugen Enabled{new_indicator_text}",
-                        subtitle=f"Dynamic color generation is now enabled • {
-                            new_status_text
-                        }",
+                        title=f"Enable Matugen{indicator_text}",
+                        subtitle=f"Turn on dynamic color generation • {status_text}",
                         icon_markup=icons.palette,
-                        action=lambda: None,  # No action needed since already executed
+                        action=lambda: self._set_matugen_state(True),
                         relevance=0.9,
                         plugin_name=self.display_name,
                         data={
                             "action": "matugen_on",
-                            "executed": True,
                             "bypass_max_results": True,
+                            "keep_launcher_open": True,
                         },
                     )
                 )
-            elif "off" in query or "disable" in query:
-                # Execute immediately
-                self._set_matugen_state(False)
-                # Get updated status after change
-                new_indicator_text, new_status_text, _, _ = (
-                    self._get_status_indicators()
-                )
+            elif query.strip() == "matugen off" or query.strip() == "matugen disable":
+                # Show result for disabling matugen (execute on Enter)
                 results.append(
                     Result(
-                        title=f"Matugen Disabled{new_indicator_text}",
-                        subtitle=f"Dynamic color generation is now disabled • {
-                            new_status_text
-                        }",
+                        title=f"Disable Matugen{indicator_text}",
+                        subtitle=f"Turn off dynamic color generation • {status_text}",
                         icon_markup=icons.palette,
-                        action=lambda: None,  # No action needed since already executed
+                        action=lambda: self._set_matugen_state(False),
                         relevance=0.9,
                         plugin_name=self.display_name,
                         data={
                             "action": "matugen_off",
-                            "executed": True,
                             "bypass_max_results": True,
+                            "keep_launcher_open": True,
                         },
                     )
                 )
-            elif "toggle" in query:
-                # Execute toggle immediately
+            elif query.strip() == "matugen toggle":
+                # Show result for toggling matugen (execute on Enter)
                 new_state = not current_state
-                self._set_matugen_state(new_state)
-                # Get updated status after change
-                new_indicator_text, new_status_text, _, _ = (
-                    self._get_status_indicators()
-                )
                 results.append(
                     Result(
-                        title=f"Matugen {'Enabled' if new_state else 'Disabled'}{
-                            new_indicator_text
-                        }",
-                        subtitle=f"Dynamic color generation is now {
-                            'enabled' if new_state else 'disabled'
-                        } • {new_status_text}",
+                        title=f"Toggle Matugen to {'Enabled' if new_state else 'Disabled'}{indicator_text}",
+                        subtitle=f"Switch matugen to {'enabled' if new_state else 'disabled'} • {status_text}",
                         icon_markup=icons.palette,
-                        action=lambda: None,  # No action needed since already executed
+                        action=lambda: self._set_matugen_state(new_state),
                         relevance=0.9,
                         plugin_name=self.display_name,
                         data={
                             "action": "matugen_toggle",
-                            "executed": True,
                             "bypass_max_results": True,
+                            "keep_launcher_open": True,
+                        },
+                    )
+                )
+            elif ("on" in query or "enable" in query) and not query.strip().endswith(("on", "enable")):
+                # Show suggestion for enabling (partial match)
+                results.append(
+                    Result(
+                        title=f"Enable Matugen{indicator_text}",
+                        subtitle=f"Turn on dynamic color generation • {status_text}",
+                        icon_markup=icons.palette,
+                        action=lambda: self._set_matugen_state(True),
+                        relevance=0.8,
+                        plugin_name=self.display_name,
+                        data={
+                            "action": "matugen_on_suggestion",
+                            "bypass_max_results": True,
+                            "keep_launcher_open": True,
+                        },
+                    )
+                )
+            elif ("off" in query or "disable" in query) and not query.strip().endswith(("off", "disable")):
+                # Show suggestion for disabling (partial match)
+                results.append(
+                    Result(
+                        title=f"Disable Matugen{indicator_text}",
+                        subtitle=f"Turn off dynamic color generation • {status_text}",
+                        icon_markup=icons.palette,
+                        action=lambda: self._set_matugen_state(False),
+                        relevance=0.8,
+                        plugin_name=self.display_name,
+                        data={
+                            "action": "matugen_off_suggestion",
+                            "bypass_max_results": True,
+                            "keep_launcher_open": True,
+                        },
+                    )
+                )
+            elif "toggle" in query and not query.strip().endswith("toggle"):
+                # Show suggestion for toggling (partial match)
+                results.append(
+                    Result(
+                        title=f"Toggle Matugen{indicator_text}",
+                        subtitle=f"Switch matugen state • {status_text}",
+                        icon_markup=icons.palette,
+                        action=lambda: self._set_matugen_state(not current_state),
+                        relevance=0.8,
+                        plugin_name=self.display_name,
+                        data={
+                            "action": "matugen_toggle_suggestion",
+                            "bypass_max_results": True,
+                            "keep_launcher_open": True,
                         },
                     )
                 )
@@ -531,7 +721,11 @@ class WallpaperPlugin(PluginBase):
                     action=lambda: self._set_random_wallpaper(),
                     relevance=0.9,
                     plugin_name=self.display_name,
-                    data={"action": "random_quick", "bypass_max_results": True},
+                    data={
+                        "action": "random_quick",
+                        "bypass_max_results": True,
+                        "keep_launcher_open": True,
+                    },
                 )
             )
 
@@ -587,6 +781,7 @@ class WallpaperPlugin(PluginBase):
                             "wallpaper": wallpaper,
                             "action": "set",
                             "bypass_max_results": True,
+                            "keep_launcher_open": True,
                         },
                     )
                 )

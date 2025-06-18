@@ -83,7 +83,6 @@ class PluginManager:
         """Activate default plugins."""
         default_plugins = [
             "applications",
-            "files",
             "calculator",
             "system",
             "clipboard",

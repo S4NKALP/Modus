@@ -1,6 +1,6 @@
 """
 Files plugin for the launcher.
-High-performance file and directory search using advanced fuzzy matching.
+High-performance file search (files only, excludes directories) using advanced fuzzy matching.
 """
 
 import os
@@ -11,40 +11,45 @@ from typing import List, Dict, Set, Tuple
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from thefuzz import fuzz
-from ..plugin_base import PluginBase
-from ..result import Result
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
 import utils.icons as icons
 
 
 class FilesPlugin(PluginBase):
     """
-    High-performance plugin for searching files and directories.
+    High-performance plugin for searching files only (excludes directories).
     Uses advanced fuzzy matching, caching, and threading for optimal performance.
     """
 
     def __init__(self):
         super().__init__()
         self.display_name = "Files"
-        self.description = "Search for files and directories"
+        self.description = "Search for files only"
 
-        # Performance-optimized search paths
+        # Performance-optimized search paths - focus on user directories
         self.search_paths = [
-            os.path.expanduser("~"),
-            os.path.expanduser("/"),
+            os.path.expanduser("~/Documents"),
+            os.path.expanduser("~/Downloads"),
+            os.path.expanduser("~/Desktop"),
+            os.path.expanduser("~/Pictures"),
+            os.path.expanduser("~/Videos"),
+            os.path.expanduser("~/Music"),
+            os.path.expanduser("~"),  # Home directory but with limited depth
         ]
 
         # Performance settings
         self.max_results = 15
-        self.max_depth = 3
-        self.search_timeout = 0.8
-        self.min_query_length = 1
+        self.max_depth = 2  # Reduced depth for better performance
+        self.search_timeout = 0.5  # Reduced timeout
+        self.min_query_length = 1  # Allow single character searches
 
-        # Fuzzy search settings
+        # Fuzzy search settings - optimized for performance
         self.fuzzy_thresholds = {
-            "ratio": 60,
-            "partial": 70,
-            "token_sort": 65,
-            "token_set": 65,
+            "ratio": 70,  # Increased for better precision
+            "partial": 80,  # Increased for better precision
+            "token_sort": 75,  # Increased for better precision
+            "token_set": 75,  # Increased for better precision
         }
 
         # Enhanced caching
@@ -89,10 +94,9 @@ class FilesPlugin(PluginBase):
         if query.startswith("/") or query.startswith("~"):
             return self._handle_path_query(query)
 
-        # Check if this is a file-only search
-        is_file_only = query.startswith("file ")
-        if is_file_only:
-            query = query[5:].strip()
+        # Always search for files only since this is the files plugin
+        # triggered by "file" or "find" keywords
+        is_file_only = True
 
         # Use cached search for better performance
         results = self._fast_search(query, file_only=is_file_only)
@@ -135,13 +139,21 @@ class FilesPlugin(PluginBase):
         return []
 
     def _fast_search(self, query: str, file_only: bool = False) -> List[Result]:
-        """Fast search using cached file lists and concurrent processing."""
+        """Fast search using cached file lists and optimized matching."""
         results = []
         query_lower = query.lower()
 
-        # Search in cached directories
+        # Early exit for empty queries
+        if len(query_lower) < self.min_query_length:
+            return results
+
+        # Search in cached directories with early termination
         for search_path in self.search_paths:
             if not os.path.exists(search_path):
+                continue
+
+            # Skip home directory if we already have enough results from specific folders
+            if search_path == os.path.expanduser("~") and len(results) >= self.max_results:
                 continue
 
             cached_files = self._get_cached_files(search_path)
@@ -150,17 +162,21 @@ class FilesPlugin(PluginBase):
                     continue
 
                 filename = os.path.basename(file_path)
-                if self._simple_fuzzy_match(query_lower, filename):
-                    relevance = self._calculate_relevance(filename, query_lower)
-                    result = self._create_file_result(file_path, relevance)
-                    if result:
-                        results.append(result)
 
-                if len(results) >= self.max_results * 2:
-                    break
+                # Fast pre-filter: check if query is in filename before expensive fuzzy matching
+                if query_lower not in filename.lower():
+                    # Only do fuzzy matching if simple substring match fails
+                    if not self._simple_fuzzy_match(query_lower, filename):
+                        continue
 
-            if len(results) >= self.max_results * 2:
-                break
+                relevance = self._calculate_relevance(filename, query_lower)
+                result = self._create_file_result(file_path, relevance)
+                if result:
+                    results.append(result)
+
+                # Early termination when we have enough results
+                if len(results) >= self.max_results * 3:
+                    return results
 
         return results
 
@@ -183,12 +199,13 @@ class FilesPlugin(PluginBase):
         return files
 
     def _scan_directory_fast(self, directory: str) -> List[str]:
-        """Fast directory scan with improved depth and fuzzy search."""
+        """Fast directory scan with optimized depth and early termination."""
         files = []
         current_depth = 0
+        max_files_per_dir = 1000  # Limit files per directory to prevent memory issues
 
         def scan_dir(path: str, depth: int):
-            if depth > self.max_depth:
+            if depth > self.max_depth or len(files) >= max_files_per_dir:
                 return
 
             try:
@@ -198,10 +215,29 @@ class FilesPlugin(PluginBase):
                             if entry.name.startswith("."):
                                 continue
 
+                            # Skip common large directories that are unlikely to contain user files
+                            if entry.is_dir() and entry.name in {
+                                "node_modules", ".git", ".cache", "__pycache__",
+                                ".npm", ".cargo", ".rustup", "target", "build",
+                                ".vscode", ".idea", "venv", ".env"
+                            }:
+                                continue
+
                             files.append(entry.path)
 
-                            if entry.is_dir():
-                                scan_dir(entry.path, depth + 1)
+                            # Early termination if we have too many files
+                            if len(files) >= max_files_per_dir:
+                                return
+
+                            # Only recurse into directories if we're not at max depth
+                            # and for home directory, be more selective
+                            if entry.is_dir() and depth < self.max_depth:
+                                if path == os.path.expanduser("~"):
+                                    # For home directory, only scan important subdirectories
+                                    if self._is_important_directory(entry.name):
+                                        scan_dir(entry.path, depth + 1)
+                                else:
+                                    scan_dir(entry.path, depth + 1)
 
                         except (PermissionError, OSError):
                             continue
@@ -309,42 +345,55 @@ class FilesPlugin(PluginBase):
         self._open_path(dir_path)
 
     def _simple_fuzzy_match(self, query: str, text: str) -> bool:
-        """Advanced fuzzy matching using multiple methods."""
+        """Optimized fuzzy matching with performance improvements."""
         text_lower = text.lower()
         query_lower = query.lower()
 
+        # Fast exact substring match
         if query_lower in text_lower:
             return True
 
-        return (
-            fuzz.ratio(query_lower, text_lower) >= self.fuzzy_thresholds["ratio"]
-            or fuzz.partial_ratio(query_lower, text_lower)
-            >= self.fuzzy_thresholds["partial"]
-            or fuzz.token_sort_ratio(query_lower, text_lower)
-            >= self.fuzzy_thresholds["token_sort"]
-            or fuzz.token_set_ratio(query_lower, text_lower)
-            >= self.fuzzy_thresholds["token_set"]
-        )
+        # Fast prefix match
+        if text_lower.startswith(query_lower):
+            return True
+
+        # Only do expensive fuzzy matching for longer queries
+        if len(query_lower) >= 3:
+            # Use only the most effective fuzzy matching methods
+            return (
+                fuzz.partial_ratio(query_lower, text_lower) >= self.fuzzy_thresholds["partial"]
+                or fuzz.ratio(query_lower, text_lower) >= self.fuzzy_thresholds["ratio"]
+            )
+
+        return False
 
     def _calculate_relevance(self, filename: str, query: str) -> float:
-        """Calculate relevance score using multiple fuzzy matching methods."""
+        """Calculate relevance score with optimized performance."""
         filename_lower = filename.lower()
         query_lower = query.lower()
 
-        ratio = fuzz.ratio(query_lower, filename_lower)
-        partial = fuzz.partial_ratio(query_lower, filename_lower)
-        token_sort = fuzz.token_sort_ratio(query_lower, filename_lower)
-        token_set = fuzz.token_set_ratio(query_lower, filename_lower)
-
-        relevance = (
-            ratio * 0.2 + partial * 0.4 + token_sort * 0.2 + token_set * 0.2
-        ) / 100.0
-
+        # Fast exact match
         if query_lower == filename_lower:
-            relevance = 1.0
-        elif filename_lower.startswith(query_lower):
-            relevance = max(relevance, 0.9)
-        elif query_lower in filename_lower:
-            relevance = max(relevance, 0.8)
+            return 1.0
 
-        return relevance
+        # Fast prefix match
+        if filename_lower.startswith(query_lower):
+            return 0.95
+
+        # Fast substring match
+        if query_lower in filename_lower:
+            # Calculate position-based relevance
+            position = filename_lower.index(query_lower)
+            position_score = 1.0 - (position / len(filename_lower))
+            return 0.8 + (position_score * 0.1)
+
+        # Only do expensive fuzzy matching for longer queries
+        if len(query_lower) >= 3:
+            partial = fuzz.partial_ratio(query_lower, filename_lower)
+            ratio = fuzz.ratio(query_lower, filename_lower)
+
+            # Simplified relevance calculation
+            relevance = (partial * 0.6 + ratio * 0.4) / 100.0
+            return max(relevance, 0.3)  # Minimum relevance for fuzzy matches
+
+        return 0.3  # Default relevance for short queries

@@ -25,14 +25,6 @@
             "icon": "apps",
             "description": "Applications - Launch installed applications"
         },
-        "file": {
-            "icon": "file",
-            "description": "Files - Search for files and documents"
-        },
-        "find": {
-            "icon": "file",
-            "description": "Find - Locate files and folders"
-        },
         "bin": {
             "icon": "terminal",
             "description": "Bins - Search and run executable binaries"
@@ -70,6 +62,38 @@
         "?": {
             "icon": "world",
             "description": "Quick Web Search - Fast web search with question mark"
+        },
+        "google": {
+            "icon": "google",
+            "description": "Google Search - Search with Google"
+        },
+        "reddit": {
+            "icon": "reddit",
+            "description": "Reddit Search - Search discussions on Reddit"
+        },
+        "youtube": {
+            "icon": "youtube",
+            "description": "YouTube Search - Search videos on YouTube"
+        },
+        "github": {
+            "icon": "github",
+            "description": "GitHub Search - Search repositories on GitHub"
+        },
+        "duckduckgo": {
+            "icon": "duckduckgo",
+            "description": "DuckDuckGo Search - Privacy-focused search"
+        },
+        "stackoverflow": {
+            "icon": "stackoverflow",
+            "description": "Stack Overflow Search - Programming questions"
+        },
+        "wikipedia": {
+            "icon": "wikipedia",
+            "description": "Wikipedia Search - Search articles on Wikipedia"
+        },
+        "linkedin": {
+            "icon": "linkedin",
+            "description": "LinkedIn Search - Search professionals and jobs"
         },
         "kanban": {
             "icon": "kanban",
