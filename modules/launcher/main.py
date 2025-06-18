@@ -33,7 +33,7 @@ class Launcher(Window):
             layer="top",
             anchor="center",
             exclusivity="none",
-            keyboard_mode="on-demand",
+            keyboard_mode="exclusive",
             **kwargs,
         )
 
@@ -635,6 +635,7 @@ class Launcher(Window):
 
                 # Use idle_add to check after the backspace is processed
                 from gi.repository import GLib
+
                 GLib.idle_add(check_trigger_after_backspace)
 
                 # Allow the normal backspace to proceed
@@ -674,7 +675,9 @@ class Launcher(Window):
                     if self._custom_widget_has_entry(result.custom_widget):
                         # Let the custom widget handle the Enter key
                         # Find the focused Entry widget and trigger its activate signal
-                        focused_entry = self._find_focused_entry_in_widget(result.custom_widget)
+                        focused_entry = self._find_focused_entry_in_widget(
+                            result.custom_widget
+                        )
                         if focused_entry:
                             focused_entry.emit("activate")
                             return True
@@ -700,7 +703,7 @@ class Launcher(Window):
             return True
 
         # Check children recursively
-        if hasattr(widget, 'get_children'):
+        if hasattr(widget, "get_children"):
             for child in widget.get_children():
                 if self._custom_widget_has_entry(child):
                     return True
@@ -723,7 +726,7 @@ class Launcher(Window):
                 return widget
 
         # Check children recursively
-        if hasattr(widget, 'get_children'):
+        if hasattr(widget, "get_children"):
             for child in widget.get_children():
                 focused_entry = self._find_focused_entry_in_widget(child)
                 if focused_entry:
@@ -736,10 +739,14 @@ class Launcher(Window):
         for result in self.results:
             if result.custom_widget:
                 # Check if this is a NetworkPasswordEntry widget
-                if hasattr(result.custom_widget, '__class__') and result.custom_widget.__class__.__name__ == 'NetworkPasswordEntry':
+                if (
+                    hasattr(result.custom_widget, "__class__")
+                    and result.custom_widget.__class__.__name__
+                    == "NetworkPasswordEntry"
+                ):
                     return result.custom_widget
                 # Also check if it has the cancel_password_entry method (duck typing)
-                elif hasattr(result.custom_widget, 'cancel_password_entry'):
+                elif hasattr(result.custom_widget, "cancel_password_entry"):
                     return result.custom_widget
         return None
 
