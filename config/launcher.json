@@ -101,6 +101,10 @@
     "net": {
       "icon": "wifi_3",
       "description": "Network - Quick access to network management"
+    },
+    "bt": {
+      "icon": "bluetooth",
+      "description": "Bluetooth - Manage Bluetooth devices and connections"
     }
   },
   "settings": {
