@@ -97,8 +97,7 @@ class PluginManager:
             "calendar",
             "reminders",
             "network",
-            "bluetooth",
-            "scripts",
+            "bluetooth"
         ]
 
         for plugin_name in default_plugins:

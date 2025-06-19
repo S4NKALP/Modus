@@ -29,7 +29,7 @@ class BluetoothPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the bluetooth plugin."""
-        self.set_triggers(["bluetooth", "bt", "blue"])
+        self.set_triggers(["bt"])
 
     def cleanup(self):
         """Cleanup the bluetooth plugin."""

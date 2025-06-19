@@ -104,7 +104,7 @@ class NetworkPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the network plugin."""
-        self.set_triggers(["wifi", "network", "net"])
+        self.set_triggers(["net"])
 
     def cleanup(self):
         """Cleanup the network plugin."""
