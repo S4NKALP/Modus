@@ -29,7 +29,7 @@ class BluetoothPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the bluetooth plugin."""
-        self.set_triggers(["bt", "bt "])
+        self.set_triggers(["bluetooth", "bt", "blue"])
 
     def cleanup(self):
         """Cleanup the bluetooth plugin."""
@@ -49,20 +49,10 @@ class BluetoothPlugin(PluginBase):
     def _init_bluetooth_client(self):
         """Initialize bluetooth client with proper error handling."""
         try:
-            # Check if bluetooth is available by trying to import and create client
-            import signal
-            import gi
-
-            # Check if GnomeBluetooth is available
-            try:
-                gi.require_version("GnomeBluetooth", "3.0")
-                from gi.repository import GnomeBluetooth
-            except Exception:
-                print("Warning: GnomeBluetooth library not available")
-                return
-
             # Set up timeout for bluetooth client creation
-            def timeout_handler(signum, frame):
+            import signal
+
+            def timeout_handler(_signum, _frame):
                 raise TimeoutError("Bluetooth client initialization timeout")
 
             old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -89,11 +79,11 @@ class BluetoothPlugin(PluginBase):
             print(f"Warning: Bluetooth initialization failed: {e}")
             self.bluetooth_client = None
 
-    def _on_bluetooth_changed(self, *args):
+    def _on_bluetooth_changed(self, *_args):
         """Called when bluetooth state changes."""
         pass
 
-    def _on_device_changed(self, *args):
+    def _on_device_changed(self, *_args):
         """Called when devices are added or removed."""
         pass
 
