@@ -363,6 +363,21 @@ class Kanban(Gtk.Box):
         self.set_vexpand(False)
         self.set_hexpand(True)
 
+        # Make the widget focusable so it can receive key events
+        self.set_can_focus(True)
+        self.connect("key-press-event", self.on_key_press)
+
+        # Store pending add text for Enter key handling
+        self.pending_add_text = None
+
+        # Add a hidden Entry widget so the launcher will let us handle Enter events
+        from fabric.widgets.entry import Entry
+        self.hidden_entry = Entry(name="kanban-hidden-entry")
+        self.hidden_entry.set_size_request(1, 1)  # Make it tiny
+        self.hidden_entry.set_opacity(0.0)  # Make it invisible
+        self.hidden_entry.connect("activate", self.on_hidden_entry_activate)
+        self.add(self.hidden_entry)
+
         self.grid = Gtk.Grid(
             column_spacing=4,
             column_homogeneous=True,
@@ -387,6 +402,29 @@ class Kanban(Gtk.Box):
 
         self.load_state()
         self.show_all()
+
+    def on_key_press(self, widget, event):
+        """Handle key press events for the kanban widget."""
+        if event.keyval == Gdk.KEY_Return:
+            if self.pending_add_text:
+                self.columns[0].add_note(self.pending_add_text)
+                self.save_state()
+                self.pending_add_text = None
+                return True
+        return False
+
+    def on_hidden_entry_activate(self, entry):
+        """Handle activation of the hidden entry (Enter key from launcher)."""
+        if self.pending_add_text:
+            self.columns[0].add_note(self.pending_add_text)
+            self.save_state()
+            self.pending_add_text = None
+
+    def set_pending_add_text(self, text):
+        """Set the pending add text for Enter key handling."""
+        self.pending_add_text = text
+        # Don't grab focus - let the launcher manage focus
+        # The launcher will find our hidden entry when Enter is pressed
 
     def save_state(self):
         state = {
@@ -428,6 +466,7 @@ class KanbanPlugin(PluginBase):
         self.display_name = "Kanban"
         self.description = "Kanban board for task management"
         self._current_widget = None
+        self._pending_add_text = None
 
     def initialize(self):
         """Initialize the Kanban plugin."""
@@ -442,42 +481,42 @@ class KanbanPlugin(PluginBase):
                 self._current_widget.get_parent().remove(self._current_widget)
             self._current_widget.destroy()
             self._current_widget = None
+        self._pending_add_text = None
 
     def query(self, query_string: str) -> List[Result]:
         """Process Kanban queries."""
         results = []
 
-        # Clean up any existing widget first
-        self.cleanup()
+        # Only create a new widget if we don't have one
+        if not self._current_widget:
+            kanban_widget = Kanban()
+            self._current_widget = kanban_widget
+        else:
+            kanban_widget = self._current_widget
 
-        # Create a new kanban widget each time to avoid parent issues
-        kanban_widget = Kanban()
-        self._current_widget = kanban_widget
-
-        # Check if this is an "add" command
+        # Check if this is an "add" command and store it for Enter key handling
         if query_string.startswith("add "):
             # Extract the note text
             note_text = query_string[4:].strip()
             if note_text:
-                # Create an action that will add the note when executed
-                def add_task_action():
-                    # Add to the "To Do" column (first column)
-                    kanban_widget.columns[0].add_note(note_text)
-                    kanban_widget.save_state()
-                    return None
+                # Store the pending add command in the widget
+                kanban_widget.set_pending_add_text(note_text)
+            else:
+                kanban_widget.set_pending_add_text(None)
+        else:
+            kanban_widget.set_pending_add_text(None)
 
-                add_task_action()
         # Always show the kanban board directly when triggered
         results.append(
             Result(
                 title="Kanban Board",
                 subtitle="Task management with kanban-style columns",
                 icon_markup=icons.kanban,
-                action=lambda: None,  # No action needed since widget is displayed directly
+                action=lambda: None,  # No action needed, widget handles Enter
                 relevance=1.0,
                 plugin_name=self.display_name,
                 custom_widget=kanban_widget,
-                data={"type": "kanban_board"},
+                data={"type": "kanban_board", "keep_launcher_open": True},
             )
         )
 

@@ -1,8 +1,10 @@
 import math
-import cairo
 from typing import cast
-from fabric.widgets.image import Image
+
+import cairo
 from gi.repository import Gtk
+
+from fabric.widgets.image import Image
 
 
 class CustomImage(Image):

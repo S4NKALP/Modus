@@ -132,12 +132,17 @@ class Launcher(Window):
         # Hide trigger suggestions at startup
         self._clear_results()
 
-    def show_launcher(self, trigger_keyword: str = None):
-        """Show the launcher and focus the search entry.
+    def show_launcher(self, trigger_keyword: str = None, external: bool = False):
+        """Show the launcher and focus the search entry, or execute command externally.
 
         Args:
             trigger_keyword: Optional trigger keyword to activate immediately (e.g., "google", "calc", "app")
+            external: If True, execute the command without showing the launcher UI
         """
+        if external and trigger_keyword:
+            # Execute command externally without showing launcher
+            return self._execute_external_command(trigger_keyword)
+
         self.show_all()
 
         if trigger_keyword:
@@ -480,6 +485,83 @@ class Launcher(Window):
         self.search_entry.grab_focus()
 
         # Don't hide the launcher - user should be able to continue typing
+
+    def _execute_external_command(self, command_string: str):
+        """Execute a command externally without showing the launcher UI.
+
+        Args:
+            command_string: Full command string (e.g., "wall random", "calc 2+2")
+
+        Returns:
+            Result of the command execution or None if failed
+        """
+        try:
+            # Parse the command to extract trigger and query
+            parts = command_string.strip().split(' ', 1)
+            if not parts:
+                return None
+
+            trigger_part = parts[0]
+            query_part = parts[1] if len(parts) > 1 else ""
+
+            # Find the plugin that handles this trigger
+            triggered_plugin = None
+            detected_trigger = None
+
+            for plugin in self.plugin_manager.get_active_plugins():
+                trigger = plugin.get_active_trigger(f"{trigger_part} ")
+                if trigger:
+                    triggered_plugin = plugin
+                    detected_trigger = trigger
+                    break
+
+            if not triggered_plugin:
+                print(f"No plugin found for trigger: {trigger_part}")
+                return None
+
+            # Query the plugin with the remaining query
+            try:
+                results = triggered_plugin.query(query_part)
+                if not results:
+                    print(f"No results found for query: {query_part}")
+                    return None
+
+                # Find the first result that matches the query exactly or has highest relevance
+                best_result = None
+                for result in results:
+                    # For exact matches like "random", execute immediately
+                    if (hasattr(result, 'data') and result.data and
+                        result.data.get('action') == query_part.strip()):
+                        best_result = result
+                        break
+                    # For partial matches, take the first high-relevance result
+                    elif not best_result and result.relevance >= 0.9:
+                        best_result = result
+
+                # If no exact match, take the first result
+                if not best_result and results:
+                    best_result = results[0]
+
+                if best_result:
+                    # Execute the result action
+                    try:
+                        result_value = best_result.activate()
+                        print(f"External command executed: {command_string}")
+                        return result_value
+                    except Exception as e:
+                        print(f"Error executing result action: {e}")
+                        return None
+                else:
+                    print(f"No suitable result found for: {command_string}")
+                    return None
+
+            except Exception as e:
+                print(f"Error querying plugin {triggered_plugin.name}: {e}")
+                return None
+
+        except Exception as e:
+            print(f"Error executing external command '{command_string}': {e}")
+            return None
 
     def _update_results_display(self):
         """Update the results display."""
