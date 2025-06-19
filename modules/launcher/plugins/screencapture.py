@@ -7,6 +7,7 @@ import os
 import subprocess
 from typing import List
 
+from fabric.utils import get_relative_path
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from utils.icons import screenrecord, screenshots, ssfull, ssregion, stop
@@ -22,7 +23,7 @@ class ScreencapturePlugin(PluginBase):
         self.display_name = "Screencapture"
         self.description = "Take screenshots and screen recordings"
         # Path to the screen-capture script
-        self.script_path = os.path.expanduser("~/Modus/scripts/screen-capture.sh")
+        self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
 
     def initialize(self):
         """Initialize the screencapture plugin."""
