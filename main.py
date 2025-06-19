@@ -12,7 +12,6 @@ from modules.dock.main import Dock
 from modules.switcher import ApplicationSwitcher
 from modules.osd import OSD
 from modules.launcher import Launcher
-from services.screencapture import ScreenCapture
 
 gi.require_version("GLib", "2.0")
 
@@ -49,7 +48,7 @@ if __name__ == "__main__":
     switcher = ApplicationSwitcher()
     osd = OSD()
     launcher = Launcher()
-    sc = ScreenCapture()
+
     # Set corners visibility based on config
     corners_visible = config.get("corners_visible", True)
     corners.set_visible(corners_visible)
