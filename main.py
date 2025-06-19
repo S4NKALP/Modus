@@ -12,6 +12,7 @@ from modules.dock.main import Dock
 from modules.switcher import ApplicationSwitcher
 from modules.osd import OSD
 from modules.launcher import Launcher
+from modules.notification_popup import NotificationPopup
 
 gi.require_version("GLib", "2.0")
 
@@ -48,6 +49,7 @@ if __name__ == "__main__":
     switcher = ApplicationSwitcher()
     osd = OSD()
     launcher = Launcher()
+    nc = NotificationPopup()
 
     # Set corners visibility based on config
     corners_visible = config.get("corners_visible", True)
@@ -61,12 +63,7 @@ if __name__ == "__main__":
     _ = color_css_file.connect("changed", lambda *_: set_css())
 
     app = Application(
-        f"{APP_NAME}",
-        dock,
-        corners,
-        switcher,
-        osd,
-        launcher,
+        f"{APP_NAME}", dock, corners, switcher, osd, launcher, nc
     )  # Make sure corners is added to the app
 
     def set_css():

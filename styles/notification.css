@@ -1,0 +1,137 @@
+#notification-action-buttons button.start-action {
+  border-radius: 20px;
+}
+
+#notification-action-buttons button {
+  background-color: var(--surface);
+  padding: 8px;
+  border-radius: 20px;
+  transition: background-color 0.1s ease;
+}
+
+#notification-action-buttons button:hover {
+  background-color: var(--surface-bright);
+}
+
+#notification-action-buttons button:active {
+  background-color: var(--primary);
+}
+
+#notification-action-buttons button:active #button-label {
+  color: var(--shadow);
+}
+
+#notification-image image {
+  border-radius: 16px;
+  color: var(--on-surface);
+}
+
+#notification-summary,
+#button-label {
+  font-weight: bold;
+}
+
+#notification-summary {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+#notification-app-name {
+  color: var(--outline);
+}
+
+#action-button {
+  margin-top: 8px;
+}
+
+#notification-box {
+  border-radius: 20px;
+  padding: 16px;
+  background-color: var(--shadow);
+  margin: 4px;
+  min-width: 336px;
+  transition: background-color 0.1s ease;
+}
+
+#boxed-notification-revealer {
+  margin-top: -14px;
+}
+
+#notif-close-button {
+  border-radius: 16px;
+  padding: 4px;
+  transition: background-color 0.1s ease;
+}
+
+#notif-close-button:hover,
+#notif-close-button:focus {
+  background-color: var(--surface-bright);
+}
+
+#notif-close-button:active {
+  background-color: var(--red-dim);
+}
+
+#notif-close-label {
+  color: var(--red-dim);
+  font-size: 20px;
+}
+
+#notif-close-button:active #notif-close-label {
+  color: var(--shadow);
+}
+
+#notif-close-progress {
+  color: var(--surface-bright);
+  border-color: var(--red-dim);
+  background-color: transparent;
+  transition: border-color 0.2s ease;
+}
+
+#notif-close-button:hover #notif-close-progress {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+#notif-close-button:active #notif-close-progress {
+  border-color: var(--shadow);
+  color: var(--shadow);
+}
+
+/* Chevron button styling */
+#notif-chevron-button {
+  border-radius: 16px;
+  padding: 8px;
+  transition: background-color 0.1s ease;
+}
+
+#notif-chevron-button:hover,
+#notif-chevron-button:focus {
+  background-color: var(--surface-bright);
+}
+
+#notif-chevron-button:active {
+  background-color: var(--primary);
+}
+
+#notif-chevron-label {
+  color: var(--primary);
+  font-size: 20px;
+}
+
+#notif-chevron-button:active #notif-chevron-label {
+  color: var(--shadow);
+}
+
+/* Expanded content styling */
+#notification-expanded-content {
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* Action buttons in expanded content */
+#notification-expanded-content #notification-action-buttons {
+  margin-top: 30px;
+}
+
+
