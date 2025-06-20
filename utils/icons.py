@@ -183,6 +183,14 @@ calendar: str = "&#xea53;"
 connect: str = "&#xeade;"
 disconnect: str = "&#xfd16;"
 
+# otp
+check: str = "&#xea5e;"
+bulb: str = "&#xea51;"
+key: str = "&#xeac7;"
+magnifier: str = "&#xeb1c;"
+plus: str = "&#xeb0b;"
+info: str = "&#xeac5;"
+
 # Dice
 dice_1: str = "&#xf08b;"
 dice_2: str = "&#xf08c;"

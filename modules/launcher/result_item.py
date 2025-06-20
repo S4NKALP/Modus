@@ -95,14 +95,25 @@ class ResultItem(EventBox):
         text_box.add(title_label)
 
         # Subtitle (if present)
-        if self.result.subtitle:
-            subtitle_label = Label(
-                label=self.result.subtitle,
-                name="result-item-subtitle",
-                h_align="start",
-                v_align="center",
-                ellipsize="end",
-            )
+        if self.result.subtitle or self.result.subtitle_markup:
+            if self.result.subtitle_markup:
+                # Use markup for subtitle (supports Pango markup)
+                subtitle_label = Label(
+                    markup=self.result.subtitle_markup,
+                    name="result-item-subtitle",
+                    h_align="start",
+                    v_align="center",
+                    ellipsize="end",
+                )
+            else:
+                # Use plain text for subtitle
+                subtitle_label = Label(
+                    label=self.result.subtitle,
+                    name="result-item-subtitle",
+                    h_align="start",
+                    v_align="center",
+                    ellipsize="end",
+                )
             text_box.add(subtitle_label)
 
         # Plugin name (small text)

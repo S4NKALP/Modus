@@ -9,14 +9,16 @@ import hashlib
 import colorsys
 import re
 import json
-from typing import List
+from typing import List, Dict, Optional
 from PIL import Image
-from gi.repository import GdkPixbuf
+from gi.repository import GdkPixbuf, GLib
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from fabric.utils.helpers import exec_shell_command_async
 import config.data as data
 import utils.icons as icons
+import threading
+import time
 
 
 class WallpaperPlugin(PluginBase):
@@ -29,6 +31,8 @@ class WallpaperPlugin(PluginBase):
         self.display_name = "Wallpaper"
         self.wallpapers = []
         self.cache_dir = f"{data.CACHE_DIR}/thumbs"
+        self.thumbnail_cache: Dict[str, Optional[GdkPixbuf.Pixbuf]] = {}
+        self.thumbnail_loading = set()  # Track which thumbnails are being loaded
         self.schemes = {
             "scheme-tonal-spot": "Tonal Spot",
             "scheme-content": "Content",
@@ -45,6 +49,8 @@ class WallpaperPlugin(PluginBase):
         self.set_triggers(["wall", "wall "])
         self._load_wallpapers()
         os.makedirs(self.cache_dir, exist_ok=True)
+        # Start background thumbnail creation
+        self._start_background_thumbnail_creation()
 
     def cleanup(self):
         """Cleanup the wallpaper plugin."""
@@ -127,14 +133,95 @@ class WallpaperPlugin(PluginBase):
         if not os.path.exists(cache_path):
             try:
                 with Image.open(full_path) as img:
-                    # Use faster thumbnail creation
-                    img.thumbnail((48, 48), Image.Resampling.LANCZOS)
-                    img.save(cache_path, "PNG")
+                    # Use faster thumbnail creation with smaller size for better performance
+                    img.thumbnail((32, 32), Image.Resampling.LANCZOS)
+                    img.save(cache_path, "PNG", optimize=True)
             except Exception as e:
                 print(f"Error creating thumbnail for {filename}: {e}")
                 return None
 
         return cache_path
+
+    def _start_background_thumbnail_creation(self):
+        """Start background thread to create thumbnails for all wallpapers."""
+        def create_thumbnails():
+            for wallpaper in self.wallpapers:
+                if wallpaper not in self.thumbnail_loading:
+                    self.thumbnail_loading.add(wallpaper)
+                    try:
+                        cache_path = self._create_thumbnail(wallpaper)
+                        if cache_path and os.path.exists(cache_path):
+                            # Load thumbnail into memory cache
+                            try:
+                                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                                    cache_path, 32, 32, True
+                                )
+                                self.thumbnail_cache[wallpaper] = pixbuf
+                            except Exception as e:
+                                print(f"Error loading thumbnail for {wallpaper}: {e}")
+                                self.thumbnail_cache[wallpaper] = None
+                        else:
+                            self.thumbnail_cache[wallpaper] = None
+                    except Exception as e:
+                        print(f"Error processing thumbnail for {wallpaper}: {e}")
+                        self.thumbnail_cache[wallpaper] = None
+                    finally:
+                        self.thumbnail_loading.discard(wallpaper)
+
+                    # Small delay to prevent overwhelming the system
+                    time.sleep(0.01)
+
+        # Start background thread
+        thread = threading.Thread(target=create_thumbnails, daemon=True)
+        thread.start()
+
+    def _get_thumbnail_fast(self, filename: str) -> Optional[GdkPixbuf.Pixbuf]:
+        """Get thumbnail quickly from cache or return None if not ready."""
+        # Return cached thumbnail if available
+        if filename in self.thumbnail_cache:
+            return self.thumbnail_cache[filename]
+
+        # Check if thumbnail file exists and load it immediately
+        cache_path = self._get_cache_path(filename)
+        if os.path.exists(cache_path):
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    cache_path, 32, 32, True
+                )
+                self.thumbnail_cache[filename] = pixbuf
+                return pixbuf
+            except Exception as e:
+                print(f"Error loading thumbnail for {filename}: {e}")
+                self.thumbnail_cache[filename] = None
+                return None
+
+        # If not in cache and file doesn't exist, trigger background creation
+        if filename not in self.thumbnail_loading:
+            self.thumbnail_loading.add(filename)
+            def create_async():
+                try:
+                    cache_path = self._create_thumbnail(filename)
+                    if cache_path and os.path.exists(cache_path):
+                        try:
+                            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                                cache_path, 32, 32, True
+                            )
+                            self.thumbnail_cache[filename] = pixbuf
+                        except Exception as e:
+                            print(f"Error loading thumbnail for {filename}: {e}")
+                            self.thumbnail_cache[filename] = None
+                    else:
+                        self.thumbnail_cache[filename] = None
+                except Exception as e:
+                    print(f"Error creating thumbnail for {filename}: {e}")
+                    self.thumbnail_cache[filename] = None
+                finally:
+                    self.thumbnail_loading.discard(filename)
+
+            thread = threading.Thread(target=create_async, daemon=True)
+            thread.start()
+
+        return None
 
     def _set_wallpaper(self, filename: str, scheme: str = None):
         """Set wallpaper with optional matugen integration."""
@@ -749,22 +836,16 @@ class WallpaperPlugin(PluginBase):
                         relevance = 0.8
                     matching_wallpapers.append((wallpaper, relevance))
 
-            # Sort by relevance - no limit since we use bypass_max_results
+            # Sort by relevance and limit results for better performance
             matching_wallpapers.sort(key=lambda x: x[1], reverse=True)
 
-            for wallpaper, relevance in matching_wallpapers:
-                # Only create thumbnails for displayed results
-                cache_path = self._get_cache_path(wallpaper)
-                icon = None
+            # Limit to first 50 results for performance (can be increased if needed)
+            max_results = 50 if query else 20  # Show fewer when no query to load faster
+            matching_wallpapers = matching_wallpapers[:max_results]
 
-                # Try to load existing thumbnail first
-                if os.path.exists(cache_path):
-                    try:
-                        icon = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                            cache_path, 32, 32, True
-                        )
-                    except Exception as e:
-                        print(f"Error loading existing thumbnail: {e}")
+            for wallpaper, relevance in matching_wallpapers:
+                # Use fast thumbnail loading
+                icon = self._get_thumbnail_fast(wallpaper)
 
                 results.append(
                     Result(

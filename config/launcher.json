@@ -105,18 +105,6 @@
     "bt": {
       "icon": "bluetooth",
       "description": "Bluetooth - Manage Bluetooth devices and connections"
-    },
-    "script": {
-      "icon": "toolbox",
-      "description": "Scripts - Execute system scripts and utilities"
-    },
-    "cmd": {
-      "icon": "terminal",
-      "description": "Scripts - Quick access to system commands"
-    },
-    "util": {
-      "icon": "config",
-      "description": "Utilities - System utilities and toggles"
     }
   },
   "settings": {

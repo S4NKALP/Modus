@@ -75,23 +75,5 @@ if __name__ == "__main__":
 
     app.set_css()
 
-    # Register launcher actions
-    @Application.action("show-launcher")
-    def show_launcher():
-        """Show the launcher window."""
-        launcher.show_launcher()
-
-    @Application.action("hide-launcher")
-    def hide_launcher():
-        """Hide the launcher window."""
-        launcher.hide_launcher()
-
-    @Application.action("toggle-launcher")
-    def toggle_launcher():
-        """Toggle the launcher window visibility."""
-        if launcher.visible:
-            launcher.hide_launcher()
-        else:
-            launcher.show_launcher()
 
     app.run()

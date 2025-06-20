@@ -394,16 +394,14 @@ class Applications(Box):
         for child in children:
             self.add(child)
 
-        # Check if the applications component is enabled in the dock configuration
-        # Import here to avoid circular imports
-        import config.data as data
-        applications_visible = data.DOCK_COMPONENTS_VISIBILITY.get("applications", True)
-
-        # Show or hide based on whether there are any applications AND if component is enabled
-        if len(children) > 0 and applications_visible:
+        # Only show children if there are any applications
+        # Note: Component-level visibility is handled by the parent DockComponents class
+        if len(children) > 0:
             self.show_all()
         else:
-            self.hide()
+            # Hide the widget content but don't override component-level visibility
+            for child in self.get_children():
+                child.hide()
 
         return True
 
@@ -564,7 +562,7 @@ class Applications(Box):
         if hasattr(self, '_dragged_widget') and self._dragged_widget:
             children = self.get_children()
             source_index = children.index(self._dragged_widget)
-            
+
             # Find separator index
             separator_index = -1
             for i, child in enumerate(children):

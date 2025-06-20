@@ -58,24 +58,36 @@ class PowerPlugin(PluginBase):
 
     def query(self, query_string: str) -> List[Result]:
         """Search power commands based on query."""
-        if not query_string.strip():
-            return []
-
         query = query_string.lower().strip()
         results = []
 
-        for cmd, info in self.commands.items():
-            if query in cmd.lower() or query in info["description"].lower():
+        # If no query, show all power commands
+        if not query:
+            for cmd, info in self.commands.items():
                 result = Result(
                     title=cmd.capitalize(),
                     subtitle=info["description"],
                     icon_markup=info["icon"],
                     action=info["action"],
-                    relevance=1.0 if query == cmd else 0.7,
+                    relevance=1.0,
                     plugin_name=self.display_name,
                     data={"command": cmd},
                 )
                 results.append(result)
+        else:
+            # Filter commands based on query
+            for cmd, info in self.commands.items():
+                if query in cmd.lower() or query in info["description"].lower():
+                    result = Result(
+                        title=cmd.capitalize(),
+                        subtitle=info["description"],
+                        icon_markup=info["icon"],
+                        action=info["action"],
+                        relevance=1.0 if query == cmd else 0.7,
+                        plugin_name=self.display_name,
+                        data={"command": cmd},
+                    )
+                    results.append(result)
 
         return results
 

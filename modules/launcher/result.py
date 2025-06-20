@@ -17,6 +17,7 @@ class Result:
     # Display information
     title: str
     subtitle: str = ""
+    subtitle_markup: Optional[str] = None  # Pango markup for subtitle
     description: str = ""
     icon: Optional[GdkPixbuf.Pixbuf] = None
     icon_name: Optional[str] = None

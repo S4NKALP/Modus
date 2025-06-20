@@ -146,6 +146,9 @@ class Launcher(Window):
         self.show_all()
 
         if trigger_keyword:
+            # Set flag to track that launcher was opened with a trigger keyword
+            self.opened_with_trigger = True
+
             # Set the trigger keyword with a space and activate trigger mode
             trigger_text = f"{trigger_keyword} "
             self.search_entry.set_text(trigger_text)
@@ -173,6 +176,7 @@ class Launcher(Window):
                 self._clear_results()
         else:
             # Normal launcher opening - clear everything
+            self.opened_with_trigger = False
             self.search_entry.set_text("")
             self._clear_results()
 
@@ -198,6 +202,8 @@ class Launcher(Window):
         self.triggered_plugin = None
         self.active_trigger = ""
         self.visible = False
+        self.opened_with_trigger = False  # Reset the flag when closing
+        self.opened_with_trigger = False  # Track if launcher was opened with a trigger keyword
 
     def _on_search_changed(self, entry):
         """Handle search text changes."""
@@ -679,6 +685,10 @@ class Launcher(Window):
             if password_entry_widget:
                 # Cancel the password entry
                 password_entry_widget.cancel_password_entry()
+                return True
+            elif self.opened_with_trigger:
+                # If launcher was opened with a trigger keyword, close directly
+                self.close_launcher()
                 return True
             elif self.triggered_plugin:
                 # Exit trigger mode
