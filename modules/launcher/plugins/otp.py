@@ -18,6 +18,7 @@ import utils.icons as icons
 
 try:
     import pyotp
+
     PYOTP_AVAILABLE = True
 except ImportError:
     PYOTP_AVAILABLE = False
@@ -42,9 +43,11 @@ class OTPPlugin(PluginBase):
     def initialize(self):
         """Initialize the OTP plugin."""
         if not PYOTP_AVAILABLE:
-            raise RuntimeError("pyotp is required for OTP functionality. Install with: pip install pyotp")
+            raise RuntimeError(
+                "pyotp is required for OTP functionality. Install with: pip install pyotp"
+            )
 
-        self.set_triggers(["otp", "2fa", "totp", "auth"])
+        self.set_triggers(["otp", "otp "])
         self._load_secrets()
         self._ensure_config_file()
         self._start_refresh_thread()
@@ -59,7 +62,7 @@ class OTPPlugin(PluginBase):
         """Load secrets from JSON file."""
         try:
             if self.secrets_file.exists():
-                with open(self.secrets_file, 'r', encoding='utf-8') as f:
+                with open(self.secrets_file, "r", encoding="utf-8") as f:
                     self.secrets = json.load(f)
             else:
                 self.secrets = {}
@@ -71,25 +74,21 @@ class OTPPlugin(PluginBase):
         """Save secrets to JSON file."""
         try:
             self.secrets_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.secrets_file, 'w', encoding='utf-8') as f:
+            with open(self.secrets_file, "w", encoding="utf-8") as f:
                 json.dump(self.secrets, f, indent=2)
         except Exception as e:
             print(f"Error saving OTP secrets: {e}")
-            subprocess.run([
-                "notify-send", "OTP Manager Error",
-                f"Failed to save config: {str(e)}",
-                "-i", "dialog-error"
-            ], check=False)
 
     def _ensure_config_file(self):
         """Ensure the config file exists."""
         if not self.secrets_file.exists():
             self.secrets_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.secrets_file, 'w', encoding='utf-8') as f:
+            with open(self.secrets_file, "w", encoding="utf-8") as f:
                 json.dump({}, f, indent=2)
 
     def _start_refresh_thread(self):
         """Start background thread for auto-refreshing tokens."""
+
         def refresh_loop():
             while not self.stop_refresh.wait(1):
                 current_time = time.time()
@@ -113,16 +112,19 @@ class OTPPlugin(PluginBase):
             def do_update():
                 try:
                     for obj in gc.get_objects():
-                        if (hasattr(obj, '__class__') and
-                            obj.__class__.__name__ == 'Launcher' and
-                            hasattr(obj, 'results_box') and
-                            hasattr(obj, 'visible') and obj.visible and
-                            hasattr(obj, 'results') and obj.results):
-
+                        if (
+                            hasattr(obj, "__class__")
+                            and obj.__class__.__name__ == "Launcher"
+                            and hasattr(obj, "results_box")
+                            and hasattr(obj, "visible")
+                            and obj.visible
+                            and hasattr(obj, "results")
+                            and obj.results
+                        ):
                             has_otp_results = any(
                                 result.data and result.data.get("type") == "totp"
                                 for result in obj.results
-                                if hasattr(result, 'data') and result.data
+                                if hasattr(result, "data") and result.data
                             )
 
                             if has_otp_results:
@@ -141,9 +143,14 @@ class OTPPlugin(PluginBase):
         try:
             time_display = self._get_time_remaining_with_blink()
             for child in results_box.get_children():
-                if (hasattr(child, '__class__') and child.__class__.__name__ == 'ResultItem' and
-                    hasattr(child, 'result') and hasattr(child.result, 'data') and
-                    child.result.data and child.result.data.get("type") == "totp"):
+                if (
+                    hasattr(child, "__class__")
+                    and child.__class__.__name__ == "ResultItem"
+                    and hasattr(child, "result")
+                    and hasattr(child.result, "data")
+                    and child.result.data
+                    and child.result.data.get("type") == "totp"
+                ):
                     self._update_result_item_content(child, time_display)
         except Exception as e:
             print(f"Error updating result labels: {e}")
@@ -168,7 +175,9 @@ class OTPPlugin(PluginBase):
             if current_totp_code != old_code:
                 result_item.result.data["code"] = current_totp_code
                 self._find_and_update_title_label(result_item, current_totp_code)
-                result_item.result.action = lambda code=current_totp_code: self._copy_to_clipboard(code)
+                result_item.result.action = (
+                    lambda code=current_totp_code: self._copy_to_clipboard(code)
+                )
 
             new_subtitle_markup = f"{display_name} • {time_display} remaining"
             self._find_and_update_subtitle_label(result_item, new_subtitle_markup)
@@ -177,10 +186,11 @@ class OTPPlugin(PluginBase):
 
     def _find_and_update_title_label(self, result_item, new_title):
         """Find the title label widget and update its text."""
+
         def find_title_label(widget):
-            if hasattr(widget, 'get_name') and widget.get_name() == "result-item-title":
+            if hasattr(widget, "get_name") and widget.get_name() == "result-item-title":
                 return widget
-            if hasattr(widget, 'get_children'):
+            if hasattr(widget, "get_children"):
                 for child in widget.get_children():
                     found = find_title_label(child)
                     if found:
@@ -188,15 +198,19 @@ class OTPPlugin(PluginBase):
             return None
 
         title_label = find_title_label(result_item)
-        if title_label and hasattr(title_label, 'set_label'):
+        if title_label and hasattr(title_label, "set_label"):
             title_label.set_label(new_title)
 
     def _find_and_update_subtitle_label(self, result_item, new_markup):
         """Find the subtitle label widget and update its markup."""
+
         def find_subtitle_label(widget):
-            if hasattr(widget, 'get_name') and widget.get_name() == "result-item-subtitle":
+            if (
+                hasattr(widget, "get_name")
+                and widget.get_name() == "result-item-subtitle"
+            ):
                 return widget
-            if hasattr(widget, 'get_children'):
+            if hasattr(widget, "get_children"):
                 for child in widget.get_children():
                     found = find_subtitle_label(child)
                     if found:
@@ -204,7 +218,7 @@ class OTPPlugin(PluginBase):
             return None
 
         subtitle_label = find_subtitle_label(result_item)
-        if subtitle_label and hasattr(subtitle_label, 'set_markup'):
+        if subtitle_label and hasattr(subtitle_label, "set_markup"):
             subtitle_label.set_markup(new_markup)
 
     def _copy_to_clipboard(self, text: str):
@@ -213,7 +227,11 @@ class OTPPlugin(PluginBase):
             try:
                 subprocess.run(["wl-copy"], input=text.encode(), check=True)
             except subprocess.SubprocessError:
-                subprocess.run(["xclip", "-selection", "clipboard"], input=text.encode(), check=True)
+                subprocess.run(
+                    ["xclip", "-selection", "clipboard"],
+                    input=text.encode(),
+                    check=True,
+                )
         except Exception as e:
             print(f"Failed to copy to clipboard: {e}")
 
@@ -227,25 +245,32 @@ class OTPPlugin(PluginBase):
                 try:
                     # Try to access the launcher through the fabric Application
                     from fabric import Application
+
                     app = Application.get_default()
 
-                    if app and hasattr(app, 'launcher'):
+                    if app and hasattr(app, "launcher"):
                         launcher = app.launcher
-                        if launcher and hasattr(launcher, 'search_entry'):
+                        if launcher and hasattr(launcher, "search_entry"):
                             # Clear the search entry and set it to just "otp "
                             launcher.search_entry.set_text("otp ")
                             # Position cursor at the end
                             launcher.search_entry.set_position(-1)
                             # Trigger the search to show default OTP view
-                            if hasattr(launcher, '_perform_search'):
+                            if hasattr(launcher, "_perform_search"):
                                 launcher._perform_search("otp ")
                             return False
 
                     # Fallback: try to find launcher instance through other means
                     import gc
+
                     for obj in gc.get_objects():
-                        if hasattr(obj, '__class__') and obj.__class__.__name__ == 'Launcher':
-                            if hasattr(obj, 'search_entry') and hasattr(obj, '_perform_search'):
+                        if (
+                            hasattr(obj, "__class__")
+                            and obj.__class__.__name__ == "Launcher"
+                        ):
+                            if hasattr(obj, "search_entry") and hasattr(
+                                obj, "_perform_search"
+                            ):
                                 obj.search_entry.set_text("otp ")
                                 obj.search_entry.set_position(-1)
                                 obj._perform_search("otp ")
@@ -266,38 +291,14 @@ class OTPPlugin(PluginBase):
         """Remove an account and trigger refresh to return to default OTP view."""
         try:
             if account_name in self.secrets:
-                # Get account info for notification
-                account_data = self.secrets[account_name]
-                issuer = account_data.get("issuer", "")
-                display_name = f"{issuer} - {account_name}" if issuer else account_name
-
                 # Remove the account
                 del self.secrets[account_name]
                 self._save_secrets()
 
-                # Show notification
-                subprocess.run([
-                    "notify-send", "OTP Manager",
-                    f"Removed '{display_name}' successfully",
-                    "-i", "dialog-information"
-                ], check=False)
-
                 # Trigger refresh to return to default OTP view
                 self._trigger_refresh()
-            else:
-                # Account not found
-                subprocess.run([
-                    "notify-send", "OTP Manager Error",
-                    f"Account '{account_name}' not found",
-                    "-i", "dialog-error"
-                ], check=False)
         except Exception as e:
             print(f"Error removing account {account_name}: {e}")
-            subprocess.run([
-                "notify-send", "OTP Manager Error",
-                f"Failed to remove account: {str(e)}",
-                "-i", "dialog-error"
-            ], check=False)
 
     def _generate_totp(self, secret: str) -> Optional[str]:
         """Generate TOTP code from secret."""
@@ -315,7 +316,7 @@ class OTPPlugin(PluginBase):
         """Get time remaining with blinking effect."""
         time_remaining = self._get_time_remaining()
         current_second = int(time.time())
-        should_blink = (current_second % 2 == 0)
+        should_blink = current_second % 2 == 0
 
         if should_blink:
             return f"<span alpha='30%'>{time_remaining}s</span>"
@@ -363,61 +364,64 @@ class OTPPlugin(PluginBase):
     def _handle_direct_add(self, account_name: str, secret_or_uri: str) -> List[Result]:
         """Handle direct addition of OTP account."""
         if not account_name or not secret_or_uri:
-            return [Result(
-                title="Invalid format",
-                subtitle="Usage: add <account_name> <secret> or add <account_name>```<secret>```",
-                icon_markup=icons.question,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
-            )]
-
-        # Debug info
-        print(f"OTP Debug: Adding account '{account_name}' with secret/URI: '{secret_or_uri[:20]}...'")
+            return [
+                Result(
+                    title="Invalid format",
+                    subtitle="Usage: add <account_name> <secret> or add <account_name>```<secret>```",
+                    icon_markup=icons.question,
+                    action=lambda: None,
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "help", "keep_launcher_open": True},
+                )
+            ]
 
         try:
             if secret_or_uri.startswith("otpauth://"):
-                print("OTP Debug: Processing as otpauth URI")
                 return self._handle_otpauth_uri(account_name, secret_or_uri)
             else:
-                print("OTP Debug: Processing as Base32 secret")
                 return self._handle_base32_secret(account_name, secret_or_uri)
         except Exception as e:
             print(f"OTP Debug: Error in _handle_direct_add: {e}")
-            return [Result(
-                title="Error adding account",
-                subtitle=f"Debug: {str(e)}",
-                icon_markup=icons.cancel,
-                action=lambda: None,
-                relevance=0.5,
-                plugin_name=self.display_name,
-                data={"type": "error", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title="Error adding account",
+                    subtitle=f"Debug: {str(e)}",
+                    icon_markup=icons.cancel,
+                    action=lambda: None,
+                    relevance=0.5,
+                    plugin_name=self.display_name,
+                    data={"type": "error", "keep_launcher_open": True},
+                )
+            ]
 
     def _list_otp_codes(self) -> List[Result]:
         """List all OTP codes with current tokens."""
         results = []
 
         if not self.secrets:
-            results.append(Result(
-                title="No OTP accounts configured",
-                subtitle="Use 'add <account> <secret>' to add your first account",
-                icon_markup=icons.key,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name,
-                data={"type": "empty", "keep_launcher_open": True}
-            ))
-            results.append(Result(
-                title="Available commands:",
-                subtitle="add <account> <secret> | remove <account>",
-                icon_markup=icons.info,
-                action=lambda: None,
-                relevance=0.9,
-                plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
-            ))
+            results.append(
+                Result(
+                    title="No OTP accounts configured",
+                    subtitle="Use 'add <account> <secret>' to add your first account",
+                    icon_markup=icons.key,
+                    action=lambda: None,
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "empty", "keep_launcher_open": True},
+                )
+            )
+            results.append(
+                Result(
+                    title="Available commands:",
+                    subtitle="add <account> <secret> | remove <account>",
+                    icon_markup=icons.info,
+                    action=lambda: None,
+                    relevance=0.9,
+                    plugin_name=self.display_name,
+                    data={"type": "help", "keep_launcher_open": True},
+                )
+            )
             return results
 
         time_display = self._get_time_remaining_with_blink()
@@ -429,26 +433,37 @@ class OTPPlugin(PluginBase):
 
             if totp_code:
                 display_name = f"{issuer} - {account_name}" if issuer else account_name
-                results.append(Result(
-                    title=f"{totp_code}",
-                    subtitle_markup=f"{display_name} • {time_display} remaining",
-                    icon_markup=icons.key,
-                    action=lambda code=totp_code: self._copy_to_clipboard(code),
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "totp", "account": account_name, "code": totp_code}
-                    # Note: No keep_launcher_open flag - launcher will close after copying
-                ))
+                results.append(
+                    Result(
+                        title=f"{totp_code}",
+                        subtitle_markup=f"{display_name} • {time_display} remaining",
+                        icon_markup=icons.key,
+                        action=lambda code=totp_code: self._copy_to_clipboard(code),
+                        relevance=1.0,
+                        plugin_name=self.display_name,
+                        data={
+                            "type": "totp",
+                            "account": account_name,
+                            "code": totp_code,
+                        },
+                    )
+                )
             else:
-                results.append(Result(
-                    title=f"Error: {account_name}",
-                    subtitle="Invalid secret or configuration",
-                    icon_markup=icons.cancel,
-                    action=lambda: None,
-                    relevance=0.5,
-                    plugin_name=self.display_name,
-                    data={"type": "error", "account": account_name, "keep_launcher_open": True}
-                ))
+                results.append(
+                    Result(
+                        title=f"Error: {account_name}",
+                        subtitle="Invalid secret or configuration",
+                        icon_markup=icons.cancel,
+                        action=lambda: None,
+                        relevance=0.5,
+                        plugin_name=self.display_name,
+                        data={
+                            "type": "error",
+                            "account": account_name,
+                            "keep_launcher_open": True,
+                        },
+                    )
+                )
 
         return results
 
@@ -466,54 +481,71 @@ class OTPPlugin(PluginBase):
                 totp_code = self._generate_totp(secret)
 
                 if totp_code:
-                    display_name = f"{account_data.get('issuer', '')} - {account_name}" if account_data.get('issuer') else account_name
+                    display_name = (
+                        f"{account_data.get('issuer', '')} - {account_name}"
+                        if account_data.get("issuer")
+                        else account_name
+                    )
                     time_display = self._get_time_remaining_with_blink()
 
-                    results.append(Result(
-                        title=f"{totp_code}",
-                        subtitle_markup=f"{display_name} • {time_display} remaining",
-                        icon_markup=icons.key,
-                        action=lambda code=totp_code: self._copy_to_clipboard(code),
-                        relevance=1.0,
-                        plugin_name=self.display_name,
-                        data={"type": "totp", "account": account_name, "code": totp_code}
-                        # Note: No keep_launcher_open flag - launcher will close after copying
-                    ))
+                    results.append(
+                        Result(
+                            title=f"{totp_code}",
+                            subtitle_markup=f"{display_name} • {
+                                time_display
+                            } remaining",
+                            icon_markup=icons.key,
+                            action=lambda code=totp_code: self._copy_to_clipboard(code),
+                            relevance=1.0,
+                            plugin_name=self.display_name,
+                            data={
+                                "type": "totp",
+                                "account": account_name,
+                                "code": totp_code,
+                            },
+                        )
+                    )
 
         if not results:
-            results.append(Result(
-                title=f"No accounts found for '{query}'",
-                subtitle="Use 'add <account> <secret>' to create new account",
-                icon_markup=icons.magnifier,
-                action=lambda: None,
-                relevance=0.5,
-                plugin_name=self.display_name,
-                data={"type": "no_results", "keep_launcher_open": True}
-            ))
-            results.append(Result(
-                title="Available commands:",
-                subtitle="add <account> <secret> | remove <account>",
-                icon_markup=icons.info,
-                action=lambda: None,
-                relevance=0.4,
-                plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
-            ))
+            results.append(
+                Result(
+                    title=f"No accounts found for '{query}'",
+                    subtitle="Use 'add <account> <secret>' to create new account",
+                    icon_markup=icons.magnifier,
+                    action=lambda: None,
+                    relevance=0.5,
+                    plugin_name=self.display_name,
+                    data={"type": "no_results", "keep_launcher_open": True},
+                )
+            )
+            results.append(
+                Result(
+                    title="Available commands:",
+                    subtitle="add <account> <secret> | remove <account>",
+                    icon_markup=icons.info,
+                    action=lambda: None,
+                    relevance=0.4,
+                    plugin_name=self.display_name,
+                    data={"type": "help", "keep_launcher_open": True},
+                )
+            )
 
         return results
 
     def _handle_add_command(self, account_name: str) -> List[Result]:
         """Handle manual addition of OTP secret."""
         if not account_name:
-            return [Result(
-                title="Enter account name",
-                subtitle="Usage: add <account_name> <secret>",
-                icon_markup=icons.question,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title="Enter account name",
+                    subtitle="Usage: add <account_name> <secret>",
+                    icon_markup=icons.question,
+                    action=lambda: None,
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "help", "keep_launcher_open": True},
+                )
+            ]
 
         return [
             Result(
@@ -523,7 +555,11 @@ class OTPPlugin(PluginBase):
                 action=lambda: None,
                 relevance=1.0,
                 plugin_name=self.display_name,
-                data={"type": "instruction", "account": account_name, "keep_launcher_open": True}
+                data={
+                    "type": "instruction",
+                    "account": account_name,
+                    "keep_launcher_open": True,
+                },
             ),
             Result(
                 title="Base32 Secret Format:",
@@ -532,7 +568,7 @@ class OTPPlugin(PluginBase):
                 action=lambda: None,
                 relevance=0.9,
                 plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
+                data={"type": "help", "keep_launcher_open": True},
             ),
             Result(
                 title="otpauth URI Format:",
@@ -541,7 +577,7 @@ class OTPPlugin(PluginBase):
                 action=lambda: None,
                 relevance=0.9,
                 plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
+                data={"type": "help", "keep_launcher_open": True},
             ),
             Result(
                 title="Remove Account:",
@@ -550,8 +586,8 @@ class OTPPlugin(PluginBase):
                 action=lambda: None,
                 relevance=0.8,
                 plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
-            )
+                data={"type": "help", "keep_launcher_open": True},
+            ),
         ]
 
     def _handle_remove_command(self, account_name: str) -> List[Result]:
@@ -561,25 +597,29 @@ class OTPPlugin(PluginBase):
             results = []
 
             if not self.secrets:
-                results.append(Result(
-                    title="No OTP accounts to remove",
-                    subtitle="Use 'add <account> <secret>' to add accounts first",
-                    icon_markup=icons.info,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "empty", "keep_launcher_open": True}
-                ))
+                results.append(
+                    Result(
+                        title="No OTP accounts to remove",
+                        subtitle="Use 'add <account> <secret>' to add accounts first",
+                        icon_markup=icons.info,
+                        action=lambda: None,
+                        relevance=1.0,
+                        plugin_name=self.display_name,
+                        data={"type": "empty", "keep_launcher_open": True},
+                    )
+                )
             else:
-                results.append(Result(
-                    title="Select account to remove:",
-                    subtitle="Type: remove <account_name> to remove an account",
-                    icon_markup=icons.trash,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "help", "keep_launcher_open": True}
-                ))
+                results.append(
+                    Result(
+                        title="Select account to remove:",
+                        subtitle="Type: remove <account_name> to remove an account",
+                        icon_markup=icons.trash,
+                        action=lambda: None,
+                        relevance=1.0,
+                        plugin_name=self.display_name,
+                        data={"type": "help", "keep_launcher_open": True},
+                    )
+                )
 
                 # Get time display for consistency with main OTP view
                 time_display = self._get_time_remaining_with_blink()
@@ -594,39 +634,56 @@ class OTPPlugin(PluginBase):
                     totp_code = self._generate_totp(secret)
 
                     if totp_code:
-                        results.append(Result(
-                            title=f"{totp_code}",
-                            subtitle_markup=f"Remove {display_name} • {time_display} remaining",
-                            icon_markup=icons.trash,
-                            action=lambda account=acc_name: self._remove_account_and_refresh(account),
-                            relevance=0.9,
-                            plugin_name=self.display_name,
-                            data={"type": "remove_option", "account": acc_name, "code": totp_code, "keep_launcher_open": True}
-                        ))
+                        results.append(
+                            Result(
+                                title=f"{totp_code}",
+                                subtitle_markup=f"Type: remove {acc_name} • {
+                                    time_display
+                                } remaining",
+                                icon_markup=icons.trash,
+                                action=lambda: None,  # No action - shows instruction only
+                                relevance=0.9,
+                                plugin_name=self.display_name,
+                                data={
+                                    "type": "remove_instruction",
+                                    "account": acc_name,
+                                    "code": totp_code,
+                                    "keep_launcher_open": True,
+                                },
+                            )
+                        )
                     else:
-                        results.append(Result(
-                            title=f"Error: {acc_name}",
-                            subtitle=f"Remove {display_name} (Invalid secret)",
-                            icon_markup=icons.trash,
-                            action=lambda account=acc_name: self._remove_account_and_refresh(account),
-                            relevance=0.8,
-                            plugin_name=self.display_name,
-                            data={"type": "remove_option", "account": acc_name, "keep_launcher_open": True}
-                        ))
+                        results.append(
+                            Result(
+                                title=f"Error: {acc_name}",
+                                subtitle=f"Type: remove {acc_name} (Invalid secret)",
+                                icon_markup=icons.trash,
+                                action=lambda: None,  # No action - shows instruction only
+                                relevance=0.8,
+                                plugin_name=self.display_name,
+                                data={
+                                    "type": "remove_instruction",
+                                    "account": acc_name,
+                                    "keep_launcher_open": True,
+                                },
+                            )
+                        )
 
             return results
 
         # Check if account exists
         if account_name not in self.secrets:
-            return [Result(
-                title=f"Account '{account_name}' not found",
-                subtitle="Use 'remove' to see all available accounts",
-                icon_markup=icons.cancel,
-                action=lambda: None,
-                relevance=0.5,
-                plugin_name=self.display_name,
-                data={"type": "error", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title=f"Account '{account_name}' not found",
+                    subtitle="Use 'remove' to see all available accounts",
+                    icon_markup=icons.cancel,
+                    action=lambda: None,
+                    relevance=0.5,
+                    plugin_name=self.display_name,
+                    data={"type": "error", "keep_launcher_open": True},
+                )
+            ]
 
         # Get account info for confirmation
         account_data = self.secrets[account_name]
@@ -638,55 +695,62 @@ class OTPPlugin(PluginBase):
             del self.secrets[account_name]
             self._save_secrets()
 
-            return [Result(
-                title=f"✓ Removed '{display_name}'",
-                subtitle="OTP account removed successfully",
-                icon_markup=icons.check,
-                action=lambda: self._trigger_refresh(),
-                relevance=1.0,
-                plugin_name=self.display_name,
-                data={"type": "success", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title=f"✓ Removed '{display_name}'",
+                    subtitle="OTP account removed successfully",
+                    icon_markup=icons.check,
+                    action=lambda: self._trigger_refresh(),
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "success", "keep_launcher_open": True},
+                )
+            ]
         except Exception as e:
-            return [Result(
-                title="Error removing account",
-                subtitle=f"Failed to remove account: {str(e)}",
-                icon_markup=icons.cancel,
-                action=lambda: None,
-                relevance=0.5,
-                plugin_name=self.display_name,
-                data={"type": "error", "keep_launcher_open": True}
-            )]
-
-
+            return [
+                Result(
+                    title="Error removing account",
+                    subtitle=f"Failed to remove account: {str(e)}",
+                    icon_markup=icons.cancel,
+                    action=lambda: None,
+                    relevance=0.5,
+                    plugin_name=self.display_name,
+                    data={"type": "error", "keep_launcher_open": True},
+                )
+            ]
 
     def _handle_base32_secret(self, account_name: str, secret: str) -> List[Result]:
         """Handle raw Base32 secret."""
         try:
             # Clean up the secret - remove spaces, dashes, and convert to uppercase
-            clean_secret = secret.replace(" ", "").replace("-", "").replace("_", "").upper()
+            clean_secret = (
+                secret.replace(" ", "").replace("-", "").replace("_", "").upper()
+            )
 
             # Remove any non-base32 characters
             import re
-            clean_secret = re.sub(r'[^A-Z2-7]', '', clean_secret)
+
+            clean_secret = re.sub(r"[^A-Z2-7]", "", clean_secret)
 
             # Add padding if needed (Base32 requires padding to multiple of 8)
             while len(clean_secret) % 8 != 0:
-                clean_secret += '='
+                clean_secret += "="
 
             # Validate Base32 format
             try:
                 base64.b32decode(clean_secret)
             except Exception as e:
-                return [Result(
-                    title="Invalid Base32 secret",
-                    subtitle=f"Error: {str(e)}. Please check the secret format",
-                    icon_markup=icons.cancel,
-                    action=lambda: None,
-                    relevance=0.5,
-                    plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
-                )]
+                return [
+                    Result(
+                        title="Invalid Base32 secret",
+                        subtitle=f"Error: {str(e)}. Please check the secret format",
+                        icon_markup=icons.cancel,
+                        action=lambda: None,
+                        relevance=0.5,
+                        plugin_name=self.display_name,
+                        data={"type": "error", "keep_launcher_open": True},
+                    )
+                ]
 
             # Test if the secret can generate a valid TOTP
             try:
@@ -695,44 +759,52 @@ class OTPPlugin(PluginBase):
                 if not test_code or len(test_code) != 6:
                     raise ValueError("Generated invalid TOTP code")
             except Exception as e:
-                return [Result(
-                    title="Invalid secret for TOTP",
-                    subtitle=f"Cannot generate TOTP: {str(e)}",
-                    icon_markup=icons.cancel,
-                    action=lambda: None,
-                    relevance=0.5,
-                    plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
-                )]
+                return [
+                    Result(
+                        title="Invalid secret for TOTP",
+                        subtitle=f"Cannot generate TOTP: {str(e)}",
+                        icon_markup=icons.cancel,
+                        action=lambda: None,
+                        relevance=0.5,
+                        plugin_name=self.display_name,
+                        data={"type": "error", "keep_launcher_open": True},
+                    )
+                ]
 
             self.secrets[account_name] = {
                 "secret": clean_secret,
                 "issuer": "",
                 "algorithm": "SHA1",
                 "digits": 6,
-                "period": 30
+                "period": 30,
             }
             self._save_secrets()
 
-            return [Result(
-                title=f"✓ Added '{account_name}'",
-                subtitle=f"OTP account added successfully (secret: {clean_secret[:4]}...)",
-                icon_markup=icons.check,
-                action=lambda: self._trigger_refresh(),
-                relevance=1.0,
-                plugin_name=self.display_name,
-                data={"type": "success", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title=f"✓ Added '{account_name}'",
+                    subtitle=f"OTP account added successfully (secret: {
+                        clean_secret[:4]
+                    }...)",
+                    icon_markup=icons.check,
+                    action=lambda: self._trigger_refresh(),
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "success", "keep_launcher_open": True},
+                )
+            ]
         except Exception as e:
-            return [Result(
-                title="Error adding account",
-                subtitle=f"Unexpected error: {str(e)}",
-                icon_markup=icons.cancel,
-                action=lambda: None,
-                relevance=0.5,
-                plugin_name=self.display_name,
-                data={"type": "error", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title="Error adding account",
+                    subtitle=f"Unexpected error: {str(e)}",
+                    icon_markup=icons.cancel,
+                    action=lambda: None,
+                    relevance=0.5,
+                    plugin_name=self.display_name,
+                    data={"type": "error", "keep_launcher_open": True},
+                )
+            ]
 
     def _handle_otpauth_uri(self, account_name: str, uri: str) -> List[Result]:
         """Handle otpauth:// URI."""
@@ -741,15 +813,17 @@ class OTPPlugin(PluginBase):
 
             parsed = urlparse(uri)
             if parsed.scheme != "otpauth" or parsed.netloc != "totp":
-                return [Result(
-                    title="Invalid otpauth URI",
-                    subtitle="Only otpauth://totp/ URIs are supported",
-                    icon_markup=icons.cancel,
-                    action=lambda: None,
-                    relevance=0.5,
-                    plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
-                )]
+                return [
+                    Result(
+                        title="Invalid otpauth URI",
+                        subtitle="Only otpauth://totp/ URIs are supported",
+                        icon_markup=icons.cancel,
+                        action=lambda: None,
+                        relevance=0.5,
+                        plugin_name=self.display_name,
+                        data={"type": "error", "keep_launcher_open": True},
+                    )
+                ]
 
             if not account_name:
                 account_path = parsed.path.lstrip("/")
@@ -767,42 +841,48 @@ class OTPPlugin(PluginBase):
             period = int(params.get("period", ["30"])[0])
 
             if not secret:
-                return [Result(
-                    title="No secret in URI",
-                    subtitle="otpauth URI must contain a secret parameter",
-                    icon_markup=icons.cancel,
-                    action=lambda: None,
-                    relevance=0.5,
-                    plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
-                )]
+                return [
+                    Result(
+                        title="No secret in URI",
+                        subtitle="otpauth URI must contain a secret parameter",
+                        icon_markup=icons.cancel,
+                        action=lambda: None,
+                        relevance=0.5,
+                        plugin_name=self.display_name,
+                        data={"type": "error", "keep_launcher_open": True},
+                    )
+                ]
 
             self.secrets[account_name] = {
                 "secret": secret,
                 "issuer": issuer,
                 "algorithm": algorithm,
                 "digits": digits,
-                "period": period
+                "period": period,
             }
             self._save_secrets()
 
             display_name = f"{issuer} - {account_name}" if issuer else account_name
-            return [Result(
-                title=f"✓ Added '{display_name}'",
-                subtitle="OTP account added from URI",
-                icon_markup=icons.check,
-                action=lambda: self._trigger_refresh(),
-                relevance=1.0,
-                plugin_name=self.display_name,
-                data={"type": "success", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title=f"✓ Added '{display_name}'",
+                    subtitle="OTP account added from URI",
+                    icon_markup=icons.check,
+                    action=lambda: self._trigger_refresh(),
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "success", "keep_launcher_open": True},
+                )
+            ]
         except Exception as e:
-            return [Result(
-                title="Error parsing otpauth URI",
-                subtitle=str(e),
-                icon_markup=icons.cancel,
-                action=lambda: None,
-                relevance=0.5,
-                plugin_name=self.display_name,
-                data={"type": "error", "keep_launcher_open": True}
-            )]
+            return [
+                Result(
+                    title="Error parsing otpauth URI",
+                    subtitle=str(e),
+                    icon_markup=icons.cancel,
+                    action=lambda: None,
+                    relevance=0.5,
+                    plugin_name=self.display_name,
+                    data={"type": "error", "keep_launcher_open": True},
+                )
+            ]
