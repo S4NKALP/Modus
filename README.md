@@ -3,7 +3,7 @@
 </div>
 
 <p align="center">
-  <img src="assets/logo.svg" height="200" alt="Logo">
+  <img src="assets/modus.png" height="200" alt="Logo">
 </p>
 <p align="center"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /> <sup>A modular and extensible shell for Hyprland, written on <a href="https://github.com/Fabric-Development/fabric/">Fabric</a>. </sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /></p>
 
