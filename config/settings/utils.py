@@ -192,7 +192,7 @@ def load_bind_vars():
     # Usar .copy() para no modificar DEFAULTS accidentalmente
     bind_vars.update(settings_constants.DEFAULTS.copy())
 
-    config_json = os.path.expanduser(f"~/{APP_NAME_CAP}/config/config.json")
+    config_json = os.path.expanduser(f"~/{APP_NAME_CAP}/config/json/config.json")
     if os.path.exists(config_json):
         try:
             with open(config_json, "r") as f:

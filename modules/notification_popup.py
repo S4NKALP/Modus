@@ -80,10 +80,10 @@ class NotificationWidget(Box):
         self.timeout_ms = timeout_ms
         self._timeout_id = None
 
-   
+
         self.close_button_animator = Animator(
-            bezier_curve=(0.25, 0.1, 0.25, 1.0),  
-            duration=0.3,  
+            bezier_curve=(0.25, 0.1, 0.25, 1.0),
+            duration=0.3,
             min_value=0.0,
             max_value=1.0,
             repeat=False,
@@ -91,8 +91,8 @@ class NotificationWidget(Box):
         self.close_button_animator.connect("notify::value", self.on_hover_animation_value_changed)
 
         self.timeout_progress_animator = Animator(
-            bezier_curve=(1.0, 0.0, 1.0, 1.0), 
-            duration=timeout_ms / 1000.0,  
+            bezier_curve=(1.0, 0.0, 1.0, 1.0),
+            duration=timeout_ms / 1000.0,
             min_value=0.0,
             max_value=1.0,
             repeat=False,
@@ -234,7 +234,7 @@ class NotificationWidget(Box):
             line_width=2,
             start_angle=0,
             end_angle=360,
-            value=0.0, 
+            value=0.0,
             min_value=0.0,
             max_value=1.0,
             child=close_icon,
@@ -324,13 +324,13 @@ class NotificationWidget(Box):
             if self.is_expanded:
                 # Show full text without ellipsization and enable wrapping
                 self.body_label.set_markup(self.notification.body)  # Keep original newlines
-                self.body_label.set_property("ellipsize", 0) 
+                self.body_label.set_property("ellipsize", 0)
                 self.body_label.set_property("wrap", True)
-                self.body_label.set_property("wrap-mode", 2) 
+                self.body_label.set_property("wrap-mode", 2)
             else:
                 # Show truncated text with ellipsization
                 self.body_label.set_markup(self.notification.body.replace("\n", " "))
-                self.body_label.set_property("ellipsize", 3)  
+                self.body_label.set_property("ellipsize", 3)
                 self.body_label.set_property("wrap", False)
 
     def on_hover_animation_value_changed(self, animator, value):
@@ -406,9 +406,10 @@ class NotificationWidget(Box):
 
 
 class NotificationRevealer(Revealer):
-    def __init__(self, notification: Notification, **kwargs):
+    def __init__(self, notification: Notification, cache_service, **kwargs):
         self.notif_box = NotificationWidget(notification)
         self._notification = notification
+        self.cache_service = cache_service
         super().__init__(
             child=Box(
                 children=[self.notif_box],
@@ -429,6 +430,9 @@ class NotificationRevealer(Revealer):
         notification: Notification,
         reason: NotificationCloseReason,
     ):
+        # Cache the notification to history when it's actually closed/dismissed
+        self.cache_service.cache_notification(notification)
+        logger.info(f"[Notification] Cached notification from {notification.app_name} (reason: {reason})")
         self.set_reveal_child(False)
 
 
@@ -456,17 +460,22 @@ class NotificationPopup(Window):
 
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
-        self.cache_notification_service.cache_notification(notification)
 
         # Only show popup if DND is not enabled
         if not self.cache_notification_service.dont_disturb:
-            new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))
+            new_box = NotificationRevealer(
+                fabric_notif.get_notification_from_id(id),
+                self.cache_notification_service
+            )
             self.notifications.add(new_box)
             new_box.set_reveal_child(True)
             logger.info(f"[Notification] New notification from {notification.app_name}")
         else:
+            # Even in DND mode, we should cache the notification when it would have been closed
+            # For DND notifications, cache them immediately since they won't be shown
+            self.cache_notification_service.cache_notification(notification)
             logger.info(
                 f"[Notification] DND enabled, notification from {
                     notification.app_name
-                } not shown"
+                } cached without showing popup"
             )

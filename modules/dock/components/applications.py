@@ -14,7 +14,7 @@ from utils.icon_resolver import IconResolver
 
 def read_config():
     """Read and return the full configuration from the JSON file, handling missing file."""
-    config_path = get_relative_path("../../../config/dock.json")
+    config_path = get_relative_path("../../../config/json/dock.json")
     try:
         with open(config_path, "r") as file:
             config_data = json.load(file)
@@ -80,7 +80,7 @@ class Applications(Box):
         self.conn = get_hyprland_connection()
         self.icon_resolver = IconResolver()
         self.pinned = self.config.get("pinned_apps", [])
-        self.config_path = get_relative_path("../../../config/dock.json")
+        self.config_path = get_relative_path("../../../config/json/dock.json")
         self.app_map = {}
         self._all_apps = get_desktop_applications()
         self.app_identifiers = self._build_app_identifiers_map()
@@ -254,7 +254,7 @@ class Applications(Box):
             )
 
     def update_pinned_apps_file(self):
-        config_path = get_relative_path("../../../config/dock.json")
+        config_path = get_relative_path("../../../config/json/dock.json")
         try:
             with open(config_path, "w") as file:
                 json.dump(self.config, file, indent=4)
@@ -558,7 +558,7 @@ class Applications(Box):
             self.dock_instance.prevent_hiding(False)
 
         # Check if the drag ended outside the dock
-        if hasattr(self, '_dragged_widget') and self._dragged_widget:
+        if hasattr(self, "_dragged_widget") and self._dragged_widget:
             children = self.get_children()
             source_index = children.index(self._dragged_widget)
 
@@ -579,8 +579,8 @@ class Applications(Box):
                     self.update_applications()
 
         # Clear the dragged widget reference
-        if hasattr(self, '_dragged_widget'):
-            delattr(self, '_dragged_widget')
+        if hasattr(self, "_dragged_widget"):
+            delattr(self, "_dragged_widget")
 
     def get_focused(self):
         try:

@@ -28,7 +28,7 @@ CURRENT_HEIGHT = screen.get_height()
 
 
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example")
-CONFIG_FILE = get_relative_path("../config/config.json")
+CONFIG_FILE = get_relative_path("../config/json/config.json")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
 WORKSPACE_NUMS = False
@@ -40,7 +40,7 @@ DOCK_THEME = "Pills"
 
 def load_config():
     """Load the configuration from config.json"""
-    config_path = os.path.expanduser(f"~/{APP_NAME_CAP}/config/config.json")
+    config_path = os.path.expanduser(f"~/{APP_NAME_CAP}/config/json/config.json")
     config = {}
 
     if os.path.exists(config_path):

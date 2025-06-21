@@ -32,7 +32,9 @@ class OTPPlugin(PluginBase):
         self.display_name = "OTP Manager"
         self.description = "Manage TOTP codes and 2FA authentication"
 
-        self.secrets_file = Path(get_relative_path("../../../config/otp_accounts.json"))
+        self.secrets_file = Path(
+            get_relative_path("../../../config/json/accounts.json")
+        )
         self.secrets: Dict[str, Dict] = {}
         self.last_update = 0
 

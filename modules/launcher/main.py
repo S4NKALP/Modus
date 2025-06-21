@@ -791,10 +791,9 @@ class Launcher(Window):
                     self.selected_index += 1
                     self._update_selection()
                 else:
-                    # At last result, go to header buttons
-                    self.focus_mode = "header"
-                    self.header_button_index = 0
-                    self._update_header_focus()
+                    # At last result, wrap around to first result
+                    self.selected_index = 0
+                    self._update_selection()
             elif self.results:
                 # If not in results mode but have results, enter results mode at first item
                 self.focus_mode = "results"
@@ -810,13 +809,19 @@ class Launcher(Window):
                 self.header_buttons[self.header_button_index].emit("clicked")
                 return True
 
-            # Check for Shift+Enter to pin application
+            # Check for Shift+Enter for alternative actions
             if event.state & Gdk.ModifierType.SHIFT_MASK:
                 if self.results and 0 <= self.selected_index < len(self.results):
                     result = self.results[self.selected_index]
-                    if result.data and result.data.get("pin_action"):
-                        result.data["pin_action"]()
-                        return True
+                    if result.data:
+                        # Check for generic alternative action first
+                        if result.data.get("alt_action"):
+                            result.data["alt_action"]()
+                            return True
+                        # Fallback to pin_action for backward compatibility
+                        elif result.data.get("pin_action"):
+                            result.data["pin_action"]()
+                            return True
 
             # Check if the selected result has a custom widget with Entry fields
             if self.results and 0 <= self.selected_index < len(self.results):
@@ -1197,16 +1202,15 @@ class Launcher(Window):
                 self._focus_search_entry_without_selection()
 
     def _navigate_results_forward(self):
-        """Navigate to next result or exit results mode."""
+        """Navigate to next result or wrap around to first result."""
         if self.results and self.selected_index < len(self.results) - 1:
             # Move to next result
             self.selected_index += 1
             self._update_selection()
         else:
-            # Exit results mode and go to header
-            self.focus_mode = "header"
-            self.header_button_index = 0
-            self._update_header_focus()
+            # At last result, wrap around to first result
+            self.selected_index = 0
+            self._update_selection()
 
     def _navigate_results_backward(self):
         """Navigate to previous result or exit results mode."""

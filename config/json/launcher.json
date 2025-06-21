@@ -109,6 +109,11 @@
     "otp": {
       "icon": "auth",
       "description": "Manage TOTP codes and 2FA authentication"
+    },
+    "notif": {
+      "icon": "notifications",
+      "description": "Notification History - Search and manage notification history",
+      "examples": ["notif", "notif clear", "notif search term"]
     }
   },
   "settings": {

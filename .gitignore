@@ -1,4 +1,7 @@
-__pycache__
-config/assets/config.json
-config/dock.conf
-config/config.json
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+config/json/config.json
+config/json/dock.json
+config/json/accounts.json

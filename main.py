@@ -75,5 +75,4 @@ if __name__ == "__main__":
 
     app.set_css()
 
-
     app.run()

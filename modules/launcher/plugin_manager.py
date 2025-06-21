@@ -98,7 +98,8 @@ class PluginManager:
             "reminders",
             "network",
             "bluetooth",
-            "otp"
+            "otp",
+            "notifications",
         ]
 
         for plugin_name in default_plugins:

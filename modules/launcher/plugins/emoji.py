@@ -24,7 +24,7 @@ class EmojiPlugin(PluginBase):
         self.display_name = "Emoji"
         self.description = "Search and copy emojis"
         self.emoji_data = {}
-        self.emoji_path = get_relative_path("../../../config/emoji.json")
+        self.emoji_path = get_relative_path("../../../config/json/emoji.json")
 
     def initialize(self):
         """Initialize the emoji plugin."""
