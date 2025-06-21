@@ -182,6 +182,8 @@ file: str = "&#xeaa4;"
 calendar: str = "&#xea53;"
 connect: str = "&#xeade;"
 disconnect: str = "&#xfd16;"
+auth: str = "&#xeca0;"
+
 
 # otp
 check: str = "&#xea5e;"

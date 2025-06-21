@@ -80,24 +80,27 @@ class NotificationWidget(Box):
         self.timeout_ms = timeout_ms
         self._timeout_id = None
 
-   
         self.close_button_animator = Animator(
-            bezier_curve=(0.25, 0.1, 0.25, 1.0),  
-            duration=0.3,  
+            bezier_curve=(0.25, 0.1, 0.25, 1.0),
+            duration=0.3,
             min_value=0.0,
             max_value=1.0,
             repeat=False,
         )
-        self.close_button_animator.connect("notify::value", self.on_hover_animation_value_changed)
+        self.close_button_animator.connect(
+            "notify::value", self.on_hover_animation_value_changed
+        )
 
         self.timeout_progress_animator = Animator(
-            bezier_curve=(1.0, 0.0, 1.0, 1.0), 
-            duration=timeout_ms / 1000.0,  
+            bezier_curve=(1.0, 0.0, 1.0, 1.0),
+            duration=timeout_ms / 1000.0,
             min_value=0.0,
             max_value=1.0,
             repeat=False,
         )
-        self.timeout_progress_animator.connect("notify::value", self.on_timeout_progress_changed)
+        self.timeout_progress_animator.connect(
+            "notify::value", self.on_timeout_progress_changed
+        )
         self.timeout_progress_animator.connect("finished", self.on_timeout_finished)
 
         self.start_timeout()
@@ -223,10 +226,7 @@ class NotificationWidget(Box):
         )
 
     def create_close_button(self):
-        close_icon = Label(
-            name="notif-close-label",
-            markup=icons.cancel
-        )
+        close_icon = Label(name="notif-close-label", markup=icons.cancel)
 
         self.close_progress_bar = CircularProgressBar(
             name="notif-close-progress",
@@ -234,7 +234,7 @@ class NotificationWidget(Box):
             line_width=2,
             start_angle=0,
             end_angle=360,
-            value=0.0, 
+            value=0.0,
             min_value=0.0,
             max_value=1.0,
             child=close_icon,
@@ -270,17 +270,14 @@ class NotificationWidget(Box):
         # Only show chevron button if there's something to expand
         # (either long text that gets ellipsized or action buttons)
         has_expandable_content = (
-            (self.notification.body and len(self.notification.body) > 50) or  # Long text
-            bool(self.notification.actions)  # Has action buttons
+            (self.notification.body and len(self.notification.body) > 50)  # Long text
+            or bool(self.notification.actions)  # Has action buttons
         )
 
         if not has_expandable_content:
             return Box()  # Return empty box if nothing to expand
 
-        self.chevron_icon = Label(
-            name="notif-chevron-label",
-            markup=icons.chevron_down
-        )
+        self.chevron_icon = Label(name="notif-chevron-label", markup=icons.chevron_down)
 
         chevron_button = Button(
             name="notif-chevron-button",
@@ -302,9 +299,7 @@ class NotificationWidget(Box):
                 name="notification-expanded-content",
                 orientation="v",
                 spacing=8,
-                children=[
-                    self.create_action_buttons(notification)
-                ],
+                children=[self.create_action_buttons(notification)],
             )
         else:
             return Box()
@@ -320,17 +315,18 @@ class NotificationWidget(Box):
             self.chevron_icon.set_markup(icons.chevron_down)
 
         # Toggle body label properties
-        if hasattr(self, 'body_label') and self.body_label:
+        if hasattr(self, "body_label") and self.body_label:
             if self.is_expanded:
                 # Show full text without ellipsization and enable wrapping
-                self.body_label.set_markup(self.notification.body)  # Keep original newlines
-                self.body_label.set_property("ellipsize", 0) 
+                # Keep original newlines
+                self.body_label.set_markup(self.notification.body)
+                self.body_label.set_property("ellipsize", 0)
                 self.body_label.set_property("wrap", True)
-                self.body_label.set_property("wrap-mode", 2) 
+                self.body_label.set_property("wrap-mode", 2)
             else:
                 # Show truncated text with ellipsization
                 self.body_label.set_markup(self.notification.body.replace("\n", " "))
-                self.body_label.set_property("ellipsize", 3)  
+                self.body_label.set_property("ellipsize", 3)
                 self.body_label.set_property("wrap", False)
 
     def on_hover_animation_value_changed(self, animator, value):
@@ -339,7 +335,7 @@ class NotificationWidget(Box):
         pass
 
     def on_timeout_progress_changed(self, animator, value):
-        if hasattr(self, 'close_progress_bar'):
+        if hasattr(self, "close_progress_bar"):
             # Update progress bar value based on timeout progress (convert to float to avoid type issues)
             self.close_progress_bar.value = float(animator.value)
 
@@ -349,7 +345,7 @@ class NotificationWidget(Box):
 
     def start_timeout(self):
         self.stop_timeout()
-        if hasattr(self, 'timeout_progress_animator'):
+        if hasattr(self, "timeout_progress_animator"):
             self.timeout_progress_animator.play()
         self._timeout_id = GLib.timeout_add(self.timeout_ms, self.close_notification)
 
@@ -357,7 +353,7 @@ class NotificationWidget(Box):
         if self._timeout_id is not None:
             GLib.source_remove(self._timeout_id)
             self._timeout_id = None
-        if hasattr(self, 'timeout_progress_animator'):
+        if hasattr(self, "timeout_progress_animator"):
             self.timeout_progress_animator.stop()
 
     def close_notification(self):
@@ -373,9 +369,9 @@ class NotificationWidget(Box):
 
     def destroy(self):
         self.stop_timeout()
-        if hasattr(self, 'close_button_animator'):
+        if hasattr(self, "close_button_animator"):
             self.close_button_animator.stop()
-        if hasattr(self, 'timeout_progress_animator'):
+        if hasattr(self, "timeout_progress_animator"):
             self.timeout_progress_animator.stop()
         super().destroy()
 
@@ -391,7 +387,7 @@ class NotificationWidget(Box):
         self.set_pointer_cursor(button, "hand2")
 
         # On hover, show full progress (indicating ready to close)
-        if hasattr(self, 'close_progress_bar'):
+        if hasattr(self, "close_progress_bar"):
             self.close_progress_bar.value = 1.0
 
     def unhover_button(self, button):
@@ -399,7 +395,9 @@ class NotificationWidget(Box):
         self.set_pointer_cursor(button, "arrow")
 
         # On unhover, resume showing timeout progress
-        if hasattr(self, 'timeout_progress_animator') and hasattr(self, 'close_progress_bar'):
+        if hasattr(self, "timeout_progress_animator") and hasattr(
+            self, "close_progress_bar"
+        ):
             # Resume the timeout progress display
             current_progress = float(self.timeout_progress_animator.value)
             self.close_progress_bar.value = current_progress

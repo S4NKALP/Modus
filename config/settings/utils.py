@@ -270,15 +270,18 @@ bind = {bind_vars.get("prefix_app_launcher", "SUPER")}, {bind_vars.get("suffix_a
 bind = {bind_vars.get("prefix_cliphist", "SUPER")}, {bind_vars.get("suffix_cliphist", "V")}, exec, $fabricSend "launcher.show_launcher('clip ')"
 # Wallpapers
 bind = {bind_vars.get("prefix_wallpapers", "SUPER")}, {bind_vars.get("suffix_wallpapers", "W")}, exec, $fabricSend "launcher.show_launcher('wall ')"
-bind = {bind_vars.get("prefix_randwall", "SUPER")}, {bind_vars.get("suffix_randwall", "W")}, exec, $fabricSend "launcher.show_launcher('wall random', external=True)" # Random Wallpaper
+# Random Wallpaper
+bind = {bind_vars.get("prefix_randwall", "SUPER")}, {bind_vars.get("suffix_randwall", "W")}, exec, $fabricSend "launcher.show_launcher('wall random', external=True)"
 # Emoji Picker
-bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "E")}, exec, $fabricSend 'notch.open_notch("emoji")'
+# Emoji Picker
+bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "E")}, exec, $fabricSend "launcher.show_launcher('wall ')"
 # Power Menu
 bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", "ESCAPE")}, exec, $fabricSend "launcher.show_launcher('power ')"
-bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix_caffeine", "M")}, exec, $fabricSend "launcher.show_launcher('caffeine on', external=True)" # Toggle Caffeine
+# Toggle Caffeine
+bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix_caffeine", "M")}, exec, $fabricSend "launcher.show_launcher('caffeine on', external=True)"
 # Settings
 bind = {bind_vars.get("prefix_settings", "SUPER")}, {bind_vars.get("suffix_settings", "I")}, exec, uwsm-app $(python {home}/{APP_NAME_CAP}/config/config.py) # Settings
-# Restart Modus 
+# Restart Modus
 bind = {bind_vars.get("prefix_restart_inspector", "SUPER CTRL ALT")}, {bind_vars.get("suffix_restart_inspector", "B")}, exec, killall {APP_NAME}; uwsm-app $(GTK_DEBUG=interactive python {home}/.config/{APP_NAME_CAP}/main.py) # Restart with inspector
 
 # Wallpapers directory: {bind_vars.get("wallpapers_dir", "~/Modus/assets/wallpapers_example")}

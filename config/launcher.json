@@ -105,6 +105,10 @@
     "bt": {
       "icon": "bluetooth",
       "description": "Bluetooth - Manage Bluetooth devices and connections"
+    },
+    "otp": {
+      "icon": "auth",
+      "description": "Manage TOTP codes and 2FA authentication"
     }
   },
   "settings": {
