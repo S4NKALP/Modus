@@ -64,6 +64,30 @@
   border: 3px solid var(--red);
 }
 
+#battery-circle.discharging {
+  border: 3px solid var(--yellow);
+}
+
+#battery-circle.discharging-low {
+  border: 3px solid var(--orange);
+}
+
+#battery-circle.discharging-critical {
+  border: 3px solid var(--red-dim);
+}
+
+#battery-icon.discharging {
+  color: var(--yellow);
+}
+
+#battery-icon.discharging-low {
+  color: var(--orange);
+}
+
+#battery-icon.discharging-critical {
+  color: var(--red-dim);
+}
+
 /*
  * ── metrics ───────────────────────────────────────────────────────────
 */

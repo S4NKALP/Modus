@@ -394,14 +394,13 @@ class Applications(Box):
         for child in children:
             self.add(child)
 
-        # Only show children if there are any applications
-        # Note: Component-level visibility is handled by the parent DockComponents class
+        # Show/hide the entire component based on whether there are applications
         if len(children) > 0:
             self.show_all()
         else:
-            # Hide the widget content but don't override component-level visibility
-            for child in self.get_children():
-                child.hide()
+            # Hide the entire component when there are no applications
+            # This allows the dock to properly detect when it's empty and auto-hide
+            self.hide()
 
         return True
 

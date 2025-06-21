@@ -27,13 +27,17 @@ class NetworkPasswordEntry(Box):
         self.access_point = access_point
         self.network_plugin = network_plugin
 
+        # Make widget focusable for keyboard events
+        self.set_can_focus(True)
+        self.connect("key-press-event", self.on_key_press)
+
         # Password entry field
         self.password_entry = Entry(
             name="network-password-field",
             placeholder="Enter password",
             h_expand=True,
             h_align="fill",
-            visibility=False 
+            visibility=False
         )
 
         # Connect Enter key to connect action
@@ -41,7 +45,6 @@ class NetworkPasswordEntry(Box):
 
         # Auto-focus the password entry when widget is created
         GLib.timeout_add(100, self._focus_password_entry)
-
 
         # Add widgets to layout
         self.add(self.password_entry)
@@ -53,6 +56,24 @@ class NetworkPasswordEntry(Box):
         except Exception as e:
             print(f"Could not focus password entry: {e}")
         return False  # Don't repeat
+
+    def on_key_press(self, widget, event):
+        """Handle keyboard events for password entry."""
+        from gi.repository import Gdk
+
+        keyval = event.keyval
+
+        # Enter - connect to network
+        if keyval == Gdk.KEY_Return:
+            self.connect_to_network()
+            return True
+
+        # Escape - cancel password entry
+        if keyval == Gdk.KEY_Escape:
+            self.cancel_password_entry()
+            return True
+
+        return False
 
     def connect_to_network(self):
         """Connect to network with entered password."""
@@ -105,6 +126,7 @@ class NetworkPlugin(PluginBase):
     def initialize(self):
         """Initialize the network plugin."""
         self.set_triggers(["net"])
+        self.description = "Manage WiFi networks and connections. Keyboard: Enter to connect, Esc to cancel password entry"
 
     def cleanup(self):
         """Cleanup the network plugin."""

@@ -273,8 +273,7 @@ bind = {bind_vars.get("prefix_wallpapers", "SUPER")}, {bind_vars.get("suffix_wal
 # Random Wallpaper
 bind = {bind_vars.get("prefix_randwall", "SUPER")}, {bind_vars.get("suffix_randwall", "W")}, exec, $fabricSend "launcher.show_launcher('wall random', external=True)"
 # Emoji Picker
-# Emoji Picker
-bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "E")}, exec, $fabricSend "launcher.show_launcher('wall ')"
+bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "E")}, exec, $fabricSend "launcher.show_launcher('emoji ')"
 # Power Menu
 bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", "ESCAPE")}, exec, $fabricSend "launcher.show_launcher('power ')"
 # Toggle Caffeine

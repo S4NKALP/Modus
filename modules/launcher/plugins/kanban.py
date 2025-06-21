@@ -127,9 +127,13 @@ class KanbanNote(Gtk.EventBox):
         super().__init__()
         self.text = text
 
+        # Make focusable for keyboard events
+        self.set_can_focus(True)
+
         self.setup_ui()
         self.setup_dnd()
         self.connect("button-press-event", self.on_button_press)
+        self.connect("key-press-event", self.on_key_press)
 
     def setup_ui(self):
         self.box = Gtk.Box(name="kanban-note", spacing=4)
@@ -165,6 +169,24 @@ class KanbanNote(Gtk.EventBox):
         if event.type != Gdk.EventType._2BUTTON_PRESS:
             return True
         self.start_edit()
+        return False
+
+    def on_key_press(self, widget, event):
+        """Handle keyboard events for kanban notes."""
+        from gi.repository import Gdk
+
+        keyval = event.keyval
+
+        # Enter or F2 - start editing
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_F2):
+            self.start_edit()
+            return True
+
+        # Delete - remove note
+        if keyval == Gdk.KEY_Delete:
+            self.get_parent().destroy()
+            return True
+
         return False
 
     def on_drag_begin(self, widget, context):
@@ -405,12 +427,35 @@ class Kanban(Gtk.Box):
 
     def on_key_press(self, widget, event):
         """Handle key press events for the kanban widget."""
-        if event.keyval == Gdk.KEY_Return:
+        from gi.repository import Gdk
+
+        keyval = event.keyval
+
+        # Enter - add pending text as note
+        if keyval == Gdk.KEY_Return:
             if self.pending_add_text:
                 self.columns[0].add_note(self.pending_add_text)
                 self.save_state()
                 self.pending_add_text = None
                 return True
+
+        # Ctrl+N - add new note to first column
+        if keyval == Gdk.KEY_n and event.state & Gdk.ModifierType.CONTROL_MASK:
+            self.columns[0].on_add_clicked(None)
+            return True
+
+        # Ctrl+1, Ctrl+2, Ctrl+3 - add note to specific column
+        if event.state & Gdk.ModifierType.CONTROL_MASK:
+            if keyval == Gdk.KEY_1 and len(self.columns) > 0:
+                self.columns[0].on_add_clicked(None)
+                return True
+            elif keyval == Gdk.KEY_2 and len(self.columns) > 1:
+                self.columns[1].on_add_clicked(None)
+                return True
+            elif keyval == Gdk.KEY_3 and len(self.columns) > 2:
+                self.columns[2].on_add_clicked(None)
+                return True
+
         return False
 
     def on_hidden_entry_activate(self, entry):
@@ -471,7 +516,7 @@ class KanbanPlugin(PluginBase):
     def initialize(self):
         """Initialize the Kanban plugin."""
         self.set_triggers(["kanban", "kanban "])
-        self.description = "Kanban board for task management. Use 'kanban add <text>' to quickly add tasks."
+        self.description = "Kanban board for task management. Use 'kanban add <text>' to quickly add tasks. Keyboard: Enter/F2 to edit, Del to delete, Ctrl+N to add new note"
 
     def cleanup(self):
         """Cleanup the Kanban plugin."""

@@ -34,6 +34,10 @@ class CalendarWidget(Gtk.Box):
         self.today = datetime.date.today()
         self.plugin = plugin_instance
 
+        # Make widget focusable for keyboard events
+        self.set_can_focus(True)
+        self.connect("key-press-event", self._on_key_press)
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -127,6 +131,33 @@ class CalendarWidget(Gtk.Box):
         if self.plugin:
             self.plugin._navigate_to_next()
 
+    def _on_key_press(self, widget, event):
+        """Handle keyboard navigation for calendar."""
+        from gi.repository import Gdk
+
+        keyval = event.keyval
+
+        # Left arrow - previous month
+        if keyval == Gdk.KEY_Left:
+            if self.plugin:
+                self.plugin._navigate_to_previous()
+            return True
+
+        # Right arrow - next month
+        if keyval == Gdk.KEY_Right:
+            if self.plugin:
+                self.plugin._navigate_to_next()
+            return True
+
+        # Home - go to current month
+        if keyval == Gdk.KEY_Home:
+            if self.plugin:
+                self.plugin._reset_to_current_month()
+                self.plugin._force_launcher_refresh()
+            return True
+
+        return False
+
     def update_display(self, month: int, year: int):
         """Update the calendar to show a different month/year."""
         self.display_month = month
@@ -214,6 +245,7 @@ class CalendarPlugin(PluginBase):
     def initialize(self):
         """Initialize the Calendar plugin."""
         self.set_triggers(["cal", "cal "])
+        self.description = "Calendar with visual dates and navigation. Use ← → arrows for months, Home for current month"
 
     def cleanup(self):
         """Cleanup the Calendar plugin."""
@@ -306,7 +338,7 @@ class CalendarPlugin(PluginBase):
         results.append(
             Result(
                 title=f"Calendar - {month_name} {display_year}",
-                subtitle="Use ◀ ▶ buttons to navigate months",
+                subtitle="← → navigate months, Home for current month",
                 icon_markup=icons.calendar,
                 action=lambda: None,
                 relevance=1.0,

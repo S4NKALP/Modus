@@ -217,10 +217,16 @@ class Battery(Box):
         else:
             self.level.set_visible(False)
 
-        # Remove any existing profile classes
+        # Remove any existing profile and discharging classes
         self.circle.remove_style_class("power-saver")
         self.circle.remove_style_class("performance")
         self.circle.remove_style_class("balanced")
+        self.circle.remove_style_class("discharging")
+        self.circle.remove_style_class("discharging-low")
+        self.circle.remove_style_class("discharging-critical")
+        self.icon.remove_style_class("discharging")
+        self.icon.remove_style_class("discharging-low")
+        self.icon.remove_style_class("discharging-critical")
 
         # Apply power profile styling and icons
         if power_profile:
@@ -230,9 +236,35 @@ class Battery(Box):
             elif power_profile == "performance":
                 self.icon.set_markup(icons.power_performance)
             else:  # balanced
-                self.icon.set_markup(icons.battery)
+                # In balanced mode, show discharging icons when discharging
+                if state == "DISCHARGING":
+                    # Show different discharging icons and apply styling based on battery level
+                    if percentage <= 15:
+                        self.icon.set_markup(icons.bat_low)
+                        self.circle.add_style_class("discharging-critical")
+                        self.icon.add_style_class("discharging-critical")
+                    elif percentage <= 30:
+                        self.icon.set_markup(icons.alert)
+                        self.circle.add_style_class("discharging-low")
+                        self.icon.add_style_class("discharging-low")
+                    else:
+                        self.icon.set_markup(icons.bat_discharging)
+                        self.circle.add_style_class("discharging")
+                        self.icon.add_style_class("discharging")
+                elif state == "CHARGING":
+                    self.icon.set_markup(icons.charging)
+                else:
+                    self.icon.set_markup(icons.battery)
         else:
-            self.icon.set_markup(icons.battery)
+            # No power profile - show basic battery state icons
+            if state == "FULLY_CHARGED":
+                self.icon.set_markup(icons.battery)
+            elif state == "CHARGING":
+                self.icon.set_markup(icons.charging)
+            elif state == "DISCHARGING":
+                self.icon.set_markup(icons.discharging)
+            else:
+                self.icon.set_markup(icons.battery)
 
         # Apply alert styling if battery is low AND not charging
         if percentage <= 15 and not charging:
@@ -241,19 +273,6 @@ class Battery(Box):
         else:
             self.icon.remove_style_class("alert")
             self.circle.remove_style_class("alert")
-
-        # Update icon based on battery state if not in power profile mode
-        if not power_profile:
-            if state == "FULLY_CHARGED":
-                self.icon.set_markup(icons.battery)
-            elif state == "CHARGING":
-                self.icon.set_markup(icons.charging)
-            elif percentage <= 15 and state == "DISCHARGING":
-                self.icon.set_markup(icons.alert)
-            elif state == "DISCHARGING":
-                self.icon.set_markup(icons.discharging)
-            else:
-                self.icon.set_markup(icons.battery)
 
         self.set_visible(True)
         return True

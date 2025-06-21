@@ -22,6 +22,22 @@
   border-radius: 16px;
 }
 
+/* Keyboard focus styling for header buttons */
+#close-button.focused,
+#config-button.focused {
+  background-color: var(--primary);
+  border-radius: 16px;
+  box-shadow: 0 0 0 2px var(--primary-bright);
+}
+
+#close-button.focused #close-label {
+  color: var(--background);
+}
+
+#config-button.focused #config-label {
+  color: var(--background);
+}
+
 #close-button:active {
   background-color: var(--red-dim);
   border-radius: 40px;

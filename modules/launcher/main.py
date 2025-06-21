@@ -54,6 +54,10 @@ class Launcher(Window):
         # Trigger system
         self.triggered_plugin = None  # Currently active triggered plugin
 
+        # Focus management for header buttons
+        self.focus_mode = "search"  # "search", "results", "header"
+        self.header_button_index = 0  # 0 = config, 1 = close
+
         # Setup UI
         main_box = Box(
             name="launcher",
@@ -75,28 +79,37 @@ class Launcher(Window):
         self.search_entry.connect("changed", self._on_search_changed)
         self.search_entry.connect("activate", self._on_entry_activate)
 
+        # Create header buttons with references for keyboard navigation
+        self.config_button = Button(
+            name="config-button",
+            child=Label(name="config-label", markup=icons.config),
+            tooltip_text="Open Configuration (Ctrl+,)",
+            on_clicked=lambda *_: (
+                exec_shell_command_async(
+                    f"python {get_relative_path('../../config/config.py')}"
+                ),
+                self.close_launcher(),
+            ),
+        )
+
+        self.close_button = Button(
+            name="close-button",
+            child=Label(name="close-label", markup=icons.cancel),
+            tooltip_text="Close Launcher (Escape)",
+            on_clicked=lambda *_: self.close_launcher(),
+        )
+
+        # Store header buttons for keyboard navigation
+        self.header_buttons = [self.config_button, self.close_button]
+
         self.header_box = Box(
             name="header_box",
             spacing=10,
             orientation="h",
             children=[
-                Button(
-                    name="config-button",
-                    child=Label(name="config-label", markup=icons.config),
-                    on_clicked=lambda *_: (
-                        exec_shell_command_async(
-                            f"python {get_relative_path('../../config/config.py')}"
-                        ),
-                        self.close_launcher(),
-                    ),
-                ),
+                self.config_button,
                 self.search_entry,
-                Button(
-                    name="close-button",
-                    child=Label(name="close-label", markup=icons.cancel),
-                    tooltip_text="Exit",
-                    on_clicked=lambda *_: self.close_launcher(),
-                ),
+                self.close_button,
             ],
         )
 
@@ -180,17 +193,25 @@ class Launcher(Window):
             self.search_entry.set_text("")
             self._clear_results()
 
-        self.search_entry.grab_focus()
+        # Reset focus mode to search
+        self.focus_mode = "search"
+        self.header_button_index = 0
 
-        # Position cursor at the end if there's text
+        # Remove focus styling from header buttons
+        self._clear_header_focus()
+
+        # Focus search entry without selecting text
         if trigger_keyword:
-
+            # For trigger keywords, we want the cursor at the end
+            self.search_entry.grab_focus()
             def position_cursor():
                 if hasattr(self.search_entry, "set_position"):
                     self.search_entry.set_position(-1)  # Move caret to end
                 return False  # Only run once
-
             GLib.idle_add(position_cursor)
+        else:
+            # For normal opening, use our method that prevents text selection
+            self._focus_search_entry_without_selection()
 
         self.visible = True
 
@@ -210,6 +231,11 @@ class Launcher(Window):
         # Skip if still initializing
         if getattr(self, "_initializing", True):
             return
+
+        # Reset focus to search when user types
+        if self.focus_mode != "search":
+            self.focus_mode = "search"
+            self._clear_header_focus()
 
         query = entry.get_text().strip()
         self.query = query
@@ -735,21 +761,55 @@ class Launcher(Window):
             # Let normal backspace behavior continue for other cases
             return False
 
-        # Up/Down - navigate results
+        # Ctrl+, - Open configuration
+        if keyval == Gdk.KEY_comma and event.state & Gdk.ModifierType.CONTROL_MASK:
+            self.config_button.emit("clicked")
+            return True
+
+        # Up/Down - navigate results (alternative to Tab)
         if keyval == Gdk.KEY_Up:
-            if self.results:
-                self.selected_index = (self.selected_index - 1) % len(self.results)
+            if self.focus_mode == "results" and self.results:
+                if self.selected_index > 0:
+                    # Move to previous result
+                    self.selected_index -= 1
+                    self._update_selection()
+                else:
+                    # At first result, go back to search entry
+                    self.focus_mode = "search"
+                    self._focus_search_entry_without_selection()
+            elif self.results:
+                # If not in results mode but have results, enter results mode at last item
+                self.focus_mode = "results"
+                self.selected_index = len(self.results) - 1
                 self._update_selection()
             return True
 
         if keyval == Gdk.KEY_Down:
-            if self.results:
-                self.selected_index = (self.selected_index + 1) % len(self.results)
+            if self.focus_mode == "results" and self.results:
+                if self.selected_index < len(self.results) - 1:
+                    # Move to next result
+                    self.selected_index += 1
+                    self._update_selection()
+                else:
+                    # At last result, go to header buttons
+                    self.focus_mode = "header"
+                    self.header_button_index = 0
+                    self._update_header_focus()
+            elif self.results:
+                # If not in results mode but have results, enter results mode at first item
+                self.focus_mode = "results"
+                self.selected_index = 0
                 self._update_selection()
             return True
 
-        # Enter - activate selected result
+        # Enter - activate selected result or header button
         if keyval == Gdk.KEY_Return:
+            # Check if we're in header mode
+            if self.focus_mode == "header":
+                # Activate the selected header button
+                self.header_buttons[self.header_button_index].emit("clicked")
+                return True
+
             # Check for Shift+Enter to pin application
             if event.state & Gdk.ModifierType.SHIFT_MASK:
                 if self.results and 0 <= self.selected_index < len(self.results):
@@ -775,12 +835,63 @@ class Launcher(Window):
             self._activate_selected()
             return True
 
-        # Tab - cycle through results
+        # Tab - cycle through focus areas, results, and header buttons
         if keyval == Gdk.KEY_Tab:
+            if event.state & Gdk.ModifierType.SHIFT_MASK:
+                # Shift+Tab - reverse direction
+                if self.focus_mode == "header":
+                    # Navigate between header buttons in reverse
+                    self._navigate_header_buttons_backward()
+                elif self.focus_mode == "results":
+                    # Navigate through results in reverse
+                    self._navigate_results_backward()
+                else:
+                    self._cycle_focus_backward()
+            else:
+                # Tab - forward direction
+                if self.focus_mode == "header":
+                    # Navigate between header buttons forward
+                    self._navigate_header_buttons_forward()
+                elif self.focus_mode == "results":
+                    # Navigate through results forward
+                    self._navigate_results_forward()
+                else:
+                    self._cycle_focus_forward()
+            return True
+
+        # Page Up/Page Down - navigate results faster
+        if keyval == Gdk.KEY_Page_Up:
             if self.results:
-                self.selected_index = (self.selected_index + 1) % len(self.results)
+                self.selected_index = max(0, self.selected_index - 5)
                 self._update_selection()
             return True
+
+        if keyval == Gdk.KEY_Page_Down:
+            if self.results:
+                self.selected_index = min(len(self.results) - 1, self.selected_index + 5)
+                self._update_selection()
+            return True
+
+        # Home/End - go to first/last result
+        if keyval == Gdk.KEY_Home:
+            if self.results:
+                self.selected_index = 0
+                self._update_selection()
+            return True
+
+        if keyval == Gdk.KEY_End:
+            if self.results:
+                self.selected_index = len(self.results) - 1
+                self._update_selection()
+            return True
+
+        # Forward other keys to custom widgets if they can handle them
+        if self.results and 0 <= self.selected_index < len(self.results):
+            result = self.results[self.selected_index]
+            if result.custom_widget and hasattr(result.custom_widget, 'on_key_press'):
+                # Try to forward the key event to the custom widget
+                if result.custom_widget.on_key_press(result.custom_widget, event):
+                    return True
 
         return False
 
@@ -862,6 +973,13 @@ class Launcher(Window):
                     selected_widget = child
             # For custom widgets, we don't need to handle selection visually
             # since they manage their own interaction
+
+        # Focus custom widgets when selected for keyboard interaction
+        if self.results and 0 <= self.selected_index < len(self.results):
+            result = self.results[self.selected_index]
+            if result.custom_widget and result.custom_widget.get_can_focus():
+                # Give focus to the custom widget for keyboard interaction
+                result.custom_widget.grab_focus()
 
         # Scroll to make the selected item visible
         if selected_widget and self.results_scroll.get_visible():
@@ -961,6 +1079,145 @@ class Launcher(Window):
                 print(f"Error in _ensure_selected_visible: {e}")
 
         return False  # Don't repeat the idle callback
+
+    def _cycle_focus_forward(self):
+        """Cycle focus forward: search -> results -> header (first button)"""
+        if self.focus_mode == "search":
+            if self.results:
+                self.focus_mode = "results"
+                self._update_selection()
+            else:
+                self.focus_mode = "header"
+                self.header_button_index = 0
+                self._update_header_focus()
+        elif self.focus_mode == "results":
+            self.focus_mode = "header"
+            self.header_button_index = 0
+            self._update_header_focus()
+
+    def _cycle_focus_backward(self):
+        """Cycle focus backward: search -> header (last button) -> results -> search"""
+        if self.focus_mode == "search":
+            self.focus_mode = "header"
+            self.header_button_index = len(self.header_buttons) - 1
+            self._update_header_focus()
+        elif self.focus_mode == "results":
+            self.focus_mode = "search"
+            self._clear_header_focus()
+            self._focus_search_entry_without_selection()
+
+    def _update_header_focus(self):
+        """Update focus to the selected header button."""
+        # Remove focus from all buttons first
+        self._clear_header_focus()
+
+        # Add focus style to selected button
+        selected_button = self.header_buttons[self.header_button_index]
+        selected_button.add_style_class("focused")
+        selected_button.grab_focus()
+
+    def _clear_header_focus(self):
+        """Remove focus styling from all header buttons."""
+        for button in self.header_buttons:
+            button.remove_style_class("focused")
+
+
+
+    def _focus_search_entry_without_selection(self):
+        """Focus search entry and position cursor at end without selecting text."""
+        # First grab focus
+        self.search_entry.grab_focus()
+
+        # Use multiple approaches to prevent text selection
+        def clear_selection():
+            try:
+                text_length = len(self.search_entry.get_text())
+
+                # Method 1: Set position and clear selection
+                if hasattr(self.search_entry, "set_position"):
+                    self.search_entry.set_position(text_length)
+                if hasattr(self.search_entry, "select_region"):
+                    self.search_entry.select_region(text_length, text_length)
+
+                # Method 2: Try to access underlying GTK widget
+                try:
+                    # For fabric Entry widgets, try to get the actual GTK Entry
+                    if hasattr(self.search_entry, '_entry'):
+                        gtk_entry = self.search_entry._entry
+                    elif hasattr(self.search_entry, 'get_children') and self.search_entry.get_children():
+                        gtk_entry = self.search_entry.get_children()[0]
+                    else:
+                        gtk_entry = self.search_entry
+
+                    if hasattr(gtk_entry, 'set_position'):
+                        gtk_entry.set_position(text_length)
+                    if hasattr(gtk_entry, 'select_region'):
+                        gtk_entry.select_region(text_length, text_length)
+
+                except Exception:
+                    pass
+
+            except Exception as e:
+                print(f"Could not clear selection: {e}")
+            return False
+
+        # Schedule clearing selection after focus is established
+        GLib.idle_add(clear_selection)
+        # Also try with a small delay as backup
+        GLib.timeout_add(10, clear_selection)
+
+    def _navigate_header_buttons_forward(self):
+        """Navigate to next header button or exit header mode."""
+        if self.header_button_index < len(self.header_buttons) - 1:
+            # Move to next button
+            self.header_button_index += 1
+            self._update_header_focus()
+        else:
+            # Exit header mode and go to search
+            self.focus_mode = "search"
+            self._clear_header_focus()
+            self._focus_search_entry_without_selection()
+
+    def _navigate_header_buttons_backward(self):
+        """Navigate to previous header button or exit header mode."""
+        if self.header_button_index > 0:
+            # Move to previous button
+            self.header_button_index -= 1
+            self._update_header_focus()
+        else:
+            # Exit header mode and go to results or search
+            if self.results:
+                self.focus_mode = "results"
+                self.selected_index = len(self.results) - 1  # Go to last result
+                self._clear_header_focus()
+                self._update_selection()
+            else:
+                self.focus_mode = "search"
+                self._clear_header_focus()
+                self._focus_search_entry_without_selection()
+
+    def _navigate_results_forward(self):
+        """Navigate to next result or exit results mode."""
+        if self.results and self.selected_index < len(self.results) - 1:
+            # Move to next result
+            self.selected_index += 1
+            self._update_selection()
+        else:
+            # Exit results mode and go to header
+            self.focus_mode = "header"
+            self.header_button_index = 0
+            self._update_header_focus()
+
+    def _navigate_results_backward(self):
+        """Navigate to previous result or exit results mode."""
+        if self.results and self.selected_index > 0:
+            # Move to previous result
+            self.selected_index -= 1
+            self._update_selection()
+        else:
+            # Exit results mode and go to search
+            self.focus_mode = "search"
+            self._focus_search_entry_without_selection()
 
     def _activate_selected(self):
         """Activate the currently selected result."""
