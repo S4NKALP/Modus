@@ -46,7 +46,7 @@ class ApplicationsPlugin(PluginBase):
             if v is not None
         }
 
-        config_path = get_relative_path("../../../config/dock.json")
+        config_path = get_relative_path("../../../config/json/dock.json")
         try:
             with open(config_path, "r") as file:
                 data = json.load(file)
