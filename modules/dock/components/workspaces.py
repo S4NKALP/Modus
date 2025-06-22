@@ -1,21 +1,19 @@
 import json
 import subprocess
-from fabric.hyprland.service import Hyprland
-from fabric.hyprland.widgets import Workspaces, WorkspaceButton
-from fabric.widgets.button import Button
-import config.data as data
-from fabric.widgets.box import Box
 
+import config.data as data
+from fabric.hyprland.service import Hyprland
+from fabric.hyprland.widgets import WorkspaceButton, Workspaces
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
 
 CHINESE_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "〇"]
 
 
 class Workspace(Button):
     def __init__(self):
-        # Determine if invert style should be applied
-        should_invert = (
-            data.DOCK_THEME in ["Dense", "Edge"] or
-            (data.DOCK_THEME == "Pills" and data.DOCK_POSITION in ["Left", "Right"])
+        should_invert = data.DOCK_THEME in ["Dense", "Edge"] or (
+            data.DOCK_THEME == "Pills" and data.DOCK_POSITION in ["Left", "Right"]
         )
 
         super().__init__(
@@ -41,7 +39,6 @@ class Workspace(Button):
         return json.loads(active.decode("utf-8"))["name"]
 
     def _get_active_workspaces(self):
-        """Get list of workspaces that have windows"""
         clients_data = self.connection.send_command("j/clients").reply
         clients = json.loads(clients_data.decode("utf-8"))
 
@@ -56,11 +53,9 @@ class Workspace(Button):
         )
 
     def _on_click(self, _widget):
-        """Handle button click to cycle through workspaces"""
         self._cycle_workspace()
 
     def _cycle_workspace(self):
-        """Core logic to cycle through workspaces"""
         active_workspaces = self._get_active_workspaces()
 
         if not active_workspaces:
@@ -87,7 +82,6 @@ class Workspace(Button):
         self.set_label(str(self.activeWorkspace))
 
 
-# Create workspace components using Workspaces widget
 workspaces = Workspaces(
     name="workspaces",
     invert_scroll=True,
@@ -132,10 +126,8 @@ workspaces_num = Workspaces(
 )
 
 
-# Create the workspace button instance
 workspaceactive = Workspace()
 
-# Export the workspace widget based on configuration
 workspace = Box(
     name="workspaces-container",
     children=[

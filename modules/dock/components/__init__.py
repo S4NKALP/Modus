@@ -111,7 +111,15 @@ class DockComponents(Box):
 
         for component_name, widget in components.items():
             if component_name in self.component_visibility:
-                widget.set_visible(self.component_visibility[component_name])
+                # Special handling for applications component - let it manage its own visibility
+                if component_name == "applications":
+                    # Only apply config visibility if the component has content
+                    if hasattr(widget, '_update_visibility_based_on_content'):
+                        widget._update_visibility_based_on_content()
+                    else:
+                        widget.set_visible(self.component_visibility[component_name])
+                else:
+                    widget.set_visible(self.component_visibility[component_name])
 
     def toggle_component_visibility(self, component_name):
         components = {

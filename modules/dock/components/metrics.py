@@ -1,8 +1,9 @@
 import json
-import logging
 import subprocess
 
+import config.data as data
 import psutil
+import utils.icons as icons
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
@@ -10,16 +11,8 @@ from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from gi.repository import GLib
 
-import config.data as data
-import utils.icons as icons
-
-logger = logging.getLogger(__name__)
 
 class MetricsProvider:
-    """
-    Class responsible for obtaining centralized CPU, memory, disk usage, and battery metrics.
-    It updates periodically so that all widgets querying it display the same values.
-    """
     def __init__(self):
         self.gpu = []
         self.cpu = 0.0
@@ -47,13 +40,11 @@ class MetricsProvider:
         return True
 
     def _start_gpu_update_async(self):
-        """Starts a new GLib thread to run nvtop in the background."""
         self._gpu_update_running = True
 
         GLib.Thread.new("nvtop-thread", lambda _: self._run_nvtop_in_thread(), None)
 
     def _run_nvtop_in_thread(self):
-        """Runs nvtop via subprocess in a separate GLib thread."""
         output = None
         error_message = None
         try:
@@ -61,34 +52,29 @@ class MetricsProvider:
             output = result
         except FileNotFoundError:
             error_message = "nvtop command not found."
-            logger.warning(error_message)
         except subprocess.CalledProcessError as e:
-            error_message = f"nvtop failed with exit code {e.returncode}: {e.stderr.strip()}"
-            logger.error(error_message)
+            error_message = (
+                f"nvtop failed with exit code {e.returncode}: {e.stderr.strip()}"
+            )
         except subprocess.TimeoutExpired:
             error_message = "nvtop command timed out."
-            logger.error(error_message)
         except Exception as e:
             error_message = f"Unexpected error running nvtop: {e}"
-            logger.error(error_message)
 
         GLib.idle_add(self._process_gpu_output, output, error_message)
         self._gpu_update_running = False
 
     def _process_gpu_output(self, output, error_message):
-        """Process nvtop JSON output on the main loop."""
         try:
             if error_message:
-                logger.error(f"GPU update failed: {error_message}")
                 self.gpu = []
             elif output:
                 try:
                     info = json.loads(output)
                     if not info or not isinstance(info, list):
-                        logger.warning("Invalid nvtop data format")
                         self.gpu = []
                         return False
-                        
+
                     gpu_utils = []
                     for gpu in info:
                         if not isinstance(gpu, dict):
@@ -102,19 +88,15 @@ class MetricsProvider:
                             gpu_utils.append(util_value)
                         except (ValueError, TypeError):
                             continue
-                    
+
                     self.gpu = gpu_utils if gpu_utils else []
-                except (KeyError, ValueError, TypeError, AttributeError) as e:
-                    logger.error(f"Failed parsing nvtop JSON: {e}")
+                except (KeyError, ValueError, TypeError, AttributeError):
                     self.gpu = []
             else:
-                logger.warning("nvtop returned no output.")
                 self.gpu = []
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {e}")
+        except json.JSONDecodeError:
             self.gpu = []
-        except Exception as e:
-            logger.error(f"Error processing nvtop output: {e}")
+        except Exception:
             self.gpu = []
 
         return False
@@ -130,44 +112,41 @@ class MetricsProvider:
             result = subprocess.check_output(["nvtop", "-s"], text=True, timeout=5)
             if not result.strip():
                 return []
-                
+
             info = json.loads(result)
             if not info or not isinstance(info, list):
                 return []
-                
+
             valid_gpus = []
             for gpu in info:
                 if not isinstance(gpu, dict):
                     continue
-                    
+
                 gpu_data = {
-                    'device_name': gpu.get('device_name', 'GPU'),
-                    'gpu_util': gpu.get('gpu_util', '0%'),
-                    'mem_util': gpu.get('mem_util', '0%'),
-                    'temperature': gpu.get('temperature', '0 C'),
-                    'power': gpu.get('power', '0 W')
+                    "device_name": gpu.get("device_name", "GPU"),
+                    "gpu_util": gpu.get("gpu_util", "0%"),
+                    "mem_util": gpu.get("mem_util", "0%"),
+                    "temperature": gpu.get("temperature", "0 C"),
+                    "power": gpu.get("power", "0 W"),
                 }
                 valid_gpus.append(gpu_data)
-                
+
             return valid_gpus
-                
+
         except FileNotFoundError:
-            logger.warning("nvtop not found; GPU info unavailable.")
             return []
-        except subprocess.CalledProcessError as e:
-            logger.error(f"nvtop init sync failed: {e}")
+        except subprocess.CalledProcessError:
             return []
         except subprocess.TimeoutExpired:
-            logger.error("nvtop init call timed out.")
             return []
-        except json.JSONDecodeError as e:
-            logger.error(f"Init JSON parse error: {e}")
+        except json.JSONDecodeError:
             return []
-        except Exception as e:
-            logger.error(f"Unexpected error during GPU init: {e}")
+        except Exception:
             return []
 
+
 shared_provider = MetricsProvider()
+
 
 class SingularMetric:
     def __init__(self, id, name, icon):
@@ -205,6 +184,7 @@ class SingularMetric:
     def markup(self):
         return f"{self.icon_markup} {self.name_markup}: {self.level.get_label()}"
 
+
 class Metrics(Button):
     def __init__(self, **kwargs):
         super().__init__(name="metrics", **kwargs)
@@ -216,17 +196,53 @@ class Metrics(Button):
             all_visible=True,
         )
 
-        visible = getattr(data, "METRICS_VISIBLE", {'cpu': True, 'ram': True, 'swap': True, 'disk': True, 'gpu': True})
-        disks = [SingularMetric("disk", f"DISK ({path})" if len(data.METRICS_DISKS) != 1 else "DISK", icons.disk)
-                 for path in data.METRICS_DISKS] if visible.get('disk', True) else []
+        visible = getattr(
+            data,
+            "METRICS_VISIBLE",
+            {"cpu": True, "ram": True, "swap": True, "disk": True, "gpu": True},
+        )
+        disks = (
+            [
+                SingularMetric(
+                    "disk",
+                    f"DISK ({path})" if len(data.METRICS_DISKS) != 1 else "DISK",
+                    icons.disk,
+                )
+                for path in data.METRICS_DISKS
+            ]
+            if visible.get("disk", True)
+            else []
+        )
 
         gpu_info = shared_provider.get_gpu_info()
-        gpus = [SingularMetric(f"gpu", f"GPU ({v['device_name']})" if len(gpu_info) != 1 else "GPU", icons.gpu)
-                for v in gpu_info] if visible.get('gpu', True) else []
+        gpus = (
+            [
+                SingularMetric(
+                    "gpu",
+                    f"GPU ({v['device_name']})" if len(gpu_info) != 1 else "GPU",
+                    icons.gpu,
+                )
+                for v in gpu_info
+            ]
+            if visible.get("gpu", True)
+            else []
+        )
 
-        self.cpu = SingularMetric("cpu", "CPU", icons.cpu) if visible.get('cpu', True) else None
-        self.ram = SingularMetric("ram", "RAM", icons.memory) if visible.get('ram', True) else None
-        self.swap = SingularMetric("swap", "SWAP", icons.swap) if visible.get('swap', True) else None
+        self.cpu = (
+            SingularMetric("cpu", "CPU", icons.cpu)
+            if visible.get("cpu", True)
+            else None
+        )
+        self.ram = (
+            SingularMetric("ram", "RAM", icons.memory)
+            if visible.get("ram", True)
+            else None
+        )
+        self.swap = (
+            SingularMetric("swap", "SWAP", icons.swap)
+            if visible.get("swap", True)
+            else None
+        )
         self.disk = disks
         self.gpu = gpus
 
@@ -259,9 +275,12 @@ class Metrics(Button):
     def on_click(self, widget):
         if not data.VERTICAL:
             self.labels_visible = not self.labels_visible
-            if self.cpu: self.cpu.revealer.set_reveal_child(self.labels_visible)
-            if self.ram: self.ram.revealer.set_reveal_child(self.labels_visible)
-            if self.swap: self.swap.revealer.set_reveal_child(self.labels_visible)
+            if self.cpu:
+                self.cpu.revealer.set_reveal_child(self.labels_visible)
+            if self.ram:
+                self.ram.revealer.set_reveal_child(self.labels_visible)
+            if self.swap:
+                self.swap.revealer.set_reveal_child(self.labels_visible)
             for disk in self.disk:
                 disk.revealer.set_reveal_child(self.labels_visible)
             for gpu in self.gpu:
@@ -289,11 +308,20 @@ class Metrics(Button):
                 gpu.level.set_label(self._format_percentage(int(gpus[i])))
 
         tooltip_metrics = []
-        if self.disk: tooltip_metrics.extend(self.disk)
-        if self.ram: tooltip_metrics.append(self.ram)
-        if self.swap: tooltip_metrics.append(self.swap)
-        if self.cpu: tooltip_metrics.append(self.cpu)
-        if self.gpu: tooltip_metrics.extend(self.gpu)
-        self.set_tooltip_markup((" - " if not data.VERTICAL else "\n").join([v.markup() for v in tooltip_metrics]))
+        if self.disk:
+            tooltip_metrics.extend(self.disk)
+        if self.ram:
+            tooltip_metrics.append(self.ram)
+        if self.swap:
+            tooltip_metrics.append(self.swap)
+        if self.cpu:
+            tooltip_metrics.append(self.cpu)
+        if self.gpu:
+            tooltip_metrics.extend(self.gpu)
+        self.set_tooltip_markup(
+            (" - " if not data.VERTICAL else "\n").join(
+                [v.markup() for v in tooltip_metrics]
+            )
+        )
 
         return True

@@ -1,12 +1,11 @@
-from gi.repository import GLib, Gdk
-
-from fabric.widgets.label import Label
-from fabric.widgets.box import Box
-from fabric.widgets.circularprogressbar import CircularProgressBar
-from fabric.widgets.button import Button
-from services.battery import Battery as BatteryService
-import utils.icons as icons
 import config.data as data
+import utils.icons as icons
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.circularprogressbar import CircularProgressBar
+from fabric.widgets.label import Label
+from gi.repository import Gdk, GLib
+from services.battery import Battery as BatteryService
 
 
 class Battery(Box):

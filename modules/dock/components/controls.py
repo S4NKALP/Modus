@@ -1,3 +1,5 @@
+import config.data as data
+import utils.icons as icons
 from fabric.audio.service import Audio
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -5,11 +7,7 @@ from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-from fabric.widgets.scale import Scale
 from gi.repository import Gdk, GLib
-
-import config.data as data
-import utils.icons as icons
 from services.brightness import Brightness as BrightnessService
 
 
@@ -22,17 +20,19 @@ class Brightness(Box):
             return
 
         self.progress_bar = CircularProgressBar(
-            name="button-brightness", size=28, line_width=2,
-            start_angle=150, end_angle=390,
+            name="button-brightness",
+            size=28,
+            line_width=2,
+            start_angle=150,
+            end_angle=390,
         )
-        self.brightness_label = Label(name="brightness-label", markup=icons.brightness_high)
+        self.brightness_label = Label(
+            name="brightness-label", markup=icons.brightness_high
+        )
         self.brightness_button = Button(child=self.brightness_label)
         self.event_box = EventBox(
             events=["scroll", "smooth-scroll"],
-            child=Overlay(
-                child=self.progress_bar,
-                overlays=self.brightness_button
-            ),
+            child=Overlay(child=self.progress_bar, overlays=self.brightness_button),
         )
         self.event_box.connect("scroll-event", self.on_scroll)
         self.add(self.event_box)
@@ -49,21 +49,19 @@ class Brightness(Box):
     def on_scroll(self, _, event):
         if self.brightness.max_screen == -1:
             return
-        
+
         current_brightness = self.brightness.screen_brightness
         max_brightness = self.brightness.max_screen
         step = max(1, int(max_brightness * 0.01))  # 1% of max brightness
-        
+
         if event.direction == Gdk.ScrollDirection.SMOOTH:
-            if hasattr(event, 'delta_y') and abs(event.delta_y) > 0:
+            if hasattr(event, "delta_y") and abs(event.delta_y) > 0:
                 new_brightness = current_brightness - int(event.delta_y * step)
                 self.brightness.screen_brightness = new_brightness
-            # Remove delta_x handling
         elif event.direction == Gdk.ScrollDirection.UP:
             self.brightness.screen_brightness = current_brightness + step
         elif event.direction == Gdk.ScrollDirection.DOWN:
             self.brightness.screen_brightness = current_brightness - step
-
 
     def on_progress_value_changed(self, widget, pspec):
         if self._updating_from_brightness:
@@ -72,10 +70,15 @@ class Brightness(Box):
         new_brightness = int(new_norm * self.brightness.max_screen)
         self._pending_value = new_brightness
         if self._update_source_id is None:
-            self._update_source_id = GLib.timeout_add(50, self._update_brightness_callback)
+            self._update_source_id = GLib.timeout_add(
+                50, self._update_brightness_callback
+            )
 
     def _update_brightness_callback(self):
-        if self._pending_value is not None and self._pending_value != self.brightness.screen_brightness:
+        if (
+            self._pending_value is not None
+            and self._pending_value != self.brightness.screen_brightness
+        ):
             self.brightness.screen_brightness = self._pending_value
             self._pending_value = None
             return True
@@ -105,13 +108,17 @@ class Brightness(Box):
             GLib.source_remove(self._update_source_id)
         super().destroy()
 
+
 class Volume(Box):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-vol", **kwargs)
         self.audio = Audio()
         self.progress_bar = CircularProgressBar(
-            name="button-volume", size=28, line_width=2,
-            start_angle=150, end_angle=390,
+            name="button-volume",
+            size=28,
+            line_width=2,
+            start_angle=150,
+            end_angle=390,
         )
         self.vol_label = Label(name="vol-label", markup=icons.vol_high)
         self.vol_button = Button(on_clicked=self.toggle_mute, child=self.vol_label)
@@ -148,12 +155,12 @@ class Volume(Box):
     def on_scroll(self, _, event):
         if not self.audio.speaker:
             return
-        
+
         current_volume = self.audio.speaker.volume
         step = 1
-        
+
         if event.direction == Gdk.ScrollDirection.SMOOTH:
-            if hasattr(event, 'delta_y') and abs(event.delta_y) > 0:
+            if hasattr(event, "delta_y") and abs(event.delta_y) > 0:
                 new_volume = current_volume - int(event.delta_y * step)
                 self.audio.speaker.volume = new_volume
             # Remove delta_x handling
@@ -165,7 +172,7 @@ class Volume(Box):
     def on_speaker_changed(self, *_):
         if not self.audio.speaker:
             return
-        
+
         vol_high_icon = icons.vol_high
         vol_medium_icon = icons.vol_medium
         vol_mute_icon = icons.vol_off
@@ -178,7 +185,7 @@ class Volume(Box):
             vol_off_icon = icons.bluetooth_disconnected
 
         self.progress_bar.value = self.audio.speaker.volume / 100
-        
+
         if self.audio.speaker.muted:
             self.vol_label.set_markup(vol_mute_icon)
             self.progress_bar.add_style_class("muted")
@@ -196,13 +203,17 @@ class Volume(Box):
         else:
             self.vol_label.set_markup(vol_off_icon)
 
+
 class MicroPhone(Box):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-mic", **kwargs)
         self.audio = Audio()
         self.progress_bar = CircularProgressBar(
-            name="button-mic", size=28, line_width=2,
-            start_angle=150, end_angle=390,
+            name="button-mic",
+            size=28,
+            line_width=2,
+            start_angle=150,
+            end_angle=390,
         )
         self.mic_label = Label(name="mic-label", markup=icons.mic)
         self.mic_button = Button(on_clicked=self.toggle_mute, child=self.mic_label)
@@ -240,9 +251,8 @@ class MicroPhone(Box):
         if not self.audio.microphone:
             return
         if event.direction == Gdk.ScrollDirection.SMOOTH:
-            if hasattr(event, 'delta_y') and abs(event.delta_y) > 0:
+            if hasattr(event, "delta_y") and abs(event.delta_y) > 0:
                 self.audio.microphone.volume -= event.delta_y
-            # Remove delta_x handling
         elif event.direction == Gdk.ScrollDirection.UP:
             self.audio.microphone.volume += 1
         elif event.direction == Gdk.ScrollDirection.DOWN:
@@ -251,9 +261,9 @@ class MicroPhone(Box):
     def on_microphone_changed(self, *_):
         if not self.audio.microphone:
             return
-        
+
         self.progress_bar.value = self.audio.microphone.volume / 100
-        
+
         if self.audio.microphone.muted:
             self.mic_label.set_markup(icons.mic_mute)
             self.progress_bar.add_style_class("muted")
@@ -271,11 +281,12 @@ class MicroPhone(Box):
         else:
             self.mic_label.set_markup(icons.mic_mute)
 
+
 class Controls(Box):
     def __init__(self, **kwargs):
         brightness = BrightnessService.get_initial()
         children = []
-        if (brightness.screen_brightness != -1):
+        if brightness.screen_brightness != -1:
             children.append(Brightness())
         children.extend([Volume(), MicroPhone()])
         super().__init__(
