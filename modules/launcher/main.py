@@ -253,7 +253,7 @@ class Launcher(Window):
         # If query is exactly ':', show all triggers
         if query == ":":
             self._show_available_triggers()
-        # If query matches a trigger exactly (with or without space), do not re-show suggestions
+        # If query matches a trigger exactly (with or without space), handle trigger activation
         elif any(
             query == trig or query == f"{trig} "
             for trig in [
@@ -262,8 +262,34 @@ class Launcher(Window):
                 for t in p.get_triggers()
             ]
         ):
-            # Do nothing, let the user type after the trigger
-            GLib.timeout_add(150, self._perform_search, query)
+            # Check if we need to add space immediately for exact trigger matches
+            if not query.endswith(" "):
+                # This is an exact trigger match without space - add space immediately
+                trigger_text_with_space = f"{query} "
+
+                # Temporarily disable search change handling to prevent recursion
+                self._auto_adding_space = True
+                self.search_entry.set_text(trigger_text_with_space)
+
+                # Position cursor at the end
+                def position_cursor():
+                    if hasattr(self.search_entry, "set_position"):
+                        self.search_entry.set_position(-1)  # Move caret to end
+                    if hasattr(self.search_entry, "select_region"):
+                        self.search_entry.select_region(
+                            len(trigger_text_with_space), len(trigger_text_with_space)
+                        )  # No selection
+                    self._auto_adding_space = False
+                    return False  # Only run once
+
+                GLib.idle_add(position_cursor)
+
+                # Update query and trigger search with the new text
+                self.query = trigger_text_with_space
+                GLib.timeout_add(50, self._perform_search, trigger_text_with_space)
+            else:
+                # Already has space, proceed with normal search
+                GLib.timeout_add(150, self._perform_search, query)
         elif query:
             # Debounce search to avoid too many queries
             GLib.timeout_add(150, self._perform_search, query)
@@ -306,7 +332,8 @@ class Launcher(Window):
                 current_text = self.search_entry.get_text()
 
                 # If the current text is exactly the trigger word (no space), add space automatically
-                if current_text.strip() == trigger_word and not current_text.endswith(" "):
+                if (current_text.strip() == trigger_word and not current_text.endswith(" ")
+                    and not getattr(self, "_auto_adding_space", False)):
                     # Add space after trigger keyword
                     trigger_text_with_space = f"{trigger_word} "
 
