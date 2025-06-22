@@ -1017,10 +1017,9 @@ class HyprConfGUI(Window):
 
             print(f"{time.time():.4f}: Modus restart commands issued via Popen.")
             end_time = time.time()
+            total_time = end_time - start_time
             print(
-                f"{end_time:.4f}: Background task finished (Total: {
-                    end_time - start_time:.4f
-                }s)."
+                f"{end_time:.4f}: Background task finished (Total: {total_time:.4f}s)."
             )
 
         thread = threading.Thread(target=_apply_and_reload_task_thread)
