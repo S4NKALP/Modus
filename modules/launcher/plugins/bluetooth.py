@@ -1,13 +1,9 @@
-"""
-Bluetooth plugin for the launcher.
-Manage Bluetooth devices, connections, and adapter settings.
-"""
-
 from typing import List
+
+import utils.icons as icons
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import utils.icons as icons
 
 
 class BluetoothPlugin(PluginBase):
@@ -41,6 +37,7 @@ class BluetoothPlugin(PluginBase):
         if self._scan_timeout_id:
             try:
                 from gi.repository import GLib
+
                 GLib.source_remove(self._scan_timeout_id)
                 self._scan_timeout_id = None
             except Exception:
@@ -114,9 +111,15 @@ class BluetoothPlugin(PluginBase):
                 battery_info = ""
                 if device.battery_percentage > 0:
                     battery_info = f" ({device.battery_percentage:.0f}%)"
-                return f"Connected to {device.alias}", f"Device: {device.type}{battery_info}"
+                return (
+                    f"Connected to {device.alias}",
+                    f"Device: {device.type}{battery_info}",
+                )
             else:
-                return f"Connected to {len(connected_devices)} devices", "Multiple devices connected"
+                return (
+                    f"Connected to {len(connected_devices)} devices",
+                    "Multiple devices connected",
+                )
         elif self.bluetooth_client.scanning:
             return "Scanning for devices...", "Looking for nearby Bluetooth devices"
         else:
@@ -126,7 +129,11 @@ class BluetoothPlugin(PluginBase):
         """Get appropriate icon for a bluetooth device based on its type."""
         device_type = device.type.lower()
 
-        if "audio" in device_type or "headphone" in device_type or "headset" in device_type:
+        if (
+            "audio" in device_type
+            or "headphone" in device_type
+            or "headset" in device_type
+        ):
             return icons.headphones
         elif "mouse" in device_type or "keyboard" in device_type:
             return icons.keyboard
@@ -153,6 +160,7 @@ class BluetoothPlugin(PluginBase):
             if self._scan_timeout_id:
                 try:
                     from gi.repository import GLib
+
                     GLib.source_remove(self._scan_timeout_id)
                     self._scan_timeout_id = None
                 except Exception:
@@ -186,6 +194,7 @@ class BluetoothPlugin(PluginBase):
         if self._scan_timeout_id:
             try:
                 from gi.repository import GLib
+
                 GLib.source_remove(self._scan_timeout_id)
                 self._scan_timeout_id = None
             except Exception:
@@ -200,6 +209,7 @@ class BluetoothPlugin(PluginBase):
 
         # Stop scanning if plugin hasn't been used for 10 seconds
         import time
+
         current_time = time.time()
         if current_time - self._last_query_time > 10:
             self._stop_scanning()
@@ -222,14 +232,18 @@ class BluetoothPlugin(PluginBase):
 
     def _create_connect_action(self, device: BluetoothDevice):
         """Create a connect action function with proper closure."""
+
         def connect_action():
             return self._connect_device(device)
+
         return connect_action
 
     def _create_disconnect_action(self, device: BluetoothDevice):
         """Create a disconnect action function with proper closure."""
+
         def disconnect_action():
             return self._disconnect_device(device)
+
         return disconnect_action
 
     def _force_launcher_refresh(self):
@@ -242,13 +256,16 @@ class BluetoothPlugin(PluginBase):
                 try:
                     # Try to access the launcher through the fabric Application
                     from fabric import Application
+
                     app = Application.get_default()
 
-                    if app and hasattr(app, 'launcher'):
+                    if app and hasattr(app, "launcher"):
                         launcher = app.launcher
-                        if launcher and hasattr(launcher, '_perform_search'):
+                        if launcher and hasattr(launcher, "_perform_search"):
                             # Get current query and trigger a search
-                            current_query = launcher.query if hasattr(launcher, 'query') else ""
+                            current_query = (
+                                launcher.query if hasattr(launcher, "query") else ""
+                            )
                             if not current_query:
                                 # If no query, use the trigger to force refresh
                                 current_query = "bt list"
@@ -259,9 +276,15 @@ class BluetoothPlugin(PluginBase):
 
                     # Fallback: try to find launcher instance through other means
                     import gc
+
                     for obj in gc.get_objects():
-                        if hasattr(obj, '__class__') and obj.__class__.__name__ == 'Launcher':
-                            if hasattr(obj, '_perform_search') and hasattr(obj, 'query'):
+                        if (
+                            hasattr(obj, "__class__")
+                            and obj.__class__.__name__ == "Launcher"
+                        ):
+                            if hasattr(obj, "_perform_search") and hasattr(
+                                obj, "query"
+                            ):
                                 current_query = obj.query if obj.query else "bt list"
                                 obj._perform_search(current_query)
                                 return False
@@ -281,12 +304,16 @@ class BluetoothPlugin(PluginBase):
         """Process bluetooth queries."""
         # Update last query time to track plugin activity
         import time
+
         self._last_query_time = time.time()
 
         # Schedule periodic check for inactive scanning
         try:
             from gi.repository import GLib
-            GLib.timeout_add_seconds(15, lambda: (self._check_and_stop_inactive_scanning(), False))
+
+            GLib.timeout_add_seconds(
+                15, lambda: (self._check_and_stop_inactive_scanning(), False)
+            )
         except Exception:
             pass
 
@@ -339,7 +366,6 @@ class BluetoothPlugin(PluginBase):
                         data={"type": "toggle", "keep_launcher_open": True},
                     )
                 )
-
 
             else:
                 results.append(
@@ -411,7 +437,10 @@ class BluetoothPlugin(PluginBase):
                         relevance = 1.0
                     elif device.connecting:
                         subtitle = f"Connecting... • {device.type}"
-                        action = lambda: None
+
+                        def action():
+                            return None
+
                         relevance = 0.9
                     else:
                         subtitle = f"Disconnected • {device.type} • Click to connect"
@@ -431,7 +460,7 @@ class BluetoothPlugin(PluginBase):
                                 "device_address": device.address,
                                 "device_name": device.alias,
                                 "connected": device.connected,
-                                "keep_launcher_open": True
+                                "keep_launcher_open": True,
                             },
                         )
                     )
@@ -470,14 +499,14 @@ class BluetoothPlugin(PluginBase):
 
             return results
 
-
-
         # Search for devices by name (like network plugin search)
         if self.bluetooth_client and self.bluetooth_client.enabled:
             devices = self.bluetooth_client.devices
             matching_devices = [
-                device for device in devices
-                if query_lower in device.alias.lower() or query_lower in device.name.lower()
+                device
+                for device in devices
+                if query_lower in device.alias.lower()
+                or query_lower in device.name.lower()
             ]
 
             if matching_devices:
@@ -501,7 +530,10 @@ class BluetoothPlugin(PluginBase):
                         relevance = 1.0
                     elif device.connecting:
                         subtitle = f"Connecting... • {device.type}"
-                        action = lambda: None
+
+                        def action():
+                            return None
+
                         relevance = 0.9
                     else:
                         subtitle = f"Disconnected • {device.type} • Click to connect"
@@ -521,7 +553,7 @@ class BluetoothPlugin(PluginBase):
                                 "device_address": device.address,
                                 "device_name": device.alias,
                                 "connected": device.connected,
-                                "keep_launcher_open": True
+                                "keep_launcher_open": True,
                             },
                         )
                     )
@@ -549,7 +581,9 @@ class BluetoothPlugin(PluginBase):
                     title="Bluetooth Not Available",
                     subtitle="Enable Bluetooth to search for devices",
                     icon_markup=icons.bluetooth_off,
-                    action=lambda: self._toggle_bluetooth() if self.bluetooth_client else None,
+                    action=lambda: self._toggle_bluetooth()
+                    if self.bluetooth_client
+                    else None,
                     relevance=0.5,
                     plugin_name=self.display_name,
                     data={"type": "info"},

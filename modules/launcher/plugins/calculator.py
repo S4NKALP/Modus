@@ -1,8 +1,3 @@
-"""
-Calculator plugin for the launcher.
-Evaluates mathematical expressions and converts units.
-"""
-
 import math
 import re
 import subprocess
@@ -64,7 +59,7 @@ class CalculatorPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the files plugin."""
-        self.set_triggers(["=", "= "])
+        self.set_triggers(["="])
 
     def _cleanup_cache(self):
         """Clean up old cache entries."""

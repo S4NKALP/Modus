@@ -1,19 +1,15 @@
-"""
-Notification History plugin for the launcher.
-Provides access to notification history with search, view, and management capabilities.
-"""
-
 import time
 from datetime import datetime
 from typing import List, Optional
+
+import utils.icons as icons
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+from gi.repository import GdkPixbuf
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from services import notification_service
-from gi.repository import GdkPixbuf, GLib
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.button import Button
-import utils.icons as icons
 
 
 class NotificationDetailWidget(Box):
@@ -42,7 +38,7 @@ class NotificationDetailWidget(Box):
             label=f"📧 {self.notification_data.get('app_name', 'Unknown')}",
             name="notification-detail-title",
             h_align="start",
-            h_expand=True
+            h_expand=True,
         )
         header_box.add(title_label)
 
@@ -50,7 +46,7 @@ class NotificationDetailWidget(Box):
         close_btn = Button(
             child=Label(markup=icons.cancel, name="notification-close-icon"),
             name="notification-close-btn",
-            on_clicked=lambda *_: self.plugin._close_detail_view()
+            on_clicked=lambda *_: self.plugin._close_detail_view(),
         )
         header_box.add(close_btn)
 
@@ -60,24 +56,24 @@ class NotificationDetailWidget(Box):
         content_box = Box(orientation="v", spacing=4)
 
         # Summary
-        summary = self.notification_data.get('summary', 'No title')
+        summary = self.notification_data.get("summary", "No title")
         summary_label = Label(
             label=f"Subject: {summary}",
             name="notification-detail-summary",
             h_align="start",
-            ellipsize="end"
+            ellipsize="end",
         )
         content_box.add(summary_label)
 
         # Body content
-        body = self.notification_data.get('body', '')
+        body = self.notification_data.get("body", "")
         if body:
             body_label = Label(
                 label=body,
                 name="notification-detail-body",
                 h_align="start",
                 v_align="start",
-                ellipsize="none"
+                ellipsize="none",
             )
             # Set line wrapping using properties
             body_label.set_property("wrap", True)
@@ -85,12 +81,10 @@ class NotificationDetailWidget(Box):
             content_box.add(body_label)
 
         # Timestamp
-        timestamp = self.notification_data.get('timestamp', time.time())
+        timestamp = self.notification_data.get("timestamp", time.time())
         time_str = self.plugin._format_timestamp(timestamp)
         time_label = Label(
-            label=f"Time: {time_str}",
-            name="notification-detail-time",
-            h_align="start"
+            label=f"Time: {time_str}", name="notification-detail-time", h_align="start"
         )
         content_box.add(time_label)
 
@@ -101,9 +95,11 @@ class NotificationDetailWidget(Box):
 
         # Remove button
         remove_btn = Button(
-            child=Label(markup=f"{icons.trash} Remove", name="notification-action-label"),
+            child=Label(
+                markup=f"{icons.trash} Remove", name="notification-action-label"
+            ),
             name="notification-action-btn",
-            on_clicked=lambda *_: self._remove_notification()
+            on_clicked=lambda *_: self._remove_notification(),
         )
         actions_box.add(remove_btn)
 
@@ -111,7 +107,7 @@ class NotificationDetailWidget(Box):
 
     def _remove_notification(self):
         """Remove this notification."""
-        notif_id = self.notification_data.get('notification_id', 0)
+        notif_id = self.notification_data.get("notification_id", 0)
         self.plugin._clear_notification(notif_id)
 
 
@@ -129,16 +125,20 @@ class NotificationsPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the plugin."""
-        self.set_triggers(["notif", "notif "])
+        self.set_triggers(["notif"])
 
         # Connect to notification service signals to refresh when notifications change
-        self.notification_service.connect("notification_count", self._on_notification_count_changed)
+        self.notification_service.connect(
+            "notification_count", self._on_notification_count_changed
+        )
 
     def cleanup(self):
         """Cleanup the plugin."""
         # Disconnect from notification service signals
         try:
-            self.notification_service.disconnect("notification_count", self._on_notification_count_changed)
+            self.notification_service.disconnect(
+                "notification_count", self._on_notification_count_changed
+            )
         except:
             pass
 
@@ -166,18 +166,20 @@ class NotificationsPlugin(PluginBase):
         """Get icon for notification."""
         try:
             # Try to use notification's image first
-            if hasattr(notification, 'image_pixbuf') and notification.image_pixbuf:
+            if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
                 return notification.image_pixbuf.scale_simple(
                     32, 32, GdkPixbuf.InterpType.BILINEAR
                 )
 
             # Try app icon
-            if hasattr(notification, 'app_icon') and notification.app_icon:
+            if hasattr(notification, "app_icon") and notification.app_icon:
                 if notification.app_icon.startswith("file://"):
                     icon_path = notification.app_icon[7:]
                     try:
                         pixbuf = GdkPixbuf.Pixbuf.new_from_file(icon_path)
-                        return pixbuf.scale_simple(32, 32, GdkPixbuf.InterpType.BILINEAR)
+                        return pixbuf.scale_simple(
+                            32, 32, GdkPixbuf.InterpType.BILINEAR
+                        )
                     except:
                         pass
 
@@ -191,7 +193,7 @@ class NotificationsPlugin(PluginBase):
             return ""
         if len(text) <= max_length:
             return text
-        return text[:max_length-3] + "..."
+        return text[: max_length - 3] + "..."
 
     def _trigger_refresh(self):
         """Trigger launcher refresh to return to default notification view."""
@@ -223,7 +225,9 @@ class NotificationsPlugin(PluginBase):
                             hasattr(obj, "__class__")
                             and obj.__class__.__name__ == "Launcher"
                         ):
-                            if hasattr(obj, "search_entry") and hasattr(obj, "_perform_search"):
+                            if hasattr(obj, "search_entry") and hasattr(
+                                obj, "_perform_search"
+                            ):
                                 current_text = obj.search_entry.get_text()
                                 obj._perform_search(current_text)
                                 return False
@@ -255,18 +259,34 @@ class NotificationsPlugin(PluginBase):
             count_after = len(self.notification_service.all_notifications)
 
             # Debug: Print removal result
-            print(f"[NotificationPlugin] Notifications before: {count_before}, after: {count_after}")
+            print(
+                f"[NotificationPlugin] Notifications before: {count_before}, after: {
+                    count_after
+                }"
+            )
 
             if count_after < count_before:
-                print(f"[NotificationPlugin] Successfully removed notification {notification_id}")
+                print(
+                    f"[NotificationPlugin] Successfully removed notification {
+                        notification_id
+                    }"
+                )
             else:
-                print(f"[NotificationPlugin] Warning: Notification {notification_id} may not have been removed")
+                print(
+                    f"[NotificationPlugin] Warning: Notification {
+                        notification_id
+                    } may not have been removed"
+                )
 
             # Trigger immediate refresh using the same pattern as OTP plugin
             self._trigger_refresh()
 
         except Exception as e:
-            print(f"[NotificationPlugin] Error removing notification {notification_id}: {e}")
+            print(
+                f"[NotificationPlugin] Error removing notification {notification_id}: {
+                    e
+                }"
+            )
             # Still try to refresh even if there was an error
             self._trigger_refresh()
 
@@ -297,7 +317,11 @@ class NotificationsPlugin(PluginBase):
     def _on_notification_count_changed(self, service, count: int):
         """Handle notification count changes (new notifications added or removed)."""
         try:
-            print(f"[NotificationPlugin] Notification count changed to {count}, triggering refresh")
+            print(
+                f"[NotificationPlugin] Notification count changed to {
+                    count
+                }, triggering refresh"
+            )
             self._trigger_refresh()
         except Exception as e:
             print(f"[NotificationPlugin] Error handling notification count change: {e}")
@@ -311,7 +335,7 @@ class NotificationsPlugin(PluginBase):
 
     def _show_notification_details(self, notification_data: dict):
         """Show detailed view of a notification."""
-        notif_id = notification_data.get('notification_id', 0)
+        notif_id = notification_data.get("notification_id", 0)
         self.showing_detail_for = notif_id
         self._trigger_refresh()
 
@@ -329,31 +353,38 @@ class NotificationsPlugin(PluginBase):
             try:
                 notifications = self.notification_service.get_deserialized()
                 for notif in notifications:
-                    notif_data = notif.serialize() if hasattr(notif, 'serialize') else {}
-                    notif_id = notif_data.get('id', 0)
+                    notif_data = (
+                        notif.serialize() if hasattr(notif, "serialize") else {}
+                    )
+                    notif_id = notif_data.get("id", 0)
 
                     if notif_id == self.showing_detail_for:
                         # Create detail widget for this notification
                         detail_data = {
-                            'notification_id': notif_id,
-                            'app_name': getattr(notif, 'app_name', 'Unknown'),
-                            'timestamp': getattr(notif, 'timestamp', time.time()),
-                            'summary': getattr(notif, 'summary', 'No title'),
-                            'body': getattr(notif, 'body', '')
+                            "notification_id": notif_id,
+                            "app_name": getattr(notif, "app_name", "Unknown"),
+                            "timestamp": getattr(notif, "timestamp", time.time()),
+                            "summary": getattr(notif, "summary", "No title"),
+                            "body": getattr(notif, "body", ""),
                         }
 
                         detail_widget = NotificationDetailWidget(detail_data, self)
 
-                        results.append(Result(
-                            title="Notification Details",
-                            subtitle="Press Escape to go back to list",
-                            icon_markup=icons.notifications,
-                            action=lambda: None,
-                            relevance=1.0,
-                            plugin_name=self.name,
-                            custom_widget=detail_widget,
-                            data={"type": "detail_view", "keep_launcher_open": True}
-                        ))
+                        results.append(
+                            Result(
+                                title="Notification Details",
+                                subtitle="Press Escape to go back to list",
+                                icon_markup=icons.notifications,
+                                action=lambda: None,
+                                relevance=1.0,
+                                plugin_name=self.name,
+                                custom_widget=detail_widget,
+                                data={
+                                    "type": "detail_view",
+                                    "keep_launcher_open": True,
+                                },
+                            )
+                        )
                         return results
             except Exception as e:
                 print(f"Error showing notification details: {e}")
@@ -361,72 +392,90 @@ class NotificationsPlugin(PluginBase):
 
         # Handle special commands
         if query_string.lower() in ["clear"]:
-            results.append(Result(
-                title="Clear All Notifications",
-                subtitle="Remove all notifications from history",
-                description="This will permanently delete all notification history",
-                icon_markup=icons.trash,
-                relevance=1.0,
-                plugin_name=self.name,
-                action=self._clear_all_notifications
-            ))
+            results.append(
+                Result(
+                    title="Clear All Notifications",
+                    subtitle="Remove all notifications from history",
+                    description="This will permanently delete all notification history",
+                    icon_markup=icons.trash,
+                    relevance=1.0,
+                    plugin_name=self.name,
+                    action=self._clear_all_notifications,
+                )
+            )
             return results
 
         # Handle DND commands
         if query_string.lower() in ["off"]:
             current_dnd = self.notification_service.dont_disturb
-            results.append(Result(
-                title="Enable Do Not Disturb",
-                subtitle="Turn off notification popups" + (" (already enabled)" if current_dnd else ""),
-                description="Notifications will still be saved to history but won't show popups",
-                icon_markup=icons.notifications_off,
-                relevance=1.0,
-                plugin_name=self.name,
-                action=lambda: self._toggle_dnd(True),
-                data={"keep_launcher_open": True}
-            ))
+            results.append(
+                Result(
+                    title="Enable Do Not Disturb",
+                    subtitle="Turn off notification popups"
+                    + (" (already enabled)" if current_dnd else ""),
+                    description="Notifications will still be saved to history but won't show popups",
+                    icon_markup=icons.notifications_off,
+                    relevance=1.0,
+                    plugin_name=self.name,
+                    action=lambda: self._toggle_dnd(True),
+                    data={"keep_launcher_open": True},
+                )
+            )
             return results
 
         if query_string.lower() in ["on"]:
             current_dnd = self.notification_service.dont_disturb
-            results.append(Result(
-                title="Disable Do Not Disturb",
-                subtitle="Turn on notification popups" + (" (already disabled)" if not current_dnd else ""),
-                description="Notifications will show popups normally",
-                icon_markup=icons.notifications,
-                relevance=1.0,
-                plugin_name=self.name,
-                action=lambda: self._toggle_dnd(False),
-                data={"keep_launcher_open": True}
-            ))
+            results.append(
+                Result(
+                    title="Disable Do Not Disturb",
+                    subtitle="Turn on notification popups"
+                    + (" (already disabled)" if not current_dnd else ""),
+                    description="Notifications will show popups normally",
+                    icon_markup=icons.notifications,
+                    relevance=1.0,
+                    plugin_name=self.name,
+                    action=lambda: self._toggle_dnd(False),
+                    data={"keep_launcher_open": True},
+                )
+            )
             return results
 
         # Handle remove command
-        if query_string.lower().startswith("remove ") or query_string.lower().startswith("delete "):
-            search_term = query_string[7:].strip() if query_string.lower().startswith("remove ") else query_string[7:].strip()
+        if query_string.lower().startswith(
+            "remove "
+        ) or query_string.lower().startswith("delete "):
+            search_term = (
+                query_string[7:].strip()
+                if query_string.lower().startswith("remove ")
+                else query_string[7:].strip()
+            )
             if search_term:
-                results.append(Result(
-                    title=f"Remove notifications containing '{search_term}'",
-                    subtitle="Search for notifications to remove",
-                    description="This will show notifications matching your search term for removal",
-                    icon_markup=icons.trash,
-                    relevance=1.0,
-                    plugin_name=self.name,
-                    action=lambda: None  # Will be handled by showing matching notifications
-                ))
+                results.append(
+                    Result(
+                        title=f"Remove notifications containing '{search_term}'",
+                        subtitle="Search for notifications to remove",
+                        description="This will show notifications matching your search term for removal",
+                        icon_markup=icons.trash,
+                        relevance=1.0,
+                        plugin_name=self.name,
+                        action=lambda: None,  # Will be handled by showing matching notifications
+                    )
+                )
 
         try:
             # Get notifications from service
             notifications = self.notification_service.get_deserialized()
 
             if not notifications:
-                results.append(Result(
-                    title="No notifications found",
-                    subtitle="Your notification history is empty",
-                    icon_markup=icons.notifications,
-                    relevance=0.5,
-                    plugin_name=self.name
-                ))
+                results.append(
+                    Result(
+                        title="No notifications found",
+                        subtitle="Your notification history is empty",
+                        icon_markup=icons.notifications,
+                        relevance=0.5,
+                        plugin_name=self.name,
+                    )
+                )
                 return results
 
             # Show count if no query
@@ -436,33 +485,39 @@ class NotificationsPlugin(PluginBase):
 
                 # Add DND status result
                 if dnd_status:
-                    results.append(Result(
-                        title="Do Not Disturb: ON",
-                        subtitle="Notification popups are disabled • Type 'on' to enable",
-                        icon_markup=icons.notifications_off,
-                        relevance=0.9,
-                        plugin_name=self.name,
-                        action=lambda: self._toggle_dnd(False),
-                        data={"keep_launcher_open": True}
-                    ))
+                    results.append(
+                        Result(
+                            title="Do Not Disturb: ON",
+                            subtitle="Notification popups are disabled • Type 'on' to enable",
+                            icon_markup=icons.notifications_off,
+                            relevance=0.9,
+                            plugin_name=self.name,
+                            action=lambda: self._toggle_dnd(False),
+                            data={"keep_launcher_open": True},
+                        )
+                    )
                 else:
-                    results.append(Result(
-                        title="Do Not Disturb: OFF",
-                        subtitle="Notification popups are enabled • Type 'off' to disable",
-                        icon_markup=icons.notifications,
-                        relevance=0.9,
-                        plugin_name=self.name,
-                        action=lambda: self._toggle_dnd(True),
-                        data={"keep_launcher_open": True}
-                    ))
+                    results.append(
+                        Result(
+                            title="Do Not Disturb: OFF",
+                            subtitle="Notification popups are enabled • Type 'off' to disable",
+                            icon_markup=icons.notifications,
+                            relevance=0.9,
+                            plugin_name=self.name,
+                            action=lambda: self._toggle_dnd(True),
+                            data={"keep_launcher_open": True},
+                        )
+                    )
 
-                results.append(Result(
-                    title=f"Notification History ({count} notifications)",
-                    subtitle="Type to search notifications or 'clear' to remove all",
-                    icon_markup=icons.notifications,
-                    relevance=0.8,
-                    plugin_name=self.name
-                ))
+                results.append(
+                    Result(
+                        title=f"Notification History ({count} notifications)",
+                        subtitle="Type to search notifications or 'clear' to remove all",
+                        icon_markup=icons.notifications,
+                        relevance=0.8,
+                        plugin_name=self.name,
+                    )
+                )
 
             # Filter notifications based on query
             query_lower = query_string.lower() if query_string else ""
@@ -470,16 +525,18 @@ class NotificationsPlugin(PluginBase):
 
             for notif in notifications:
                 # Get notification data
-                notif_data = notif.serialize() if hasattr(notif, 'serialize') else {}
-                notif_id = notif_data.get('id', 0)
-                timestamp = getattr(notif, 'timestamp', time.time())
+                notif_data = notif.serialize() if hasattr(notif, "serialize") else {}
+                notif_id = notif_data.get("id", 0)
+                timestamp = getattr(notif, "timestamp", time.time())
 
                 # Search in summary, body, and app name
-                searchable_text = " ".join([
-                    getattr(notif, 'summary', ''),
-                    getattr(notif, 'body', ''),
-                    getattr(notif, 'app_name', '')
-                ]).lower()
+                searchable_text = " ".join(
+                    [
+                        getattr(notif, "summary", ""),
+                        getattr(notif, "body", ""),
+                        getattr(notif, "app_name", ""),
+                    ]
+                ).lower()
 
                 if not query_lower or query_lower in searchable_text:
                     filtered_notifications.append((notif, notif_id, timestamp))
@@ -493,9 +550,9 @@ class NotificationsPlugin(PluginBase):
 
             # Create results
             for notif, notif_id, timestamp in filtered_notifications:
-                summary = getattr(notif, 'summary', 'No title')
-                body = getattr(notif, 'body', '')
-                app_name = getattr(notif, 'app_name', 'Unknown')
+                summary = getattr(notif, "summary", "No title")
+                body = getattr(notif, "body", "")
+                app_name = getattr(notif, "app_name", "Unknown")
 
                 # Create title and subtitle
                 title = self._truncate_text(summary, 50)
@@ -519,25 +576,35 @@ class NotificationsPlugin(PluginBase):
                     icon_markup=icons.notifications if not icon else None,
                     relevance=1.0,
                     plugin_name=self.name,
-                    action=lambda nd={"notification_id": notif_id, "app_name": app_name, "timestamp": timestamp, "summary": summary, "body": body}: self._show_notification_details(nd),
+                    action=lambda nd={
+                        "notification_id": notif_id,
+                        "app_name": app_name,
+                        "timestamp": timestamp,
+                        "summary": summary,
+                        "body": body,
+                    }: self._show_notification_details(nd),
                     data={
                         "notification_id": notif_id,
                         "app_name": app_name,
                         "timestamp": timestamp,
                         "can_remove": True,
-                        "alt_action": lambda nid=notif_id: self._clear_notification(nid),
-                        "keep_launcher_open": True
-                    }
+                        "alt_action": lambda nid=notif_id: self._clear_notification(
+                            nid
+                        ),
+                        "keep_launcher_open": True,
+                    },
                 )
                 results.append(result)
 
         except Exception as e:
-            results.append(Result(
-                title="Error loading notifications",
-                subtitle=str(e),
-                icon_markup=icons.alert,
-                relevance=0.0,
-                plugin_name=self.name
-            ))
+            results.append(
+                Result(
+                    title="Error loading notifications",
+                    subtitle=str(e),
+                    icon_markup=icons.alert,
+                    relevance=0.0,
+                    plugin_name=self.name,
+                )
+            )
 
         return results

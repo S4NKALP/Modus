@@ -1,16 +1,12 @@
-"""
-Pomodoro plugin for the launcher.
-Implements the Pomodoro Technique timer with work/break cycles.
-"""
-
+import subprocess
 import threading
 import time
-import subprocess
 from typing import List
-from modules.launcher.plugin_base import PluginBase
-from modules.launcher.result import Result
+
 import utils.icons as icons
 from gi.repository import GLib
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
 
 
 class PomodoroTimer:
@@ -35,10 +31,19 @@ class PomodoroTimer:
 
     def _send_notification_async(self, title, message):
         """Send a desktop notification asynchronously."""
+
         def send_notification():
             try:
                 subprocess.run(
-                    ["notify-send", "-a", "Pomodoro Timer", "-i", "timer", title, message],
+                    [
+                        "notify-send",
+                        "-a",
+                        "Pomodoro Timer",
+                        "-i",
+                        "timer",
+                        title,
+                        message,
+                    ],
                     check=False,
                 )
             except Exception as e:
@@ -50,6 +55,7 @@ class PomodoroTimer:
 
     def _send_countdown_notification_async(self, seconds_left):
         """Send countdown notification asynchronously."""
+
         def send_countdown():
             try:
                 subprocess.run(
@@ -224,7 +230,9 @@ class PomodoroTimer:
         else:
             period_type = f"Work (Cycle {self.current_cycle})"
 
-        self._cached_status = f"{period_type} - {remaining_minutes:02d}:{remaining_seconds:02d} | Total: {self.total_cycles_completed}"
+        self._cached_status = f"{period_type} - {remaining_minutes:02d}:{
+            remaining_seconds:02d
+        } | Total: {self.total_cycles_completed}"
         self._last_status_update = current_time
 
     def get_status(self):
@@ -257,7 +265,7 @@ class PomodoroPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the Pomodoro plugin."""
-        self.set_triggers(["pomo", "pomo "])
+        self.set_triggers(["pomo"])
 
     def cleanup(self):
         """Cleanup the Pomodoro plugin."""
@@ -266,6 +274,7 @@ class PomodoroPlugin(PluginBase):
     def _force_refresh(self):
         """Force refresh the launcher to update the display."""
         try:
+
             def trigger_refresh():
                 try:
                     # Fallback: try to find launcher instance through other means

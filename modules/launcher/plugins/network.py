@@ -1,16 +1,13 @@
-"""
-Network plugin for the launcher.
-Manage WiFi networks, connect/disconnect, and view network status.
-"""
-
 from typing import List
+
+import utils.icons as icons
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
+from gi.repository import GLib
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import utils.icons as icons
 from services.network import NetworkClient
-from gi.repository import GLib
+
 
 class NetworkPasswordEntry(Box):
     """
@@ -19,10 +16,7 @@ class NetworkPasswordEntry(Box):
 
     def __init__(self, access_point, network_plugin, **kwargs):
         super().__init__(
-            name="network-password-entry",
-            orientation="h",
-            spacing=8,
-            **kwargs
+            name="network-password-entry", orientation="h", spacing=8, **kwargs
         )
         self.access_point = access_point
         self.network_plugin = network_plugin
@@ -37,7 +31,7 @@ class NetworkPasswordEntry(Box):
             placeholder="Enter password",
             h_expand=True,
             h_align="fill",
-            visibility=False
+            visibility=False,
         )
 
         # Connect Enter key to connect action
@@ -169,8 +163,10 @@ class NetworkPlugin(PluginBase):
             return icons.loader
 
         # Check ethernet first
-        if (self.network_client.ethernet_device and
-            self.network_client.ethernet_device.state == "activated"):
+        if (
+            self.network_client.ethernet_device
+            and self.network_client.ethernet_device.state == "activated"
+        ):
             return icons.world
 
         # Check WiFi
@@ -191,8 +187,10 @@ class NetworkPlugin(PluginBase):
             return "Network Loading...", "Initializing network client"
 
         # Check ethernet first
-        if (self.network_client.ethernet_device and
-            self.network_client.ethernet_device.state == "activated"):
+        if (
+            self.network_client.ethernet_device
+            and self.network_client.ethernet_device.state == "activated"
+        ):
             speed = self.network_client.ethernet_device.speed
             return "Connected via Ethernet", f"Speed: {speed}"
 
@@ -204,7 +202,10 @@ class NetworkPlugin(PluginBase):
         else:
             active_ap = self.network_client.wifi_device.active_access_point
             if active_ap:
-                return f"Connected to {active_ap.ssid}", f"Signal: {active_ap.strength}%"
+                return (
+                    f"Connected to {active_ap.ssid}",
+                    f"Signal: {active_ap.strength}%",
+                )
             else:
                 return "WiFi Disconnected", "No active connection"
 
@@ -216,8 +217,11 @@ class NetworkPlugin(PluginBase):
 
     def _disconnect_wifi(self):
         """Disconnect from current WiFi network and keep launcher open."""
-        if (self.network_client and self.network_client.wifi_device and
-            self.network_client.wifi_device.active_access_point):
+        if (
+            self.network_client
+            and self.network_client.wifi_device
+            and self.network_client.wifi_device.active_access_point
+        ):
             self.network_client.wifi_device.disconnect_wifi()
         return None  # Keep launcher open to show disconnected state
 
@@ -238,13 +242,12 @@ class NetworkPlugin(PluginBase):
                 return None
 
             # Validate access point
-            if not access_point or not hasattr(access_point, 'ssid'):
+            if not access_point or not hasattr(access_point, "ssid"):
                 return None
 
             # Validate password for secured networks
             if access_point.requires_password and not password:
                 return None
-
 
             # Use our own safer connection method to avoid NetworkManager errors
             self._safe_connect_to_wifi(access_point, password)
@@ -266,13 +269,14 @@ class NetworkPlugin(PluginBase):
                 print("NetworkManager client or device not available")
                 return False
 
-
             # Check for existing connections first
             existing_connection = None
             for connection in client.get_connections():
                 wifi_setting = connection.get_setting_wireless()
                 if wifi_setting:
-                    conn_ssid = NM.utils_ssid_to_utf8(wifi_setting.get_ssid().get_data())
+                    conn_ssid = NM.utils_ssid_to_utf8(
+                        wifi_setting.get_ssid().get_data()
+                    )
                     if conn_ssid == ssid:
                         existing_connection = connection
                         break
@@ -282,8 +286,11 @@ class NetworkPlugin(PluginBase):
                 def activate_existing():
                     try:
                         client.activate_connection_async(
-                            existing_connection, device, None, None,
-                            self._on_connection_result
+                            existing_connection,
+                            device,
+                            None,
+                            None,
+                            self._on_connection_result,
                         )
                     except Exception as e:
                         print(f"Error activating existing connection: {e}")
@@ -294,7 +301,9 @@ class NetworkPlugin(PluginBase):
                 # Create new connection with delay to prevent assertion errors
                 def create_new_connection():
                     try:
-                        self._create_and_activate_connection(ssid, password, client, device)
+                        self._create_and_activate_connection(
+                            ssid, password, client, device
+                        )
                     except Exception as e:
                         print(f"Error creating new connection: {e}")
                     return False
@@ -351,12 +360,16 @@ class NetworkPlugin(PluginBase):
                         def activate_new():
                             try:
                                 client_obj.activate_connection_async(
-                                    new_connection, device, None, None,
-                                    self._on_connection_result
+                                    new_connection,
+                                    device,
+                                    None,
+                                    None,
+                                    self._on_connection_result,
                                 )
                             except Exception as e:
                                 print(f"Error activating new connection: {e}")
                             return False
+
                         GLib.timeout_add(100, activate_new)
                     else:
                         print(f"✗ Failed to create connection profile for {ssid}")
@@ -399,13 +412,16 @@ class NetworkPlugin(PluginBase):
                 try:
                     # Try to access the launcher through the fabric Application
                     from fabric import Application
+
                     app = Application.get_default()
 
-                    if app and hasattr(app, 'launcher'):
+                    if app and hasattr(app, "launcher"):
                         launcher = app.launcher
-                        if launcher and hasattr(launcher, '_perform_search'):
+                        if launcher and hasattr(launcher, "_perform_search"):
                             # Get current query and trigger a search
-                            current_query = launcher.query if hasattr(launcher, 'query') else ""
+                            current_query = (
+                                launcher.query if hasattr(launcher, "query") else ""
+                            )
                             if not current_query:
                                 # If no query, use the trigger to force refresh
                                 current_query = "net list"
@@ -416,13 +432,18 @@ class NetworkPlugin(PluginBase):
 
                     # Fallback: try to find launcher instance through other means
                     import gc
+
                     for obj in gc.get_objects():
-                        if hasattr(obj, '__class__') and obj.__class__.__name__ == 'Launcher':
-                            if hasattr(obj, '_perform_search') and hasattr(obj, 'query'):
+                        if (
+                            hasattr(obj, "__class__")
+                            and obj.__class__.__name__ == "Launcher"
+                        ):
+                            if hasattr(obj, "_perform_search") and hasattr(
+                                obj, "query"
+                            ):
                                 current_query = obj.query if obj.query else "net list"
                                 obj._perform_search(current_query)
                                 return False
-
 
                 except Exception as e:
                     print(f"Error forcing launcher refresh: {e}")
@@ -439,8 +460,6 @@ class NetworkPlugin(PluginBase):
         """Cancel password entry and return to network list."""
         self.showing_password_for = None
         return None  # Keep launcher open
-
-
 
     def query(self, query_string: str) -> List[Result]:
         """Process network queries."""
@@ -506,7 +525,9 @@ class NetworkPlugin(PluginBase):
                         results.append(
                             Result(
                                 title="Disconnect WiFi",
-                                subtitle=f"Disconnect from {self.network_client.wifi_device.active_access_point.ssid}",
+                                subtitle=f"Disconnect from {
+                                    self.network_client.wifi_device.active_access_point.ssid
+                                }",
                                 icon_markup=icons.world_off,
                                 action=lambda: self._disconnect_wifi(),
                                 relevance=0.8,
@@ -548,8 +569,11 @@ class NetworkPlugin(PluginBase):
             )
 
             # Show current networks if any
-            if (self._ready and self.network_client.wifi_device and
-                self.network_client.wifi_device.wireless_enabled):
+            if (
+                self._ready
+                and self.network_client.wifi_device
+                and self.network_client.wifi_device.wireless_enabled
+            ):
                 access_points = self.network_client.wifi_device.access_points
                 if access_points:
                     results.append(
@@ -567,8 +591,10 @@ class NetworkPlugin(PluginBase):
             return results
 
         if query_lower in ["disconnect", "off"]:
-            if (self.network_client.wifi_device and
-                self.network_client.wifi_device.active_access_point):
+            if (
+                self.network_client.wifi_device
+                and self.network_client.wifi_device.active_access_point
+            ):
                 ap = self.network_client.wifi_device.active_access_point
                 results.append(
                     Result(
@@ -618,9 +644,11 @@ class NetworkPlugin(PluginBase):
             return results
 
         # Search for specific networks or show available networks
-        if (self._ready and self.network_client.wifi_device and
-            self.network_client.wifi_device.wireless_enabled):
-
+        if (
+            self._ready
+            and self.network_client.wifi_device
+            and self.network_client.wifi_device.wireless_enabled
+        ):
             access_points = self.network_client.wifi_device.access_points
 
             if query_lower in ["list"]:
@@ -649,11 +677,13 @@ class NetworkPlugin(PluginBase):
                             title = ap.ssid
 
                         # Check if this network should show password entry instead
-                        if ap.requires_password and self.showing_password_for == ap.ssid:
+                        if (
+                            ap.requires_password
+                            and self.showing_password_for == ap.ssid
+                        ):
                             # REPLACE network with password entry Result using our own Entry widget
                             password_widget = NetworkPasswordEntry(
-                                access_point=ap,
-                                network_plugin=self
+                                access_point=ap, network_plugin=self
                             )
 
                             results.append(
@@ -668,7 +698,7 @@ class NetworkPlugin(PluginBase):
                                     data={
                                         "type": "password_entry",
                                         "ssid": ap.ssid,
-                                        "keep_launcher_open": True
+                                        "keep_launcher_open": True,
                                     },
                                 )
                             )
@@ -676,14 +706,26 @@ class NetworkPlugin(PluginBase):
                             # Show normal network Result
                             if ap.is_active:
                                 subtitle = f"Connected • {ap.strength}% signal"
-                                action = lambda: self._disconnect_wifi()
+
+                                def action():
+                                    return self._disconnect_wifi()
                             else:
                                 if ap.requires_password:
-                                    subtitle = f"{ap.strength}% signal • Click to enter password"
-                                    action = lambda current_ap=ap: self._show_password_entry_for_network(current_ap)
+                                    subtitle = f"{
+                                        ap.strength
+                                    }% signal • Click to enter password"
+
+                                    def action(current_ap=ap):
+                                        return self._show_password_entry_for_network(
+                                            current_ap
+                                        )
                                 else:
-                                    subtitle = f"{ap.strength}% signal • Click to connect"
-                                    action = lambda current_ap=ap: self._connect_to_network(current_ap)
+                                    subtitle = (
+                                        f"{ap.strength}% signal • Click to connect"
+                                    )
+
+                                    def action(current_ap=ap):
+                                        return self._connect_to_network(current_ap)
 
                             results.append(
                                 Result(
@@ -697,20 +739,17 @@ class NetworkPlugin(PluginBase):
                                         "type": "network",
                                         "ssid": ap.ssid,
                                         "requires_password": ap.requires_password,
-                                        "keep_launcher_open": True
+                                        "keep_launcher_open": True,
                                     },
                                 )
                             )
-
-
 
                 return results
 
             else:
                 # Search for networks matching the query
                 matching_networks = [
-                    ap for ap in access_points
-                    if query.lower() in ap.ssid.lower()
+                    ap for ap in access_points if query.lower() in ap.ssid.lower()
                 ]
 
                 if matching_networks:
@@ -721,11 +760,13 @@ class NetworkPlugin(PluginBase):
                             title = ap.ssid
 
                         # Check if this network should show password entry instead
-                        if ap.requires_password and self.showing_password_for == ap.ssid:
+                        if (
+                            ap.requires_password
+                            and self.showing_password_for == ap.ssid
+                        ):
                             # REPLACE network with password entry Result using our own Entry widget
                             password_widget = NetworkPasswordEntry(
-                                access_point=ap,
-                                network_plugin=self
+                                access_point=ap, network_plugin=self
                             )
 
                             results.append(
@@ -740,7 +781,7 @@ class NetworkPlugin(PluginBase):
                                     data={
                                         "type": "password_entry",
                                         "ssid": ap.ssid,
-                                        "keep_launcher_open": True
+                                        "keep_launcher_open": True,
                                     },
                                 )
                             )
@@ -748,14 +789,26 @@ class NetworkPlugin(PluginBase):
                             # Show normal network Result
                             if ap.is_active:
                                 subtitle = f"Connected • {ap.strength}% signal"
-                                action = lambda: self._disconnect_wifi()
+
+                                def action():
+                                    return self._disconnect_wifi()
                             else:
                                 if ap.requires_password:
-                                    subtitle = f"{ap.strength}% signal • Click to enter password"
-                                    action = lambda current_ap=ap: self._show_password_entry_for_network(current_ap)
+                                    subtitle = f"{
+                                        ap.strength
+                                    }% signal • Click to enter password"
+
+                                    def action(current_ap=ap):
+                                        return self._show_password_entry_for_network(
+                                            current_ap
+                                        )
                                 else:
-                                    subtitle = f"{ap.strength}% signal • Click to connect"
-                                    action = lambda current_ap=ap: self._connect_to_network(current_ap)
+                                    subtitle = (
+                                        f"{ap.strength}% signal • Click to connect"
+                                    )
+
+                                    def action(current_ap=ap):
+                                        return self._connect_to_network(current_ap)
 
                             results.append(
                                 Result(
@@ -769,12 +822,10 @@ class NetworkPlugin(PluginBase):
                                         "type": "network",
                                         "ssid": ap.ssid,
                                         "requires_password": ap.requires_password,
-                                        "keep_launcher_open": True
+                                        "keep_launcher_open": True,
                                     },
                                 )
                             )
-
-
 
                     return results
                 else:
@@ -798,7 +849,9 @@ class NetworkPlugin(PluginBase):
                 title="WiFi Not Available",
                 subtitle="Enable WiFi to search for networks",
                 icon_markup=icons.wifi_off,
-                action=lambda: self._toggle_wifi() if self.network_client.wifi_device else None,
+                action=lambda: self._toggle_wifi()
+                if self.network_client.wifi_device
+                else None,
                 relevance=0.5,
                 plugin_name=self.display_name,
                 data={"type": "info"},

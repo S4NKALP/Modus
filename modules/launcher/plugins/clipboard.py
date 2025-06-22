@@ -1,19 +1,15 @@
-"""
-Clipboard plugin using cliphist for clipboard history management.
-Optimized for performance with caching, threading, and lazy loading.
-"""
-
 import os
 import subprocess
 import sys
 import tempfile
 import threading
 import time
-from typing import List, Dict, Optional
 from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List, Optional
+
+from gi.repository import GdkPixbuf, GLib
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-from gi.repository import GdkPixbuf, GLib
 
 
 class ClipboardPlugin(PluginBase):
@@ -25,7 +21,8 @@ class ClipboardPlugin(PluginBase):
 
         # Performance settings
         self.max_results = 20
-        self.cache_ttl = 5  # Cache clipboard items for 5 seconds (more responsive)
+        # Cache clipboard items for 5 seconds (more responsive)
+        self.cache_ttl = 5
         self.image_cache_ttl = 300  # Cache images for 5 minutes
 
         # Initialize cache and temp directory
@@ -36,7 +33,9 @@ class ClipboardPlugin(PluginBase):
         self.image_cache_timestamps: Dict[str, float] = {}
 
         # Threading
-        self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="clipboard")
+        self.executor = ThreadPoolExecutor(
+            max_workers=2, thread_name_prefix="clipboard"
+        )
         self.cache_lock = threading.Lock()
 
         # State tracking
@@ -45,9 +44,11 @@ class ClipboardPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the plugin."""
-        self.set_triggers(["clip", "clip "])
+        self.set_triggers(["clip"])
         try:
-            subprocess.run(["cliphist", "list"], capture_output=True, check=True, timeout=5)
+            subprocess.run(
+                ["cliphist", "list"], capture_output=True, check=True, timeout=5
+            )
         except (subprocess.SubprocessError, FileNotFoundError):
             raise RuntimeError("cliphist is not installed or not working properly")
 
@@ -58,12 +59,13 @@ class ClipboardPlugin(PluginBase):
         """Cleanup the plugin."""
         try:
             # Shutdown executor
-            if hasattr(self, 'executor'):
+            if hasattr(self, "executor"):
                 self.executor.shutdown(wait=False)
 
             # Clean up temp files
             if os.path.exists(self.tmp_dir):
                 import shutil
+
                 shutil.rmtree(self.tmp_dir)
 
             # Clear caches
@@ -91,11 +93,16 @@ class ClipboardPlugin(PluginBase):
                 try:
                     # Try to access the launcher through the fabric Application
                     from fabric import Application
+
                     app = Application.get_default()
 
-                    if app and hasattr(app, 'launcher'):
+                    if app and hasattr(app, "launcher"):
                         launcher = app.launcher
-                        if launcher and hasattr(launcher, 'search_entry') and hasattr(launcher, '_perform_search'):
+                        if (
+                            launcher
+                            and hasattr(launcher, "search_entry")
+                            and hasattr(launcher, "_perform_search")
+                        ):
                             # Get current search text to preserve the query
                             current_text = launcher.search_entry.get_text()
                             # Trigger the search to refresh results
@@ -104,9 +111,15 @@ class ClipboardPlugin(PluginBase):
 
                     # Fallback: try to find launcher instance through other means
                     import gc
+
                     for obj in gc.get_objects():
-                        if (hasattr(obj, '__class__') and obj.__class__.__name__ == 'Launcher'):
-                            if hasattr(obj, 'search_entry') and hasattr(obj, '_perform_search'):
+                        if (
+                            hasattr(obj, "__class__")
+                            and obj.__class__.__name__ == "Launcher"
+                        ):
+                            if hasattr(obj, "search_entry") and hasattr(
+                                obj, "_perform_search"
+                            ):
                                 current_text = obj.search_entry.get_text()
                                 obj._perform_search(current_text)
                                 return False
@@ -122,8 +135,6 @@ class ClipboardPlugin(PluginBase):
         except Exception as e:
             print(f"Could not trigger refresh: {e}")
 
-
-
     def _load_clipboard_items_cached(self) -> List[str]:
         """Load clipboard items from cliphist with caching and change detection."""
         current_time = time.time()
@@ -136,22 +147,26 @@ class ClipboardPlugin(PluginBase):
             stdout_str = result.stdout.decode("utf-8", errors="replace")
             if stdout_str.strip():
                 lines = stdout_str.strip().split("\n")
-                items = [line for line in lines if line and "<meta http-equiv" not in line]
+                items = [
+                    line for line in lines if line and "<meta http-equiv" not in line
+                ]
             else:
                 items = []
 
             # Check if data has changed
             with self.cache_lock:
                 data_changed = (
-                    not self.clipboard_items_cache or
-                    len(items) != len(self.clipboard_items_cache) or
-                    items != self.clipboard_items_cache
+                    not self.clipboard_items_cache
+                    or len(items) != len(self.clipboard_items_cache)
+                    or items != self.clipboard_items_cache
                 )
 
                 # If cache is still valid and data hasn't changed, return cached data
-                if (not data_changed and
-                    self.clipboard_items_cache and
-                    current_time - self.cache_timestamp < self.cache_ttl):
+                if (
+                    not data_changed
+                    and self.clipboard_items_cache
+                    and current_time - self.cache_timestamp < self.cache_ttl
+                ):
                     return self.clipboard_items_cache.copy()
 
                 # Update cache with fresh data
@@ -218,14 +233,20 @@ class ClipboardPlugin(PluginBase):
 
         # Check cache first
         with self.cache_lock:
-            if (item_id in self.image_cache and
-                item_id in self.image_cache_timestamps and
-                current_time - self.image_cache_timestamps[item_id] < self.image_cache_ttl):
+            if (
+                item_id in self.image_cache
+                and item_id in self.image_cache_timestamps
+                and current_time - self.image_cache_timestamps[item_id]
+                < self.image_cache_ttl
+            ):
                 return self.image_cache[item_id]
 
         try:
             result = subprocess.run(
-                ["cliphist", "decode", item_id], capture_output=True, check=True, timeout=3
+                ["cliphist", "decode", item_id],
+                capture_output=True,
+                check=True,
+                timeout=3,
             )
             pixbuf = self._create_pixbuf_from_bytes(result.stdout)
             if pixbuf:
@@ -325,7 +346,9 @@ class ClipboardPlugin(PluginBase):
                 result = Result(
                     title=display_text,
                     subtitle="Text from clipboard",
-                    description=content if len(content) <= 100 else content[:97] + "...",
+                    description=content
+                    if len(content) <= 100
+                    else content[:97] + "...",
                     icon_name="edit-paste",
                     relevance=1.0,
                     plugin_name=self.name,
@@ -353,7 +376,10 @@ class ClipboardPlugin(PluginBase):
         """Copy entry to clipboard using cliphist with timeout."""
         try:
             result = subprocess.run(
-                ["cliphist", "decode", entry_id], capture_output=True, check=True, timeout=5
+                ["cliphist", "decode", entry_id],
+                capture_output=True,
+                check=True,
+                timeout=5,
             )
             # Use wl-copy for Wayland or xclip for X11
             try:
@@ -363,7 +389,7 @@ class ClipboardPlugin(PluginBase):
                     ["xclip", "-selection", "clipboard"],
                     input=result.stdout,
                     check=True,
-                    timeout=3
+                    timeout=3,
                 )
 
             # Invalidate cache since clipboard content has changed

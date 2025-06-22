@@ -1,17 +1,12 @@
-"""
-Reminders plugin for the launcher.
-Set time-based reminders with notify-send notifications.
-"""
-
-import threading
-import time
-import subprocess
 import re
+import subprocess
+import threading
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import utils.icons as icons
 
 
 class Reminder:
@@ -19,7 +14,13 @@ class Reminder:
     Represents a single reminder with its timer and metadata.
     """
 
-    def __init__(self, reminder_id: int, message: str, target_time: datetime, timer: threading.Timer):
+    def __init__(
+        self,
+        reminder_id: int,
+        message: str,
+        target_time: datetime,
+        timer: threading.Timer,
+    ):
         self.id = reminder_id
         self.message = message
         self.target_time = target_time
@@ -70,14 +71,17 @@ class RemindersPlugin(PluginBase):
 
         # Regex patterns for time parsing
         self.time_patterns = {
-            'relative_time': re.compile(r'^(\d+)([smhd])$'),  # 5m, 30s, 2h, 1d
-            'absolute_time': re.compile(r'^(\d{1,2}):(\d{2})$'),  # 14:30, 9:15
-            'relative_with_unit': re.compile(r'^(\d+)\s*(min|mins|minute|minutes|hour|hours|sec|seconds|day|days)$', re.IGNORECASE)
+            "relative_time": re.compile(r"^(\d+)([smhd])$"),  # 5m, 30s, 2h, 1d
+            "absolute_time": re.compile(r"^(\d{1,2}):(\d{2})$"),  # 14:30, 9:15
+            "relative_with_unit": re.compile(
+                r"^(\d+)\s*(min|mins|minute|minutes|hour|hours|sec|seconds|day|days)$",
+                re.IGNORECASE,
+            ),
         }
 
     def initialize(self):
         """Initialize the reminders plugin."""
-        self.set_triggers(["remind", "remind "])
+        self.set_triggers(["remind"])
 
     def cleanup(self):
         """Cleanup the reminders plugin."""
@@ -108,18 +112,18 @@ class RemindersPlugin(PluginBase):
         time_str = time_str.strip().lower()
 
         # Try relative time format (5m, 30s, 2h, 1d)
-        match = self.time_patterns['relative_time'].match(time_str)
+        match = self.time_patterns["relative_time"].match(time_str)
         if match:
             value, unit = match.groups()
             value = int(value)
 
-            if unit == 's':
+            if unit == "s":
                 delta = timedelta(seconds=value)
-            elif unit == 'm':
+            elif unit == "m":
                 delta = timedelta(minutes=value)
-            elif unit == 'h':
+            elif unit == "h":
                 delta = timedelta(hours=value)
-            elif unit == 'd':
+            elif unit == "d":
                 delta = timedelta(days=value)
             else:
                 return None
@@ -127,30 +131,32 @@ class RemindersPlugin(PluginBase):
             return datetime.now() + delta
 
         # Try absolute time format (14:30, 9:15)
-        match = self.time_patterns['absolute_time'].match(time_str)
+        match = self.time_patterns["absolute_time"].match(time_str)
         if match:
             hour, minute = map(int, match.groups())
             if 0 <= hour <= 23 and 0 <= minute <= 59:
-                target = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+                target = datetime.now().replace(
+                    hour=hour, minute=minute, second=0, microsecond=0
+                )
                 # If the time has already passed today, schedule for tomorrow
                 if target <= datetime.now():
                     target += timedelta(days=1)
                 return target
 
         # Try relative time with full unit names
-        match = self.time_patterns['relative_with_unit'].match(time_str)
+        match = self.time_patterns["relative_with_unit"].match(time_str)
         if match:
             value, unit = match.groups()
             value = int(value)
             unit = unit.lower()
 
-            if unit in ['sec', 'seconds']:
+            if unit in ["sec", "seconds"]:
                 delta = timedelta(seconds=value)
-            elif unit in ['min', 'mins', 'minute', 'minutes']:
+            elif unit in ["min", "mins", "minute", "minutes"]:
                 delta = timedelta(minutes=value)
-            elif unit in ['hour', 'hours']:
+            elif unit in ["hour", "hours"]:
                 delta = timedelta(hours=value)
-            elif unit in ['day', 'days']:
+            elif unit in ["day", "days"]:
                 delta = timedelta(days=value)
             else:
                 return None
@@ -230,9 +236,13 @@ class RemindersPlugin(PluginBase):
         reminder = self._create_reminder(time_str, message)
         if reminder:
             time_remaining = reminder.get_time_remaining()
-            self._send_notification("✅ Reminder Created", f"Reminder set for {time_remaining}: {message}")
+            self._send_notification(
+                "✅ Reminder Created", f"Reminder set for {time_remaining}: {message}"
+            )
         else:
-            self._send_notification("❌ Failed to Create Reminder", "The specified time may be in the past")
+            self._send_notification(
+                "❌ Failed to Create Reminder", "The specified time may be in the past"
+            )
 
     def query(self, query_string: str) -> List[Result]:
         """Process reminder queries."""
@@ -245,7 +255,9 @@ class RemindersPlugin(PluginBase):
             results.append(
                 Result(
                     title="Reminders Help",
-                    subtitle=f"Active reminders: {active_count} | Usage: remind 5m Take a break",
+                    subtitle=f"Active reminders: {
+                        active_count
+                    } | Usage: remind 5m Take a break",
                     icon_markup=icons.timer_on,
                     action=lambda: None,
                     relevance=1.0,
@@ -278,7 +290,7 @@ class RemindersPlugin(PluginBase):
             return results
 
         # Handle list command
-        if query.lower() in ['list', 'ls', 'show']:
+        if query.lower() in ["list", "ls", "show"]:
             if not self.reminders:
                 results.append(
                     Result(
@@ -292,7 +304,9 @@ class RemindersPlugin(PluginBase):
                     )
                 )
             else:
-                for reminder in sorted(self.reminders.values(), key=lambda r: r.target_time):
+                for reminder in sorted(
+                    self.reminders.values(), key=lambda r: r.target_time
+                ):
                     time_remaining = reminder.get_time_remaining()
                     target_time = reminder.get_target_time_str()
 
@@ -311,7 +325,7 @@ class RemindersPlugin(PluginBase):
             return results
 
         # Handle cancel command
-        if query.lower().startswith('cancel') or query.lower().startswith('stop'):
+        if query.lower().startswith("cancel") or query.lower().startswith("stop"):
             parts = query.split()
             if len(parts) == 1:
                 # Cancel all reminders
@@ -390,12 +404,19 @@ class RemindersPlugin(PluginBase):
                     results.append(
                         Result(
                             title=f"Set Reminder: {message}",
-                            subtitle=f"Will remind in {time_remaining} (at {target_time_str})",
+                            subtitle=f"Will remind in {time_remaining} (at {
+                                target_time_str
+                            })",
                             icon_markup=icons.timer_on,
-                            action=lambda ts=time_str, msg=message: self._create_and_confirm_reminder(ts, msg),
+                            action=lambda ts=time_str,
+                            msg=message: self._create_and_confirm_reminder(ts, msg),
                             relevance=1.0,
                             plugin_name=self.display_name,
-                            data={"type": "preview", "time_str": time_str, "message": message},
+                            data={
+                                "type": "preview",
+                                "time_str": time_str,
+                                "message": message,
+                            },
                         )
                     )
                 else:

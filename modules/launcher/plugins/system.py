@@ -1,8 +1,3 @@
-"""
-System plugin for the launcher.
-Provides system commands and actions.
-"""
-
 import os
 import time
 import shlex
@@ -31,8 +26,7 @@ class SystemPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the system plugin."""
-        # Set up triggers for system commands
-        self.set_triggers(["bin", "bin "])
+        self.set_triggers(["bin"])
         self._update_bin_cache()
 
     def cleanup(self):
@@ -124,8 +118,10 @@ class SystemPlugin(PluginBase):
 
     def _create_action(self, command: Union[str, List[str]]):
         """Create an action function for the given command."""
+
         def action():
             self._execute_command(command)
+
         return action
 
     def _execute_command(self, command: Union[str, List[str]]):
@@ -141,5 +137,5 @@ class SystemPlugin(PluginBase):
         except Exception as e:
             print(f"SystemPlugin: Error executing command '{command}': {e}")
             import traceback
-            traceback.print_exc()
 
+            traceback.print_exc()

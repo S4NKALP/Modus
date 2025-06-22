@@ -1,11 +1,6 @@
-"""
-Web Search plugin for the launcher.
-Allows searching the web using various search engines.
-"""
-
 import subprocess
 import urllib.parse
-from typing import Dict, List
+from typing import List
 
 import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
@@ -81,7 +76,7 @@ class WebSearchPlugin(PluginBase):
     def initialize(self):
         """Initialize the web search plugin."""
         # Set up triggers for web search
-        triggers = ["web", "web ", "?", "? "]
+        triggers = ["web", "?"]
 
         # Add search engine specific triggers
         for engine in self.search_engines.keys():

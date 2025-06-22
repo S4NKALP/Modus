@@ -1,19 +1,15 @@
-"""
-Files plugin for the launcher.
-High-performance file search (files only, excludes directories) using advanced fuzzy matching.
-"""
-
 import os
 import subprocess
 import threading
 import time
-from typing import List, Dict, Set, Tuple
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List
+
 from thefuzz import fuzz
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import utils.icons as icons
 
 
 class FilesPlugin(PluginBase):
@@ -69,8 +65,6 @@ class FilesPlugin(PluginBase):
             [
                 "file",
                 "find",
-                "file ",
-                "find ",
             ]
         )
         self._warm_cache()
@@ -153,7 +147,10 @@ class FilesPlugin(PluginBase):
                 continue
 
             # Skip home directory if we already have enough results from specific folders
-            if search_path == os.path.expanduser("~") and len(results) >= self.max_results:
+            if (
+                search_path == os.path.expanduser("~")
+                and len(results) >= self.max_results
+            ):
                 continue
 
             cached_files = self._get_cached_files(search_path)
@@ -217,9 +214,19 @@ class FilesPlugin(PluginBase):
 
                             # Skip common large directories that are unlikely to contain user files
                             if entry.is_dir() and entry.name in {
-                                "node_modules", ".git", ".cache", "__pycache__",
-                                ".npm", ".cargo", ".rustup", "target", "build",
-                                ".vscode", ".idea", "venv", ".env"
+                                "node_modules",
+                                ".git",
+                                ".cache",
+                                "__pycache__",
+                                ".npm",
+                                ".cargo",
+                                ".rustup",
+                                "target",
+                                "build",
+                                ".vscode",
+                                ".idea",
+                                "venv",
+                                ".env",
                             }:
                                 continue
 
@@ -361,7 +368,8 @@ class FilesPlugin(PluginBase):
         if len(query_lower) >= 3:
             # Use only the most effective fuzzy matching methods
             return (
-                fuzz.partial_ratio(query_lower, text_lower) >= self.fuzzy_thresholds["partial"]
+                fuzz.partial_ratio(query_lower, text_lower)
+                >= self.fuzzy_thresholds["partial"]
                 or fuzz.ratio(query_lower, text_lower) >= self.fuzzy_thresholds["ratio"]
             )
 

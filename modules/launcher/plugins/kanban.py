@@ -1,8 +1,3 @@
-"""
-Kanban plugin for the launcher.
-Provides a kanban board interface for task management.
-"""
-
 import json
 import os
 from pathlib import Path
@@ -394,6 +389,7 @@ class Kanban(Gtk.Box):
 
         # Add a hidden Entry widget so the launcher will let us handle Enter events
         from fabric.widgets.entry import Entry
+
         self.hidden_entry = Entry(name="kanban-hidden-entry")
         self.hidden_entry.set_size_request(1, 1)  # Make it tiny
         self.hidden_entry.set_opacity(0.0)  # Make it invisible
@@ -515,7 +511,7 @@ class KanbanPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the Kanban plugin."""
-        self.set_triggers(["kanban", "kanban "])
+        self.set_triggers(["kanban"])
         self.description = "Kanban board for task management. Use 'kanban add <text>' to quickly add tasks. Keyboard: Enter/F2 to edit, Del to delete, Ctrl+N to add new note"
 
     def cleanup(self):

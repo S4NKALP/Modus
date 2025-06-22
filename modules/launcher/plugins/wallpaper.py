@@ -1,24 +1,20 @@
-"""
-Wallpaper plugin for the launcher.
-Provides wallpaper management with search, random selection, matugen integration, and hex color support.
-"""
-
+import colorsys
+import hashlib
+import json
 import os
 import random
-import hashlib
-import colorsys
 import re
-import json
-from typing import List, Dict, Optional
-from PIL import Image
-from gi.repository import GdkPixbuf, GLib
-from modules.launcher.plugin_base import PluginBase
-from modules.launcher.result import Result
-from fabric.utils.helpers import exec_shell_command_async
-import config.data as data
-import utils.icons as icons
 import threading
 import time
+from typing import Dict, List, Optional
+
+import config.data as data
+import utils.icons as icons
+from fabric.utils.helpers import exec_shell_command_async
+from gi.repository import GdkPixbuf
+from modules.launcher.plugin_base import PluginBase
+from modules.launcher.result import Result
+from PIL import Image
 
 
 class WallpaperPlugin(PluginBase):
@@ -46,7 +42,7 @@ class WallpaperPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the wallpaper plugin."""
-        self.set_triggers(["wall", "wall "])
+        self.set_triggers(["wall"])
         self._load_wallpapers()
         os.makedirs(self.cache_dir, exist_ok=True)
         # Start background thumbnail creation
@@ -78,7 +74,7 @@ class WallpaperPlugin(PluginBase):
         """Get current matugen state from config.json."""
         self.matugen_enabled = True  # Default to True
         try:
-            with open(data.CONFIG_FILE, 'r') as f:
+            with open(data.CONFIG_FILE, "r") as f:
                 config = json.load(f)
                 self.matugen_enabled = config.get("matugen_enabled", True)
         except FileNotFoundError:
@@ -99,26 +95,26 @@ class WallpaperPlugin(PluginBase):
             # Read current config
             config = {}
             if os.path.exists(data.CONFIG_FILE):
-                with open(data.CONFIG_FILE, 'r') as f:
+                with open(data.CONFIG_FILE, "r") as f:
                     config = json.load(f)
 
             # Update matugen state
             config["matugen_enabled"] = enabled
 
             # Write back to config file
-            with open(data.CONFIG_FILE, 'w') as f:
+            with open(data.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
 
         except Exception as e:
             print(f"Error writing matugen state to config: {e}")
 
-        # Send notification
-        status = "enabled" if enabled else "disabled"
-        exec_shell_command_async(
-            f"notify-send '🎨 Matugen' 'Dynamic colors {status}' -a '{
-                data.APP_NAME_CAP
-            }' -e"
-        )
+        # # Send notification
+        # status = "enabled" if enabled else "disabled"
+        # exec_shell_command_async(
+        #     f"notify-send '🎨 Matugen' 'Dynamic colors {status}' -a '{
+        #         data.APP_NAME_CAP
+        #     }' -e"
+        # )
 
     def _get_cache_path(self, filename: str) -> str:
         """Get cache path for wallpaper thumbnail."""
@@ -144,6 +140,7 @@ class WallpaperPlugin(PluginBase):
 
     def _start_background_thumbnail_creation(self):
         """Start background thread to create thumbnails for all wallpapers."""
+
         def create_thumbnails():
             for wallpaper in self.wallpapers:
                 if wallpaper not in self.thumbnail_loading:
@@ -198,6 +195,7 @@ class WallpaperPlugin(PluginBase):
         # If not in cache and file doesn't exist, trigger background creation
         if filename not in self.thumbnail_loading:
             self.thumbnail_loading.add(filename)
+
             def create_async():
                 try:
                     cache_path = self._create_thumbnail(filename)
@@ -240,22 +238,11 @@ class WallpaperPlugin(PluginBase):
         matugen_enabled = self._get_matugen_state()
         if matugen_enabled:
             exec_shell_command_async(f'matugen image "{full_path}" -t {scheme}')
-            scheme_name = self.schemes.get(scheme, scheme)
-            exec_shell_command_async(
-                f"notify-send '🖼️ Wallpaper Applied' 'File: {filename}\\nScheme: {scheme_name}' -a '{
-                    data.APP_NAME_CAP
-                }' -e"
-            )
         else:
             exec_shell_command_async(
                 f'swww img "{
                     full_path
                 }" -t outer --transition-duration 1.5 --transition-step 255 --transition-fps 60 -f Nearest'
-            )
-            exec_shell_command_async(
-                f"notify-send '🖼️ Wallpaper Applied' 'File: {filename}\\nMatugen: Disabled' -a '{
-                    data.APP_NAME_CAP
-                }' -e"
             )
 
     def _set_random_wallpaper(self):
@@ -298,20 +285,6 @@ class WallpaperPlugin(PluginBase):
         scheme_name = self.schemes.get(scheme, scheme)
         matugen_enabled = self._get_matugen_state()
 
-        # Show notification with matugen status
-        if matugen_enabled:
-            exec_shell_command_async(
-                f"notify-send '🎨 Color Scheme' 'Set to {
-                    scheme_name
-                }\\nMatugen: Enabled' -a '{data.APP_NAME_CAP}' -e"
-            )
-        else:
-            exec_shell_command_async(
-                f"notify-send '⚠️ Color Scheme' 'Set to {
-                    scheme_name
-                }\\nMatugen: Disabled (enable for effect)' -a '{data.APP_NAME_CAP}' -e"
-            )
-
     def _apply_hex_color(self, hex_color: str, scheme: str = None):
         """Apply hex color using matugen. Assumes matugen is enabled."""
         if not hex_color.startswith("#"):
@@ -321,12 +294,6 @@ class WallpaperPlugin(PluginBase):
             scheme = self._get_current_scheme()
 
         exec_shell_command_async(f'matugen color hex "{hex_color}" -t {scheme}')
-        scheme_name = self.schemes.get(scheme, scheme)
-        exec_shell_command_async(
-            f"notify-send '🎨 Hex Color Applied' 'Color: {hex_color}\\nScheme: {
-                scheme_name
-            }' -a '{data.APP_NAME_CAP}' -e"
-        )
 
     def _generate_random_hex_color(self) -> str:
         """Generate a random hex color."""
@@ -446,10 +413,15 @@ class WallpaperPlugin(PluginBase):
                             # Show result for hex color (execute on Enter)
                             results.append(
                                 Result(
-                                    title=f"Apply Hex Color: {hex_color}{indicator_text}",
-                                    subtitle=f"Apply with {scheme_name} scheme • {status_text}",
+                                    title=f"Apply Hex Color: {hex_color}{
+                                        indicator_text
+                                    }",
+                                    subtitle=f"Apply with {scheme_name} scheme • {
+                                        status_text
+                                    }",
                                     icon_markup=icons.palette,
-                                    action=lambda c=hex_color, s=scheme: self._apply_hex_color(c, s),
+                                    action=lambda c=hex_color,
+                                    s=scheme: self._apply_hex_color(c, s),
                                     relevance=1.0,
                                     plugin_name=self.display_name,
                                     data={
@@ -465,8 +437,10 @@ class WallpaperPlugin(PluginBase):
                             # Show error result when matugen is disabled
                             results.append(
                                 Result(
-                                    title=f"Cannot Apply Hex Color: {hex_color}{indicator_text}",
-                                    subtitle=f"Matugen is disabled • Enable matugen to use hex colors",
+                                    title=f"Cannot Apply Hex Color: {hex_color}{
+                                        indicator_text
+                                    }",
+                                    subtitle="Matugen is disabled • Enable matugen to use hex colors",
                                     icon_markup=icons.palette,
                                     action=lambda: None,
                                     relevance=1.0,
@@ -484,9 +458,14 @@ class WallpaperPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"Apply Hex Color: {hex_color}{indicator_text}",
-                                subtitle=f"Apply with {scheme_name} scheme • {status_text}",
+                                subtitle=f"Apply with {scheme_name} scheme • {
+                                    status_text
+                                }",
                                 icon_markup=icons.palette,
-                                action=lambda c=hex_color, s=scheme: self._apply_hex_color(c, s) if matugen_enabled else None,
+                                action=lambda c=hex_color,
+                                s=scheme: self._apply_hex_color(c, s)
+                                if matugen_enabled
+                                else None,
                                 relevance=0.9,
                                 plugin_name=self.display_name,
                                 data={
@@ -503,7 +482,7 @@ class WallpaperPlugin(PluginBase):
                     results.append(
                         Result(
                             title=f"Hex Color (incomplete): {hex_color}",
-                            subtitle=f"Complete the 6-digit hex color to apply",
+                            subtitle="Complete the 6-digit hex color to apply",
                             icon_markup=icons.palette,
                             action=lambda: None,
                             relevance=0.7,
@@ -517,10 +496,12 @@ class WallpaperPlugin(PluginBase):
                     )
             elif "random" in query and ("color" in query or "hex" in query):
                 # Check for exact matches for random color commands
-                if (query.strip() == "color random" or
-                    query.strip() == "hex random" or
-                    query.strip() == "random color" or
-                    query.strip() == "random hex"):
+                if (
+                    query.strip() == "color random"
+                    or query.strip() == "hex random"
+                    or query.strip() == "random color"
+                    or query.strip() == "random hex"
+                ):
                     # Random hex color - show result (execute on Enter)
                     scheme_name = self.schemes.get(scheme, scheme)
 
@@ -529,9 +510,13 @@ class WallpaperPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"Random Hex Color{indicator_text}",
-                                subtitle=f"Generate and apply random color with {scheme_name} scheme • {status_text}",
+                                subtitle=f"Generate and apply random color with {
+                                    scheme_name
+                                } scheme • {status_text}",
                                 icon_markup=icons.palette,
-                                action=lambda s=scheme: self._apply_hex_color(self._generate_random_hex_color(), s),
+                                action=lambda s=scheme: self._apply_hex_color(
+                                    self._generate_random_hex_color(), s
+                                ),
                                 relevance=1.0,
                                 plugin_name=self.display_name,
                                 data={
@@ -547,7 +532,7 @@ class WallpaperPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"Cannot Apply Random Color{indicator_text}",
-                                subtitle=f"Matugen is disabled • Enable matugen to use hex colors",
+                                subtitle="Matugen is disabled • Enable matugen to use hex colors",
                                 icon_markup=icons.palette,
                                 action=lambda: None,
                                 relevance=1.0,
@@ -565,7 +550,11 @@ class WallpaperPlugin(PluginBase):
                             title=f"Random Hex Color{indicator_text}",
                             subtitle=f"Generate and apply random color • {status_text}",
                             icon_markup=icons.palette,
-                            action=lambda: self._apply_hex_color(self._generate_random_hex_color(), scheme) if matugen_enabled else None,
+                            action=lambda: self._apply_hex_color(
+                                self._generate_random_hex_color(), scheme
+                            )
+                            if matugen_enabled
+                            else None,
                             relevance=0.8,
                             plugin_name=self.display_name,
                             data={
@@ -679,8 +668,12 @@ class WallpaperPlugin(PluginBase):
                 new_state = not current_state
                 results.append(
                     Result(
-                        title=f"Toggle Matugen to {'Enabled' if new_state else 'Disabled'}{indicator_text}",
-                        subtitle=f"Switch matugen to {'enabled' if new_state else 'disabled'} • {status_text}",
+                        title=f"Toggle Matugen to {
+                            'Enabled' if new_state else 'Disabled'
+                        }{indicator_text}",
+                        subtitle=f"Switch matugen to {
+                            'enabled' if new_state else 'disabled'
+                        } • {status_text}",
                         icon_markup=icons.palette,
                         action=lambda: self._set_matugen_state(new_state),
                         relevance=0.9,
@@ -692,7 +685,9 @@ class WallpaperPlugin(PluginBase):
                         },
                     )
                 )
-            elif ("on" in query or "enable" in query) and not query.strip().endswith(("on", "enable")):
+            elif ("on" in query or "enable" in query) and not query.strip().endswith(
+                ("on", "enable")
+            ):
                 # Show suggestion for enabling (partial match)
                 results.append(
                     Result(
@@ -709,7 +704,9 @@ class WallpaperPlugin(PluginBase):
                         },
                     )
                 )
-            elif ("off" in query or "disable" in query) and not query.strip().endswith(("off", "disable")):
+            elif ("off" in query or "disable" in query) and not query.strip().endswith(
+                ("off", "disable")
+            ):
                 # Show suggestion for disabling (partial match)
                 results.append(
                     Result(

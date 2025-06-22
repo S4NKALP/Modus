@@ -1,19 +1,14 @@
-"""
-Emoji plugin for the launcher.
-Provides quick access to emojis with search functionality.
-"""
-
 import json
 import os
 import subprocess
 import time
-from typing import Dict, List
 from collections import OrderedDict
+from typing import Dict, List
 
+import config.data as data
 from fabric.utils import get_relative_path
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import config.data as data
 
 
 class EmojiPlugin(PluginBase):
@@ -36,7 +31,7 @@ class EmojiPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the emoji plugin."""
-        self.set_triggers(["emoji", "emoji ", ";", "; "])
+        self.set_triggers(["emoji", ";"])
         self._load_emoji_data()
         self._load_recent_emojis()
 
@@ -131,14 +126,18 @@ class EmojiPlugin(PluginBase):
                 for emoji in reversed(list(self.recent_emojis.keys())):
                     if emoji in self.emoji_data:
                         emoji_info = self.emoji_data[emoji]
-                        results.append(self._create_emoji_result(emoji, emoji_info, 1.0))
+                        results.append(
+                            self._create_emoji_result(emoji, emoji_info, 1.0)
+                        )
             else:
                 # If no recent emojis, show some popular ones as fallback
                 popular_emojis = ["😀", "👍", "❤️", "🎉", "🔥", "✨", "🚀", "🌈"]
                 for emoji in popular_emojis:
                     if emoji in self.emoji_data:
                         emoji_info = self.emoji_data[emoji]
-                        results.append(self._create_emoji_result(emoji, emoji_info, 1.0))
+                        results.append(
+                            self._create_emoji_result(emoji, emoji_info, 1.0)
+                        )
             return results
 
         # Search by name, group, or the emoji itself

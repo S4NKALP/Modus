@@ -1,8 +1,3 @@
-"""
-Screencapture plugin for the launcher.
-Provides screenshot and screen recording functionality using screen-capture.sh script.
-"""
-
 import subprocess
 from typing import List
 
@@ -26,7 +21,7 @@ class ScreencapturePlugin(PluginBase):
 
     def initialize(self):
         """Initialize the screencapture plugin."""
-        self.set_triggers(["sc", "sc "])
+        self.set_triggers(["sc"])
 
     def cleanup(self):
         """Cleanup the screencapture plugin."""
@@ -44,7 +39,6 @@ class ScreencapturePlugin(PluginBase):
             "ss-both": "Take a screenshot of both displays",
             "screenshot-hdmi": "Take a screenshot of HDMI display",
             "ss-hdmi": "Take a screenshot of HDMI display",
-
             # Recording commands (with audio)
             "record": "Start recording main display with audio",
             "rec": "Start recording main display with audio",
@@ -52,7 +46,6 @@ class ScreencapturePlugin(PluginBase):
             "rec-region": "Start recording selected region with audio",
             "record-hdmi": "Start recording HDMI display with audio",
             "rec-hdmi": "Start recording HDMI display with audio",
-
             # Recording commands (no audio)
             "record-noaudio": "Start recording main display without audio",
             "rec-noaudio": "Start recording main display without audio",
@@ -60,7 +53,6 @@ class ScreencapturePlugin(PluginBase):
             "rec-noaudio-region": "Start recording selected region without audio",
             "record-noaudio-hdmi": "Start recording HDMI display without audio",
             "rec-noaudio-hdmi": "Start recording HDMI display without audio",
-
             # High-quality recording commands
             "record-hq": "Start high-quality recording of main display",
             "rec-hq": "Start high-quality recording of main display",
@@ -68,16 +60,13 @@ class ScreencapturePlugin(PluginBase):
             "rec-hq-region": "Start high-quality recording of selected region",
             "record-hq-hdmi": "Start high-quality recording of HDMI display",
             "rec-hq-hdmi": "Start high-quality recording of HDMI display",
-
             # GIF recording commands
             "record-gif": "Start GIF recording of main display",
             "rec-gif": "Start GIF recording of main display",
             "record-gif-region": "Start GIF recording of selected region",
             "rec-gif-region": "Start GIF recording of selected region",
-
             # Control commands
             "stop": "Stop current recording",
-
             # Conversion commands
             "convert-webm": "Convert recordings to WebM format",
             "conv-webm": "Convert recordings to WebM format",
@@ -100,9 +89,7 @@ class ScreencapturePlugin(PluginBase):
         """Check if recording is currently active."""
         try:
             result = subprocess.run(
-                [self.script_path, "status"],
-                capture_output=True,
-                text=True
+                [self.script_path, "status"], capture_output=True, text=True
             )
             return result.stdout.strip() == "true"
         except Exception:
@@ -111,61 +98,250 @@ class ScreencapturePlugin(PluginBase):
     def _get_command_result(self, command: str) -> Result:
         """Get a Result object for a specific command."""
         # Import here to avoid circular imports
-        from utils.icons import ssfull, ssregion, screenshots, screenrecord, stop
+        from utils.icons import screenrecord, screenshots, ssfull, ssregion, stop
 
         command_info = {
             # Screenshot commands
-            "screenshot": ("Take Screenshot (eDP-1)", "Capture the main display", ssfull, lambda: self._run_script("screenshot", "eDP-1")),
-            "ss": ("Take Screenshot (eDP-1)", "Capture the main display", ssfull, lambda: self._run_script("screenshot", "eDP-1")),
-            "screenshot-region": ("Take Region Screenshot", "Capture a selected region", ssregion, lambda: self._run_script("screenshot", "selection")),
-            "ss-region": ("Take Region Screenshot", "Capture a selected region", ssregion, lambda: self._run_script("screenshot", "selection")),
-            "screenshot-both": ("Take Screenshot (Both Displays)", "Capture both displays combined", screenshots, lambda: self._run_script("screenshot", "both")),
-            "ss-both": ("Take Screenshot (Both Displays)", "Capture both displays combined", screenshots, lambda: self._run_script("screenshot", "both")),
-            "screenshot-hdmi": ("Take Screenshot (HDMI-A-1)", "Capture HDMI display", ssfull, lambda: self._run_script("screenshot", "HDMI-A-1")),
-            "ss-hdmi": ("Take Screenshot (HDMI-A-1)", "Capture HDMI display", ssfull, lambda: self._run_script("screenshot", "HDMI-A-1")),
-
+            "screenshot": (
+                "Take Screenshot (eDP-1)",
+                "Capture the main display",
+                ssfull,
+                lambda: self._run_script("screenshot", "eDP-1"),
+            ),
+            "ss": (
+                "Take Screenshot (eDP-1)",
+                "Capture the main display",
+                ssfull,
+                lambda: self._run_script("screenshot", "eDP-1"),
+            ),
+            "screenshot-region": (
+                "Take Region Screenshot",
+                "Capture a selected region",
+                ssregion,
+                lambda: self._run_script("screenshot", "selection"),
+            ),
+            "ss-region": (
+                "Take Region Screenshot",
+                "Capture a selected region",
+                ssregion,
+                lambda: self._run_script("screenshot", "selection"),
+            ),
+            "screenshot-both": (
+                "Take Screenshot (Both Displays)",
+                "Capture both displays combined",
+                screenshots,
+                lambda: self._run_script("screenshot", "both"),
+            ),
+            "ss-both": (
+                "Take Screenshot (Both Displays)",
+                "Capture both displays combined",
+                screenshots,
+                lambda: self._run_script("screenshot", "both"),
+            ),
+            "screenshot-hdmi": (
+                "Take Screenshot (HDMI-A-1)",
+                "Capture HDMI display",
+                ssfull,
+                lambda: self._run_script("screenshot", "HDMI-A-1"),
+            ),
+            "ss-hdmi": (
+                "Take Screenshot (HDMI-A-1)",
+                "Capture HDMI display",
+                ssfull,
+                lambda: self._run_script("screenshot", "HDMI-A-1"),
+            ),
             # Recording commands (with audio)
-            "record": ("Start Recording (eDP-1)", "Record the main display with audio", screenrecord, lambda: self._run_script("record", "eDP-1")),
-            "rec": ("Start Recording (eDP-1)", "Record the main display with audio", screenrecord, lambda: self._run_script("record", "eDP-1")),
-            "record-region": ("Start Region Recording", "Record a selected region with audio", screenrecord, lambda: self._run_script("record", "selection")),
-            "rec-region": ("Start Region Recording", "Record a selected region with audio", screenrecord, lambda: self._run_script("record", "selection")),
-            "record-hdmi": ("Start Recording (HDMI-A-1)", "Record HDMI display with audio", screenrecord, lambda: self._run_script("record", "HDMI-A-1")),
-            "rec-hdmi": ("Start Recording (HDMI-A-1)", "Record HDMI display with audio", screenrecord, lambda: self._run_script("record", "HDMI-A-1")),
-
+            "record": (
+                "Start Recording (eDP-1)",
+                "Record the main display with audio",
+                screenrecord,
+                lambda: self._run_script("record", "eDP-1"),
+            ),
+            "rec": (
+                "Start Recording (eDP-1)",
+                "Record the main display with audio",
+                screenrecord,
+                lambda: self._run_script("record", "eDP-1"),
+            ),
+            "record-region": (
+                "Start Region Recording",
+                "Record a selected region with audio",
+                screenrecord,
+                lambda: self._run_script("record", "selection"),
+            ),
+            "rec-region": (
+                "Start Region Recording",
+                "Record a selected region with audio",
+                screenrecord,
+                lambda: self._run_script("record", "selection"),
+            ),
+            "record-hdmi": (
+                "Start Recording (HDMI-A-1)",
+                "Record HDMI display with audio",
+                screenrecord,
+                lambda: self._run_script("record", "HDMI-A-1"),
+            ),
+            "rec-hdmi": (
+                "Start Recording (HDMI-A-1)",
+                "Record HDMI display with audio",
+                screenrecord,
+                lambda: self._run_script("record", "HDMI-A-1"),
+            ),
             # Recording commands (no audio)
-            "record-noaudio": ("Start Recording No Audio (eDP-1)", "Record the main display without audio", screenrecord, lambda: self._run_script("record-noaudio", "eDP-1")),
-            "rec-noaudio": ("Start Recording No Audio (eDP-1)", "Record the main display without audio", screenrecord, lambda: self._run_script("record-noaudio", "eDP-1")),
-            "record-noaudio-region": ("Start Region Recording No Audio", "Record a selected region without audio", screenrecord, lambda: self._run_script("record-noaudio", "selection")),
-            "rec-noaudio-region": ("Start Region Recording No Audio", "Record a selected region without audio", screenrecord, lambda: self._run_script("record-noaudio", "selection")),
-            "record-noaudio-hdmi": ("Start Recording No Audio (HDMI-A-1)", "Record HDMI display without audio", screenrecord, lambda: self._run_script("record-noaudio", "HDMI-A-1")),
-            "rec-noaudio-hdmi": ("Start Recording No Audio (HDMI-A-1)", "Record HDMI display without audio", screenrecord, lambda: self._run_script("record-noaudio", "HDMI-A-1")),
-
+            "record-noaudio": (
+                "Start Recording No Audio (eDP-1)",
+                "Record the main display without audio",
+                screenrecord,
+                lambda: self._run_script("record-noaudio", "eDP-1"),
+            ),
+            "rec-noaudio": (
+                "Start Recording No Audio (eDP-1)",
+                "Record the main display without audio",
+                screenrecord,
+                lambda: self._run_script("record-noaudio", "eDP-1"),
+            ),
+            "record-noaudio-region": (
+                "Start Region Recording No Audio",
+                "Record a selected region without audio",
+                screenrecord,
+                lambda: self._run_script("record-noaudio", "selection"),
+            ),
+            "rec-noaudio-region": (
+                "Start Region Recording No Audio",
+                "Record a selected region without audio",
+                screenrecord,
+                lambda: self._run_script("record-noaudio", "selection"),
+            ),
+            "record-noaudio-hdmi": (
+                "Start Recording No Audio (HDMI-A-1)",
+                "Record HDMI display without audio",
+                screenrecord,
+                lambda: self._run_script("record-noaudio", "HDMI-A-1"),
+            ),
+            "rec-noaudio-hdmi": (
+                "Start Recording No Audio (HDMI-A-1)",
+                "Record HDMI display without audio",
+                screenrecord,
+                lambda: self._run_script("record-noaudio", "HDMI-A-1"),
+            ),
             # High-quality recording commands
-            "record-hq": ("Start HQ Recording (eDP-1)", "High-quality recording for YouTube", screenrecord, lambda: self._run_script("record-hq", "eDP-1")),
-            "rec-hq": ("Start HQ Recording (eDP-1)", "High-quality recording for YouTube", screenrecord, lambda: self._run_script("record-hq", "eDP-1")),
-            "record-hq-region": ("Start HQ Region Recording", "High-quality region recording", screenrecord, lambda: self._run_script("record-hq", "selection")),
-            "rec-hq-region": ("Start HQ Region Recording", "High-quality region recording", screenrecord, lambda: self._run_script("record-hq", "selection")),
-            "record-hq-hdmi": ("Start HQ Recording (HDMI-A-1)", "High-quality HDMI recording", screenrecord, lambda: self._run_script("record-hq", "HDMI-A-1")),
-            "rec-hq-hdmi": ("Start HQ Recording (HDMI-A-1)", "High-quality HDMI recording", screenrecord, lambda: self._run_script("record-hq", "HDMI-A-1")),
-
+            "record-hq": (
+                "Start HQ Recording (eDP-1)",
+                "High-quality recording for YouTube",
+                screenrecord,
+                lambda: self._run_script("record-hq", "eDP-1"),
+            ),
+            "rec-hq": (
+                "Start HQ Recording (eDP-1)",
+                "High-quality recording for YouTube",
+                screenrecord,
+                lambda: self._run_script("record-hq", "eDP-1"),
+            ),
+            "record-hq-region": (
+                "Start HQ Region Recording",
+                "High-quality region recording",
+                screenrecord,
+                lambda: self._run_script("record-hq", "selection"),
+            ),
+            "rec-hq-region": (
+                "Start HQ Region Recording",
+                "High-quality region recording",
+                screenrecord,
+                lambda: self._run_script("record-hq", "selection"),
+            ),
+            "record-hq-hdmi": (
+                "Start HQ Recording (HDMI-A-1)",
+                "High-quality HDMI recording",
+                screenrecord,
+                lambda: self._run_script("record-hq", "HDMI-A-1"),
+            ),
+            "rec-hq-hdmi": (
+                "Start HQ Recording (HDMI-A-1)",
+                "High-quality HDMI recording",
+                screenrecord,
+                lambda: self._run_script("record-hq", "HDMI-A-1"),
+            ),
             # GIF recording commands
-            "record-gif": ("Start GIF Recording (eDP-1)", "Record as optimized GIF", screenrecord, lambda: self._run_script("record-gif", "eDP-1")),
-            "rec-gif": ("Start GIF Recording (eDP-1)", "Record as optimized GIF", screenrecord, lambda: self._run_script("record-gif", "eDP-1")),
-            "record-gif-region": ("Start GIF Region Recording", "Record selected region as GIF", screenrecord, lambda: self._run_script("record-gif", "selection")),
-            "rec-gif-region": ("Start GIF Region Recording", "Record selected region as GIF", screenrecord, lambda: self._run_script("record-gif", "selection")),
-
+            "record-gif": (
+                "Start GIF Recording (eDP-1)",
+                "Record as optimized GIF",
+                screenrecord,
+                lambda: self._run_script("record-gif", "eDP-1"),
+            ),
+            "rec-gif": (
+                "Start GIF Recording (eDP-1)",
+                "Record as optimized GIF",
+                screenrecord,
+                lambda: self._run_script("record-gif", "eDP-1"),
+            ),
+            "record-gif-region": (
+                "Start GIF Region Recording",
+                "Record selected region as GIF",
+                screenrecord,
+                lambda: self._run_script("record-gif", "selection"),
+            ),
+            "rec-gif-region": (
+                "Start GIF Region Recording",
+                "Record selected region as GIF",
+                screenrecord,
+                lambda: self._run_script("record-gif", "selection"),
+            ),
             # Control commands
-            "stop": ("Stop Recording", "Stop the current screen recording", stop, lambda: self._run_script("record", "stop")),
-
+            "stop": (
+                "Stop Recording",
+                "Stop the current screen recording",
+                stop,
+                lambda: self._run_script("record", "stop"),
+            ),
             # Conversion commands
-            "convert-webm": ("Convert to WebM", "Convert MKV recordings to WebM format", screenrecord, lambda: self._run_script("convert", "webm")),
-            "conv-webm": ("Convert to WebM", "Convert MKV recordings to WebM format", screenrecord, lambda: self._run_script("convert", "webm")),
-            "convert-iphone": ("Convert for iPhone", "Convert recordings for iPhone compatibility", screenrecord, lambda: self._run_script("convert", "iphone")),
-            "conv-iphone": ("Convert for iPhone", "Convert recordings for iPhone compatibility", screenrecord, lambda: self._run_script("convert", "iphone")),
-            "convert-youtube": ("Convert for YouTube", "Convert recordings for YouTube upload", screenrecord, lambda: self._run_script("convert", "youtube")),
-            "conv-youtube": ("Convert for YouTube", "Convert recordings for YouTube upload", screenrecord, lambda: self._run_script("convert", "youtube")),
-            "convert-gif": ("Convert to GIF", "Convert video recordings to GIF", screenrecord, lambda: self._run_script("convert", "gif")),
-            "conv-gif": ("Convert to GIF", "Convert video recordings to GIF", screenrecord, lambda: self._run_script("convert", "gif")),
+            "convert-webm": (
+                "Convert to WebM",
+                "Convert MKV recordings to WebM format",
+                screenrecord,
+                lambda: self._run_script("convert", "webm"),
+            ),
+            "conv-webm": (
+                "Convert to WebM",
+                "Convert MKV recordings to WebM format",
+                screenrecord,
+                lambda: self._run_script("convert", "webm"),
+            ),
+            "convert-iphone": (
+                "Convert for iPhone",
+                "Convert recordings for iPhone compatibility",
+                screenrecord,
+                lambda: self._run_script("convert", "iphone"),
+            ),
+            "conv-iphone": (
+                "Convert for iPhone",
+                "Convert recordings for iPhone compatibility",
+                screenrecord,
+                lambda: self._run_script("convert", "iphone"),
+            ),
+            "convert-youtube": (
+                "Convert for YouTube",
+                "Convert recordings for YouTube upload",
+                screenrecord,
+                lambda: self._run_script("convert", "youtube"),
+            ),
+            "conv-youtube": (
+                "Convert for YouTube",
+                "Convert recordings for YouTube upload",
+                screenrecord,
+                lambda: self._run_script("convert", "youtube"),
+            ),
+            "convert-gif": (
+                "Convert to GIF",
+                "Convert video recordings to GIF",
+                screenrecord,
+                lambda: self._run_script("convert", "gif"),
+            ),
+            "conv-gif": (
+                "Convert to GIF",
+                "Convert video recordings to GIF",
+                screenrecord,
+                lambda: self._run_script("convert", "gif"),
+            ),
         }
 
         if command in command_info:

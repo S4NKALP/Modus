@@ -1,8 +1,3 @@
-"""
-Calendar plugin for the launcher.
-Calendar with visual dates and working Enter key navigation.
-"""
-
 import calendar
 import datetime
 from typing import List
@@ -11,7 +6,6 @@ import gi
 import utils.icons as icons
 from fabric.widgets.label import Label
 from gi.repository import Gtk
-from fabric.widgets.button import Button
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -22,7 +16,9 @@ class CalendarWidget(Gtk.Box):
     """Visual calendar widget showing month grid with dates and navigation buttons."""
 
     def __init__(self, month: int, year: int, plugin_instance=None):
-        super().__init__(name="calendar-widget", orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        super().__init__(
+            name="calendar-widget", orientation=Gtk.Orientation.VERTICAL, spacing=2
+        )
 
         # Set size constraints to fit within launcher (following CSS)
         self.set_size_request(540, 240)
@@ -48,7 +44,9 @@ class CalendarWidget(Gtk.Box):
         header_box.set_name("calendar-header-box")
 
         # Previous button
-        prev_button = Gtk.Button(child=Label(markup=icons.chevron_left, name="calendar-nav-button"))
+        prev_button = Gtk.Button(
+            child=Label(markup=icons.chevron_left, name="calendar-nav-button")
+        )
         prev_button.connect("clicked", self._on_previous_clicked)
 
         # Month/Year label (following CSS naming)
@@ -56,12 +54,15 @@ class CalendarWidget(Gtk.Box):
         self.month_label = Label(
             name="calendar-month-year",
             label=f"{month_name} {self.display_year}",
-            h_align="center"
+            h_align="center",
         )
-        self.month_label.set_size_request(150, -1)  # Fixed width for consistent layout
+        # Fixed width for consistent layout
+        self.month_label.set_size_request(150, -1)
 
         # Next button
-        next_button = Gtk.Button(child = Label(markup=icons.chevron_right, name="calendar-nav-button"))
+        next_button = Gtk.Button(
+            child=Label(markup=icons.chevron_right, name="calendar-nav-button")
+        )
         next_button.connect("clicked", self._on_next_clicked)
 
         # Add to header box
@@ -75,16 +76,14 @@ class CalendarWidget(Gtk.Box):
             column_spacing=1,
             row_spacing=1,
             column_homogeneous=True,
-            row_homogeneous=True
+            row_homogeneous=True,
         )
 
         # Day headers (following CSS naming)
-        day_names = ['Sun','Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for i, day_name in enumerate(day_names):
             day_header = Label(
-                name="calendar-day-header",
-                label=day_name,
-                h_align="center"
+                name="calendar-day-header", label=day_name, h_align="center"
             )
             grid.attach(day_header, i, 0, 1, 1)
 
@@ -99,15 +98,15 @@ class CalendarWidget(Gtk.Box):
                 else:
                     # Day label (following CSS naming)
                     day_label = Label(
-                        name="calendar-day-label",
-                        label=str(day),
-                        h_align="center"
+                        name="calendar-day-label", label=str(day), h_align="center"
                     )
 
                     # Highlight today (CSS class)
-                    if (day == self.today.day and
-                        self.display_month == self.today.month and
-                        self.display_year == self.today.year):
+                    if (
+                        day == self.today.day
+                        and self.display_month == self.today.month
+                        and self.display_year == self.today.year
+                    ):
                         day_label.get_style_context().add_class("today")
 
                     # Highlight weekends (CSS class)
@@ -181,16 +180,14 @@ class CalendarWidget(Gtk.Box):
             column_spacing=1,
             row_spacing=1,
             column_homogeneous=True,
-            row_homogeneous=True
+            row_homogeneous=True,
         )
 
         # Day headers (following CSS naming)
-        day_names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for i, day_name in enumerate(day_names):
             day_header = Label(
-                name="calendar-day-header",
-                label=day_name,
-                h_align="center"
+                name="calendar-day-header", label=day_name, h_align="center"
             )
             grid.attach(day_header, i, 0, 1, 1)
 
@@ -205,15 +202,15 @@ class CalendarWidget(Gtk.Box):
                 else:
                     # Day label (following CSS naming)
                     day_label = Label(
-                        name="calendar-day-label",
-                        label=str(day),
-                        h_align="center"
+                        name="calendar-day-label", label=str(day), h_align="center"
                     )
 
                     # Highlight today (CSS class)
-                    if (day == self.today.day and
-                        month == self.today.month and
-                        year == self.today.year):
+                    if (
+                        day == self.today.day
+                        and month == self.today.month
+                        and year == self.today.year
+                    ):
                         day_label.get_style_context().add_class("today")
 
                     # Highlight weekends (CSS class)
@@ -244,7 +241,7 @@ class CalendarPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the Calendar plugin."""
-        self.set_triggers(["cal", "cal "])
+        self.set_triggers(["cal"])
         self.description = "Calendar with visual dates and navigation. Use ← → arrows for months, Home for current month"
 
     def cleanup(self):
@@ -273,7 +270,7 @@ class CalendarPlugin(PluginBase):
                     icon_markup=icons.calendar,
                     action=lambda: self._copy_to_clipboard(date_str),
                     relevance=1.0,
-                    plugin_name=self.display_name
+                    plugin_name=self.display_name,
                 )
             )
             return results
@@ -288,7 +285,7 @@ class CalendarPlugin(PluginBase):
                     icon_markup=icons.calendar,
                     action=lambda: self._copy_to_clipboard(date_str),
                     relevance=1.0,
-                    plugin_name=self.display_name
+                    plugin_name=self.display_name,
                 )
             )
             return results
@@ -303,7 +300,7 @@ class CalendarPlugin(PluginBase):
                     icon_markup=icons.calendar,
                     action=lambda: self._copy_to_clipboard(date_str),
                     relevance=1.0,
-                    plugin_name=self.display_name
+                    plugin_name=self.display_name,
                 )
             )
             return results
@@ -344,7 +341,7 @@ class CalendarPlugin(PluginBase):
                 relevance=1.0,
                 plugin_name=self.display_name,
                 custom_widget=calendar_widget,
-                data={"type": "calendar_display"}
+                data={"type": "calendar_display"},
             )
         )
 
@@ -353,7 +350,9 @@ class CalendarPlugin(PluginBase):
     def _navigate_to_next(self):
         """Navigate to next month (called by button click)."""
         if self._current_month and self._current_year:
-            next_month, next_year = self._advance_month(self._current_month, self._current_year, 1)
+            next_month, next_year = self._advance_month(
+                self._current_month, self._current_year, 1
+            )
             self._current_month = next_month
             self._current_year = next_year
 
@@ -364,7 +363,9 @@ class CalendarPlugin(PluginBase):
     def _navigate_to_previous(self):
         """Navigate to previous month (called by button click)."""
         if self._current_month and self._current_year:
-            prev_month, prev_year = self._advance_month(self._current_month, self._current_year, -1)
+            prev_month, prev_year = self._advance_month(
+                self._current_month, self._current_year, -1
+            )
             self._current_month = prev_month
             self._current_year = prev_year
 
@@ -395,6 +396,7 @@ class CalendarPlugin(PluginBase):
         """Copy text to clipboard."""
         try:
             import subprocess
+
             subprocess.run(["wl-copy"], input=text.encode(), check=True)
             print(f"Copied to clipboard: {text}")
         except subprocess.CalledProcessError:

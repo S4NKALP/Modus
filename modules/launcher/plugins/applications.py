@@ -18,7 +18,7 @@ class ApplicationsPlugin(PluginBase):
 
     def initialize(self):
         # Set up triggers for applications - both with and without spaces
-        self.set_triggers(["app", "app "])
+        self.set_triggers(["app"])
         self._load_applications()
 
     def cleanup(self):

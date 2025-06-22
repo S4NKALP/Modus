@@ -1,20 +1,15 @@
-"""
-OTP Manager plugin for the launcher.
-Provides TOTP (Time-based One-Time Password) management.
-"""
-
+import base64
 import json
 import subprocess
-import time
 import threading
-from typing import List, Dict, Optional
+import time
 from pathlib import Path
-import base64
+from typing import Dict, List, Optional
 
+import utils.icons as icons
 from fabric.utils import get_relative_path
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import utils.icons as icons
 
 try:
     import pyotp
@@ -49,7 +44,7 @@ class OTPPlugin(PluginBase):
                 "pyotp is required for OTP functionality. Install with: pip install pyotp"
             )
 
-        self.set_triggers(["otp", "otp "])
+        self.set_triggers(["otp"])
         self._load_secrets()
         self._ensure_config_file()
         self._start_refresh_thread()
@@ -108,8 +103,9 @@ class OTPPlugin(PluginBase):
     def _selective_force_refresh(self):
         """Update time display in existing OTP result items."""
         try:
-            from gi.repository import GLib
             import gc
+
+            from gi.repository import GLib
 
             def do_update():
                 try:
@@ -811,7 +807,7 @@ class OTPPlugin(PluginBase):
     def _handle_otpauth_uri(self, account_name: str, uri: str) -> List[Result]:
         """Handle otpauth:// URI."""
         try:
-            from urllib.parse import urlparse, parse_qs
+            from urllib.parse import parse_qs, urlparse
 
             parsed = urlparse(uri)
             if parsed.scheme != "otpauth" or parsed.netloc != "totp":

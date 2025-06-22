@@ -1,8 +1,3 @@
-"""
-Power management plugin for the launcher.
-Handles system power operations like shutdown, restart, sleep, etc.
-"""
-
 from typing import List
 
 import utils.icons as icons
@@ -50,7 +45,7 @@ class PowerPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the power plugin."""
-        self.set_triggers(["power", "power "])
+        self.set_triggers(["power"])
 
     def cleanup(self):
         """Cleanup the power plugin."""

@@ -1,19 +1,14 @@
-"""
-Caffeine plugin for the launcher.
-Prevents system from going idle for a specified duration.
-"""
-
 import subprocess
-from typing import List
 from threading import Timer
+from typing import List
 
+import config.data as data
 import gi
 import utils.icons as icons
 from fabric.utils import get_relative_path
 from fabric.utils.helpers import exec_shell_command_async
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-import config.data as data
 
 gi.require_version("Gtk", "3.0")
 
@@ -42,7 +37,7 @@ class CaffeinePlugin(PluginBase):
 
     def initialize(self):
         """Initialize the caffeine plugin."""
-        self.set_triggers(["caffeine", "caffeine "])
+        self.set_triggers(["caffeine"])
 
     def cleanup(self):
         """Cleanup the caffeine plugin."""
@@ -65,13 +60,17 @@ class CaffeinePlugin(PluginBase):
                 if duration.lower() == "off":
                     # Deactivation notification
                     exec_shell_command_async(
-                        f"notify-send '☕ Caffeine' 'Deactivated' -a '{data.APP_NAME_CAP}' -e"
+                        f"notify-send '☕ Caffeine' 'Deactivated' -a '{
+                            data.APP_NAME_CAP
+                        }' -e"
                     )
                 else:
                     # Activation notification with duration
                     duration_text = self.durations.get(duration, duration)
                     exec_shell_command_async(
-                        f"notify-send '☕ Caffeine' 'Activated for {duration_text}' -a '{data.APP_NAME_CAP}' -e"
+                        f"notify-send '☕ Caffeine' 'Activated for {
+                            duration_text
+                        }' -a '{data.APP_NAME_CAP}' -e"
                     )
 
                     # Schedule expiration notification for timed durations
@@ -86,13 +85,13 @@ class CaffeinePlugin(PluginBase):
     def _parse_duration_to_seconds(self, duration_str: str) -> int:
         """Parse duration string into seconds. Same logic as inhibit.py"""
         try:
-            if duration_str.lower() in ['on', 'off']:
+            if duration_str.lower() in ["on", "off"]:
                 return 0
-            elif duration_str.endswith('h'):
+            elif duration_str.endswith("h"):
                 return int(float(duration_str[:-1]) * 3600)
-            elif duration_str.endswith('m'):
+            elif duration_str.endswith("m"):
                 return int(float(duration_str[:-1]) * 60)
-            elif duration_str.endswith('s'):
+            elif duration_str.endswith("s"):
                 return int(float(duration_str[:-1]))
             else:
                 return int(duration_str)
@@ -103,9 +102,12 @@ class CaffeinePlugin(PluginBase):
         """Schedule a notification for when the caffeine effect expires."""
         seconds = self._parse_duration_to_seconds(duration)
         if seconds > 0:
+
             def send_expiration_notification():
                 exec_shell_command_async(
-                    f"notify-send '☕ Caffeine' 'Expired after {duration_text}' -a '{data.APP_NAME_CAP}' -e"
+                    f"notify-send '☕ Caffeine' 'Expired after {duration_text}' -a '{
+                        data.APP_NAME_CAP
+                    }' -e"
                 )
 
             # Schedule the notification
