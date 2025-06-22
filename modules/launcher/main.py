@@ -1,19 +1,19 @@
 from typing import List
 
+import utils.icons as icons
 from fabric.core.service import Property
-from fabric.widgets.box import Box
-from fabric.widgets.entry import Entry
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.button import Button
-from fabric.widgets.label import Label
 from fabric.utils import exec_shell_command_async, get_relative_path
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.entry import Entry
+from fabric.widgets.label import Label
+from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import Gdk, GLib
 from modules.launcher.plugin_manager import PluginManager
 from modules.launcher.result import Result
 from modules.launcher.result_item import ResultItem
 from modules.launcher.trigger_config import TriggerConfig
 from utils.wayland import WaylandWindow as Window
-import utils.icons as icons
 
 
 class Launcher(Window):
@@ -39,6 +39,9 @@ class Launcher(Window):
 
         # Initialization flag to prevent callbacks during setup
         self._initializing = True
+
+        # Flag to prevent recursion when automatically adding spaces
+        self._auto_adding_space = False
 
         # Initialize plugin manager
         self.plugin_manager = PluginManager()
@@ -204,10 +207,12 @@ class Launcher(Window):
         if trigger_keyword:
             # For trigger keywords, we want the cursor at the end
             self.search_entry.grab_focus()
+
             def position_cursor():
                 if hasattr(self.search_entry, "set_position"):
                     self.search_entry.set_position(-1)  # Move caret to end
                 return False  # Only run once
+
             GLib.idle_add(position_cursor)
         else:
             # For normal opening, use our method that prevents text selection
@@ -224,12 +229,17 @@ class Launcher(Window):
         self.active_trigger = ""
         self.visible = False
         self.opened_with_trigger = False  # Reset the flag when closing
-        self.opened_with_trigger = False  # Track if launcher was opened with a trigger keyword
+        # Track if launcher was opened with a trigger keyword
+        self.opened_with_trigger = False
 
     def _on_search_changed(self, entry):
         """Handle search text changes."""
         # Skip if still initializing
         if getattr(self, "_initializing", True):
+            return
+
+        # Skip if we're automatically adding a space to prevent recursion
+        if getattr(self, "_auto_adding_space", False):
             return
 
         # Reset focus to search when user types
@@ -291,7 +301,37 @@ class Launcher(Window):
             triggered_plugin, trigger = self._detect_trigger(query)
 
             if triggered_plugin:
-                # New trigger detected - enter trigger mode
+                # New trigger detected - check if we need to add space automatically
+                trigger_word = trigger.strip()
+                current_text = self.search_entry.get_text()
+
+                # If the current text is exactly the trigger word (no space), add space automatically
+                if current_text.strip() == trigger_word and not current_text.endswith(" "):
+                    # Add space after trigger keyword
+                    trigger_text_with_space = f"{trigger_word} "
+
+                    # Temporarily disable search change handling to prevent recursion
+                    self._auto_adding_space = True
+                    self.search_entry.set_text(trigger_text_with_space)
+
+                    # Position cursor at the end
+                    def position_cursor():
+                        if hasattr(self.search_entry, "set_position"):
+                            self.search_entry.set_position(-1)  # Move caret to end
+                        if hasattr(self.search_entry, "select_region"):
+                            self.search_entry.select_region(
+                                len(trigger_text_with_space), len(trigger_text_with_space)
+                            )  # No selection
+                        self._auto_adding_space = False
+                        return False  # Only run once
+
+                    GLib.idle_add(position_cursor)
+
+                    # Update query to the new text with space
+                    query = trigger_text_with_space
+                    self.query = query
+
+                # Enter trigger mode
                 self.triggered_plugin = triggered_plugin
                 self.active_trigger = trigger
 
@@ -529,7 +569,7 @@ class Launcher(Window):
         """
         try:
             # Parse the command to extract trigger and query
-            parts = command_string.strip().split(' ', 1)
+            parts = command_string.strip().split(" ", 1)
             if not parts:
                 return None
 
@@ -562,8 +602,11 @@ class Launcher(Window):
                 best_result = None
                 for result in results:
                     # For exact matches like "random", execute immediately
-                    if (hasattr(result, 'data') and result.data and
-                        result.data.get('action') == query_part.strip()):
+                    if (
+                        hasattr(result, "data")
+                        and result.data
+                        and result.data.get("action") == query_part.strip()
+                    ):
                         best_result = result
                         break
                     # For partial matches, take the first high-relevance result
@@ -753,6 +796,7 @@ class Launcher(Window):
 
                 # Use idle_add to check after the backspace is processed
                 from gi.repository import GLib
+
                 GLib.idle_add(check_trigger_after_backspace)
 
                 # Allow the normal backspace to proceed
@@ -831,7 +875,9 @@ class Launcher(Window):
                     if self._custom_widget_has_entry(result.custom_widget):
                         # Let the custom widget handle the Enter key
                         # Find the focused Entry widget and trigger its activate signal
-                        focused_entry = self._find_focused_entry_in_widget(result.custom_widget)
+                        focused_entry = self._find_focused_entry_in_widget(
+                            result.custom_widget
+                        )
                         if focused_entry:
                             focused_entry.emit("activate")
                             return True
@@ -873,7 +919,9 @@ class Launcher(Window):
 
         if keyval == Gdk.KEY_Page_Down:
             if self.results:
-                self.selected_index = min(len(self.results) - 1, self.selected_index + 5)
+                self.selected_index = min(
+                    len(self.results) - 1, self.selected_index + 5
+                )
                 self._update_selection()
             return True
 
@@ -893,7 +941,7 @@ class Launcher(Window):
         # Forward other keys to custom widgets if they can handle them
         if self.results and 0 <= self.selected_index < len(self.results):
             result = self.results[self.selected_index]
-            if result.custom_widget and hasattr(result.custom_widget, 'on_key_press'):
+            if result.custom_widget and hasattr(result.custom_widget, "on_key_press"):
                 # Try to forward the key event to the custom widget
                 if result.custom_widget.on_key_press(result.custom_widget, event):
                     return True
@@ -908,7 +956,7 @@ class Launcher(Window):
             return True
 
         # Check children recursively
-        if hasattr(widget, 'get_children'):
+        if hasattr(widget, "get_children"):
             for child in widget.get_children():
                 if self._custom_widget_has_entry(child):
                     return True
@@ -931,7 +979,7 @@ class Launcher(Window):
                 return widget
 
         # Check children recursively
-        if hasattr(widget, 'get_children'):
+        if hasattr(widget, "get_children"):
             for child in widget.get_children():
                 focused_entry = self._find_focused_entry_in_widget(child)
                 if focused_entry:
@@ -944,10 +992,14 @@ class Launcher(Window):
         for result in self.results:
             if result.custom_widget:
                 # Check if this is a NetworkPasswordEntry widget
-                if hasattr(result.custom_widget, '__class__') and result.custom_widget.__class__.__name__ == 'NetworkPasswordEntry':
+                if (
+                    hasattr(result.custom_widget, "__class__")
+                    and result.custom_widget.__class__.__name__
+                    == "NetworkPasswordEntry"
+                ):
                     return result.custom_widget
                 # Also check if it has the cancel_password_entry method (duck typing)
-                elif hasattr(result.custom_widget, 'cancel_password_entry'):
+                elif hasattr(result.custom_widget, "cancel_password_entry"):
                     return result.custom_widget
         return None
 
@@ -1126,8 +1178,6 @@ class Launcher(Window):
         for button in self.header_buttons:
             button.remove_style_class("focused")
 
-
-
     def _focus_search_entry_without_selection(self):
         """Focus search entry and position cursor at end without selecting text."""
         # First grab focus
@@ -1147,16 +1197,19 @@ class Launcher(Window):
                 # Method 2: Try to access underlying GTK widget
                 try:
                     # For fabric Entry widgets, try to get the actual GTK Entry
-                    if hasattr(self.search_entry, '_entry'):
+                    if hasattr(self.search_entry, "_entry"):
                         gtk_entry = self.search_entry._entry
-                    elif hasattr(self.search_entry, 'get_children') and self.search_entry.get_children():
+                    elif (
+                        hasattr(self.search_entry, "get_children")
+                        and self.search_entry.get_children()
+                    ):
                         gtk_entry = self.search_entry.get_children()[0]
                     else:
                         gtk_entry = self.search_entry
 
-                    if hasattr(gtk_entry, 'set_position'):
+                    if hasattr(gtk_entry, "set_position"):
                         gtk_entry.set_position(text_length)
-                    if hasattr(gtk_entry, 'select_region'):
+                    if hasattr(gtk_entry, "select_region"):
                         gtk_entry.select_region(text_length, text_length)
 
                 except Exception:
