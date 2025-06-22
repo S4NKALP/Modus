@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Tuple
 
 import utils.icons as icons
 from fabric.core.service import Property
@@ -14,6 +14,16 @@ from modules.launcher.result import Result
 from modules.launcher.result_item import ResultItem
 from modules.launcher.trigger_config import TriggerConfig
 from utils.wayland import WaylandWindow as Window
+
+# Constants
+SEARCH_DEBOUNCE_MS = 150
+TRIGGER_SEARCH_DEBOUNCE_MS = 50
+CURSOR_POSITION_DELAY_MS = 10
+SCROLL_PADDING = 10
+DEFAULT_ITEM_HEIGHT = 60
+PAGE_NAVIGATION_STEP = 5
+LAUNCHER_WIDTH = 550
+LAUNCHER_HEIGHT = 260
 
 
 class Launcher(Window):
@@ -122,8 +132,8 @@ class Launcher(Window):
         self.results_scroll = ScrolledWindow(
             name="launcher-results-scroll",
             h_scrollbar_policy="never",
-            min_content_size=(550, 260),
-            max_content_size=(550, 260),
+            min_content_size=(LAUNCHER_WIDTH, LAUNCHER_HEIGHT),
+            max_content_size=(LAUNCHER_WIDTH, LAUNCHER_HEIGHT),
             propagate_width=False,
             propagate_height=False,
         )
@@ -220,6 +230,45 @@ class Launcher(Window):
 
         self.visible = True
 
+    def _position_cursor_at_end(self, text_length: Optional[int] = None) -> None:
+        """Position cursor at the end of search entry text."""
+        if text_length is None:
+            text_length = len(self.search_entry.get_text())
+
+        def position_cursor():
+            if hasattr(self.search_entry, "set_position"):
+                self.search_entry.set_position(-1)  # Move caret to end
+            if hasattr(self.search_entry, "select_region"):
+                self.search_entry.select_region(text_length, text_length)  # No selection
+            return False  # Only run once
+
+        GLib.idle_add(position_cursor)
+
+    def _add_space_to_trigger(self, trigger_word: str) -> None:
+        """Add space after trigger keyword and position cursor."""
+        trigger_text_with_space = f"{trigger_word} "
+
+        # Temporarily disable search change handling to prevent recursion
+        self._auto_adding_space = True
+        self.search_entry.set_text(trigger_text_with_space)
+
+        # Position cursor at the end
+        def position_cursor():
+            if hasattr(self.search_entry, "set_position"):
+                self.search_entry.set_position(-1)  # Move caret to end
+            if hasattr(self.search_entry, "select_region"):
+                self.search_entry.select_region(
+                    len(trigger_text_with_space), len(trigger_text_with_space)
+                )  # No selection
+            self._auto_adding_space = False
+            return False  # Only run once
+
+        GLib.idle_add(position_cursor)
+
+        # Update query
+        self.query = trigger_text_with_space
+        return trigger_text_with_space
+
     def close_launcher(self):
         """Hide the launcher and clear search."""
         self.hide()
@@ -228,8 +277,6 @@ class Launcher(Window):
         self.triggered_plugin = None
         self.active_trigger = ""
         self.visible = False
-        self.opened_with_trigger = False  # Reset the flag when closing
-        # Track if launcher was opened with a trigger keyword
         self.opened_with_trigger = False
 
     def _on_search_changed(self, entry):
@@ -265,34 +312,14 @@ class Launcher(Window):
             # Check if we need to add space immediately for exact trigger matches
             if not query.endswith(" "):
                 # This is an exact trigger match without space - add space immediately
-                trigger_text_with_space = f"{query} "
-
-                # Temporarily disable search change handling to prevent recursion
-                self._auto_adding_space = True
-                self.search_entry.set_text(trigger_text_with_space)
-
-                # Position cursor at the end
-                def position_cursor():
-                    if hasattr(self.search_entry, "set_position"):
-                        self.search_entry.set_position(-1)  # Move caret to end
-                    if hasattr(self.search_entry, "select_region"):
-                        self.search_entry.select_region(
-                            len(trigger_text_with_space), len(trigger_text_with_space)
-                        )  # No selection
-                    self._auto_adding_space = False
-                    return False  # Only run once
-
-                GLib.idle_add(position_cursor)
-
-                # Update query and trigger search with the new text
-                self.query = trigger_text_with_space
-                GLib.timeout_add(50, self._perform_search, trigger_text_with_space)
+                trigger_text_with_space = self._add_space_to_trigger(query)
+                GLib.timeout_add(TRIGGER_SEARCH_DEBOUNCE_MS, self._perform_search, trigger_text_with_space)
             else:
                 # Already has space, proceed with normal search
-                GLib.timeout_add(150, self._perform_search, query)
+                GLib.timeout_add(SEARCH_DEBOUNCE_MS, self._perform_search, query)
         elif query:
             # Debounce search to avoid too many queries
-            GLib.timeout_add(150, self._perform_search, query)
+            GLib.timeout_add(SEARCH_DEBOUNCE_MS, self._perform_search, query)
         else:
             # Hide results when query is empty
             self._clear_results()
@@ -334,29 +361,7 @@ class Launcher(Window):
                 # If the current text is exactly the trigger word (no space), add space automatically
                 if (current_text.strip() == trigger_word and not current_text.endswith(" ")
                     and not getattr(self, "_auto_adding_space", False)):
-                    # Add space after trigger keyword
-                    trigger_text_with_space = f"{trigger_word} "
-
-                    # Temporarily disable search change handling to prevent recursion
-                    self._auto_adding_space = True
-                    self.search_entry.set_text(trigger_text_with_space)
-
-                    # Position cursor at the end
-                    def position_cursor():
-                        if hasattr(self.search_entry, "set_position"):
-                            self.search_entry.set_position(-1)  # Move caret to end
-                        if hasattr(self.search_entry, "select_region"):
-                            self.search_entry.select_region(
-                                len(trigger_text_with_space), len(trigger_text_with_space)
-                            )  # No selection
-                        self._auto_adding_space = False
-                        return False  # Only run once
-
-                    GLib.idle_add(position_cursor)
-
-                    # Update query to the new text with space
-                    query = trigger_text_with_space
-                    self.query = query
+                    query = self._add_space_to_trigger(trigger_word)
 
                 # Enter trigger mode
                 self.triggered_plugin = triggered_plugin
@@ -449,7 +454,7 @@ class Launcher(Window):
         self.selected_index = 0
         self._update_results_display()
 
-    def _detect_trigger(self, query: str):
+    def _detect_trigger(self, query: str) -> Tuple[Optional[object], str]:
         """
         Detect if query starts with a trigger keyword.
 
@@ -470,7 +475,7 @@ class Launcher(Window):
 
         return None, ""
 
-    def _get_trigger_suggestions(self, query: str):
+    def _get_trigger_suggestions(self, query: str) -> List[Result]:
         """
         Get trigger suggestions based on the current query.
 
@@ -480,8 +485,6 @@ class Launcher(Window):
         Returns:
             List of Result objects showing available triggers
         """
-        from .result import Result
-
         suggestions = []
         query_lower = query.lower().strip()
 
@@ -504,47 +507,33 @@ class Launcher(Window):
         # Show trigger suggestions based on query
         if query_lower:
             # Show triggers that match the query
-            for trigger_clean, info in all_triggers.items():
+            for trigger_clean, _ in all_triggers.items():
                 if trigger_clean.lower().startswith(query_lower):
-                    examples = self.trigger_config.get_trigger_examples(trigger_clean)
-                    icon_name = self.trigger_config.get_trigger_icon(trigger_clean)
-                    description = self.trigger_config.get_trigger_description(
-                        trigger_clean
-                    )
-
-                    # Create result for this trigger
-                    result = Result(
-                        title=f"{trigger_clean}",
-                        subtitle=f"{description} - {
-                            ', '.join(examples[:max_examples])
-                        }",
-                        icon_markup=icon_name,
-                        action=lambda t=trigger_clean: self._activate_trigger(t),
-                        # Shorter triggers get higher relevance
-                        relevance=100 - len(trigger_clean),
-                        data={"type": "trigger_suggestion", "trigger": trigger_clean},
-                    )
+                    result = self._create_trigger_result(trigger_clean, max_examples)
                     suggestions.append(result)
         else:
             # Empty query - show all available triggers
-            for trigger_clean, info in all_triggers.items():
-                examples = self.trigger_config.get_trigger_examples(trigger_clean)
-                icon_name = self.trigger_config.get_trigger_icon(trigger_clean)
-                description = self.trigger_config.get_trigger_description(trigger_clean)
-
-                # Create result for this trigger
-                result = Result(
-                    title=f"{trigger_clean}",
-                    subtitle=f"{description} - {', '.join(examples[:max_examples])}",
-                    icon_markup=icon_name,
-                    action=lambda t=trigger_clean: self._activate_trigger(t),
-                    # Shorter triggers get higher relevance
-                    relevance=100 - len(trigger_clean),
-                    data={"type": "trigger_suggestion", "trigger": trigger_clean},
-                )
+            for trigger_clean, _ in all_triggers.items():
+                result = self._create_trigger_result(trigger_clean, max_examples)
                 suggestions.append(result)
 
         return suggestions  # Return all trigger suggestions without limit
+
+    def _create_trigger_result(self, trigger_clean: str, max_examples: int) -> Result:
+        """Create a Result object for a trigger suggestion."""
+        examples = self.trigger_config.get_trigger_examples(trigger_clean)
+        icon_name = self.trigger_config.get_trigger_icon(trigger_clean)
+        description = self.trigger_config.get_trigger_description(trigger_clean)
+
+        return Result(
+            title=f"{trigger_clean}",
+            subtitle=f"{description} - {', '.join(examples[:max_examples])}",
+            icon_markup=icon_name,
+            action=lambda t=trigger_clean: self._activate_trigger(t),
+            # Shorter triggers get higher relevance
+            relevance=100 - len(trigger_clean),
+            data={"type": "trigger_suggestion", "trigger": trigger_clean},
+        )
 
     def _activate_trigger(self, trigger: str):
         """
@@ -605,13 +594,11 @@ class Launcher(Window):
 
             # Find the plugin that handles this trigger
             triggered_plugin = None
-            detected_trigger = None
 
             for plugin in self.plugin_manager.get_active_plugins():
                 trigger = plugin.get_active_trigger(f"{trigger_part} ")
                 if trigger:
                     triggered_plugin = plugin
-                    detected_trigger = trigger
                     break
 
             if not triggered_plugin:
@@ -770,67 +757,72 @@ class Launcher(Window):
             self.results_box.remove(child)
         self.results_scroll.hide()
 
-    def _on_key_press(self, widget, event):
+    def _handle_escape_key(self) -> bool:
+        """Handle escape key press."""
+        # First check if there's a password entry widget that should handle Escape
+        password_entry_widget = self._find_password_entry_widget()
+        if password_entry_widget:
+            # Cancel the password entry
+            password_entry_widget.cancel_password_entry()
+            return True
+        elif self.opened_with_trigger:
+            # If launcher was opened with a trigger keyword, close directly
+            self.close_launcher()
+            return True
+        elif self.triggered_plugin:
+            # Exit trigger mode
+            self.triggered_plugin = None
+            self.active_trigger = ""
+            self.search_entry.set_text("")
+            self._clear_results()
+            return True
+        else:
+            # Hide launcher
+            self.close_launcher()
+            return True
+
+    def _handle_backspace_key(self) -> bool:
+        """Handle backspace key press in trigger mode."""
+        if self.triggered_plugin:
+            trigger_text = self.active_trigger.strip()
+
+            # Allow normal backspace behavior first, then check if we need to exit trigger mode
+            # Don't intercept the backspace - let GTK handle it normally
+
+            # Schedule a check after the backspace is processed
+            def check_trigger_after_backspace():
+                # Get the text after backspace has been processed
+                new_text = self.search_entry.get_text()
+
+                # If the text no longer starts with the trigger, exit trigger mode
+                if not new_text.lower().startswith(trigger_text.lower()):
+                    self.triggered_plugin = None
+                    self.active_trigger = ""
+                    self._clear_results()
+                    # Don't clear the text - let the user's edit stand
+
+                return False  # Don't repeat
+
+            # Use idle_add to check after the backspace is processed
+            GLib.idle_add(check_trigger_after_backspace)
+
+            # Allow the normal backspace to proceed
+            return False
+
+        # Let normal backspace behavior continue for other cases
+        return False
+
+    def _on_key_press(self, _widget, event):
         """Handle key press events."""
         keyval = event.keyval
 
         # Escape - handle password entry, exit trigger mode, or hide launcher
         if keyval == Gdk.KEY_Escape:
-            # First check if there's a password entry widget that should handle Escape
-            password_entry_widget = self._find_password_entry_widget()
-            if password_entry_widget:
-                # Cancel the password entry
-                password_entry_widget.cancel_password_entry()
-                return True
-            elif self.opened_with_trigger:
-                # If launcher was opened with a trigger keyword, close directly
-                self.close_launcher()
-                return True
-            elif self.triggered_plugin:
-                # Exit trigger mode
-                self.triggered_plugin = None
-                self.active_trigger = ""
-                self.search_entry.set_text("")
-                self._clear_results()
-                return True
-            else:
-                # Hide launcher
-                self.close_launcher()
-                return True
+            return self._handle_escape_key()
 
         # Backspace - handle trigger mode backspace behavior
         if keyval == Gdk.KEY_BackSpace:
-            if self.triggered_plugin:
-                current_text = self.search_entry.get_text()
-                trigger_text = self.active_trigger.strip()
-
-                # Allow normal backspace behavior first, then check if we need to exit trigger mode
-                # Don't intercept the backspace - let GTK handle it normally
-
-                # Schedule a check after the backspace is processed
-                def check_trigger_after_backspace():
-                    # Get the text after backspace has been processed
-                    new_text = self.search_entry.get_text()
-
-                    # If the text no longer starts with the trigger, exit trigger mode
-                    if not new_text.lower().startswith(trigger_text.lower()):
-                        self.triggered_plugin = None
-                        self.active_trigger = ""
-                        self._clear_results()
-                        # Don't clear the text - let the user's edit stand
-
-                    return False  # Don't repeat
-
-                # Use idle_add to check after the backspace is processed
-                from gi.repository import GLib
-
-                GLib.idle_add(check_trigger_after_backspace)
-
-                # Allow the normal backspace to proceed
-                return False
-
-            # Let normal backspace behavior continue for other cases
-            return False
+            return self._handle_backspace_key()
 
         # Ctrl+, - Open configuration
         if keyval == Gdk.KEY_comma and event.state & Gdk.ModifierType.CONTROL_MASK:
@@ -940,14 +932,14 @@ class Launcher(Window):
         # Page Up/Page Down - navigate results faster
         if keyval == Gdk.KEY_Page_Up:
             if self.results:
-                self.selected_index = max(0, self.selected_index - 5)
+                self.selected_index = max(0, self.selected_index - PAGE_NAVIGATION_STEP)
                 self._update_selection()
             return True
 
         if keyval == Gdk.KEY_Page_Down:
             if self.results:
                 self.selected_index = min(
-                    len(self.results) - 1, self.selected_index + 5
+                    len(self.results) - 1, self.selected_index + PAGE_NAVIGATION_STEP
                 )
                 self._update_selection()
             return True
@@ -1030,11 +1022,11 @@ class Launcher(Window):
                     return result.custom_widget
         return None
 
-    def _on_entry_activate(self, entry):
+    def _on_entry_activate(self, _entry):
         """Handle entry activation (Enter key)."""
         self._activate_selected()
 
-    def _on_result_clicked(self, result_item, index):
+    def _on_result_clicked(self, _result_item, index):
         """Handle result item click."""
         self.selected_index = index
         self._activate_selected()
@@ -1102,7 +1094,7 @@ class Launcher(Window):
                 item_y = allocation.y
             except:
                 # Fallback to estimation
-                item_height = 60  # Default item height
+                item_height = DEFAULT_ITEM_HEIGHT
                 item_y = self.selected_index * item_height
 
             # Get current scroll info
@@ -1119,16 +1111,14 @@ class Launcher(Window):
             item_bottom = item_y + item_height
 
             # Add some padding for better visibility
-            padding = 10
-
             # Scroll if needed
-            if item_top < visible_top + padding:
+            if item_top < visible_top + SCROLL_PADDING:
                 # Item is above visible area - scroll up
-                new_scroll = max(0, item_top - padding)
+                new_scroll = max(0, item_top - SCROLL_PADDING)
                 vadjustment.set_value(new_scroll)
-            elif item_bottom > visible_bottom - padding:
+            elif item_bottom > visible_bottom - SCROLL_PADDING:
                 # Item is below visible area - scroll down
-                new_scroll = min(max_scroll, item_bottom - page_size + padding)
+                new_scroll = min(max_scroll, item_bottom - page_size + SCROLL_PADDING)
                 vadjustment.set_value(new_scroll)
 
     def _ensure_selected_visible(self):
@@ -1249,7 +1239,7 @@ class Launcher(Window):
         # Schedule clearing selection after focus is established
         GLib.idle_add(clear_selection)
         # Also try with a small delay as backup
-        GLib.timeout_add(10, clear_selection)
+        GLib.timeout_add(CURSOR_POSITION_DELAY_MS, clear_selection)
 
     def _navigate_header_buttons_forward(self):
         """Navigate to next header button or exit header mode."""
