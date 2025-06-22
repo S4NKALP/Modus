@@ -76,12 +76,12 @@ def ensure_matugen_config():
         },
         "templates": {
             "hyprland": {
-                "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/hyprland-colors.conf",
-                "output_path": f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf",
+                "input_path": f"~/{APP_NAME_CAP}/config/matugen/templates/hyprland-colors.conf",
+                "output_path": f"~/{APP_NAME_CAP}/config/hypr/colors.conf",
             },
             f"{APP_NAME}": {
-                "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/{APP_NAME}.css",
-                "output_path": f"~/.config/{APP_NAME_CAP}/styles/colors.css",
+                "input_path": f"~/{APP_NAME_CAP}/config/matugen/templates/{APP_NAME}.css",
+                "output_path": f"~/{APP_NAME_CAP}/styles/colors.css",
                 "post_hook": f"fabric-cli exec {APP_NAME} 'app.set_css()' &",
             },
         },
@@ -124,10 +124,8 @@ def ensure_matugen_config():
         print(f"Error writing matugen config to {config_path}: {e}")
 
     current_wall = os.path.expanduser("~/.current.wall")
-    hypr_colors = os.path.expanduser(
-        f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf"
-    )
-    css_colors = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/styles/colors.css")
+    hypr_colors = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/colors.conf")
+    css_colors = os.path.expanduser(f"~/{APP_NAME_CAP}/styles/colors.css")
 
     if (
         not os.path.exists(current_wall)
@@ -140,7 +138,7 @@ def ensure_matugen_config():
         image_path = ""
         if not os.path.exists(current_wall):
             example_wallpaper_path = os.path.expanduser(
-                f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg"
+                f"~/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg"
             )
             if os.path.exists(example_wallpaper_path):
                 try:
@@ -194,9 +192,7 @@ def load_bind_vars():
     # Usar .copy() para no modificar DEFAULTS accidentalmente
     bind_vars.update(settings_constants.DEFAULTS.copy())
 
-    config_json = os.path.expanduser(
-        f"~/.config/{APP_NAME_CAP}/config/json/config.json"
-    )
+    config_json = os.path.expanduser(f"~/{APP_NAME_CAP}/config/json/config.json")
     if os.path.exists(config_json):
         try:
             with open(config_json, "r") as f:
@@ -250,17 +246,17 @@ def generate_hyprconf() -> str:
     is_vertical = bar_position in ["Left", "Right"]
     animation_type = "slidefadevert" if is_vertical else "slidefade"
 
-    return f"""exec-once = uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
+    return f"""exec-once = uwsm-app $(python {home}/{APP_NAME_CAP}/main.py)
 exec = pgrep -x "hypridle" > /dev/null || uwsm app -- hypridle
 exec = uwsm app -- swww-daemon
 exec-once =  wl-paste --type text --watch cliphist store
 exec-once =  wl-paste --type image --watch cliphist store
 
 $fabricSend = fabric-cli exec {APP_NAME}
-$axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "{home}/{AP.config / P_NAME_CAP}/assets/modus.png" -A "🗣️" -A "🔥" -A "🕳️" -a "Source Code"
+$axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "{home}/{APP_NAME_CAP}/assets/modus.png" -A "🗣️" -A "🔥" -A "🕳️" -a "Source Code"
 
 # Reload {APP_NAME_CAP}
-bind = {bind_vars.get("prefix_restart", "ALT SHIFT")}, {bind_vars.get("suffix_restart", "R")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
+bind = {bind_vars.get("prefix_restart", "ALT SHIFT")}, {bind_vars.get("suffix_restart", "R")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/{APP_NAME_CAP}/main.py)
 # Message
 bind = {bind_vars.get("prefix_msg", "SUPER")}, {bind_vars.get("suffix_msg", "A")}, exec, $Message
 # Application Switcher
@@ -283,7 +279,7 @@ bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", 
 # Toggle Caffeine
 bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix_caffeine", "M")}, exec, $fabricSend "launcher.show_launcher('caffeine on', external=True)"
 # Settings
-bind = {bind_vars.get("prefix_settings", "SUPER")}, {bind_vars.get("suffix_settings", "I")}, exec, uwsm-app $(python {home}/.config/{APP_NAME_CAP}/config/config.py) # Settings
+bind = {bind_vars.get("prefix_settings", "SUPER")}, {bind_vars.get("suffix_settings", "I")}, exec, uwsm-app $(python {home}/{APP_NAME_CAP}/config/config.py) # Settings
 # Restart Modus
 bind = {bind_vars.get("prefix_restart_inspector", "SUPER CTRL ALT")}, {bind_vars.get("suffix_restart_inspector", "B")}, exec, killall {APP_NAME}; uwsm-app $(GTK_DEBUG=interactive python {home}/.config/{APP_NAME_CAP}/main.py) # Restart with inspector
 

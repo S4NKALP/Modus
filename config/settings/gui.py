@@ -907,7 +907,7 @@ class HyprConfGUI(Window):
             print(f"{start_time:.4f}: Background task started.")
 
             config_json = os.path.expanduser(
-                f"~/.config/{APP_NAME_CAP}/config/json/config.json"
+                f"~/{APP_NAME_CAP}/config/json/config.json"
             )
             os.makedirs(os.path.dirname(config_json), exist_ok=True)
             try:
@@ -935,9 +935,7 @@ class HyprConfGUI(Window):
 
             if replace_lock:
                 print(f"{time.time():.4f}: Replacing hyprlock config...")
-                src = os.path.expanduser(
-                    f"~/.config/{APP_NAME_CAP}/config/hypr/hyprlock.conf"
-                )
+                src = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/hyprlock.conf")
                 dest = os.path.expanduser("~/.config/hypr/hyprlock.conf")
                 if os.path.exists(src):
                     backup_and_replace(src, dest, "Hyprlock")
@@ -947,9 +945,7 @@ class HyprConfGUI(Window):
 
             if replace_idle:
                 print(f"{time.time():.4f}: Replacing hypridle config...")
-                src = os.path.expanduser(
-                    f"~/.config/{APP_NAME_CAP}/config/hypr/hypridle.conf"
-                )
+                src = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/hypridle.conf")
                 dest = os.path.expanduser("~/.config/hypr/hypridle.conf")
                 if os.path.exists(src):
                     backup_and_replace(src, dest, "Hypridle")
@@ -987,7 +983,7 @@ class HyprConfGUI(Window):
             print(f"{time.time():.4f}: Finished start_config().")
 
             print(f"{time.time():.4f}: Initiating Modus restart using Popen...")
-            main_py = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/main.py")
+            main_py = os.path.expanduser(f"~/{APP_NAME_CAP}/main.py")
             kill_cmd = f"killall {APP_NAME}"
             start_cmd = ["uwsm", "app", "--", "python", main_py]
             try:
