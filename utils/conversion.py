@@ -29,50 +29,50 @@ class Units():
 
         self.LENGTH_CHART: dict[str, float] = {
             # meter
-            "m": 1,              
-            "M": 1,              
-            "meter": 1,          
+            "m": 1,
+            "M": 1,
+            "meter": 1,
             # kilometer
-            "km": 1e3,           
-            "KM": 1e3,           
-            "kilometer": 1e3,    
+            "km": 1e3,
+            "KM": 1e3,
+            "kilometer": 1e3,
             # centimeter
-            "cm": 1e-2,          
-            "CM": 1e-2,          
-            "centimeter": 1e-2,  
+            "cm": 1e-2,
+            "CM": 1e-2,
+            "centimeter": 1e-2,
             # millimeter
-            "mm": 1e-3,          
+            "mm": 1e-3,
             "MM": 1e-3,
             "millimeter": 1e-3,
             # micrometer
-            "um": 1e-6,          
+            "um": 1e-6,
             "UM": 1e-6,
             "micrometer": 1e-6,
-            # nanometer          
-            "nm": 1e-9,          
-            "NM": 1e-9,          
+            # nanometer
+            "nm": 1e-9,
+            "NM": 1e-9,
             "nanometer": 1e-9,
             # mile
-            "mi": 1609.344,      
-            "MI": 1609.344,      
-            "mile": 1609.344,    
+            "mi": 1609.344,
+            "MI": 1609.344,
+            "mile": 1609.344,
             # yard
-            "yd": 0.9144,        
-            "YD": 0.9144,        
+            "yd": 0.9144,
+            "YD": 0.9144,
             "yard": 0.9144,
             # foot
-            "ft": 0.3048,        
-            "FT": 0.3048,        
-            "foot": 0.3048,      
-            "feet": 0.3048,      
+            "ft": 0.3048,
+            "FT": 0.3048,
+            "foot": 0.3048,
+            "feet": 0.3048,
             # inch
             "in": 0.0254,
             "IN": 0.0254,
             "inch": 0.0254,
             "inches": 0.0254,
             # nautical mile
-            "nmi": 1852,         
-            "NMI": 1852,         
+            "nmi": 1852,
+            "NMI": 1852,
             "nautical-mile": 1852,
         }
 
@@ -242,7 +242,7 @@ class Units():
             "megohm": 1e6,
             "MΩ": 1e6,
         }
-        
+
         self.CAPACITANCE_CHART: dict[str, float] = {
             "farad": 1,
             "F": 1,
@@ -283,7 +283,7 @@ class Units():
             "lm": 1,
             "lux": 1,
             "lx": 1,
-        }  
+        }
 
         self.AREA_CHART: dict[str, float] = {
             "square-meter": 1,
@@ -300,7 +300,7 @@ class Units():
             "mm2": 1e-6,
         }
 
-        # Ya no usamos currency_converter aquí.
+        # We no longer use currency_converter here.
 
 
 class Conversion():
@@ -309,10 +309,10 @@ class Conversion():
 
     def convert(self, value: float, from_type: str, to_type: str):
         """
-        Generalized conversion function que funciona con todas las categorías,
-        incluyendo moneda via floatrates.com.
+        Generalized conversion function that works with all categories,
+        including currency via floatrates.com.
         """
-        # Colección de todos los charts no-monedas
+        # Collection of all non-currency charts
         charts = {
             "WEIGHT_CHART": self.units.WEIGHT_CHART,
             "LENGTH_CHART": self.units.LENGTH_CHART,
@@ -322,7 +322,7 @@ class Conversion():
             "STORAGE_TYPE_CHART": self.units.STORAGE_TYPE_CHART,
             "ANGLE_CHART": self.units.ANGLE_CHART,
             "ENERGY_CHART": self.units.ENERGY_CHART,
-            "SPEED_CHART": self.units.SPEED_CHART,  
+            "SPEED_CHART": self.units.SPEED_CHART,
             "PRESSURE_CHART": self.units.PRESSURE_CHART,
             "FORCE_CHART": self.units.FORCE_CHART,
             "POWER_CHART": self.units.POWER_CHART,
@@ -336,17 +336,17 @@ class Conversion():
             "AREA_CHART": self.units.AREA_CHART,
         }
 
-        # 1) Revisar si está en alguno de los charts (no monedas)
+        # 1) Check if it's in any of the charts (non-currency)
         for chart_name, chart in charts.items():
             if from_type in chart and to_type in chart:
-                # Temperaturas usan lambdas
+                # Temperatures use lambdas
                 if chart_name == "TEMPERATURE_CHART":
                     if from_type == to_type:
                         return value
                     to_kelvin = chart[from_type][0]
                     from_kelvin = chart[to_type][1]
                     return from_kelvin(to_kelvin(value))
-                
+
                 # Handle WEIGHT_CHART separately (tuple values)
                 if chart_name == "WEIGHT_CHART":
                     if from_type == to_type:
@@ -355,24 +355,24 @@ class Conversion():
                     from_kg = chart[to_type][1]
                     return value * to_kg * from_kg
 
-                # Cualquier otro chart numérico
+                # Any other numeric chart
                 if from_type == to_type:
                     return value
                 return value * (chart[from_type] / chart[to_type])
 
-        # 2) Si ambos son códigos de moneda (p. ej. “USD”, “ARS”)
-        #    asumimos que están en mayúsculas y tienen 3 letras.
+        # 2) If both are currency codes (e.g. “USD”, “ARS”)
+        #    we assume they are uppercase and have 3 letters.
         if len(from_type) == 3 and len(to_type) == 3 and from_type.isalpha() and to_type.isalpha():
             return self._convert_currency_via_floatrates(value, from_type, to_type)
 
-        # 3) Si no cae en ningún caso, error.
+        # 3) If it doesn't fall into any case, error.
         raise ValueError(f"Unsupported conversion: {from_type} to {to_type}")
 
     def _convert_currency_via_floatrates(self, value: float, from_code: str, to_code: str) -> float:
         """
-        Convierte usando el JSON de floatrates.com:
-        - Hace GET a https://www.floatrates.com/daily/{from_lower}.json
-        - Toma el rate de la clave to_lower y multiplica.
+        Converts using the JSON from floatrates.com:
+        - Makes GET to https://www.floatrates.com/daily/{from_lower}.json
+        - Takes the rate from the to_lower key and multiplies.
         """
         from_lower = from_code.lower()
         to_lower = to_code.lower()
@@ -383,11 +383,11 @@ class Conversion():
         url = f"https://www.floatrates.com/daily/{from_lower}.json"
         resp = requests.get(url, timeout=5)
         if resp.status_code != 200:
-            raise ValueError(f"Error al obtener datos de floatrates para {from_code}")
+            raise ValueError(f"Error getting data from floatrates for {from_code}")
 
         data = resp.json()
         if to_lower not in data:
-            raise ValueError(f"Moneda destino '{to_code}' no encontrada en la respuesta de floatrates para '{from_code}'")
+            raise ValueError(f"Target currency '{to_code}' not found in floatrates response for '{from_code}'")
 
         rate = data[to_lower]["rate"]
         return value * rate
@@ -396,11 +396,11 @@ class Conversion():
         parts = input.split()
         addition = "s" if parts[-1].endswith("s") else ""
 
-        if "and" in parts:  # valor unidad1 and valor2 unidad2 _ a unidad_destino
+        if "and" in parts:  # value unit1 and value2 unit2 _ to target_unit
             parts.remove("and")
             if len(parts) != 6:
-                raise ValueError("Formato inválido. Esperado: 'value from_type and value2 from_type2 _ to_type'")
-            
+                raise ValueError("Invalid format. Expected: 'value from_type and value2 from_type2 _ to_type'")
+
             value1, from_type1, value2, from_type2, _, to_type = parts
             value1, value2 = float(value1), float(value2)
             from_type1 = self.clean_type(from_type1)
@@ -416,7 +416,7 @@ class Conversion():
                 return res, to_type + addition
         else:
             if len(parts) != 4:
-                raise ValueError("Formato inválido. Esperado: 'value from_type _ to_type'")
+                raise ValueError("Invalid format. Expected: 'value from_type _ to_type'")
             value, from_type, _, to_type = parts
             value = float(value)
             from_type = self.clean_type(from_type)
@@ -425,25 +425,25 @@ class Conversion():
 
     def clean_type(self, type: str) -> str:
         """
-        Si es moneda (3 letras), lo pasa a mayúsculas. 
-        Si termina en 's' (y no es 'celsius'), le quita la 's' para 
-        las otras unidades. """
+        If it's currency (3 letters), convert to uppercase.
+        If it ends in 's' (and is not 'celsius'), remove the 's' for
+        other units. """
         if len(type) == 3 and type.isalpha():
             return type.upper()
         if type.endswith("s") and type.lower() != "celsius":
-            # Para las tablas que tienen singular/plural
+            # For tables that have singular/plural
             singular = type[:-1].lower()
-            # Si existe en STORAGE_TYPE_CHART, lo usamos; 
-            # si no, devolvemos singular en minúsculas para otros charts.
+            # If it exists in STORAGE_TYPE_CHART, we use it;
+            # if not, we return singular in lowercase for other charts.
             if singular in self.units.STORAGE_TYPE_CHART:
                 return singular
             return singular.lower()
         return type
 
 
-# Ejemplo rápido de uso:
+# Quick usage example:
 if __name__ == "__main__":
     conv = Conversion()
-    # Convierte 10 USD a ARS:
+    # Convert 10 USD to ARS:
     result, suffix = conv.parse_input_and_convert("10 USD _ ARS")
-    print(f"{result:.2f} {suffix}")  # Ej: "10 USD _ ARS" -> "38754.23 ARS"
+    print(f"{result:.2f} {suffix}")  # Ex: "10 USD _ ARS" -> "38754.23 ARS"
