@@ -1,19 +1,19 @@
 import json
 import logging
+
 import cairo
+import config.data as data
+from fabric.hyprland.widgets import get_hyprland_connection
+from fabric.utils import exec_shell_command, exec_shell_command_async, get_relative_path
+from fabric.utils.helpers import get_desktop_applications
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
-from fabric.utils import exec_shell_command, exec_shell_command_async, get_relative_path
-from fabric.utils.helpers import get_desktop_applications
-from fabric.hyprland.widgets import get_hyprland_connection
 from gi.repository import Gdk, GLib, Gtk
-import config.data as data
 from utils.icon_resolver import IconResolver
 
 
 def read_config():
-    """Read and return the full configuration from the JSON file, handling missing file."""
     config_path = get_relative_path("../../../config/json/dock.json")
     try:
         with open(config_path, "r") as file:
@@ -70,10 +70,8 @@ class Applications(Box):
             name="applications-dock", orientation=orientation_val, spacing=4, **kwargs
         )
 
-        # Initially hide the widget
         self.hide()
 
-        # Store reference to the dock instance
         self.dock_instance = dock_instance
 
         self.config = read_config()
@@ -86,21 +84,16 @@ class Applications(Box):
         self.app_identifiers = self._build_app_identifiers_map()
         self._drag_in_progress = False
 
-        # Initialize with empty content
         self.update_applications()
 
-        # Connect to Hyprland events for live updates
         if self.conn.ready:
-            # Only update again if not already updated above
             pass
         else:
             self.conn.connect("event::ready", lambda *args: self.update_applications())
 
-        # Connect to window events to update in real-time
         for ev in ("activewindow", "openwindow", "closewindow", "changefloatingmode"):
             self.conn.connect(f"event::{ev}", lambda *args: self.update_applications())
 
-        # Set up periodic refresh for config changes
         GLib.timeout_add_seconds(1, self.check_config_change)
 
     def _build_app_identifiers_map(self):
@@ -197,14 +190,12 @@ class Applications(Box):
             Gdk.DragAction.MOVE,
         )
 
-        # Add drag destination capabilities
         button.drag_dest_set(
             Gtk.DestDefaults.ALL,
             [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)],
             Gdk.DragAction.MOVE,
         )
 
-        # Connect drag signals
         button.connect("drag-begin", self.on_drag_begin)
         button.connect("drag-data-get", self.on_drag_data_get)
         button.connect("drag-data-received", self.on_drag_data_received)
@@ -287,11 +278,9 @@ class Applications(Box):
         return normalized
 
     def update_applications(self):
-        # Clear existing children
         for child in self.get_children():
             self.remove(child)
 
-        # Get running windows from Hyprland
         clients = []
         try:
             clients_data = self.conn.send_command("j/clients").reply
@@ -300,7 +289,6 @@ class Applications(Box):
         except Exception as e:
             logging.error(f"Failed to get clients: {e}")
 
-        # Group clients by window class
         running_windows = {}
         for client in clients:
             class_name = client.get("class", "").lower()
@@ -309,7 +297,6 @@ class Applications(Box):
                     running_windows[class_name] = []
                 running_windows[class_name].append(client)
 
-        # Create pinned app buttons
         pinned_buttons = []
         used_window_classes = set()
 
@@ -332,7 +319,6 @@ class Applications(Box):
             elif isinstance(app_data_item, str):
                 possible_identifiers.append(app_data_item.lower())
 
-            # Try to match with running windows
             for class_name, window_instances in running_windows.items():
                 for identifier in possible_identifiers:
                     if identifier in class_name or class_name in identifier:
@@ -347,7 +333,6 @@ class Applications(Box):
 
             pinned_buttons.append(self.create_button(app_data_item, instances))
 
-        # Create buttons for non-pinned running apps
         open_buttons = []
         for class_name, instances in running_windows.items():
             if class_name not in used_window_classes:
@@ -367,7 +352,6 @@ class Applications(Box):
 
                 open_buttons.append(self.create_button(identifier, instances))
 
-        # Add all buttons to the dock
         children = pinned_buttons
 
         if pinned_buttons and open_buttons:
@@ -390,22 +374,30 @@ class Applications(Box):
 
         children += open_buttons
 
-        # Add all children to the dock
         for child in children:
             self.add(child)
 
-        # Show/hide the entire component based on whether there are applications
         if len(children) > 0:
             self.show_all()
         else:
-            # Hide the entire component when there are no applications
-            # This allows the dock to properly detect when it's empty and auto-hide
             self.hide()
+
+        self._update_visibility_based_on_content()
 
         return True
 
+    def _update_visibility_based_on_content(self):
+        has_content = len(self.get_children()) > 0
+
+        if not has_content:
+            self.hide()
+        else:
+            if data.DOCK_COMPONENTS_VISIBILITY.get("applications", True):
+                self.show_all()
+            else:
+                self.hide()
+
     def update_pinned_apps(self, app_identifier, index=None):
-        # Check if app is already pinned
         is_pinned = False
         for pinned_app in self.pinned:
             if (
@@ -419,7 +411,6 @@ class Applications(Box):
                 is_pinned = True
                 break
 
-        # If not pinned, add to pinned apps
         if not is_pinned:
             if hasattr(app_identifier, "desktop_app") and app_identifier.desktop_app:
                 app = app_identifier.desktop_app
@@ -445,7 +436,6 @@ class Applications(Box):
             self.update_applications()
 
     def on_button_press(self, widget, event):
-        # Handle right-click to pin/unpin applications
         if event.button == 3:  # Right mouse button
             app_identifier = widget.app_identifier
             self.update_pinned_apps(app_identifier)
@@ -464,13 +454,11 @@ class Applications(Box):
         self._dragged_widget = widget
 
     def on_drag_data_get(self, widget, drag_context, data_obj, info, time):
-        # Find the index of the button being dragged
         children = self.get_children()
         index = children.index(widget)
         data_obj.set_text(str(index), -1)
 
     def on_drag_data_received(self, widget, drag_context, x, y, data_obj, info, time):
-        # Get source and target indices
         try:
             source_index = int(data_obj.get_text())
         except (TypeError, ValueError):
@@ -480,29 +468,24 @@ class Applications(Box):
         target_index = children.index(widget)
 
         if source_index != target_index:
-            # Find separator index to determine pinned vs unpinned sections
             separator_index = -1
             for i, child in enumerate(children):
                 if child.get_name() == "dock-separator":
                     separator_index = i
                     break
 
-            # Check if we're dragging from unpinned to pinned section
             cross_section_drag_to_pin = separator_index != -1 and (
                 source_index > separator_index and target_index < separator_index
             )
 
-            # Check if we're dragging from pinned to unpinned section
             cross_section_drag_to_unpin = separator_index != -1 and (
                 source_index < separator_index and target_index > separator_index
             )
 
-            # If dragging from unpinned to pinned, add to pinned apps
             if cross_section_drag_to_pin:
                 source_widget = children[source_index]
                 app_identifier = source_widget.app_identifier
 
-                # Add to pinned apps if not already pinned
                 if hasattr(source_widget, "desktop_app") and source_widget.desktop_app:
                     app = source_widget.desktop_app
                     app_data_obj = {
@@ -519,30 +502,23 @@ class Applications(Box):
                 self.config["pinned_apps"] = self.pinned
                 self.update_pinned_apps_file()
                 self.update_applications()
-            # If dragging from pinned to unpinned, remove from pinned apps
             elif cross_section_drag_to_unpin:
-                # Remove from pinned apps
                 if source_index < len(self.pinned):
                     self.pinned.pop(source_index)
                     self.config["pinned_apps"] = self.pinned
                     self.update_pinned_apps_file()
                     self.update_applications()
             else:
-                # Regular reordering within the same section
                 if source_index < separator_index and target_index < separator_index:
-                    # Reorder within pinned section
                     item = self.pinned.pop(source_index)
                     self.pinned.insert(target_index, item)
                     self.config["pinned_apps"] = self.pinned
                     self.update_pinned_apps_file()
                     self.update_applications()
                 elif source_index > separator_index and target_index > separator_index:
-                    # Reorder within unpinned section - just reorder the widgets
-                    # since unpinned apps aren't stored in config
                     child_to_move = children.pop(source_index)
                     children.insert(target_index, child_to_move)
 
-                    # Update the UI
                     for child in self.get_children():
                         self.remove(child)
                     for child in children:
@@ -557,28 +533,23 @@ class Applications(Box):
         if self.dock_instance:
             self.dock_instance.prevent_hiding(False)
 
-        # Check if the drag ended outside the dock
         if hasattr(self, "_dragged_widget") and self._dragged_widget:
             children = self.get_children()
             source_index = children.index(self._dragged_widget)
 
-            # Find separator index
             separator_index = -1
             for i, child in enumerate(children):
                 if child.get_name() == "dock-separator":
                     separator_index = i
                     break
 
-            # If the dragged item was in the pinned section (before separator)
             if separator_index != -1 and source_index < separator_index:
-                # Remove from pinned apps
                 if source_index < len(self.pinned):
                     self.pinned.pop(source_index)
                     self.config["pinned_apps"] = self.pinned
                     self.update_pinned_apps_file()
                     self.update_applications()
 
-        # Clear the dragged widget reference
         if hasattr(self, "_dragged_widget"):
             delattr(self, "_dragged_widget")
 
