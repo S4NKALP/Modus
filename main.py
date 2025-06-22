@@ -9,10 +9,10 @@ from loguru import logger
 from config.data import APP_NAME, APP_NAME_CAP, CONFIG_FILE
 from modules.corners import Corners
 from modules.dock.main import Dock
-from modules.switcher import ApplicationSwitcher
-from modules.osd import OSD
 from modules.launcher import Launcher
 from modules.notification_popup import NotificationPopup
+from modules.osd import OSD
+from modules.switcher import ApplicationSwitcher
 
 gi.require_version("GLib", "2.0")
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     current_wallpaper = os.path.expanduser("~/.current.wall")
     if not os.path.exists(current_wallpaper):
         example_wallpaper = os.path.expanduser(
-            f"~/{APP_NAME_CAP}/assets/wallpapers_example/example-1.png"
+            f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.png"
         )
         os.symlink(example_wallpaper, current_wallpaper)
 

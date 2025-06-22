@@ -1,14 +1,11 @@
 from config.data import (
     APP_NAME,
     APP_NAME_CAP,
-    NOTIF_POS_DEFAULT,
-    NOTIF_POS_KEY,
-    WALLPAPERS_DIR_DEFAULT,
 )
 
 SOURCE_STRING = f"""
 # {APP_NAME_CAP}
-source = ~/{APP_NAME_CAP}/config/hypr/{APP_NAME}.conf
+source = ~/.config/{APP_NAME_CAP}/config/hypr/{APP_NAME}.conf
 """
 
 DEFAULTS = {

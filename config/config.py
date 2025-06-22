@@ -1,6 +1,9 @@
 import os
+import shutil
 import sys
 from pathlib import Path
+
+from fabric import Application
 
 
 def _configure_sys_path_for_direct_execution():
@@ -16,13 +19,11 @@ def _configure_sys_path_for_direct_execution():
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
 
+
 _configure_sys_path_for_direct_execution()
 
-import shutil
 
-from fabric import Application
-
-if __name__ == "__main__" and (__package__ is None or __package__ == ''):
+if __name__ == "__main__" and (__package__ is None or __package__ == ""):
     from config.data import APP_NAME, APP_NAME_CAP
     from config.settings.gui import HyprConfGUI
     from config.settings.utils import load_bind_vars
@@ -40,12 +41,12 @@ def open_config():
 
     show_lock_checkbox = True
     dest_lock = os.path.expanduser("~/.config/hypr/hyprlock.conf")
-    src_lock = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/hyprlock.conf")
+    src_lock = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/hyprlock.conf")
     if not os.path.exists(dest_lock) and os.path.exists(src_lock):
         try:
             os.makedirs(os.path.dirname(dest_lock), exist_ok=True)
             shutil.copy(src_lock, dest_lock)
-            show_lock_checkbox = False 
+            show_lock_checkbox = False
             print(f"Copied default hyprlock config to {dest_lock}")
         except Exception as e:
             print(f"Error copying default hyprlock config: {e}")
@@ -53,7 +54,7 @@ def open_config():
 
     show_idle_checkbox = True
     dest_idle = os.path.expanduser("~/.config/hypr/hypridle.conf")
-    src_idle = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/hypridle.conf")
+    src_idle = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/hypridle.conf")
     if not os.path.exists(dest_idle) and os.path.exists(src_idle):
         try:
             os.makedirs(os.path.dirname(dest_idle), exist_ok=True)
@@ -69,7 +70,7 @@ def open_config():
         show_lock_checkbox=show_lock_checkbox,
         show_idle_checkbox=show_idle_checkbox,
         application=app,
-        on_destroy=lambda *_: app.quit()
+        on_destroy=lambda *_: app.quit(),
     )
     app.add_window(window)
 

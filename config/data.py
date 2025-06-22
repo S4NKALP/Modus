@@ -1,9 +1,9 @@
-from gi.repository import Gdk, GLib
-from fabric.utils.helpers import get_relative_path
 import json
 import os
 
 import gi
+from fabric.utils.helpers import get_relative_path
+from gi.repository import Gdk, GLib
 
 gi.require_version("Gtk", "3.0")
 
@@ -20,7 +20,7 @@ USERNAME = os.getlogin()
 HOSTNAME = os.uname().nodename
 HOME_DIR = os.path.expanduser("~")
 
-CONFIG_DIR = os.path.expanduser(f"~/{APP_NAME}")
+CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
 
 screen = Gdk.Screen.get_default()
 CURRENT_WIDTH = screen.get_width()

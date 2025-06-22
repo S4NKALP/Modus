@@ -1,25 +1,23 @@
-from config.settings.utils import backup_and_replace, bind_vars, start_config
-from config.data import APP_NAME, APP_NAME_CAP, NOTIF_POS_DEFAULT, NOTIF_POS_KEY
-from PIL import Image
-from gi.repository import GdkPixbuf, GLib, Gtk
-from fabric.widgets.window import Window
-from fabric.widgets.stack import Stack
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.scale import Scale
-from fabric.widgets.label import Label
-from fabric.widgets.image import Image as FabricImage
-from fabric.widgets.entry import Entry
-from fabric.widgets.button import Button
-from fabric.widgets.box import Box
 import json
 import os
-import shutil
 import subprocess
 import threading
 import time
-from pathlib import Path
 
 import gi
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.entry import Entry
+from fabric.widgets.image import Image as FabricImage
+from fabric.widgets.label import Label
+from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.stack import Stack
+from fabric.widgets.window import Window
+from gi.repository import GdkPixbuf, GLib, Gtk
+from PIL import Image
+
+from config.data import APP_NAME, APP_NAME_CAP, NOTIF_POS_DEFAULT, NOTIF_POS_KEY
+from config.settings.utils import backup_and_replace, bind_vars, start_config
 
 gi.require_version("Gtk", "3.0")
 
@@ -907,7 +905,7 @@ class HyprConfGUI(Window):
             print(f"{start_time:.4f}: Background task started.")
 
             config_json = os.path.expanduser(
-                f"~/{APP_NAME_CAP}/config/json/config.json"
+                f"~/.config/{APP_NAME_CAP}/config/json/config.json"
             )
             os.makedirs(os.path.dirname(config_json), exist_ok=True)
             try:
@@ -935,7 +933,9 @@ class HyprConfGUI(Window):
 
             if replace_lock:
                 print(f"{time.time():.4f}: Replacing hyprlock config...")
-                src = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/hyprlock.conf")
+                src = os.path.expanduser(
+                    f"~/.config/{APP_NAME_CAP}/config/hypr/hyprlock.conf"
+                )
                 dest = os.path.expanduser("~/.config/hypr/hyprlock.conf")
                 if os.path.exists(src):
                     backup_and_replace(src, dest, "Hyprlock")
@@ -945,7 +945,9 @@ class HyprConfGUI(Window):
 
             if replace_idle:
                 print(f"{time.time():.4f}: Replacing hypridle config...")
-                src = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/hypridle.conf")
+                src = os.path.expanduser(
+                    f"~/.config/{APP_NAME_CAP}/config/hypr/hypridle.conf"
+                )
                 dest = os.path.expanduser("~/.config/hypr/hypridle.conf")
                 if os.path.exists(src):
                     backup_and_replace(src, dest, "Hypridle")
@@ -983,7 +985,7 @@ class HyprConfGUI(Window):
             print(f"{time.time():.4f}: Finished start_config().")
 
             print(f"{time.time():.4f}: Initiating Modus restart using Popen...")
-            main_py = os.path.expanduser(f"~/{APP_NAME_CAP}/main.py")
+            main_py = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/main.py")
             kill_cmd = f"killall {APP_NAME}"
             start_cmd = ["uwsm", "app", "--", "python", main_py]
             try:

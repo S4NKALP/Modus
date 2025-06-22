@@ -1,19 +1,18 @@
-from config.data import (  # CONFIG_DIR, HOME_DIR no se usan aquí directamente
-    APP_NAME,
-    APP_NAME_CAP,
-)
-from config.settings import constants as settings_constants
-from gi.repository import GLib
-from fabric.utils.helpers import exec_shell_command_async
 import json
 import os
 import shutil
 import subprocess
 import time
-from pathlib import Path
 
 import gi
 import toml
+from fabric.utils.helpers import exec_shell_command_async
+
+from config.data import (  # CONFIG_DIR, HOME_DIR no se usan aquí directamente
+    APP_NAME,
+    APP_NAME_CAP,
+)
+from config.settings import constants as settings_constants
 
 gi.require_version("Gtk", "3.0")
 
@@ -76,12 +75,12 @@ def ensure_matugen_config():
         },
         "templates": {
             "hyprland": {
-                "input_path": f"~/{APP_NAME_CAP}/config/matugen/templates/hyprland-colors.conf",
-                "output_path": f"~/{APP_NAME_CAP}/config/hypr/colors.conf",
+                "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/hyprland-colors.conf",
+                "output_path": f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf",
             },
             f"{APP_NAME}": {
-                "input_path": f"~/{APP_NAME_CAP}/config/matugen/templates/{APP_NAME}.css",
-                "output_path": f"~/{APP_NAME_CAP}/styles/colors.css",
+                "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/{APP_NAME}.css",
+                "output_path": f"~/.config/{APP_NAME_CAP}/styles/colors.css",
                 "post_hook": f"fabric-cli exec {APP_NAME} 'app.set_css()' &",
             },
         },
@@ -124,8 +123,10 @@ def ensure_matugen_config():
         print(f"Error writing matugen config to {config_path}: {e}")
 
     current_wall = os.path.expanduser("~/.current.wall")
-    hypr_colors = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/colors.conf")
-    css_colors = os.path.expanduser(f"~/{APP_NAME_CAP}/styles/colors.css")
+    hypr_colors = os.path.expanduser(
+        f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf"
+    )
+    css_colors = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/styles/colors.css")
 
     if (
         not os.path.exists(current_wall)
@@ -138,7 +139,7 @@ def ensure_matugen_config():
         image_path = ""
         if not os.path.exists(current_wall):
             example_wallpaper_path = os.path.expanduser(
-                f"~/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg"
+                f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg"
             )
             if os.path.exists(example_wallpaper_path):
                 try:
@@ -192,7 +193,9 @@ def load_bind_vars():
     # Usar .copy() para no modificar DEFAULTS accidentalmente
     bind_vars.update(settings_constants.DEFAULTS.copy())
 
-    config_json = os.path.expanduser(f"~/{APP_NAME_CAP}/config/json/config.json")
+    config_json = os.path.expanduser(
+        f"~/.config/{APP_NAME_CAP}/config/json/config.json"
+    )
     if os.path.exists(config_json):
         try:
             with open(config_json, "r") as f:
@@ -246,17 +249,17 @@ def generate_hyprconf() -> str:
     is_vertical = bar_position in ["Left", "Right"]
     animation_type = "slidefadevert" if is_vertical else "slidefade"
 
-    return f"""exec-once = uwsm-app $(python {home}/{APP_NAME_CAP}/main.py)
+    return f"""exec-once = uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
 exec = pgrep -x "hypridle" > /dev/null || uwsm app -- hypridle
 exec = uwsm app -- swww-daemon
 exec-once =  wl-paste --type text --watch cliphist store
 exec-once =  wl-paste --type image --watch cliphist store
 
 $fabricSend = fabric-cli exec {APP_NAME}
-$axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "{home}/{APP_NAME_CAP}/assets/modus.png" -A "🗣️" -A "🔥" -A "🕳️" -a "Source Code"
+$axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "{home}/{AP.config / P_NAME_CAP}/assets/modus.png" -A "🗣️" -A "🔥" -A "🕳️" -a "Source Code"
 
 # Reload {APP_NAME_CAP}
-bind = {bind_vars.get("prefix_restart", "ALT SHIFT")}, {bind_vars.get("suffix_restart", "R")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/{APP_NAME_CAP}/main.py)
+bind = {bind_vars.get("prefix_restart", "ALT SHIFT")}, {bind_vars.get("suffix_restart", "R")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
 # Message
 bind = {bind_vars.get("prefix_msg", "SUPER")}, {bind_vars.get("suffix_msg", "A")}, exec, $Message
 # Application Switcher
@@ -279,13 +282,13 @@ bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", 
 # Toggle Caffeine
 bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix_caffeine", "M")}, exec, $fabricSend "launcher.show_launcher('caffeine on', external=True)"
 # Settings
-bind = {bind_vars.get("prefix_settings", "SUPER")}, {bind_vars.get("suffix_settings", "I")}, exec, uwsm-app $(python {home}/{APP_NAME_CAP}/config/config.py) # Settings
+bind = {bind_vars.get("prefix_settings", "SUPER")}, {bind_vars.get("suffix_settings", "I")}, exec, uwsm-app $(python {home}/.config/{APP_NAME_CAP}/config/config.py) # Settings
 # Restart Modus
 bind = {bind_vars.get("prefix_restart_inspector", "SUPER CTRL ALT")}, {bind_vars.get("suffix_restart_inspector", "B")}, exec, killall {APP_NAME}; uwsm-app $(GTK_DEBUG=interactive python {home}/.config/{APP_NAME_CAP}/main.py) # Restart with inspector
 
 # Wallpapers directory: {bind_vars.get("wallpapers_dir", "~/Modus/assets/wallpapers_example")}
 
-source = {home}/{APP_NAME_CAP}/config/hypr/colors.conf
+source = {home}/.config/{APP_NAME_CAP}/config/hypr/colors.conf
 
 layerrule = noanim, fabric
 
@@ -338,7 +341,9 @@ def ensure_face_icon():
     Ensure the face icon exists. If not, copy the default icon.
     """
     face_icon_path = os.path.expanduser("~/.face.icon")
-    default_icon_path = os.path.expanduser(f"~/{APP_NAME_CAP}/assets/default.png")
+    default_icon_path = os.path.expanduser(
+        f"~/.config/{APP_NAME_CAP}/assets/default.png"
+    )
     if not os.path.exists(face_icon_path) and os.path.exists(default_icon_path):
         try:
             shutil.copy(default_icon_path, face_icon_path)
@@ -375,7 +380,7 @@ def start_config():
     ensure_face_icon()
     print(f"{time.time():.4f}: start_config: Generating hypr conf...")
 
-    hypr_config_dir = os.path.expanduser(f"~/{APP_NAME_CAP}/config/hypr/")
+    hypr_config_dir = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/")
     os.makedirs(hypr_config_dir, exist_ok=True)
     # Usar APP_NAME para el nombre del archivo .conf para que coincida con SOURCE_STRING corregido
     hypr_conf_path = os.path.join(hypr_config_dir, f"{APP_NAME}.conf")
