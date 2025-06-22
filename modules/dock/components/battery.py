@@ -16,11 +16,9 @@ class Battery(Box):
             name="battery", spacing=0, orientation=orientation, visible=True, **kwargs
         )
 
-        # Initialize battery service
         self._battery = BatteryService()
         self._battery.changed.connect(self.update_battery)
 
-        # Create the battery icon and circular progress
         self.icon = Label(name="battery-icon", markup=icons.battery)
         self.circle = CircularProgressBar(
             name="battery-circle",
@@ -33,13 +31,11 @@ class Battery(Box):
             child=self.icon,
         )
 
-        # Create button to hold the circle
         self.circle_button = Button(
             name="battery-button",
             child=self.circle,
         )
 
-        # Add event handling for hover effects
         self.circle_button.add_events(
             Gdk.EventMask.ENTER_NOTIFY_MASK
             | Gdk.EventMask.LEAVE_NOTIFY_MASK
@@ -49,14 +45,12 @@ class Battery(Box):
         self.circle_button.connect("leave-notify-event", self.on_button_leave)
         self.circle_button.connect("button-press-event", self.on_button_press)
 
-        # Create percentage label
         self.level = Label(
             name="battery-level",
             style_classes="battery",
             label="0%",
         )
 
-        # Create the container box
         self.battery_box = Box(
             name="battery-box",
             orientation=orientation,
@@ -64,40 +58,32 @@ class Battery(Box):
             children=[self.circle_button],
         )
 
-        # Only add level label in horizontal mode
         if not data.VERTICAL:
             self.battery_box.add(self.level)
 
-        # Enable tooltips
         self.circle_button.set_has_tooltip(True)
         self.battery_box.set_has_tooltip(True)
         self.level.set_has_tooltip(True)
 
-        # Connect tooltip signals
         self.circle_button.connect("query-tooltip", self.on_query_tooltip)
         self.battery_box.connect("query-tooltip", self.on_query_tooltip)
         self.level.connect("query-tooltip", self.on_query_tooltip)
 
-        # Add the battery box to self
         self.add(self.battery_box)
 
-        # Initial update
         GLib.idle_add(self.update_battery)
 
     def on_button_enter(self, widget, event):
-        """Handle mouse enter event"""
         window = widget.get_window()
         if window:
             window.set_cursor(Gdk.Cursor(Gdk.CursorType.HAND2))
 
     def on_button_leave(self, widget, event):
-        """Handle mouse leave event"""
         window = widget.get_window()
         if window:
             window.set_cursor(None)
 
     def on_button_press(self, widget, event):
-        """Handle button press event - toggle power profiles"""
         if event.button == 1:  # Left click
             try:
                 if (
@@ -107,11 +93,9 @@ class Battery(Box):
                     return False
 
                 current_profile = self._battery._profile_proxy.ActiveProfile
-                # Get available profiles from D-Bus property
                 profiles = self._battery._profile_proxy.Profiles
                 profile_names = []
 
-                # Extract profile names from the D-Bus structure
                 for profile in profiles:
                     if isinstance(profile, dict) and "Profile" in profile:
                         profile_names.append(profile["Profile"])
@@ -125,7 +109,6 @@ class Battery(Box):
                         profile_names
                     )
                     next_profile = profile_names[next_index]
-                    # Set profile directly on the D-Bus proxy
                     self._battery._profile_proxy.ActiveProfile = next_profile
                 else:
                     return False
@@ -135,22 +118,18 @@ class Battery(Box):
         return False
 
     def on_query_tooltip(self, widget, x, y, keyboard_mode, tooltip):
-        """Handle tooltip query"""
         tooltip.set_markup(self.get_tooltip_text())
         return True
 
     def get_tooltip_text(self):
-        """Get formatted tooltip text in bullet points"""
         if not self._battery.is_present:
             return "No battery detected"
 
         percentage = self._battery.percentage
         state = self._battery.state
-        # Get capacity as integer by converting from float
         capacity = int(float(self._battery.capacity.rstrip("%")))
         tooltip_points = []
 
-        # Status and percentage
         if state == "FULLY_CHARGED":
             status = f"{icons.bat_full} Fully Charged"
         elif state == "CHARGING":
@@ -163,14 +142,11 @@ class Battery(Box):
             status = "Battery"
         tooltip_points.append(f"• Status: {status}")
 
-        # Battery level and capacity
         tooltip_points.append(f"• Level: {int(percentage)}%")
         tooltip_points.append(f"• Battery Health: {capacity}%")
 
-        # Add power profile if available
         power_profile = self._battery.power_profile
         if power_profile:
-            # Add icon based on profile
             if power_profile == "power-saver":
                 profile_icon = icons.power_saving
             elif power_profile == "performance":
@@ -179,12 +155,10 @@ class Battery(Box):
                 profile_icon = icons.power_balanced
             tooltip_points.append(f"• Profile: {profile_icon} {power_profile}")
 
-        # Add temperature if available
         temp = self._battery.temperature
         if temp != "N/A":
             tooltip_points.append(f"• Temperature: {temp}")
 
-        # Add time estimates
         if state == "CHARGING":
             time_to_full = self._battery.time_to_full
             if time_to_full:
@@ -197,7 +171,6 @@ class Battery(Box):
         return "\n".join(tooltip_points)
 
     def update_battery(self, *args):
-        """Update battery status and UI"""
         if not self._battery.is_present:
             self.set_visible(False)
             return True
@@ -207,17 +180,14 @@ class Battery(Box):
         charging = state in ["CHARGING", "FULLY_CHARGED"]
         power_profile = self._battery.power_profile
 
-        # Update circle progress
         self.circle.set_value(percentage / 100.0)
 
-        # Only show percentage label if not at 100%
         if percentage < 100:
             self.level.set_label(f"{int(percentage)}%")
             self.level.set_visible(True)
         else:
             self.level.set_visible(False)
 
-        # Remove any existing profile and discharging classes
         self.circle.remove_style_class("power-saver")
         self.circle.remove_style_class("performance")
         self.circle.remove_style_class("balanced")
@@ -228,7 +198,6 @@ class Battery(Box):
         self.icon.remove_style_class("discharging-low")
         self.icon.remove_style_class("discharging-critical")
 
-        # Apply power profile styling and icons
         if power_profile:
             self.circle.add_style_class(power_profile)
             if power_profile == "power-saver":
@@ -238,7 +207,6 @@ class Battery(Box):
             else:  # balanced
                 # In balanced mode, show discharging icons when discharging
                 if state == "DISCHARGING":
-                    # Show different discharging icons and apply styling based on battery level
                     if percentage <= 15:
                         self.icon.set_markup(icons.bat_low)
                         self.circle.add_style_class("discharging-critical")
@@ -256,7 +224,6 @@ class Battery(Box):
                 else:
                     self.icon.set_markup(icons.battery)
         else:
-            # No power profile - show basic battery state icons
             if state == "FULLY_CHARGED":
                 self.icon.set_markup(icons.battery)
             elif state == "CHARGING":
@@ -266,7 +233,6 @@ class Battery(Box):
             else:
                 self.icon.set_markup(icons.battery)
 
-        # Apply alert styling if battery is low AND not charging
         if percentage <= 15 and not charging:
             self.icon.add_style_class("alert")
             self.circle.add_style_class("alert")
