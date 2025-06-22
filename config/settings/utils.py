@@ -256,7 +256,7 @@ exec-once =  wl-paste --type text --watch cliphist store
 exec-once =  wl-paste --type image --watch cliphist store
 
 $fabricSend = fabric-cli exec {APP_NAME}
-$axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "{home}/{AP.config / P_NAME_CAP}/assets/modus.png" -A "🗣️" -A "🔥" -A "🕳️" -a "Source Code"
+$axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "{home}/.config/{APP_NAME_CAP}/assets/modus.png" -A "🗣️" -A "🔥" -A "🕳️" -a "Source Code"
 
 # Reload {APP_NAME_CAP}
 bind = {bind_vars.get("prefix_restart", "ALT SHIFT")}, {bind_vars.get("suffix_restart", "R")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
