@@ -10,7 +10,7 @@ import tempfile
 import threading
 import time
 from typing import List, Dict, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from gi.repository import GdkPixbuf, GLib
@@ -25,7 +25,7 @@ class ClipboardPlugin(PluginBase):
 
         # Performance settings
         self.max_results = 20
-        self.cache_ttl = 30  # Cache clipboard items for 30 seconds
+        self.cache_ttl = 5  # Cache clipboard items for 5 seconds (more responsive)
         self.image_cache_ttl = 300  # Cache images for 5 minutes
 
         # Initialize cache and temp directory
@@ -74,29 +74,94 @@ class ClipboardPlugin(PluginBase):
         except Exception as e:
             print(f"Error cleaning up temporary files: {e}", file=sys.stderr)
 
+    def invalidate_cache(self):
+        """Force invalidation of the clipboard cache."""
+        with self.cache_lock:
+            self.clipboard_items_cache.clear()
+            self.cache_timestamp = 0
+            self.image_cache.clear()
+            self.image_cache_timestamps.clear()
+
+    def _force_launcher_refresh(self):
+        """Force the launcher to refresh its results."""
+        try:
+            from gi.repository import GLib
+
+            def trigger_refresh():
+                try:
+                    # Try to access the launcher through the fabric Application
+                    from fabric import Application
+                    app = Application.get_default()
+
+                    if app and hasattr(app, 'launcher'):
+                        launcher = app.launcher
+                        if launcher and hasattr(launcher, 'search_entry') and hasattr(launcher, '_perform_search'):
+                            # Get current search text to preserve the query
+                            current_text = launcher.search_entry.get_text()
+                            # Trigger the search to refresh results
+                            launcher._perform_search(current_text)
+                            return False
+
+                    # Fallback: try to find launcher instance through other means
+                    import gc
+                    for obj in gc.get_objects():
+                        if (hasattr(obj, '__class__') and obj.__class__.__name__ == 'Launcher'):
+                            if hasattr(obj, 'search_entry') and hasattr(obj, '_perform_search'):
+                                current_text = obj.search_entry.get_text()
+                                obj._perform_search(current_text)
+                                return False
+
+                except Exception as e:
+                    print(f"Error forcing launcher refresh: {e}")
+
+                return False  # Don't repeat
+
+            # Use immediate refresh
+            GLib.timeout_add(10, trigger_refresh)
+
+        except Exception as e:
+            print(f"Could not trigger refresh: {e}")
+
+
+
     def _load_clipboard_items_cached(self) -> List[str]:
-        """Load clipboard items from cliphist with caching."""
+        """Load clipboard items from cliphist with caching and change detection."""
         current_time = time.time()
 
-        # Check if cache is still valid
-        with self.cache_lock:
-            if (self.clipboard_items_cache and
-                current_time - self.cache_timestamp < self.cache_ttl):
-                return self.clipboard_items_cache.copy()
-
-        # Load fresh data
+        # Always load fresh data to check for changes
         try:
             result = subprocess.run(
                 ["cliphist", "list"], capture_output=True, check=True, timeout=5
             )
             stdout_str = result.stdout.decode("utf-8", errors="replace")
-            lines = stdout_str.strip().split("\n")
-            items = [line for line in lines if line and "<meta http-equiv" not in line]
+            if stdout_str.strip():
+                lines = stdout_str.strip().split("\n")
+                items = [line for line in lines if line and "<meta http-equiv" not in line]
+            else:
+                items = []
 
-            # Update cache
+            # Check if data has changed
             with self.cache_lock:
+                data_changed = (
+                    not self.clipboard_items_cache or
+                    len(items) != len(self.clipboard_items_cache) or
+                    items != self.clipboard_items_cache
+                )
+
+                # If cache is still valid and data hasn't changed, return cached data
+                if (not data_changed and
+                    self.clipboard_items_cache and
+                    current_time - self.cache_timestamp < self.cache_ttl):
+                    return self.clipboard_items_cache.copy()
+
+                # Update cache with fresh data
                 self.clipboard_items_cache = items
                 self.cache_timestamp = current_time
+
+                # If data changed significantly, clear image cache too
+                if data_changed:
+                    self.image_cache.clear()
+                    self.image_cache_timestamps.clear()
 
             return items
         except subprocess.CalledProcessError as e:
@@ -300,6 +365,10 @@ class ClipboardPlugin(PluginBase):
                     check=True,
                     timeout=3
                 )
+
+            # Invalidate cache since clipboard content has changed
+            self.invalidate_cache()
+
         except subprocess.SubprocessError as e:
             print(f"Error copying to clipboard: {e}", file=sys.stderr)
         except subprocess.TimeoutExpired as e:
