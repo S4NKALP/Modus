@@ -969,7 +969,6 @@ class Launcher(Window):
 
     def _custom_widget_has_entry(self, widget):
         """Check if a custom widget contains Entry widgets."""
-        from fabric.widgets.entry import Entry
 
         if isinstance(widget, Entry):
             return True
@@ -984,7 +983,6 @@ class Launcher(Window):
 
     def _find_focused_entry_in_widget(self, widget):
         """Find the focused Entry widget within a custom widget."""
-        from fabric.widgets.entry import Entry
 
         if isinstance(widget, Entry):
             # Try multiple ways to check if this Entry is focused
