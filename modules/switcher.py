@@ -13,11 +13,6 @@ from utils.wayland import WaylandWindow as Window
 
 
 class ApplicationSwitcher(Window):
-    """
-    A application switcher implementation for Hyprland that provides a grid-based application switching interface.
-    Supports keyboard navigation, mouse interaction, and application activation.
-    """
-
     def __init__(self, **kwargs):
         super().__init__(
             name="application-switcher",
@@ -36,7 +31,6 @@ class ApplicationSwitcher(Window):
         self.items_per_row = data.WINDOW_SWITCHER_ITEMS_PER_ROW
         self.icon_size = 64
 
-        # Create a container box that expands
         container = Box(
             name="application-switcher-container",
             orientation="v",
@@ -73,7 +67,6 @@ class ApplicationSwitcher(Window):
         self.ungrab_keyboard()
 
     def update_windows(self) -> None:
-        # Clear existing windows
         for child in self.view.get_children():
             self.view.remove(child)
 
@@ -89,7 +82,6 @@ class ApplicationSwitcher(Window):
                 json.loads(active_data.decode("utf-8")) if active_data else None
             )
 
-            # Set current index to active window
             self.current_index = 0
             if active_window:
                 for i, window in enumerate(self.windows):
@@ -97,7 +89,6 @@ class ApplicationSwitcher(Window):
                         self.current_index = i
                         break
 
-            # Create window grid
             current_row = Box(
                 name="window-row",
                 orientation="h",
@@ -111,7 +102,6 @@ class ApplicationSwitcher(Window):
                 class_name = window.get("class", "").lower()
                 title = window.get("title", "")
 
-                # Get icon
                 icon_img = self.icon_resolver.get_icon_pixbuf(
                     class_name, self.icon_size
                 )
@@ -145,7 +135,6 @@ class ApplicationSwitcher(Window):
                 )
                 current_row.add(event_box)
 
-                # Create new row if needed
                 if (i + 1) % self.items_per_row == 0 and i + 1 < len(self.windows):
                     current_row = Box(
                         name="window-row",
@@ -192,7 +181,6 @@ class ApplicationSwitcher(Window):
             self.hide_switcher()
             return True
 
-        # Arrow keys
         if keyval == Gdk.KEY_Right:
             self.current_index = (self.current_index + 1) % len(self.windows)
             self.update_selection()
@@ -256,7 +244,6 @@ class ApplicationSwitcher(Window):
                 print(f"Failed to focus window: {e}")
 
     def grab_keyboard(self):
-        """Grab keyboard focus."""
         try:
             display = Gdk.Display.get_default()
             seat = display.get_default_seat()
@@ -266,7 +253,6 @@ class ApplicationSwitcher(Window):
             print(f"Failed to grab keyboard: {e}")
 
     def ungrab_keyboard(self):
-        """Release keyboard focus."""
         try:
             display = Gdk.Display.get_default()
             seat = display.get_default_seat()

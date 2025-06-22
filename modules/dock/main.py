@@ -1,15 +1,15 @@
 import json
+
 import config.data as data
 from fabric.hyprland.widgets import get_hyprland_connection
-
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk
 from modules.corners import MyCorner
+from modules.dock.components import DockComponents
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
-from modules.dock.components import DockComponents
 
 
 class Dock(Window):
@@ -36,7 +36,6 @@ class Dock(Window):
             main_box_h_align_val = "center"
             dock_wrapper_orientation_val = Gtk.Orientation.HORIZONTAL
         else:
-            # Use DOCK_POSITION directly instead of BAR_POSITION
             if data.DOCK_POSITION == "Left":
                 anchor_to_set = "left"
                 revealer_transition_type = "slide-right"
@@ -55,7 +54,7 @@ class Dock(Window):
             name="dock-window",
             layer="top",
             anchor=anchor_to_set,
-            margin="0px 0px 0px 0px",  # Set all margins to 0
+            margin="0px 0px 0px 0px",
             exclusivity="auto" if not data.DOCK_AUTO_HIDE else "none",
             **kwargs,
         )
@@ -104,13 +103,11 @@ class Dock(Window):
         self.dock_eventbox.connect("enter-notify-event", self._on_dock_enter)
         self.dock_eventbox.connect("leave-notify-event", self._on_dock_leave)
 
-        # Create components using DockComponents
         self.components = DockComponents(
             orientation_val="h" if not data.VERTICAL else "v", dock_instance=self
         )
 
-        # Add components based on position
-        if self.actual_dock_is_horizontal:  # Bottom dock
+        if self.actual_dock_is_horizontal:
             self.view.add(self.components)
         elif data.DOCK_POSITION == "Left":
             self.view.add(self.components)
@@ -184,7 +181,7 @@ class Dock(Window):
                 orientation=Gtk.Orientation.VERTICAL,
                 v_expand=True,
                 v_align="fill",
-                margin=0,  # Add explicit margin=0
+                margin=0,
                 children=[self.corner_top, self.dock_eventbox, self.corner_bottom],
             )
 
@@ -198,7 +195,6 @@ class Dock(Window):
 
         self.hover_activator = EventBox()
 
-        # Adjust hover activator size based on position and dock position
         if self.actual_dock_is_horizontal:
             # Bottom dock
             self.hover_activator.set_size_request(-1, 1)
@@ -209,7 +205,6 @@ class Dock(Window):
         self.hover_activator.connect("enter-notify-event", self._on_hover_enter)
         self.hover_activator.connect("leave-notify-event", self._on_hover_leave)
 
-        # Create main box with correct child order based on position
         if self.actual_dock_is_horizontal:
             # Bottom dock
             self.main_box = Box(
@@ -455,27 +450,20 @@ class Dock(Window):
                     dock.dock_revealer.set_reveal_child(False)
 
     def on_app_drag_begin(self):
-        """Called when application drag begins"""
         self._drag_in_progress = True
-        # Ensure dock is visible during drag
         self.dock_revealer.set_reveal_child(True)
         if not self.always_occluded:
             self.dock_full.remove_style_class("occluded")
 
     def on_app_drag_end(self):
-        """Called when application drag ends"""
         self._drag_in_progress = False
-        # Check if we should hide the dock
         GLib.idle_add(self.check_occlusion_state)
 
     def prevent_hiding(self, prevent=True):
-        """Prevent the dock from hiding"""
         self._prevent_occlusion = prevent
         if prevent:
-            # Force dock to be visible
             self.dock_revealer.set_reveal_child(True)
             if not self.always_occluded:
                 self.dock_full.remove_style_class("occluded")
         else:
-            # Check if we should hide
             GLib.idle_add(self.check_occlusion_state)

@@ -16,7 +16,7 @@ from utils.wayland import WaylandWindow as Window
 class AnimatedScale(Scale):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.animator = None  # Lazily initialized
+        self.animator = None
 
     def animate_value(self, value: float):
         if not self.animator:
@@ -172,7 +172,6 @@ class AudioOSDContainer(Box):
             self.scale.set_value(volume)
             self.update_icon(volume)
 
-            # Apply muted style based on volume and mute state
             if volume == 0 or (self.audio.speaker and self.audio.speaker.muted):
                 self.scale.add_style_class("muted")
                 self.icon.add_style_class("muted")
