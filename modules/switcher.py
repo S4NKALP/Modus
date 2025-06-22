@@ -181,12 +181,12 @@ class ApplicationSwitcher(Window):
             self.hide_switcher()
             return True
 
-        if keyval == Gdk.KEY_Right:
+        if keyval == Gdk.KEY_Right or keyval == Gdk.KEY_l:
             self.current_index = (self.current_index + 1) % len(self.windows)
             self.update_selection()
             return True
 
-        if keyval == Gdk.KEY_Left:
+        if keyval == Gdk.KEY_Left or keyval == Gdk.KEY_h:
             self.current_index = (self.current_index - 1) % len(self.windows)
             self.update_selection()
             return True
