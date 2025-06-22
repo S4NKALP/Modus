@@ -258,24 +258,24 @@ $axMessage = notify-send "Modus" "FIRE IN THE HOLE‼️🗣️🔥🕳️" -i "
 # Reload {APP_NAME_CAP}
 bind = {bind_vars.get("prefix_restart", "ALT SHIFT")}, {bind_vars.get("suffix_restart", "R")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/{APP_NAME_CAP}/main.py)
 # Message
-bind = {bind_vars.get("prefix_msg", "SUPER")}, {bind_vars.get("suffix_msg", "A")}, exec, $axMessage
+bind = {bind_vars.get("prefix_msg", "SUPER")}, {bind_vars.get("suffix_msg", "A")}, exec, $Message
 # Application Switcher
 bind = {bind_vars.get("prefix_application_switcher", "ALT")}, {bind_vars.get("suffix_application_switcher", "TAB")}, exec, $fabricSend 'switcher.show_switcher()'
 # Kanban
-bind = {bind_vars.get("prefix_kanban", "SUPER")}, {bind_vars.get("suffix_kanban", "T")}, exec, $fabricSend "launcher.show_launcher('kanban ')" # Kanban
+bind = {bind_vars.get("prefix_kanban", "SUPER")}, {bind_vars.get("suffix_kanban", "T")}, exec, $fabricSend "launcher.show_launcher('kanban')" # Kanban
 # App Launcher
 bind = {bind_vars.get("prefix_launcher", "SUPER")}, {bind_vars.get("suffix_launcher", "SPACE")}, exec, $fabricSend "launcher.show_launcher()"
-bind = {bind_vars.get("prefix_app_launcher", "SUPER")}, {bind_vars.get("suffix_app_launcher", "D")}, exec, $fabricSend "launcher.show_launcher('app ')"
+bind = {bind_vars.get("prefix_app_launcher", "SUPER")}, {bind_vars.get("suffix_app_launcher", "D")}, exec, $fabricSend "launcher.show_launcher('app')"
 # Clipboard History
-bind = {bind_vars.get("prefix_cliphist", "SUPER")}, {bind_vars.get("suffix_cliphist", "V")}, exec, $fabricSend "launcher.show_launcher('clip ')"
+bind = {bind_vars.get("prefix_cliphist", "SUPER")}, {bind_vars.get("suffix_cliphist", "V")}, exec, $fabricSend "launcher.show_launcher('clip')"
 # Wallpapers
-bind = {bind_vars.get("prefix_wallpapers", "SUPER")}, {bind_vars.get("suffix_wallpapers", "W")}, exec, $fabricSend "launcher.show_launcher('wall ')"
+bind = {bind_vars.get("prefix_wallpapers", "SUPER")}, {bind_vars.get("suffix_wallpapers", "W")}, exec, $fabricSend "launcher.show_launcher('wall')"
 # Random Wallpaper
 bind = {bind_vars.get("prefix_randwall", "SUPER")}, {bind_vars.get("suffix_randwall", "W")}, exec, $fabricSend "launcher.show_launcher('wall random', external=True)"
 # Emoji Picker
-bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "E")}, exec, $fabricSend "launcher.show_launcher('emoji ')"
+bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "E")}, exec, $fabricSend "launcher.show_launcher('emoji')"
 # Power Menu
-bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", "ESCAPE")}, exec, $fabricSend "launcher.show_launcher('power ')"
+bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", "ESCAPE")}, exec, $fabricSend "launcher.show_launcher('power')"
 # Toggle Caffeine
 bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix_caffeine", "M")}, exec, $fabricSend "launcher.show_launcher('caffeine on', external=True)"
 # Settings
