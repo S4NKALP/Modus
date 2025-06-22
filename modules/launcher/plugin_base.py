@@ -1,7 +1,3 @@
-"""
-Base class for launcher plugins.
-"""
-
 from abc import ABC, abstractmethod
 from typing import List
 

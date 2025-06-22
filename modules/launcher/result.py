@@ -1,7 +1,3 @@
-"""
-Result class representing a search result from plugins.
-"""
-
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 

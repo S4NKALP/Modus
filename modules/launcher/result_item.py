@@ -1,14 +1,9 @@
-"""
-UI component for displaying search results.
-"""
-
-from gi.repository import Gtk
 import gi
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.image import Image
-from fabric.widgets.eventbox import EventBox
 from fabric.core.service import Signal
+from fabric.widgets.box import Box
+from fabric.widgets.eventbox import EventBox
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
 from modules.launcher.result import Result
 
 gi.require_version("Gtk", "3.0")

@@ -1,8 +1,3 @@
-"""
-Plugin manager for the launcher.
-Handles loading, managing, and executing plugins.
-"""
-
 import importlib
 import importlib.util
 import os

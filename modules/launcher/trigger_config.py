@@ -1,7 +1,3 @@
-"""
-Simple trigger configuration manager for the launcher.
-"""
-
 import json
 import os
 from typing import Any, Dict, List
