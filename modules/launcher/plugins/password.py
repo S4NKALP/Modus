@@ -26,8 +26,8 @@ class PasswordManager:
 
     def _simple_encrypt(self, text: str, key: str = "modus_pass") -> str:
         """Simple encryption using XOR with base64 encoding."""
-        key_bytes = key.encode('utf-8')
-        text_bytes = text.encode('utf-8')
+        key_bytes = key.encode("utf-8")
+        text_bytes = text.encode("utf-8")
 
         # XOR encryption
         encrypted = bytearray()
@@ -35,22 +35,22 @@ class PasswordManager:
             encrypted.append(byte ^ key_bytes[i % len(key_bytes)])
 
         # Base64 encode
-        return base64.b64encode(encrypted).decode('utf-8')
+        return base64.b64encode(encrypted).decode("utf-8")
 
     def _simple_decrypt(self, encrypted_text: str, key: str = "modus_pass") -> str:
         """Simple decryption using XOR with base64 decoding."""
         try:
-            key_bytes = key.encode('utf-8')
+            key_bytes = key.encode("utf-8")
 
             # Base64 decode
-            encrypted_bytes = base64.b64decode(encrypted_text.encode('utf-8'))
+            encrypted_bytes = base64.b64decode(encrypted_text.encode("utf-8"))
 
             # XOR decryption
             decrypted = bytearray()
             for i, byte in enumerate(encrypted_bytes):
                 decrypted.append(byte ^ key_bytes[i % len(key_bytes)])
 
-            return decrypted.decode('utf-8')
+            return decrypted.decode("utf-8")
         except Exception:
             return encrypted_text  # Return as-is if decryption fails
 
@@ -65,9 +65,9 @@ class PasswordManager:
 
             try:
                 if self.storage_file.exists():
-                    with open(self.storage_file, 'r', encoding='utf-8') as f:
+                    with open(self.storage_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
-                        self.passwords = data.get('passwords', {})
+                        self.passwords = data.get("passwords", {})
                 else:
                     self.passwords = {}
 
@@ -82,10 +82,10 @@ class PasswordManager:
             try:
                 self.storage_file.parent.mkdir(parents=True, exist_ok=True)
                 data = {
-                    'passwords': self.passwords,
-                    'last_modified': datetime.now().isoformat()
+                    "passwords": self.passwords,
+                    "last_modified": datetime.now().isoformat(),
                 }
-                with open(self.storage_file, 'w', encoding='utf-8') as f:
+                with open(self.storage_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2)
 
                 # Update cache timestamp
@@ -98,10 +98,10 @@ class PasswordManager:
         try:
             encrypted_password = self._simple_encrypt(password)
             self.passwords[name] = {
-                'password': encrypted_password,
-                'description': description,
-                'created': datetime.now().isoformat(),
-                'last_accessed': None
+                "password": encrypted_password,
+                "description": description,
+                "created": datetime.now().isoformat(),
+                "last_accessed": None,
             }
             self._save_passwords()
             return True
@@ -116,12 +116,12 @@ class PasswordManager:
 
         if name in self.passwords:
             try:
-                encrypted = self.passwords[name]['password']
+                encrypted = self.passwords[name]["password"]
                 decrypted = self._simple_decrypt(encrypted)
 
                 # Update last accessed time only if requested (to avoid frequent saves)
                 if update_access_time:
-                    self.passwords[name]['last_accessed'] = datetime.now().isoformat()
+                    self.passwords[name]["last_accessed"] = datetime.now().isoformat()
                     # Don't save immediately - batch saves for better performance
 
                 return decrypted
@@ -148,7 +148,7 @@ class PasswordManager:
         """Get password metadata without decrypting."""
         if name in self.passwords:
             info = self.passwords[name].copy()
-            info.pop('password', None)  # Remove encrypted password
+            info.pop("password", None)  # Remove encrypted password
             return info
         return None
 
@@ -165,7 +165,9 @@ class PasswordPlugin(PluginBase):
         self.description = "Secure password storage and management"
 
         # Initialize password manager
-        self.password_file = Path(get_relative_path("../../../config/json/passwords.json"))
+        self.password_file = Path(
+            get_relative_path("../../../config/json/passwords.json")
+        )
         self.password_manager = PasswordManager(self.password_file)
 
         # State for password visibility
@@ -181,7 +183,7 @@ class PasswordPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the password plugin."""
-        self.set_triggers(["pass", "password"])
+        self.set_triggers(["pass"])
         self._setup_launcher_hooks()
 
     def cleanup(self):
@@ -197,9 +199,12 @@ class PasswordPlugin(PluginBase):
         current_time = time.time()
 
         # Check cache first (except for add/remove commands which should always execute)
-        if (not query_key.startswith(("add ", "remove ", "delete ")) and
-            query_key in self._results_cache and
-            (current_time - self._cache_timestamps.get(query_key, 0)) < self._cache_ttl):
+        if (
+            not query_key.startswith(("add ", "remove ", "delete "))
+            and query_key in self._results_cache
+            and (current_time - self._cache_timestamps.get(query_key, 0))
+            < self._cache_ttl
+        ):
             return self._results_cache[query_key]
 
         results = []
@@ -261,7 +266,7 @@ class PasswordPlugin(PluginBase):
 
         for name in password_names:
             info = self.password_manager.get_password_info(name)
-            description = info.get('description', '') if info else ''
+            description = info.get("description", "") if info else ""
 
             # Check if password is revealed
             if name in self.revealed_passwords:
@@ -286,7 +291,9 @@ class PasswordPlugin(PluginBase):
                         "type": "password",
                         "name": name,
                         "keep_launcher_open": False,
-                        "alt_action": lambda n=name: self._toggle_password_visibility(n)
+                        "alt_action": lambda n=name: self._toggle_password_visibility(
+                            n
+                        ),
                     },
                 )
             )
@@ -296,7 +303,7 @@ class PasswordPlugin(PluginBase):
     def _handle_add_command(self, query_string: str) -> List[Result]:
         """Handle add password command."""
         results = []
-        parts = query_string.strip().split(' ', 3)
+        parts = query_string.strip().split(" ", 3)
 
         if len(parts) < 3:
             results.append(
@@ -323,7 +330,9 @@ class PasswordPlugin(PluginBase):
                     title=f"Update password for '{name}'?",
                     subtitle=f"Password already exists. Click to update it.",
                     icon_markup=icons.key,
-                    action=lambda: self._add_password_action(name, password, description, update=True),
+                    action=lambda: self._add_password_action(
+                        name, password, description, update=True
+                    ),
                     relevance=1.0,
                     plugin_name=self.display_name,
                     data={"type": "update", "name": name, "keep_launcher_open": False},
@@ -333,9 +342,12 @@ class PasswordPlugin(PluginBase):
             results.append(
                 Result(
                     title=f"Add password for '{name}'",
-                    subtitle=f"Click to save password" + (f" | {description}" if description else ""),
+                    subtitle=f"Click to save password"
+                    + (f" | {description}" if description else ""),
                     icon_markup=icons.plus,
-                    action=lambda: self._add_password_action(name, password, description),
+                    action=lambda: self._add_password_action(
+                        name, password, description
+                    ),
                     relevance=1.0,
                     plugin_name=self.display_name,
                     data={"type": "add", "name": name, "keep_launcher_open": False},
@@ -347,7 +359,7 @@ class PasswordPlugin(PluginBase):
     def _handle_remove_command(self, query_string: str) -> List[Result]:
         """Handle remove password command."""
         results = []
-        parts = query_string.strip().split(' ', 1)
+        parts = query_string.strip().split(" ", 1)
 
         if len(parts) < 2:
             results.append(
@@ -399,8 +411,7 @@ class PasswordPlugin(PluginBase):
 
         # Filter passwords that match the query
         matching_passwords = [
-            name for name in password_names
-            if query.lower() in name.lower()
+            name for name in password_names if query.lower() in name.lower()
         ]
 
         if not matching_passwords:
@@ -433,7 +444,7 @@ class PasswordPlugin(PluginBase):
 
         for name in matching_passwords:
             info = self.password_manager.get_password_info(name)
-            description = info.get('description', '') if info else ''
+            description = info.get("description", "") if info else ""
 
             # Check if password is revealed
             if name in self.revealed_passwords:
@@ -458,14 +469,18 @@ class PasswordPlugin(PluginBase):
                         "type": "password",
                         "name": name,
                         "keep_launcher_open": False,
-                        "alt_action": lambda n=name: self._toggle_password_visibility(n)
+                        "alt_action": lambda n=name: self._toggle_password_visibility(
+                            n
+                        ),
                     },
                 )
             )
 
         return results
 
-    def _add_password_action(self, name: str, password: str, description: str = "", update: bool = False):
+    def _add_password_action(
+        self, name: str, password: str, description: str = "", update: bool = False
+    ):
         """Action to add/update a password."""
         try:
             success = self.password_manager.add_password(name, password, description)
@@ -478,11 +493,13 @@ class PasswordPlugin(PluginBase):
 
                 # Send notification if available (non-blocking)
                 try:
-                    subprocess.Popen([
-                        "notify-send",
-                        "Password Manager",
-                        f"Password '{name}' {action_word} successfully"
-                    ])
+                    subprocess.Popen(
+                        [
+                            "notify-send",
+                            "Password Manager",
+                            f"Password '{name}' {action_word} successfully",
+                        ]
+                    )
                 except:
                     pass
             else:
@@ -505,11 +522,13 @@ class PasswordPlugin(PluginBase):
 
                 # Send notification if available (non-blocking)
                 try:
-                    subprocess.Popen([
-                        "notify-send",
-                        "Password Manager",
-                        f"Password '{name}' removed successfully"
-                    ])
+                    subprocess.Popen(
+                        [
+                            "notify-send",
+                            "Password Manager",
+                            f"Password '{name}' removed successfully",
+                        ]
+                    )
                 except:
                     pass
             else:
@@ -520,18 +539,22 @@ class PasswordPlugin(PluginBase):
     def _copy_password_to_clipboard(self, name: str):
         """Copy password to clipboard and reveal it temporarily."""
         try:
-            password = self.password_manager.get_password(name, update_access_time=False)
+            password = self.password_manager.get_password(
+                name, update_access_time=False
+            )
             if password:
                 # Copy to clipboard (use timeout to avoid hanging)
                 try:
-                    subprocess.run(["wl-copy"], input=password.encode(), check=True, timeout=2)
+                    subprocess.run(
+                        ["wl-copy"], input=password.encode(), check=True, timeout=2
+                    )
                 except subprocess.SubprocessError:
                     # Fall back to X11
                     subprocess.run(
                         ["xclip", "-selection", "clipboard"],
                         input=password.encode(),
                         check=True,
-                        timeout=2
+                        timeout=2,
                     )
 
                 # Reveal password temporarily
@@ -541,11 +564,13 @@ class PasswordPlugin(PluginBase):
 
                 # Send notification if available (non-blocking)
                 try:
-                    subprocess.Popen([
-                        "notify-send",
-                        "Password Manager",
-                        f"Password for '{name}' copied to clipboard"
-                    ])
+                    subprocess.Popen(
+                        [
+                            "notify-send",
+                            "Password Manager",
+                            f"Password for '{name}' copied to clipboard",
+                        ]
+                    )
                 except:
                     pass
 
@@ -560,7 +585,9 @@ class PasswordPlugin(PluginBase):
     def _reveal_password(self, name: str):
         """Reveal password without copying to clipboard."""
         try:
-            password = self.password_manager.get_password(name, update_access_time=False)
+            password = self.password_manager.get_password(
+                name, update_access_time=False
+            )
             if password:
                 self.revealed_passwords[name] = password
                 # Clear cache to force refresh with revealed password
@@ -587,10 +614,13 @@ class PasswordPlugin(PluginBase):
         try:
             # Try to find the launcher instance
             import gc
+
             for obj in gc.get_objects():
-                if (hasattr(obj, "__class__") and
-                    obj.__class__.__name__ == "Launcher" and
-                    hasattr(obj, "close_launcher")):
+                if (
+                    hasattr(obj, "__class__")
+                    and obj.__class__.__name__ == "Launcher"
+                    and hasattr(obj, "close_launcher")
+                ):
                     self._launcher_instance = obj
                     # Store original close_launcher method
                     self._original_close_launcher = obj.close_launcher
@@ -604,8 +634,7 @@ class PasswordPlugin(PluginBase):
     def _cleanup_launcher_hooks(self):
         """Cleanup launcher hooks."""
         try:
-            if (self._launcher_instance and
-                hasattr(self, '_original_close_launcher')):
+            if self._launcher_instance and hasattr(self, "_original_close_launcher"):
                 # Restore original close_launcher method
                 self._launcher_instance.close_launcher = self._original_close_launcher
                 self._launcher_instance = None
@@ -618,7 +647,7 @@ class PasswordPlugin(PluginBase):
         # Hide all passwords when launcher closes
         self._hide_all_passwords()
         # Call original close_launcher method
-        if hasattr(self, '_original_close_launcher'):
+        if hasattr(self, "_original_close_launcher"):
             self._original_close_launcher()
 
     def _toggle_password_visibility(self, name: str):
@@ -631,7 +660,9 @@ class PasswordPlugin(PluginBase):
         else:
             # Reveal password
             try:
-                password = self.password_manager.get_password(name, update_access_time=False)
+                password = self.password_manager.get_password(
+                    name, update_access_time=False
+                )
                 if password:
                     self.revealed_passwords[name] = password
                     self._results_cache.clear()
@@ -647,15 +678,18 @@ class PasswordPlugin(PluginBase):
     def _force_launcher_refresh(self):
         """Force the launcher to refresh and show updated results."""
         try:
-            if self._launcher_instance and hasattr(self._launcher_instance, '_perform_search'):
+            if self._launcher_instance and hasattr(
+                self._launcher_instance, "_perform_search"
+            ):
                 # Get current search text
                 current_text = ""
-                if hasattr(self._launcher_instance, 'search_entry'):
+                if hasattr(self._launcher_instance, "search_entry"):
                     current_text = self._launcher_instance.search_entry.get_text()
 
                 # Trigger a search to refresh results
                 try:
                     from gi.repository import GLib
+
                     def refresh():
                         self._launcher_instance._perform_search(current_text)
                         return False

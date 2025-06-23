@@ -114,6 +114,10 @@
       "icon": "notifications",
       "description": "Notification History - Search and manage notification history",
       "examples": ["notif", "notif clear", "notif search term"]
+    },
+    "pass": {
+      "icon": "key",
+      "description": "Password Manager - Search and manage passwords"
     }
   },
   "settings": {
