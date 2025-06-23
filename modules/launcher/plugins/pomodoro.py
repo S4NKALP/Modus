@@ -230,9 +230,7 @@ class PomodoroTimer:
         else:
             period_type = f"Work (Cycle {self.current_cycle})"
 
-        self._cached_status = f"{period_type} - {remaining_minutes:02d}:{
-            remaining_seconds:02d
-        } | Total: {self.total_cycles_completed}"
+        self._cached_status = f"{period_type} - {remaining_minutes:02d}:{remaining_seconds:02d} | Total: {self.total_cycles_completed}"
         self._last_status_update = current_time
 
     def get_status(self):
@@ -357,11 +355,7 @@ class PomodoroPlugin(PluginBase):
                 results.append(
                     Result(
                         title="Start Pomodoro",
-                        subtitle=f"{self.DEFAULT_POMODORO_DURATION} min work, {
-                            self.DEFAULT_BREAK_DURATION
-                        } min break, {
-                            self.DEFAULT_LONG_BREAK_DURATION
-                        } min long break, {self.DEFAULT_POMODORO_COUNT} cycles",
+                        subtitle=f"{self.DEFAULT_POMODORO_DURATION} min work, {self.DEFAULT_BREAK_DURATION} min break, {self.DEFAULT_LONG_BREAK_DURATION} min long break, {self.DEFAULT_POMODORO_COUNT} cycles",
                         icon_markup=icons.timer_on,
                         action=start_default_and_refresh,
                         relevance=1.0,
@@ -416,9 +410,7 @@ class PomodoroPlugin(PluginBase):
                     results.append(
                         Result(
                             title="Start Pomodoro",
-                            subtitle=f"{p} min work, {b} min break, {
-                                lb
-                            } min long break, {c} cycles",
+                            subtitle=f"{p} min work, {b} min break, {lb} min long break, {c} cycles",
                             icon_markup=icons.timer_on,
                             action=start_custom_and_refresh,
                             relevance=1.0,

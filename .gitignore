@@ -6,6 +6,7 @@ config/json/config.json
 config/json/dock.json
 config/json/accounts.json
 config/json/passwords.json
+config/json/bookmarks.json
 config/hypr/modus.conf
 config/hypr/colors.conf
 styles/colors.css

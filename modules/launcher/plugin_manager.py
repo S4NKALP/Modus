@@ -95,7 +95,8 @@ class PluginManager:
             "bluetooth",
             "otp",
             "notifications",
-            "password"
+            "password",
+            "bookmarks"
         ]
 
         for plugin_name in default_plugins:

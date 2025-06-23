@@ -486,8 +486,6 @@ class PasswordPlugin(PluginBase):
             success = self.password_manager.add_password(name, password, description)
             if success:
                 action_word = "updated" if update else "added"
-                print(f"Password '{name}' {action_word} successfully")
-
                 # Clear cache to force refresh
                 self._results_cache.clear()
 
@@ -512,7 +510,6 @@ class PasswordPlugin(PluginBase):
         try:
             success = self.password_manager.remove_password(name)
             if success:
-                print(f"Password '{name}' removed successfully")
 
                 # Remove from revealed passwords if present
                 self.revealed_passwords.pop(name, None)
@@ -560,8 +557,6 @@ class PasswordPlugin(PluginBase):
                 # Reveal password temporarily
                 self.revealed_passwords[name] = password
 
-                print(f"Password for '{name}' copied to clipboard")
-
                 # Send notification if available (non-blocking)
                 try:
                     subprocess.Popen(
@@ -607,7 +602,6 @@ class PasswordPlugin(PluginBase):
             self.revealed_passwords.clear()
             # Clear cache to force refresh with hidden passwords
             self._results_cache.clear()
-            print("🔒 All passwords hidden")
 
     def _setup_launcher_hooks(self):
         """Setup hooks to monitor launcher state."""
@@ -626,7 +620,6 @@ class PasswordPlugin(PluginBase):
                     self._original_close_launcher = obj.close_launcher
                     # Replace with our wrapper
                     obj.close_launcher = self._wrapped_close_launcher
-                    print("🔗 Password plugin hooked into launcher close event")
                     break
         except Exception as e:
             print(f"Warning: Could not setup launcher hooks: {e}")
@@ -638,7 +631,6 @@ class PasswordPlugin(PluginBase):
                 # Restore original close_launcher method
                 self._launcher_instance.close_launcher = self._original_close_launcher
                 self._launcher_instance = None
-                print("🔗 Password plugin hooks cleaned up")
         except Exception as e:
             print(f"Warning: Could not cleanup launcher hooks: {e}")
 
@@ -656,7 +648,6 @@ class PasswordPlugin(PluginBase):
             # Hide password
             self.revealed_passwords.pop(name, None)
             self._results_cache.clear()
-            print(f"🔒 Password for '{name}' hidden (Shift+Enter)")
         else:
             # Reveal password
             try:
@@ -666,7 +657,6 @@ class PasswordPlugin(PluginBase):
                 if password:
                     self.revealed_passwords[name] = password
                     self._results_cache.clear()
-                    print(f"🔓 Password for '{name}' revealed (Shift+Enter)")
                 else:
                     print(f"Failed to retrieve password for '{name}'")
             except Exception as e:
