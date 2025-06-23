@@ -17,15 +17,15 @@ set -e          # Exit immediately if a command exits with a non-zero status
 set -u          # Treat unset variables as an error
 set -o pipefail # Prevent errors in a pipeline from being masked
 
-REPO_URL="https://github.com/S4NKALP/Modus"
-INSTALL_DIR="$HOME/Modus"
+REPO_URL="https://github.com/S4NKALP/Modus.git"
+INSTALL_DIR="$HOME/.config/Modus"
 
 PACKAGES=(
 	fabric-cli-git
 	cava
 	cliphist
 	gnome-bluetooth-3.0
-  	gobject-introspection
+	gobject-introspection
 	slurp
 	ffmpeg
 	grimblast
@@ -35,9 +35,9 @@ PACKAGES=(
 	imagemagick
 	libnotify
 	matugen-bin
-  	noto-fonts-emoji
- 	nvtop
-  	playerctl
+	noto-fonts-emoji
+	nvtop
+	playerctl
 	python-fabric-git
 	python-gobject
 	python-pillow
@@ -127,11 +127,10 @@ else
 	echo "All required packages are up-to-date."
 fi
 
-
 python "$INSTALL_DIR/config/config.py"
 echo "Starting Modus..."
 killall modus 2>/dev/null || true
-uwsm app -- python "$INSTALL_DIR/main.py" > /dev/null 2>&1 & disown
-
+uwsm app -- python "$INSTALL_DIR/main.py" >/dev/null 2>&1 &
+disown
 
 echo "Installation complete!"
