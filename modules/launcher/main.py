@@ -246,7 +246,9 @@ class Launcher(Window):
             if hasattr(self.search_entry, "set_position"):
                 self.search_entry.set_position(-1)  # Move caret to end
             if hasattr(self.search_entry, "select_region"):
-                self.search_entry.select_region(text_length, text_length)  # No selection
+                self.search_entry.select_region(
+                    text_length, text_length
+                )  # No selection
             return False  # Only run once
 
         GLib.idle_add(position_cursor)
@@ -324,7 +326,11 @@ class Launcher(Window):
             if not query.endswith(" "):
                 # This is an exact trigger match without space - add space immediately
                 trigger_text_with_space = self._add_space_to_trigger(query)
-                GLib.timeout_add(TRIGGER_SEARCH_DEBOUNCE_MS, self._perform_search, trigger_text_with_space)
+                GLib.timeout_add(
+                    TRIGGER_SEARCH_DEBOUNCE_MS,
+                    self._perform_search,
+                    trigger_text_with_space,
+                )
             else:
                 # Already has space, proceed with normal search
                 GLib.timeout_add(SEARCH_DEBOUNCE_MS, self._perform_search, query)
@@ -370,8 +376,11 @@ class Launcher(Window):
                 current_text = self.search_entry.get_text()
 
                 # If the current text is exactly the trigger word (no space), add space automatically
-                if (current_text.strip() == trigger_word and not current_text.endswith(" ")
-                    and not getattr(self, "_auto_adding_space", False)):
+                if (
+                    current_text.strip() == trigger_word
+                    and not current_text.endswith(" ")
+                    and not getattr(self, "_auto_adding_space", False)
+                ):
                     query = self._add_space_to_trigger(trigger_word)
 
                 # Enter trigger mode

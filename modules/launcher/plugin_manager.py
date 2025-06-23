@@ -86,7 +86,6 @@ class PluginManager:
             "screencapture",
             "emoji",
             "wallpaper",
-            "pomodoro",
             "websearch",
             "kanban",
             "calendar",
@@ -96,7 +95,7 @@ class PluginManager:
             "otp",
             "notifications",
             "password",
-            "bookmarks"
+            "bookmarks",
         ]
 
         for plugin_name in default_plugins:

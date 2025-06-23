@@ -42,10 +42,6 @@
       "icon": "wallpapers",
       "description": "Wallpapers - Set wallpapers, and tons of features"
     },
-    "pomo": {
-      "icon": "timer_on",
-      "description": "Pomodoro - Productivity timer with notifications"
-    },
     "web": {
       "icon": "world",
       "description": "Web Search - Search the web using various search engines"
