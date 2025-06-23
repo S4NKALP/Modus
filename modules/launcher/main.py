@@ -53,6 +53,9 @@ class Launcher(Window):
         # Flag to prevent recursion when automatically adding spaces
         self._auto_adding_space = False
 
+        # Flag to prevent search change handler interference during backspace processing
+        self._processing_backspace = False
+
         # Initialize plugin manager
         self.plugin_manager = PluginManager()
 
@@ -66,6 +69,10 @@ class Launcher(Window):
 
         # Trigger system
         self.triggered_plugin = None  # Currently active triggered plugin
+        self.active_trigger = ""  # Currently active trigger keyword
+        self.query = ""  # Current search query
+        self.visible = False  # Launcher visibility state
+        self.opened_with_trigger = False  # Whether launcher was opened with a trigger
 
         # Focus management for header buttons
         self.focus_mode = "search"  # "search", "results", "header"
@@ -287,6 +294,10 @@ class Launcher(Window):
 
         # Skip if we're automatically adding a space to prevent recursion
         if getattr(self, "_auto_adding_space", False):
+            return
+
+        # Skip if we're processing a backspace to prevent interference
+        if getattr(self, "_processing_backspace", False):
             return
 
         # Reset focus to search when user types
@@ -785,21 +796,36 @@ class Launcher(Window):
         """Handle backspace key press in trigger mode."""
         if self.triggered_plugin:
             trigger_text = self.active_trigger.strip()
+            current_text = self.search_entry.get_text()
+
+            # Set flag to prevent search change handler from interfering
+            self._processing_backspace = True
 
             # Allow normal backspace behavior first, then check if we need to exit trigger mode
             # Don't intercept the backspace - let GTK handle it normally
 
             # Schedule a check after the backspace is processed
             def check_trigger_after_backspace():
-                # Get the text after backspace has been processed
-                new_text = self.search_entry.get_text()
+                try:
+                    # Get the text after backspace has been processed
+                    new_text = self.search_entry.get_text()
 
-                # If the text no longer starts with the trigger, exit trigger mode
-                if not new_text.lower().startswith(trigger_text.lower()):
-                    self.triggered_plugin = None
-                    self.active_trigger = ""
-                    self._clear_results()
-                    # Don't clear the text - let the user's edit stand
+                    # If the text no longer starts with the trigger, exit trigger mode
+                    if not new_text.lower().startswith(trigger_text.lower()):
+                        self.triggered_plugin = None
+                        self.active_trigger = ""
+                        self._clear_results()
+                        # Don't clear the text - let the user's edit stand
+
+                    # If we're still in trigger mode but the text changed, update the search
+                    elif self.triggered_plugin and new_text != current_text:
+                        # Trigger a search with the new text
+                        self.query = new_text
+                        GLib.timeout_add(50, self._perform_search, new_text)
+
+                finally:
+                    # Clear the backspace processing flag
+                    self._processing_backspace = False
 
                 return False  # Don't repeat
 
