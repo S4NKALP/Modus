@@ -810,8 +810,23 @@ class Launcher(Window):
                     # Get the text after backspace has been processed
                     new_text = self.search_entry.get_text()
 
-                    # If the text no longer starts with the trigger, exit trigger mode
-                    if not new_text.lower().startswith(trigger_text.lower()):
+                    # Check if we should exit trigger mode
+                    # We need to check if the text still matches the trigger pattern
+                    should_exit_trigger = False
+
+                    # If the active trigger ends with a space (like "calc "),
+                    # we should exit if the text doesn't contain that space anymore
+                    if self.active_trigger.endswith(" "):
+                        # For triggers like "calc ", exit if text is just "calc" or doesn't start with "calc "
+                        trigger_with_space = self.active_trigger.lower()
+                        if not new_text.lower().startswith(trigger_with_space):
+                            should_exit_trigger = True
+                    else:
+                        # For triggers without space, exit if text doesn't start with trigger
+                        if not new_text.lower().startswith(trigger_text.lower()):
+                            should_exit_trigger = True
+
+                    if should_exit_trigger:
                         self.triggered_plugin = None
                         self.active_trigger = ""
                         self._clear_results()
