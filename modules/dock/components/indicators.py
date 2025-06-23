@@ -1,3 +1,4 @@
+import subprocess
 import config.data as data
 import utils.icons as icons
 from fabric.bluetooth import BluetoothClient
@@ -6,6 +7,8 @@ from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
+from fabric.utils import get_relative_path
+from gi.repository import GLib
 from services.network import NetworkClient
 
 
@@ -167,13 +170,80 @@ class BluetoothIndicator(Button):
         self.update_state()
 
 
+class RecordingIndicator(Button):
+    def __init__(self, **kwargs):
+        super().__init__(name="button-bar-recording", **kwargs)
+
+        # Path to the screen-capture script
+        self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
+
+        self.recording_label = Label(name="recording-label", markup=icons.screenrecord)
+        self.add(self.recording_label)
+
+        # Connect click to stop recording
+        self.connect("clicked", self.on_stop_recording)
+
+        # Start with indicator hidden
+        self.hide()
+
+        # Set up periodic checking for recording status
+        self.check_recording_status()
+        self.timeout_id = GLib.timeout_add(1000, self.check_recording_status)  # Check every second
+
+    def check_recording_status(self):
+        """Check if recording is currently active and update visibility."""
+        try:
+            result = subprocess.run(
+                [self.script_path, "status"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            is_recording = result.stdout.strip() == "true"
+
+            if is_recording:
+                if not self.get_visible():
+                    self.show()
+                self.set_tooltip_text("Recording in progress - Click to stop")
+            else:
+                if self.get_visible():
+                    self.hide()
+
+        except Exception as e:
+            # If we can't check status, hide the indicator
+            if self.get_visible():
+                self.hide()
+
+        return True  # Continue the timeout
+
+    def on_stop_recording(self, *args):
+        """Stop the current recording."""
+        try:
+            subprocess.Popen([self.script_path, "record", "stop"])
+            # The indicator will hide automatically on next status check
+        except Exception as e:
+            print(f"Error stopping recording: {e}")
+
+    def cleanup(self):
+        """Clean up the timeout when the indicator is destroyed."""
+        if hasattr(self, 'timeout_id'):
+            GLib.source_remove(self.timeout_id)
+
+
 class Indicators(Box):
     def __init__(self, **kwargs):
+        self.recording_indicator = RecordingIndicator()
+
         super().__init__(
             name="indicator",
             orientation="h" if not data.VERTICAL else "v",
             spacing=4,
-            children=[WifiIndicator(), BluetoothIndicator()],
+            children=[WifiIndicator(), BluetoothIndicator(), self.recording_indicator],
             **kwargs,
         )
         self.show_all()
+
+    def cleanup(self):
+        """Clean up all indicators when the dock is destroyed."""
+        if hasattr(self, 'recording_indicator'):
+            self.recording_indicator.cleanup()

@@ -14,7 +14,31 @@
   border: 3px solid var(--primary);
 }
 
+#button-bar-recording {
+  border-radius: 12px;
+  padding:4px;
+  animation: recording-blink 1.5s ease-in-out infinite;
+}
+
+#button-bar-recording:hover {
+  background-color: var(--red);
+}
+
+
+@keyframes recording-blink {
+  0% {
+    background-color: var(--red-dim);
+  }
+  50% {
+    background-color: var(--red-dim);
+  }
+  100% {
+    background-color: var(--red-dim);
+  }
+}
+
 #network-label,
-#bluetooth-label {
+#bluetooth-label,
+#recording-label {
   font-size: 20px;
 }
