@@ -118,6 +118,10 @@
     "bm": {
       "icon": "bookmark",
       "description": "Bookmarks - Search and manage bookmarks"
+    },
+    "ps": {
+      "icon": "process",
+      "description": "Process Manager - View and manage running processes"
     }
   },
   "settings": {
