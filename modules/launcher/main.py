@@ -99,37 +99,12 @@ class Launcher(Window):
         self.search_entry.connect("changed", self._on_search_changed)
         self.search_entry.connect("activate", self._on_entry_activate)
 
-        # Create header buttons with references for keyboard navigation
-        self.config_button = Button(
-            name="config-button",
-            child=Label(name="config-label", markup=icons.config),
-            tooltip_text="Open Configuration (Ctrl+,)",
-            on_clicked=lambda *_: (
-                exec_shell_command_async(
-                    f"python {get_relative_path('../../config/config.py')}"
-                ),
-                self.close_launcher(),
-            ),
-        )
-
-        self.close_button = Button(
-            name="close-button",
-            child=Label(name="close-label", markup=icons.cancel),
-            tooltip_text="Close Launcher (Escape)",
-            on_clicked=lambda *_: self.close_launcher(),
-        )
-
-        # Store header buttons for keyboard navigation
-        self.header_buttons = [self.config_button, self.close_button]
-
         self.header_box = Box(
             name="header_box",
             spacing=10,
             orientation="h",
             children=[
-                self.config_button,
                 self.search_entry,
-                self.close_button,
             ],
         )
 
@@ -873,11 +848,6 @@ class Launcher(Window):
         # Backspace - handle trigger mode backspace behavior
         if keyval == Gdk.KEY_BackSpace:
             return self._handle_backspace_key()
-
-        # Ctrl+, - Open configuration
-        if keyval == Gdk.KEY_comma and event.state & Gdk.ModifierType.CONTROL_MASK:
-            self.config_button.emit("clicked")
-            return True
 
         # Up/Down - navigate results (alternative to Tab)
         if keyval == Gdk.KEY_Up:
