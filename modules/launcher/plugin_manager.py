@@ -96,6 +96,7 @@ class PluginManager:
             "notifications",
             "password",
             "bookmarks",
+            "process",
         ]
 
         for plugin_name in default_plugins:

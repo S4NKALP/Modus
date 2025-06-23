@@ -185,6 +185,7 @@ disconnect: str = "&#xfd16;"
 auth: str = "&#xeca0;"
 bookmark: str = "&#xea3a;"
 star: str = "&#xeb2e;"
+refresh: str = "&#xeb2e;"
 
 
 # otp
