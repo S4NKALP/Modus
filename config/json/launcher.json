@@ -83,6 +83,10 @@
     "ps": {
       "icon": "process",
       "description": "Process Manager - View and manage running processes"
+    },
+    "weather": {
+      "icon": "cloud",
+      "description": "Weather - Get current weather information"
     }
   },
   "settings": {

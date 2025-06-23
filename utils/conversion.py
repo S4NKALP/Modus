@@ -1,4 +1,105 @@
 import requests
+import time
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Optional, Tuple
+
+
+class CurrencyCache:
+    """Thread-safe currency exchange rate cache with background updates."""
+
+    def __init__(self):
+        self._cache: Dict[str, Dict] = {}  # {base_currency: {rates_data, timestamp}}
+        self._cache_lock = threading.Lock()
+        self._cache_ttl = 3600  # 1 hour in seconds
+        self._request_timeout = 2  # 2 seconds for faster response
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="currency")
+        self._pending_requests: Dict[str, threading.Event] = {}
+
+    def get_rate(self, from_code: str, to_code: str) -> Optional[Tuple[float, float]]:
+        """
+        Get exchange rate from cache or fetch if needed.
+        Returns (rate, cache_age_seconds) or None if unavailable.
+        """
+        from_lower = from_code.lower()
+        to_lower = to_code.lower()
+
+        if from_lower == to_lower:
+            return 1.0, 0.0
+
+        current_time = time.time()
+
+        with self._cache_lock:
+            # Check if we have fresh cached data
+            if from_lower in self._cache:
+                cache_entry = self._cache[from_lower]
+                cache_age = current_time - cache_entry['timestamp']
+
+                if cache_age < self._cache_ttl and to_lower in cache_entry['rates']:
+                    rate = cache_entry['rates'][to_lower]['rate']
+                    return rate, cache_age
+
+            # Check if we're already fetching this currency
+            if from_lower in self._pending_requests:
+                # Don't wait, return cached data if available (even if stale)
+                if from_lower in self._cache and to_lower in self._cache[from_lower]['rates']:
+                    cache_entry = self._cache[from_lower]
+                    cache_age = current_time - cache_entry['timestamp']
+                    rate = cache_entry['rates'][to_lower]['rate']
+                    return rate, cache_age
+                return None
+
+            # Start background fetch
+            self._pending_requests[from_lower] = threading.Event()
+
+        # Submit background task to fetch rates
+        self._executor.submit(self._fetch_rates_background, from_lower)
+
+        # Return stale cached data if available
+        with self._cache_lock:
+            if from_lower in self._cache and to_lower in self._cache[from_lower]['rates']:
+                cache_entry = self._cache[from_lower]
+                cache_age = current_time - cache_entry['timestamp']
+                rate = cache_entry['rates'][to_lower]['rate']
+                return rate, cache_age
+
+        return None
+
+    def _fetch_rates_background(self, from_code: str):
+        """Fetch exchange rates in background thread."""
+        try:
+            url = f"https://www.floatrates.com/daily/{from_code}.json"
+            response = requests.get(url, timeout=self._request_timeout)
+
+            if response.status_code == 200:
+                rates_data = response.json()
+                current_time = time.time()
+
+                with self._cache_lock:
+                    self._cache[from_code] = {
+                        'rates': rates_data,
+                        'timestamp': current_time
+                    }
+
+        except Exception as e:
+            print(f"Background currency fetch failed for {from_code}: {e}")
+        finally:
+            # Mark request as complete
+            with self._cache_lock:
+                if from_code in self._pending_requests:
+                    self._pending_requests[from_code].set()
+                    del self._pending_requests[from_code]
+
+    def cleanup(self):
+        """Cleanup resources."""
+        self._executor.shutdown(wait=False)
+        with self._cache_lock:
+            self._cache.clear()
+            self._pending_requests.clear()
+
+
+# Global currency cache instance
+_currency_cache = CurrencyCache()
 
 
 class Units():
@@ -306,6 +407,7 @@ class Units():
 class Conversion():
     def __init__(self):
         self.units = Units()
+        self.currency_cache = _currency_cache
 
     def convert(self, value: float, from_type: str, to_type: str):
         """
@@ -363,10 +465,25 @@ class Conversion():
         # 2) If both are currency codes (e.g. “USD”, “ARS”)
         #    we assume they are uppercase and have 3 letters.
         if len(from_type) == 3 and len(to_type) == 3 and from_type.isalpha() and to_type.isalpha():
+            result = self._convert_currency_fast(value, from_type, to_type)
+            if result is not None:
+                return result
+            # Fallback to slow method if fast method fails
             return self._convert_currency_via_floatrates(value, from_type, to_type)
 
         # 3) If it doesn't fall into any case, error.
         raise ValueError(f"Unsupported conversion: {from_type} to {to_type}")
+
+    def _convert_currency_fast(self, value: float, from_code: str, to_code: str) -> Optional[float]:
+        """
+        Fast currency conversion using cached exchange rates.
+        Returns None if rate is not available in cache.
+        """
+        rate_info = self.currency_cache.get_rate(from_code, to_code)
+        if rate_info is not None:
+            rate, _ = rate_info  # cache_age not needed here
+            return value * rate
+        return None
 
     def _convert_currency_via_floatrates(self, value: float, from_code: str, to_code: str) -> float:
         """
@@ -439,6 +556,22 @@ class Conversion():
                 return singular
             return singular.lower()
         return type
+
+    def cleanup(self):
+        """Cleanup resources."""
+        self.currency_cache.cleanup()
+
+    def get_currency_cache_info(self, from_code: str, to_code: str) -> Optional[Tuple[bool, float]]:
+        """
+        Get currency cache information for UI display.
+        Returns (is_fresh, cache_age_seconds) or None if not cached.
+        """
+        rate_info = self.currency_cache.get_rate(from_code, to_code)
+        if rate_info is not None:
+            _, cache_age = rate_info  # rate not needed here
+            is_fresh = cache_age < 300  # Consider fresh if less than 5 minutes old
+            return is_fresh, cache_age
+        return None
 
 
 # Quick usage example:

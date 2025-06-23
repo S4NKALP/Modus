@@ -87,16 +87,20 @@ class CalculatorPlugin(PluginBase):
                 cache_key = f"{value}_{from_unit}_{to_unit}"
                 if cache_key in self._conversion_cache:
                     result = self._conversion_cache[cache_key]
+                    subtitle = f"{value} {from_unit} = {result:.6g} {to_unit}"
                 else:
                     # Use the conversion utility
                     result = self.converter.convert(value, from_unit, to_unit)
                     # Cache the result
                     self._conversion_cache[cache_key] = result
+                    subtitle = f"{value} {from_unit} = {result:.6g} {to_unit}"
+
+    
 
                 return [
                     Result(
                         title=f"{result:.6g} {to_unit}",
-                        subtitle=f"{value} {from_unit} = {result:.6g} {to_unit}",
+                        subtitle=subtitle,
                         icon_markup=icons.calculator,
                         action=lambda r=f"{result:.6g}": self._copy_to_clipboard(r),
                         relevance=1.0,
@@ -136,6 +140,15 @@ class CalculatorPlugin(PluginBase):
 
         return []
 
+    def _format_cache_age(self, age_seconds: float) -> str:
+        """Format cache age for display."""
+        if age_seconds < 60:
+            return f"{int(age_seconds)}s ago"
+        elif age_seconds < 3600:
+            return f"{int(age_seconds // 60)}m ago"
+        else:
+            return f"{int(age_seconds // 3600)}h ago"
+
     def _copy_to_clipboard(self, text: str):
         """Copy text to clipboard using cliphist."""
         try:
@@ -150,3 +163,4 @@ class CalculatorPlugin(PluginBase):
     def cleanup(self):
         """Clean up resources."""
         self._conversion_cache.clear()
+        self.converter.cleanup()
