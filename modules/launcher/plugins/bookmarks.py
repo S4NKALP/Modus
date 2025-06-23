@@ -62,7 +62,7 @@ class BookmarkManager:
             current_time = time.time()
 
             # Check if cache is still valid
-            if (current_time - self.last_loaded) < self.cache_ttl and self.bookmarks:
+            if (current_time - self.last_loaded) < self.cache_ttl and self.last_loaded > 0:
                 return
 
             try:
@@ -71,6 +71,7 @@ class BookmarkManager:
                         data = json.load(f)
                         self.bookmarks = data.get("bookmarks", [])
                 else:
+                    # File doesn't exist, start with empty list but don't save yet
                     self.bookmarks = []
 
                 self.last_loaded = current_time
@@ -193,36 +194,65 @@ class BookmarksPlugin(PluginBase):
         self.bookmark_manager = BookmarkManager(self.bookmark_file)
         self.max_results = 15
 
+        # Cache for results
+        self._results_cache = {}
+        self._cache_timestamps = {}
+        self._cache_ttl = 30  # 30 seconds
+
+        # Launcher instance for refreshing
+        self._launcher_instance = None
+        self._original_close_launcher = None
+
     def initialize(self):
         """Initialize the bookmarks plugin."""
-        self.set_triggers(["bookmark", "bm"])
+        self.set_triggers(["bm"])
+        self._setup_launcher_hooks()
 
     def cleanup(self):
         """Cleanup the bookmarks plugin."""
-        pass
+        self._results_cache.clear()
+        self._cache_timestamps.clear()
+        self._cleanup_launcher_hooks()
 
     def query(self, query_string: str) -> List[Result]:
-        """Process bookmark queries with add/remove commands."""
-        query = query_string.strip()
+        """Process bookmark queries with caching."""
+        query_key = query_string.strip()
+        current_time = time.time()
+
+        # Check cache first (except for add/remove commands which should always execute)
+        if (
+            not query_key.startswith(("add ", "remove ", "delete ", "rm "))
+            and query_key in self._results_cache
+            and (current_time - self._cache_timestamps.get(query_key, 0)) < self._cache_ttl
+        ):
+            return self._results_cache[query_key]
+
+        query = query_key.lower()
+        results = []
 
         if not query:
             # Show recent/popular bookmarks when no query
-            return self._get_recent_bookmarks()
-
-        # Handle add command
-        if query.startswith("add "):
-            return self._handle_add_command(query[4:].strip())
-
-        # Handle remove command
-        if query.startswith(("remove ", "delete ", "rm ")):
-            command_parts = query.split(" ", 1)
+            results = self._get_recent_bookmarks()
+        elif query.startswith("add "):
+            # Add new bookmark (don't cache)
+            results = self._handle_add_command(query[4:].strip())
+        elif query.startswith(("remove ", "delete ", "rm ")):
+            # Remove bookmark (don't cache)
+            command_parts = query_key.split(" ", 1)
             if len(command_parts) > 1:
-                return self._handle_remove_command(command_parts[1].strip())
+                results = self._handle_remove_command(command_parts[1].strip())
             else:
-                return self._show_remove_help()
+                results = self._show_remove_help()
+        else:
+            # Search bookmarks
+            results = self._search_bookmarks(query)
 
-        # Search bookmarks
-        return self._search_bookmarks(query.lower())
+        # Cache results (except for add/remove commands)
+        if not query.startswith(("add ", "remove ", "delete ", "rm ")):
+            self._results_cache[query_key] = results
+            self._cache_timestamps[query_key] = current_time
+
+        return results
 
     def _search_bookmarks(self, query: str) -> List[Result]:
         """Search through bookmarks."""
@@ -333,26 +363,16 @@ class BookmarksPlugin(PluginBase):
         url = parts[1]
         description = " ".join(parts[2:]) if len(parts) > 2 else ""
 
-        # Add the bookmark
-        success = self.bookmark_manager.add_bookmark(title, url, description)
+        # Check if bookmark already exists
+        normalized_url = self.bookmark_manager._normalize_url(url)
+        existing_bookmarks = self.bookmark_manager.get_bookmarks()
+        already_exists = any(bookmark["url"] == normalized_url for bookmark in existing_bookmarks)
 
-        if success:
-            return [
-                Result(
-                    title=f"✓ Added '{title}'",
-                    subtitle=f"Bookmark saved: {url}",
-                    icon_markup=icons.check,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "success"}
-                )
-            ]
-        else:
+        if already_exists:
             return [
                 Result(
                     title="Bookmark Already Exists",
-                    subtitle=f"A bookmark with URL '{url}' already exists",
+                    subtitle=f"A bookmark with URL '{normalized_url}' already exists",
                     icon_markup=icons.alert,
                     action=lambda: None,
                     relevance=1.0,
@@ -361,26 +381,41 @@ class BookmarksPlugin(PluginBase):
                 )
             ]
 
+        # Show add action - will execute on Enter
+        domain = self.bookmark_manager._extract_domain(normalized_url)
+        subtitle = f"Click to add bookmark: {domain}"
+        if description:
+            subtitle += f" • {description}"
+
+        return [
+            Result(
+                title=f"Add bookmark for '{title}'",
+                subtitle=subtitle,
+                icon_markup=icons.plus,
+                action=lambda: self._add_bookmark_action(title, url, description),
+                relevance=1.0,
+                plugin_name=self.display_name,
+                data={"type": "add", "name": title, "keep_launcher_open": True}
+            )
+        ]
+
     def _handle_remove_command(self, identifier: str) -> List[Result]:
         """Handle remove bookmark command."""
         if not identifier:
             return self._show_remove_help()
 
-        success = self.bookmark_manager.remove_bookmark(identifier)
+        # Find matching bookmarks
+        bookmarks = self.bookmark_manager.get_bookmarks()
+        identifier_lower = identifier.lower().strip()
 
-        if success:
-            return [
-                Result(
-                    title=f"✓ Removed Bookmark",
-                    subtitle=f"Bookmark '{identifier}' has been removed",
-                    icon_markup=icons.check,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "success"}
-                )
-            ]
-        else:
+        matching_bookmarks = []
+        for bookmark in bookmarks:
+            if (bookmark["title"].lower() == identifier_lower or
+                bookmark["url"].lower() == identifier_lower or
+                self.bookmark_manager._extract_domain(bookmark["url"]).lower() == identifier_lower):
+                matching_bookmarks.append(bookmark)
+
+        if not matching_bookmarks:
             return [
                 Result(
                     title="Bookmark Not Found",
@@ -392,6 +427,23 @@ class BookmarksPlugin(PluginBase):
                     data={"type": "error", "keep_launcher_open": True}
                 )
             ]
+
+        # Show remove action - will execute on Enter
+        bookmark = matching_bookmarks[0]  # Take first match
+        title = bookmark.get("title", "Untitled")
+        domain = self.bookmark_manager._extract_domain(bookmark.get("url", ""))
+
+        return [
+            Result(
+                title=f"Remove bookmark '{title}'?",
+                subtitle=f"Click to confirm deletion: {domain}",
+                icon_markup=icons.trash,
+                action=lambda: self._remove_bookmark_action(identifier),
+                relevance=1.0,
+                plugin_name=self.display_name,
+                data={"type": "remove", "name": title, "keep_launcher_open": True}
+            )
+        ]
 
     def _show_remove_help(self) -> List[Result]:
         """Show help for remove command."""
@@ -429,16 +481,55 @@ class BookmarksPlugin(PluginBase):
                 results.append(
                     Result(
                         title=f"remove {title}",
-                        subtitle=f"Remove: {title} ({domain})",
+                        subtitle=f"Click to remove: {title} ({domain})",
                         icon_markup=icons.trash,
-                        action=lambda t=title: self.bookmark_manager.remove_bookmark(t),
+                        action=lambda t=title: self._remove_bookmark_action(t),
                         relevance=0.8,
                         plugin_name=self.display_name,
-                        data={"type": "remove_option", "bookmark": bookmark}
+                        data={"type": "remove_option", "bookmark": bookmark, "keep_launcher_open": True}
                     )
                 )
 
         return results
+
+    def _add_bookmark_action(self, title: str, url: str, description: str = ""):
+        """Execute the add bookmark action."""
+        success = self.bookmark_manager.add_bookmark(title, url, description)
+        if success:
+            print(f"✓ Added bookmark '{title}' - {url}")
+            # Clear cache to force refresh
+            self._results_cache.clear()
+            self._cache_timestamps.clear()
+            # Reset to trigger word and refresh
+            self._reset_to_trigger()
+        else:
+            print(f"✗ Failed to add bookmark '{title}' - already exists")
+
+    def _remove_bookmark_action(self, identifier: str):
+        """Execute the remove bookmark action."""
+        success = self.bookmark_manager.remove_bookmark(identifier)
+        if success:
+            print(f"✓ Removed bookmark '{identifier}'")
+            # Clear cache to force refresh
+            self._results_cache.clear()
+            self._cache_timestamps.clear()
+            # Reset to trigger word and refresh
+            self._reset_to_trigger()
+        else:
+            print(f"✗ Failed to remove bookmark '{identifier}' - not found")
+
+    def _remove_bookmark_with_reset(self, identifier: str):
+        """Execute the remove bookmark action via alt_action (Shift+Enter) and reset to trigger."""
+        success = self.bookmark_manager.remove_bookmark(identifier)
+        if success:
+            print(f"✓ Removed bookmark '{identifier}'")
+            # Clear cache to force refresh
+            self._results_cache.clear()
+            self._cache_timestamps.clear()
+            # Reset to trigger word and refresh
+            self._reset_to_trigger()
+        else:
+            print(f"✗ Failed to remove bookmark '{identifier}' - not found")
 
     def _calculate_relevance(self, bookmark: Dict, query: str) -> float:
         """Calculate relevance score for a bookmark."""
@@ -505,7 +596,9 @@ class BookmarksPlugin(PluginBase):
                     "type": "bookmark",
                     "url": url,
                     "domain": domain,
-                    "description": description
+                    "description": description,
+                    "keep_launcher_open": False,
+                    "alt_action": lambda t=title: self._remove_bookmark_with_reset(t)
                 }
             )
         except Exception as e:
@@ -538,3 +631,87 @@ class BookmarksPlugin(PluginBase):
             )
         except Exception as e:
             print(f"Failed to open bookmark: {e}")
+
+    def _setup_launcher_hooks(self):
+        """Setup hooks to monitor launcher state."""
+        try:
+            # Try to find the launcher instance
+            import gc
+
+            for obj in gc.get_objects():
+                if (
+                    hasattr(obj, "__class__")
+                    and obj.__class__.__name__ == "Launcher"
+                    and hasattr(obj, "close_launcher")
+                ):
+                    self._launcher_instance = obj
+                    break
+        except Exception as e:
+            print(f"Warning: Could not setup launcher hooks: {e}")
+
+    def _cleanup_launcher_hooks(self):
+        """Cleanup launcher hooks."""
+        try:
+            self._launcher_instance = None
+        except Exception as e:
+            print(f"Warning: Could not cleanup launcher hooks: {e}")
+
+    def _reset_to_trigger(self):
+        """Reset launcher to trigger word and refresh."""
+        try:
+            if self._launcher_instance and hasattr(self._launcher_instance, "search_entry"):
+                # Get the current trigger (bookmark or bm)
+                current_text = self._launcher_instance.search_entry.get_text()
+                trigger = "bookmark "
+
+                # Determine which trigger was used
+                if current_text.lower().startswith("bm "):
+                    trigger = "bm "
+
+                # Reset to trigger word with space
+                try:
+                    from gi.repository import GLib
+
+                    def reset_and_refresh():
+                        # Set text to trigger word
+                        self._launcher_instance.search_entry.set_text(trigger)
+                        # Position cursor at end
+                        self._launcher_instance.search_entry.set_position(-1)
+                        # Trigger search to show default bookmarks
+                        self._launcher_instance._perform_search(trigger)
+                        return False
+
+                    GLib.timeout_add(50, reset_and_refresh)
+                except ImportError:
+                    # Fallback: direct call if GLib not available
+                    self._launcher_instance.search_entry.set_text(trigger)
+                    self._launcher_instance.search_entry.set_position(-1)
+                    self._launcher_instance._perform_search(trigger)
+        except Exception as e:
+            print(f"Could not reset to trigger: {e}")
+
+    def _force_launcher_refresh(self):
+        """Force the launcher to refresh and show updated results."""
+        try:
+            if self._launcher_instance and hasattr(
+                self._launcher_instance, "_perform_search"
+            ):
+                # Get current search text
+                current_text = ""
+                if hasattr(self._launcher_instance, "search_entry"):
+                    current_text = self._launcher_instance.search_entry.get_text()
+
+                # Trigger a search to refresh results
+                try:
+                    from gi.repository import GLib
+
+                    def refresh():
+                        self._launcher_instance._perform_search(current_text)
+                        return False
+
+                    GLib.timeout_add(50, refresh)
+                except ImportError:
+                    # Fallback: direct call if GLib not available
+                    self._launcher_instance._perform_search(current_text)
+        except Exception as e:
+            print(f"Could not force launcher refresh: {e}")

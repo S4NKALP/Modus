@@ -118,6 +118,10 @@
     "pass": {
       "icon": "key",
       "description": "Password Manager - Search and manage passwords"
+    },
+    "bm": {
+      "icon": "bookmark",
+      "description": "Bookmarks - Search and manage bookmarks"
     }
   },
   "settings": {

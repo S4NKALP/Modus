@@ -183,8 +183,8 @@ calendar: str = "&#xea53;"
 connect: str = "&#xeade;"
 disconnect: str = "&#xfd16;"
 auth: str = "&#xeca0;"
-bookmark: str = "&#xea27;"
-star: str = "&#xeb4c;"
+bookmark: str = "&#xea3a;"
+star: str = "&#xeb2e;"
 
 
 # otp
