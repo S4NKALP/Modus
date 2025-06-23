@@ -75,12 +75,11 @@ class WebSearchPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the web search plugin."""
-        # Set up triggers for web search
-        triggers = ["web", "?"]
+        # Set up triggers for web search - only main triggers, not individual search engines
+        triggers = ["?"]
 
-        # Add search engine specific triggers
-        for engine in self.search_engines.keys():
-            triggers.extend([engine, f"{engine} "])
+        # Don't add individual search engine triggers to avoid cluttering trigger keywords
+        # Search engines can still be used within web search context (e.g., "web google cats")
 
         self.set_triggers(triggers)
 
@@ -108,12 +107,11 @@ class WebSearchPlugin(PluginBase):
             results.append(self._create_url_result(query_string))
             return results
 
-        # Determine which search engine to use based on the active trigger
-        engine_name = self._get_engine_from_trigger()
+        # Parse query to check if it starts with a search engine name
+        engine_name, search_query = self._parse_engine_query(query_string)
 
         if engine_name and engine_name in self.search_engines:
-            # Specific search engine triggered
-            search_query = query_string.strip()
+            # Specific search engine specified in query (e.g., "google cats")
             if search_query:
                 # Search with specific engine
                 results.append(self._create_search_result(engine_name, search_query))
@@ -149,23 +147,7 @@ class WebSearchPlugin(PluginBase):
 
         return "", query
 
-    def _get_engine_from_trigger(self) -> str:
-        """Get the search engine name from the current trigger."""
-        if not self.current_trigger:
-            return ""
 
-        # Clean the trigger (remove spaces)
-        trigger_clean = self.current_trigger.strip().lower()
-
-        # Check if the trigger matches a search engine
-        if trigger_clean in self.search_engines:
-            return trigger_clean
-
-        # Handle general triggers
-        if trigger_clean in ["web", "?"]:
-            return ""  # Use general search (multiple engines)
-
-        return ""
 
     def _is_url(self, text: str) -> bool:
         """Check if the text is a URL."""
@@ -274,4 +256,5 @@ class WebSearchPlugin(PluginBase):
     def _show_engine_help(self, engine_id: str):
         """Show help for a specific search engine."""
         engine_info = self.search_engines.get(engine_id)
-        engine_info = self.search_engines.get(engine_id)
+        if engine_info:
+            print(f"Search engine: {engine_info['name']} - {engine_info['description']}")

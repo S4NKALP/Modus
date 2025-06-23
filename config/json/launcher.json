@@ -1,10 +1,6 @@
 {
   "launcher_config": {
-    "emoji": {
-      "icon": "emoji",
-      "description": "Emoji - Search and copy emojis"
-    },
-    ";": {
+    "em": {
       "icon": "emoji",
       "description": "Emoji - Search and copy emojis"
     },
@@ -42,45 +38,10 @@
       "icon": "wallpapers",
       "description": "Wallpapers - Set wallpapers, and tons of features"
     },
-    "web": {
-      "icon": "world",
-      "description": "Web Search - Search the web using various search engines"
-    },
     "?": {
       "icon": "world",
-      "description": "Quick Web Search - Fast web search with question mark"
-    },
-    "google": {
-      "icon": "google",
-      "description": "Google Search - Search with Google"
-    },
-    "reddit": {
-      "icon": "reddit",
-      "description": "Reddit Search - Search discussions on Reddit"
-    },
-    "youtube": {
-      "icon": "youtube",
-      "description": "YouTube Search - Search videos on YouTube"
-    },
-    "github": {
-      "icon": "github",
-      "description": "GitHub Search - Search repositories on GitHub"
-    },
-    "duckduckgo": {
-      "icon": "duckduckgo",
-      "description": "DuckDuckGo Search - Privacy-focused search"
-    },
-    "stackoverflow": {
-      "icon": "stackoverflow",
-      "description": "Stack Overflow Search - Programming questions"
-    },
-    "wikipedia": {
-      "icon": "wikipedia",
-      "description": "Wikipedia Search - Search articles on Wikipedia"
-    },
-    "linkedin": {
-      "icon": "linkedin",
-      "description": "LinkedIn Search - Search professionals and jobs"
+      "description": "Quick Web Search - Fast web search with question mark",
+      "examples": ["? cats", "? google cats", "? youtube music"]
     },
     "kanban": {
       "icon": "kanban",

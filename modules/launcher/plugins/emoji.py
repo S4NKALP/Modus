@@ -31,7 +31,7 @@ class EmojiPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the emoji plugin."""
-        self.set_triggers(["emoji", ";"])
+        self.set_triggers(["em"])
         self._load_emoji_data()
         self._load_recent_emojis()
 
