@@ -97,6 +97,7 @@ class PluginManager:
             "password",
             "bookmarks",
             "process",
+            "screentime",
         ]
 
         for plugin_name in default_plugins:

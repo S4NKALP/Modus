@@ -186,6 +186,7 @@ auth: str = "&#xeca0;"
 bookmark: str = "&#xea3a;"
 star: str = "&#xeb2e;"
 process: str = "&#xf292;"
+screentime: str = "&#xf1c0;"
 
 
 # otp
