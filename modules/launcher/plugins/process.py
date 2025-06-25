@@ -60,9 +60,8 @@ class ProcessPlugin(PluginBase):
         self._cpu_cache.clear()
 
     def _get_live_process_data(self):
-        """Get fresh live process data with CPU/RAM information."""
+        """Get fresh live process data with CPU/RAM information, grouped by application."""
         try:
-            processes = []
             current_time = time.time()
 
             # Initialize CPU monitoring if this is the first call or enough time has passed
@@ -78,14 +77,17 @@ class ProcessPlugin(PluginBase):
                         continue
                 self._last_cpu_update = current_time
 
-            # Get process data with meaningful CPU readings
-            for proc in psutil.process_iter(['pid', 'name', 'status']):
+            # Group processes by application name
+            app_groups = {}
+
+            for proc in psutil.process_iter(['pid', 'name', 'status', 'ppid']):
                 try:
                     info = proc.info
                     if info['status'] == psutil.STATUS_ZOMBIE:
                         continue
 
                     pid = info['pid']
+                    name = info['name'] or 'Unknown'
 
                     # Get CPU percentage - use cached process if available for better readings
                     if pid in self._cpu_cache:
@@ -99,7 +101,6 @@ class ProcessPlugin(PluginBase):
                         self._cpu_cache[pid] = proc
 
                     # Normalize CPU to 0-100% range (divide by number of cores)
-                    # psutil returns total CPU across all cores, so divide by core count
                     cpu_cores = psutil.cpu_count()
                     if cpu_cores and cpu_percent > 0:
                         cpu_percent = min(100.0, cpu_percent / cpu_cores)
@@ -110,28 +111,104 @@ class ProcessPlugin(PluginBase):
 
                     process_data = {
                         'pid': pid,
-                        'name': info['name'] or 'Unknown',
+                        'ppid': info['ppid'],
+                        'name': name,
                         'cpu_percent': cpu_percent,
                         'memory_percent': memory_percent,
                         'memory_mb': memory_mb,
                         'status': info['status']
                     }
-                    processes.append(process_data)
+
+                    # Group processes by application name
+                    app_name = self._get_app_name(name)
+                    if app_name not in app_groups:
+                        app_groups[app_name] = []
+                    app_groups[app_name].append(process_data)
 
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     continue
 
+            # Create grouped results
+            grouped_processes = []
+            for app_name, app_processes in app_groups.items():
+                if len(app_processes) == 1:
+                    # Single process - show as individual
+                    proc = app_processes[0]
+                    proc['process_count'] = 1
+                    grouped_processes.append(proc)
+                else:
+                    # Multiple processes - group them and sum resources
+                    total_cpu = sum(p['cpu_percent'] for p in app_processes)
+                    total_memory_mb = sum(p['memory_mb'] for p in app_processes)
+                    total_memory_percent = sum(p['memory_percent'] for p in app_processes)
+
+                    # Find the main process (usually the one with lowest PID)
+                    main_process = min(app_processes, key=lambda x: x['pid'])
+
+                    grouped_process = {
+                        'pid': main_process['pid'],  # Use main process PID for killing
+                        'name': app_name,
+                        'cpu_percent': total_cpu,
+                        'memory_percent': total_memory_percent,
+                        'memory_mb': total_memory_mb,
+                        'status': main_process['status'],
+                        'process_count': len(app_processes),
+                        'child_pids': [p['pid'] for p in app_processes]
+                    }
+                    grouped_processes.append(grouped_process)
+
             # Clean up old entries from cache
-            current_pids = {proc['pid'] for proc in processes}
-            self._cpu_cache = {pid: proc for pid, proc in self._cpu_cache.items() if pid in current_pids}
+            all_pids = set()
+            for app_processes in app_groups.values():
+                all_pids.update(p['pid'] for p in app_processes)
+            self._cpu_cache = {pid: proc for pid, proc in self._cpu_cache.items() if pid in all_pids}
 
             # Sort by combined CPU and memory usage for better display
-            processes.sort(key=lambda x: (x['cpu_percent'] + x['memory_percent']), reverse=True)
-            return processes
+            grouped_processes.sort(key=lambda x: (x['cpu_percent'] + x['memory_percent']), reverse=True)
+            return grouped_processes
 
         except Exception as e:
             print(f"ProcessPlugin: Error getting process data: {e}")
             return []
+
+    def _get_app_name(self, process_name: str) -> str:
+        """Extract application name from process name, handling common patterns."""
+        # Remove common suffixes and normalize
+        name = process_name.lower()
+
+        # Handle common browser patterns
+        if 'firefox' in name:
+            return 'Firefox'
+        elif 'chrome' in name or 'chromium' in name:
+            return 'Chrome'
+        elif 'zen' in name or name in ['socket process', 'privileged cont', 'rdd process',
+                                       'isolated web co', 'web content', 'webextensions',
+                                       'utility process', 'isolated servic']:
+            return 'Zen Browser'
+        elif 'code' in name and ('helper' in name or 'oss' in name or name == 'code'):
+            return 'VS Code'
+        elif name.startswith('python') and len(name) > 6:
+            return 'Python'
+        elif name.startswith('node') and len(name) > 4:
+            return 'Node.js'
+        elif 'electron' in name:
+            return 'Electron'
+        elif 'java' in name:
+            return 'Java'
+        elif 'gnome' in name:
+            return 'GNOME'
+        elif 'gtk' in name:
+            return 'GTK App'
+
+        # Remove common suffixes
+        suffixes = ['-bin', '-real', '-wrapped', '.bin', '.exe', '-helper', '-gpu', '-renderer']
+        for suffix in suffixes:
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
+                break
+
+        # Capitalize first letter
+        return name.capitalize()
 
     def query(self, query_string: str) -> List[Result]:
         """Search for processes matching the query with live updates - ALWAYS FRESH DATA."""
@@ -158,16 +235,20 @@ class ProcessPlugin(PluginBase):
         return results
 
     def _create_process_result(self, proc_data: dict) -> Result:
-        """Create a Result object for a process."""
+        """Create a Result object for a process or grouped application."""
         try:
             pid = proc_data['pid']
             name = proc_data['name']
             cpu_percent = proc_data['cpu_percent']
             memory_percent = proc_data['memory_percent']
             memory_mb = proc_data['memory_mb']
+            process_count = proc_data.get('process_count', 1)
 
-            # Format the title and subtitle with live indicator
-            title = f"{name} (PID: {pid})"
+            # Format the title with process count if grouped
+            if process_count > 1:
+                title = f"{name} ({process_count} processes)"
+            else:
+                title = f"{name} (PID: {pid})"
 
             # Add visual indicators for high usage
             cpu_indicator = "🔥" if cpu_percent > 80 else "⚡" if cpu_percent > 50 else ""
@@ -197,8 +278,10 @@ class ProcessPlugin(PluginBase):
                     "cpu_percent": cpu_percent,
                     "memory_percent": memory_percent,
                     "memory_mb": memory_mb,
+                    "process_count": process_count,
+                    "child_pids": proc_data.get('child_pids', [pid]),
                     "keep_launcher_open": True,  # Keep launcher open to see live updates
-                    "alt_action": lambda p=pid: self._kill_process(p),
+                    "alt_action": lambda data=proc_data: self._kill_process_group(data),
                 },
             )
         except Exception as e:
@@ -207,8 +290,30 @@ class ProcessPlugin(PluginBase):
 
 
 
-    def _kill_process(self, pid: int):
-        """Kill a process by PID."""
+    def _kill_process_group(self, proc_data: dict):
+        """Kill a process group (application with all its subprocesses)."""
+        try:
+            process_count = proc_data.get('process_count', 1)
+            child_pids = proc_data.get('child_pids', [proc_data['pid']])
+            app_name = proc_data['name']
+
+            if process_count == 1:
+                # Single process
+                self._kill_process(proc_data['pid'])
+            else:
+                # Multiple processes - kill all
+                killed_count = 0
+                for pid in child_pids:
+                    if self._kill_process(pid, silent=True):
+                        killed_count += 1
+
+                print(f"✓ Terminated {killed_count}/{len(child_pids)} processes for '{app_name}'")
+
+        except Exception as e:
+            print(f"✗ Error killing process group: {e}")
+
+    def _kill_process(self, pid: int, silent: bool = False) -> bool:
+        """Kill a process by PID. Returns True if successful."""
         try:
             proc = psutil.Process(pid)
             proc_name = proc.name()
@@ -219,20 +324,28 @@ class ProcessPlugin(PluginBase):
             # Wait a bit for graceful termination
             try:
                 proc.wait(timeout=3)
-                print(f"✓ Successfully terminated process '{proc_name}' (PID: {pid})")
+                if not silent:
+                    print(f"✓ Successfully terminated process '{proc_name}' (PID: {pid})")
+                return True
             except psutil.TimeoutExpired:
                 # Force kill if graceful termination failed
                 proc.kill()
-                print(f"✓ Force killed process '{proc_name}' (PID: {pid})")
-
-
+                if not silent:
+                    print(f"✓ Force killed process '{proc_name}' (PID: {pid})")
+                return True
 
         except psutil.NoSuchProcess:
-            print(f"✗ Process {pid} not found - may have already been terminated")
+            if not silent:
+                print(f"✗ Process {pid} not found - may have already been terminated")
+            return False
         except psutil.AccessDenied:
-            print(f"✗ Access denied - cannot kill process {pid} (insufficient permissions)")
+            if not silent:
+                print(f"✗ Access denied - cannot kill process {pid} (insufficient permissions)")
+            return False
         except Exception as e:
-            print(f"✗ Error killing process {pid}: {e}")
+            if not silent:
+                print(f"✗ Error killing process {pid}: {e}")
+            return False
 
     def _start_refresh_thread(self):
         """Start background thread for auto-refreshing process data in milliseconds."""
