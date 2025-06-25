@@ -66,7 +66,7 @@ class ProcessPlugin(PluginBase):
             current_time = time.time()
 
             # Initialize CPU monitoring if this is the first call or enough time has passed
-            if current_time - self._last_cpu_update > 1.0:  # Update every second
+            if current_time - self._last_cpu_update > 0.1:  # Update every 100ms
                 # Pre-populate CPU cache for all processes
                 for proc in psutil.process_iter(['pid']):
                     try:
@@ -235,12 +235,12 @@ class ProcessPlugin(PluginBase):
             print(f"✗ Error killing process {pid}: {e}")
 
     def _start_refresh_thread(self):
-        """Start background thread for auto-refreshing process data (optimized)."""
+        """Start background thread for auto-refreshing process data in milliseconds."""
 
         def refresh_loop():
-            while not self.stop_refresh.wait(2.0):  # Check every 2 seconds to reduce load
+            while not self.stop_refresh.wait(0.5):  # Check every 500ms for real-time updates
                 current_time = time.time()
-                if current_time - self.last_update >= 2.0:  # Update every 2 seconds
+                if current_time - self.last_update >= 0.5:  # Update every 500ms
                     self.last_update = current_time
                     # Update existing process labels without full refresh
                     try:
