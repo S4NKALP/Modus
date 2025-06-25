@@ -69,6 +69,7 @@ if os.path.exists(CONFIG_FILE):
     WORKSPACE_USE_CHINESE_NUMERAL = config.get("workspace_use_chinese_numerals", False)
     WORKSPACE_DOTS = config.get("workspace_dots", False)
     WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 13)
+    DOCK_HIDE_SPECIAL_WORKSPACE = config.get('dock_hide_special_workspace', True)
 
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
@@ -101,6 +102,7 @@ else:
     DOCK_ICON_SIZE = 20
     WINDOW_SWITCHER_ITEMS_PER_ROW = 13
     NOTIF_POS = NOTIF_POS_DEFAULT
+    DOCK_HIDE_SPECIAL_WORKSPACE = True    
 
     DOCK_COMPONENTS_VISIBILITY = {
         "workspaces": True,

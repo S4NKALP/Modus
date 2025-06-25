@@ -101,6 +101,9 @@ workspaces = Workspaces(
         )
         for i in range(1, 11)
     ],
+    buttons_factory=None
+            if data.DOCK_HIDE_SPECIAL_WORKSPACE
+            else Workspaces.default_buttons_factory,
 )
 
 workspaces_num = Workspaces(
@@ -123,6 +126,9 @@ workspaces_num = Workspaces(
         )
         for i in range(1, 11)
     ],
+    buttons_factory=None
+            if data.DOCK_HIDE_SPECIAL_WORKSPACE
+            else Workspaces.default_buttons_factory,
 )
 
 
