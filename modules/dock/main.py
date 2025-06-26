@@ -30,8 +30,12 @@ class Dock(Window):
         self.actual_dock_is_horizontal = not data.VERTICAL
 
         if self.actual_dock_is_horizontal:
-            anchor_to_set = "bottom"
-            revealer_transition_type = "slide-up"
+            if data.DOCK_POSITION == "Top":
+                anchor_to_set = "top"
+                revealer_transition_type = "slide-down"
+            else:  # Bottom
+                anchor_to_set = "bottom"
+                revealer_transition_type = "slide-up"
             main_box_orientation_val = Gtk.Orientation.VERTICAL
             main_box_h_align_val = "center"
             dock_wrapper_orientation_val = Gtk.Orientation.HORIZONTAL
@@ -77,6 +81,8 @@ class Dock(Window):
             if data.DOCK_POSITION == "Left"
             else ["right"]
             if data.DOCK_POSITION == "Right"
+            else ["top"]
+            if data.DOCK_POSITION == "Top"
             else [],
         )
 
@@ -120,18 +126,32 @@ class Dock(Window):
         self.corner_bottom = Box()
 
         if self.actual_dock_is_horizontal:
-            self.corner_left = Box(
-                name="dock-corner-left",
-                orientation=Gtk.Orientation.VERTICAL,
-                h_align="start",
-                children=[Box(v_expand=True, v_align="fill"), MyCorner("bottom-right")],
-            )
-            self.corner_right = Box(
-                name="dock-corner-right",
-                orientation=Gtk.Orientation.VERTICAL,
-                h_align="end",
-                children=[Box(v_expand=True, v_align="fill"), MyCorner("bottom-left")],
-            )
+            if data.DOCK_POSITION == "Top":
+                self.corner_left = Box(
+                    name="dock-corner-left",
+                    orientation=Gtk.Orientation.VERTICAL,
+                    h_align="start",
+                    children=[MyCorner("top-right"), Box(v_expand=True, v_align="fill")],
+                )
+                self.corner_right = Box(
+                    name="dock-corner-right",
+                    orientation=Gtk.Orientation.VERTICAL,
+                    h_align="end",
+                    children=[MyCorner("top-left"), Box(v_expand=True, v_align="fill")],
+                )
+            else:  # Bottom
+                self.corner_left = Box(
+                    name="dock-corner-left",
+                    orientation=Gtk.Orientation.VERTICAL,
+                    h_align="start",
+                    children=[Box(v_expand=True, v_align="fill"), MyCorner("bottom-right")],
+                )
+                self.corner_right = Box(
+                    name="dock-corner-right",
+                    orientation=Gtk.Orientation.VERTICAL,
+                    h_align="end",
+                    children=[Box(v_expand=True, v_align="fill"), MyCorner("bottom-left")],
+                )
             self.dock_full = Box(
                 name="dock-full",
                 orientation=Gtk.Orientation.HORIZONTAL,
@@ -206,12 +226,20 @@ class Dock(Window):
         self.hover_activator.connect("leave-notify-event", self._on_hover_leave)
 
         if self.actual_dock_is_horizontal:
-            # Bottom dock
-            self.main_box = Box(
-                orientation=main_box_orientation_val,
-                children=[self.hover_activator, self.dock_revealer],
-                h_align=main_box_h_align_val,
-            )
+            if data.DOCK_POSITION == "Top":
+                # Top dock - revealer first, then hover activator
+                self.main_box = Box(
+                    orientation=main_box_orientation_val,
+                    children=[self.dock_revealer, self.hover_activator],
+                    h_align=main_box_h_align_val,
+                )
+            else:
+                # Bottom dock - hover activator first, then revealer
+                self.main_box = Box(
+                    orientation=main_box_orientation_val,
+                    children=[self.hover_activator, self.dock_revealer],
+                    h_align=main_box_h_align_val,
+                )
         else:
             # Vertical dock
             if data.DOCK_POSITION == "Left":
@@ -306,11 +334,18 @@ class Dock(Window):
             if self.always_occluded:
                 self.dock_revealer.set_reveal_child(False)
             else:
-                occlusion_region = (
-                    ("bottom", self.effective_occlusion_size)
-                    if self.actual_dock_is_horizontal
-                    else ("right", self.effective_occlusion_size)
-                )
+                if self.actual_dock_is_horizontal:
+                    occlusion_region = (
+                        ("top", self.effective_occlusion_size)
+                        if data.DOCK_POSITION == "Top"
+                        else ("bottom", self.effective_occlusion_size)
+                    )
+                else:
+                    occlusion_region = (
+                        ("left", self.effective_occlusion_size)
+                        if data.DOCK_POSITION == "Left"
+                        else ("right", self.effective_occlusion_size)
+                    )
                 if check_occlusion(occlusion_region) or not self.view.get_children():
                     self.dock_revealer.set_reveal_child(False)
         return False
@@ -392,11 +427,18 @@ class Dock(Window):
             self.dock_full.add_style_class("occluded")
             return True
 
-        occlusion_region = (
-            ("bottom", self.effective_occlusion_size)
-            if self.actual_dock_is_horizontal
-            else ("right", self.effective_occlusion_size)
-        )
+        if self.actual_dock_is_horizontal:
+            occlusion_region = (
+                ("top", self.effective_occlusion_size)
+                if data.DOCK_POSITION == "Top"
+                else ("bottom", self.effective_occlusion_size)
+            )
+        else:
+            occlusion_region = (
+                ("left", self.effective_occlusion_size)
+                if data.DOCK_POSITION == "Left"
+                else ("right", self.effective_occlusion_size)
+            )
         is_occluded_by_window = check_occlusion(occlusion_region)
         is_empty = not self.view.get_children()
 

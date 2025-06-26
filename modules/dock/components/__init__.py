@@ -91,7 +91,7 @@ class DockComponents(Box):
 
         # Apply invert style for specific themes and positions
         should_invert = data.DOCK_THEME in ["Dense", "Edge"] or (
-            data.DOCK_THEME == "Pills" and data.DOCK_POSITION in ["Left", "Right"]
+            data.DOCK_THEME == "Pills" and data.DOCK_POSITION in ["Left", "Right", "Top"]
         )
 
         if should_invert:

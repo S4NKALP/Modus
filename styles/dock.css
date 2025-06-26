@@ -6,6 +6,11 @@
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+#dock.top {
+  margin: 0 8px 8px 8px;
+  border-radius: 0 0 20px 20px;
+}
+
 #dock.vertical {
   margin: 8px 0 8px 8px;
   border-radius: 20px 0 0 20px;
@@ -22,10 +27,22 @@
   border: 2px solid var(--surface);
 }
 
+#dock.dense.top {
+  margin: 4px 8px 8px 8px;
+  border-radius: 20px;
+  border: 2px solid var(--surface);
+}
+
 #dock.edge {
   border-radius: 20px 20px 0 0;
   border: 2px solid var(--surface);
   border-bottom: none;
+}
+
+#dock.edge.top {
+  border-radius: 0 0 20px 20px;
+  border: 2px solid var(--surface);
+  border-top: none;
 }
 
 #dock.dense.vertical {

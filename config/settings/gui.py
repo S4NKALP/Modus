@@ -307,7 +307,7 @@ class HyprConfGUI(Window):
         )
         self.position_combo = Gtk.ComboBoxText()
         self.position_combo.set_tooltip_text("Select the position of the dock")
-        positions = ["Bottom", "Left", "Right"]
+        positions = ["Bottom", "Top", "Left", "Right"]
         for pos in positions:
             self.position_combo.append_text(pos)
         current_position = bind_vars.get("dock_position", "Bottom")
@@ -1095,7 +1095,7 @@ class HyprConfGUI(Window):
 
             self.wall_dir_chooser.set_filename(utils.bind_vars["wallpapers_dir"])
 
-            positions = ["Bottom", "Left", "Right"]
+            positions = ["Bottom", "Top", "Left", "Right"]
             default_position = DEFAULTS.get("dock_position", "Bottom")
             try:
                 self.position_combo.set_active(positions.index(default_position))
