@@ -45,7 +45,8 @@
     },
     "kanban": {
       "icon": "kanban",
-      "description": "Kanban - Task management with kanban-style columns"
+      "description": "Kanban - Task management with kanban-style columns",
+      "examples": ["kanban add Fix bug", "kanban move Fix bug", "kanban done Fix bug"]
     },
     "cal": {
       "icon": "calendar",

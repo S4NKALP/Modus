@@ -373,6 +373,10 @@ class KanbanColumn(Gtk.Frame):
 class Kanban(Gtk.Box):
     STATE_FILE = Path(os.path.expanduser("~/.kanban.json"))
 
+    __gsignals__ = {
+        "todo-added": (GObject.SignalFlags.RUN_LAST, None, ()),
+    }
+
     def __init__(self):
         super().__init__(name="kanban", orientation=Gtk.Orientation.VERTICAL)
 
@@ -387,6 +391,8 @@ class Kanban(Gtk.Box):
 
         # Store pending add text for Enter key handling
         self.pending_add_text = None
+        # Store pending command for Enter key handling
+        self.pending_command = None
 
         # Add a hidden Entry widget so the launcher will let us handle Enter events
         from fabric.widgets.entry import Entry
@@ -428,12 +434,35 @@ class Kanban(Gtk.Box):
 
         keyval = event.keyval
 
-        # Enter - add pending text as note
+        # Enter - handle pending commands
         if keyval == Gdk.KEY_Return:
-            if self.pending_add_text:
+            if self.pending_command:
+                command, text = self.pending_command
+                if command == "add":
+                    self.columns[0].add_note(text)
+                    self.save_state()
+
+                elif command == "move":
+                    success = self._execute_move_command(text)
+                    if success:
+                        self.save_state()
+                elif command == "done":
+                    success = self._execute_done_command(text)
+                    if success:
+                        self.save_state()
+
+                # Clear pending command and notify plugin to reset
+                self.pending_command = None
+                self.pending_add_text = None
+                self.emit("todo-added")  # Reuse this signal for all commands
+                return True
+            elif self.pending_add_text:
+                # Fallback for old add system
                 self.columns[0].add_note(self.pending_add_text)
                 self.save_state()
                 self.pending_add_text = None
+                # Notify plugin to reset to trigger
+                self.emit("todo-added")
                 return True
 
         # Ctrl+N - add new note to first column
@@ -457,16 +486,107 @@ class Kanban(Gtk.Box):
 
     def on_hidden_entry_activate(self, entry):
         """Handle activation of the hidden entry (Enter key from launcher)."""
-        if self.pending_add_text:
+        if self.pending_command:
+            command, text = self.pending_command
+            if command == "add":
+                self.columns[0].add_note(text)
+                self.save_state()
+            elif command == "move":
+                success = self._execute_move_command(text)
+                if success:
+                    self.save_state()
+            elif command == "done":
+                success = self._execute_done_command(text)
+                if success:
+                    self.save_state()
+
+            # Clear pending command and notify plugin to reset
+            self.pending_command = None
+            self.pending_add_text = None
+            self.emit("todo-added")  # Reuse this signal for all commands
+        elif self.pending_add_text:
+            # Fallback for old add system
             self.columns[0].add_note(self.pending_add_text)
             self.save_state()
             self.pending_add_text = None
+            # Notify plugin to reset to trigger
+            self.emit("todo-added")
 
     def set_pending_add_text(self, text):
         """Set the pending add text for Enter key handling."""
         self.pending_add_text = text
         # Don't grab focus - let the launcher manage focus
         # The launcher will find our hidden entry when Enter is pressed
+
+    def _execute_move_command(self, todo_text: str) -> bool:
+        """Execute move command within the widget."""
+        search_text = todo_text.lower().strip()
+
+        # Find todo across all columns
+        for col_idx, column in enumerate(self.columns):
+            notes = column.get_notes()
+            for note_text in notes:
+                if search_text in note_text.lower():
+                    # Determine next column
+                    if col_idx == 0:  # To Do -> In Progress
+                        next_col_idx = 1
+                        next_state = "In Progress"
+                    elif col_idx == 1:  # In Progress -> Done
+                        next_col_idx = 2
+                        next_state = "Done"
+                    else:  # Already in Done
+                        return False
+
+                    # Remove from current column
+                    for row in column.listbox.get_children():
+                        note_widget = row.get_children()[0]
+                        if (
+                            isinstance(note_widget, KanbanNote)
+                            and note_widget.label.get_text() == note_text
+                        ):
+                            row.destroy()
+                            break
+
+                    # Add to next column
+                    next_column = self.columns[next_col_idx]
+                    next_column.add_note(note_text)
+                    return True
+
+        return False
+
+    def _execute_done_command(self, todo_text: str) -> bool:
+        """Execute done command within the widget."""
+        search_text = todo_text.lower().strip()
+
+        # Find todo across all columns (except Done)
+        # Only To Do and In Progress
+        for col_idx, column in enumerate(self.columns[:2]):
+            notes = column.get_notes()
+            for note_text in notes:
+                if search_text in note_text.lower():
+                    # Remove from current column
+                    for row in column.listbox.get_children():
+                        note_widget = row.get_children()[0]
+                        if (
+                            isinstance(note_widget, KanbanNote)
+                            and note_widget.label.get_text() == note_text
+                        ):
+                            row.destroy()
+                            break
+
+                    # Add to Done column
+                    done_column = self.columns[2]
+                    done_column.add_note(note_text)
+
+                    return True
+
+        # Check if already in Done column
+        done_notes = self.columns[2].get_notes()
+        for note_text in done_notes:
+            if search_text in note_text.lower():
+                return False
+
+        return False
 
     def save_state(self):
         state = {
@@ -509,11 +629,13 @@ class KanbanPlugin(PluginBase):
         self.description = "Kanban board for task management"
         self._current_widget = None
         self._pending_add_text = None
+        self._launcher_instance = None
 
     def initialize(self):
         """Initialize the Kanban plugin."""
         self.set_triggers(["kanban"])
-        self.description = "Kanban board for task management. Use 'kanban add <text>' to quickly add tasks. Keyboard: Enter/F2 to edit, Del to delete, Ctrl+N to add new note"
+        self.description = "Kanban board for task management. Use 'kanban add <text>' to add tasks, 'kanban move <text>' to move to next state. Keyboard: Enter/F2 to edit, Del to delete, Ctrl+N to add new note"
+        self._setup_launcher_hooks()
 
     def cleanup(self):
         """Cleanup the Kanban plugin."""
@@ -524,31 +646,227 @@ class KanbanPlugin(PluginBase):
             self._current_widget.destroy()
             self._current_widget = None
         self._pending_add_text = None
+        self._cleanup_launcher_hooks()
+
+    def _setup_launcher_hooks(self):
+        """Setup hooks to monitor launcher state."""
+        try:
+            # Try to find the launcher instance using garbage collection (like bookmarks plugin)
+            import gc
+
+            for obj in gc.get_objects():
+                if (
+                    hasattr(obj, "__class__")
+                    and obj.__class__.__name__ == "Launcher"
+                    and hasattr(obj, "close_launcher")
+                ):
+                    self._launcher_instance = obj
+                    break
+        except Exception as e:
+            print(f"Warning: Could not setup launcher hooks: {e}")
+
+    def _cleanup_launcher_hooks(self):
+        """Cleanup launcher hooks."""
+        try:
+            self._launcher_instance = None
+        except Exception as e:
+            print(f"Warning: Could not cleanup launcher hooks: {e}")
+
+    def _reset_to_trigger(self):
+        """Reset launcher to trigger word and refresh."""
+        try:
+            if self._launcher_instance and hasattr(
+                self._launcher_instance, "search_entry"
+            ):
+                # Get the current trigger
+                trigger = "kanban "
+
+                # Reset to trigger word with space
+                try:
+
+                    def reset_and_refresh():
+                        # Set text to trigger word
+                        self._launcher_instance.search_entry.set_text(trigger)
+                        # Position cursor at end
+                        self._launcher_instance.search_entry.set_position(-1)
+                        # Trigger search to show default kanban view
+                        self._launcher_instance._perform_search(trigger)
+                        return False
+
+                    GLib.timeout_add(50, reset_and_refresh)
+                except ImportError:
+                    # Fallback: direct call if GLib not available
+                    self._launcher_instance.search_entry.set_text(trigger)
+                    self._launcher_instance.search_entry.set_position(-1)
+                    self._launcher_instance._perform_search(trigger)
+        except Exception as e:
+            print(f"Could not reset to trigger: {e}")
+
+    def _delayed_reset_for_add(self):
+        """Reset to trigger with minimal delay for add operations."""
+        try:
+            GLib.timeout_add(50, lambda: (self._reset_to_trigger(), False))
+        except ImportError:
+            self._reset_to_trigger()
+
+    def _find_todo_in_columns(self, search_text: str):
+        """Find a todo by partial text match across all columns."""
+        search_text = search_text.lower().strip()
+
+        # Load current state to get fresh data
+        if self._current_widget:
+            for col_idx, column in enumerate(self._current_widget.columns):
+                notes = column.get_notes()
+                for note_text in notes:
+                    if search_text in note_text.lower():
+                        return col_idx, note_text
+        return None, None
+
+    def _move_todo_to_next_state(self, todo_text: str):
+        """Move a todo to the next state (To Do -> In Progress -> Done)."""
+        if not self._current_widget:
+            return False, "Kanban board not initialized"
+
+        col_idx, found_text = self._find_todo_in_columns(todo_text)
+        if col_idx is None:
+            return False, f"Todo '{todo_text}' not found"
+
+        # Determine next column
+        if col_idx == 0:  # To Do -> In Progress
+            next_col_idx = 1
+            next_state = "In Progress"
+        elif col_idx == 1:  # In Progress -> Done
+            next_col_idx = 2
+            next_state = "Done"
+        else:  # Already in Done
+            return False, f"Todo '{found_text}' is already completed"
+
+        # Remove from current column
+        current_column = self._current_widget.columns[col_idx]
+        for row in current_column.listbox.get_children():
+            note_widget = row.get_children()[0]
+            if (
+                isinstance(note_widget, KanbanNote)
+                and note_widget.label.get_text() == found_text
+            ):
+                row.destroy()
+                break
+
+        # Add to next column
+        next_column = self._current_widget.columns[next_col_idx]
+        next_column.add_note(found_text)
+
+        # Save state
+        self._current_widget.save_state()
+
+        return True, f"Moved '{found_text}' to {next_state}"
+
+    def _execute_move_action(self, todo_text: str):
+        """Execute the move action and reset to trigger."""
+
+        try:
+            GLib.timeout_add(50, lambda: (self._reset_to_trigger(), False))
+        except ImportError:
+            self._reset_to_trigger()
+
+    def _execute_complete_action(self, todo_text: str):
+        """Execute the complete action (move directly to Done) and reset to trigger."""
+        if not self._current_widget:
+            return
+
+        col_idx, found_text = self._find_todo_in_columns(todo_text)
+        if col_idx is None:
+            return
+
+        if col_idx == 2:  # Already in Done
+            return
+
+        # Remove from current column
+        current_column = self._current_widget.columns[col_idx]
+        for row in current_column.listbox.get_children():
+            note_widget = row.get_children()[0]
+            if (
+                isinstance(note_widget, KanbanNote)
+                and note_widget.label.get_text() == found_text
+            ):
+                row.destroy()
+                break
+
+        # Add to Done column
+        done_column = self._current_widget.columns[2]
+        done_column.add_note(found_text)
+
+        # Save state
+        self._current_widget.save_state()
+
+        # Reset to trigger word with minimal delay (like bookmarks plugin)
+        try:
+            GLib.timeout_add(50, lambda: (self._reset_to_trigger(), False))
+        except ImportError:
+            self._reset_to_trigger()
+
+    def _execute_add_action(self, todo_text: str):
+        """Execute the add action and reset to trigger."""
+        if not self._current_widget:
+            return
+
+        # Add to To Do column
+        self._current_widget.columns[0].add_note(todo_text)
+        self._current_widget.save_state()
+
+        # Reset to trigger word with minimal delay
+        try:
+            GLib.timeout_add(50, lambda: (self._reset_to_trigger(), False))
+        except ImportError:
+            self._reset_to_trigger()
 
     def query(self, query_string: str) -> List[Result]:
         """Process Kanban queries."""
         results = []
+        query = query_string.strip()
 
         # Only create a new widget if we don't have one
         if not self._current_widget:
             kanban_widget = Kanban()
+            kanban_widget.connect("todo-added", lambda _: self._delayed_reset_for_add())
             self._current_widget = kanban_widget
         else:
             kanban_widget = self._current_widget
 
-        # Check if this is an "add" command and store it for Enter key handling
-        if query_string.startswith("add "):
-            # Extract the note text
-            note_text = query_string[4:].strip()
+        # Store pending command for Enter key handling (no preview results)
+        if query.startswith("add "):
+            note_text = query[4:].strip()
             if note_text:
-                # Store the pending add command in the widget
                 kanban_widget.set_pending_add_text(note_text)
+                kanban_widget.pending_command = ("add", note_text)
             else:
                 kanban_widget.set_pending_add_text(None)
+                kanban_widget.pending_command = None
+        elif query.startswith(("move ", "progress ")):
+            command_parts = query.split(" ", 1)
+            if len(command_parts) > 1:
+                todo_text = command_parts[1].strip()
+                if todo_text:
+                    kanban_widget.pending_command = ("move", todo_text)
+                else:
+                    kanban_widget.pending_command = None
+            else:
+                kanban_widget.pending_command = None
+        elif query.startswith(("done ", "complete ")):
+            command_parts = query.split(" ", 1)
+            if len(command_parts) > 1:
+                todo_text = command_parts[1].strip()
+                if todo_text:
+                    kanban_widget.pending_command = ("done", todo_text)
+                else:
+                    kanban_widget.pending_command = None
+            else:
+                kanban_widget.pending_command = None
         else:
             kanban_widget.set_pending_add_text(None)
+            kanban_widget.pending_command = None
 
-        # Always show the kanban board directly when triggered
+        # Always show the kanban board widget
         results.append(
             Result(
                 title="Kanban Board",
