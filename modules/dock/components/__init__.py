@@ -21,6 +21,57 @@ from .metrics import Metrics
 from .music_player import MusicPlayer
 from .workspaces import workspace
 
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+
+# Monkey patch SystemTray to use GTK theme icons
+from fabric.system_tray.widgets import SystemTrayItem
+
+def _patched_do_update_properties(self, *_):
+    """Enhanced update method that prioritizes GTK theme icons"""
+    icon_name = self._item.icon_name
+
+    if icon_name:
+        # Use the default GTK icon theme to load the icon
+        icon_theme = Gtk.IconTheme.get_default()
+
+        try:
+            # Try to load the icon from the GTK theme first
+            if icon_theme.has_icon(icon_name):
+                self._image.set_from_icon_name(icon_name, self._icon_size)
+            else:
+                # Fallback to original behavior (pixbuf)
+                pixbuf = self._item.get_preferred_icon_pixbuf(self._icon_size)
+                if pixbuf is not None:
+                    self._image.set_from_pixbuf(pixbuf)
+                else:
+                    self._image.set_from_icon_name("image-missing", self._icon_size)
+        except Exception:
+            # Fallback to original behavior on any error
+            pixbuf = self._item.get_preferred_icon_pixbuf(self._icon_size)
+            if pixbuf is not None:
+                self._image.set_from_pixbuf(pixbuf)
+            else:
+                self._image.set_from_icon_name("image-missing", self._icon_size)
+    else:
+        # No icon name, use original behavior
+        pixbuf = self._item.get_preferred_icon_pixbuf(self._icon_size)
+        if pixbuf is not None:
+            self._image.set_from_pixbuf(pixbuf)
+        else:
+            self._image.set_from_icon_name("image-missing", self._icon_size)
+
+    # Set tooltip (same as original)
+    tooltip = self._item.tooltip
+    self.set_tooltip_markup(
+        tooltip.description or tooltip.title or self._item.title.title() if self._item.title else "Unknown"
+    )
+    return
+
+# Apply the patch
+SystemTrayItem.do_update_properties = _patched_do_update_properties
+
 
 class DockComponents(Box):
     def __init__(self, orientation_val="h", dock_instance=None, **kwargs):
