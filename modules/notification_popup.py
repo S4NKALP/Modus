@@ -50,13 +50,44 @@ class ActionButton(Button):
         )
 
     def on_clicked(self, *_):
-        self.action.invoke()
-        self.action.parent.close("dismissed-by-user")
+        print(f"[ActionButton] Action button clicked: {self.action.label}")
+        print(f"[ActionButton] Action details - Key: {getattr(self.action, 'key', 'N/A')}")
+        print(f"[ActionButton] Action parent: {self.action.parent.app_name} - {self.action.parent.summary}")
+
+        # First, execute the action
+        try:
+            print(f"[ActionButton] Invoking action: {self.action.label}")
+            result = self.action.invoke()
+            print(f"[ActionButton] Action invoked successfully, result: {result}")
+            print(f"[ActionButton] Action type: {type(self.action)}")
+
+            # Try to get more info about what the action does
+            if hasattr(self.action, '__dict__'):
+                print(f"[ActionButton] Action attributes: {self.action.__dict__}")
+
+        except Exception as e:
+            print(f"[ActionButton] Error invoking action: {e}")
+            import traceback
+            traceback.print_exc()
+
+        # Then, after a longer delay, handle notification removal
+        if hasattr(self, '_dock_popup_callback') and self._dock_popup_callback is not None:
+            print(f"[ActionButton] Scheduling dock notification removal in 500ms")
+            # Longer delay to allow action to complete properly
+            from gi.repository import GLib
+            GLib.timeout_add(500, lambda: self._dock_popup_callback(self.action.parent))
+        else:
+            # For regular popup notifications, also add a small delay
+            print(f"[ActionButton] Scheduling regular close in 200ms (no dock callback)")
+            from gi.repository import GLib
+            GLib.timeout_add(200, lambda: self.action.parent.close("dismissed-by-user"))
 
 
 class NotificationWidget(Box):
-    def __init__(self, notification: Notification, timeout_ms=5000, **kwargs):
+    def __init__(self, notification: Notification, timeout_ms=5000, show_progress=True, dock_callback=None, **kwargs):
         self.notification = notification
+        self.show_progress = show_progress
+        self._dock_popup_callback = dock_callback
 
         self.is_expanded = False
 
@@ -81,30 +112,35 @@ class NotificationWidget(Box):
         self.timeout_ms = timeout_ms
         self._timeout_id = None
 
-        self.close_button_animator = Animator(
-            bezier_curve=(0.25, 0.1, 0.25, 1.0),
-            duration=0.3,
-            min_value=0.0,
-            max_value=1.0,
-            repeat=False,
-        )
-        self.close_button_animator.connect(
-            "notify::value", self.on_hover_animation_value_changed
-        )
+        if self.show_progress:
+            self.close_button_animator = Animator(
+                bezier_curve=(0.25, 0.1, 0.25, 1.0),
+                duration=0.3,
+                min_value=0.0,
+                max_value=1.0,
+                repeat=False,
+            )
+            self.close_button_animator.connect(
+                "notify::value", self.on_hover_animation_value_changed
+            )
 
-        self.timeout_progress_animator = Animator(
-            bezier_curve=(1.0, 0.0, 1.0, 1.0),
-            duration=timeout_ms / 1000.0,
-            min_value=0.0,
-            max_value=1.0,
-            repeat=False,
-        )
-        self.timeout_progress_animator.connect(
-            "notify::value", self.on_timeout_progress_changed
-        )
-        self.timeout_progress_animator.connect("finished", self.on_timeout_finished)
+            self.timeout_progress_animator = Animator(
+                bezier_curve=(1.0, 0.0, 1.0, 1.0),
+                duration=timeout_ms / 1000.0,
+                min_value=0.0,
+                max_value=1.0,
+                repeat=False,
+            )
+            self.timeout_progress_animator.connect(
+                "notify::value", self.on_timeout_progress_changed
+            )
+            self.timeout_progress_animator.connect("finished", self.on_timeout_finished)
 
-        self.start_timeout()
+            self.start_timeout()
+        else:
+            # No timeout for dock notifications
+            self.close_button_animator = None
+            self.timeout_progress_animator = None
 
     def create_header(self, notification):
         app_icon = (
@@ -216,35 +252,51 @@ class NotificationWidget(Box):
     def create_action_buttons(self, notification):
         if not notification.actions:
             return Box()
+
+        action_buttons = []
+        for i, action in enumerate(notification.actions):
+            action_button = ActionButton(action, i, len(notification.actions), self)
+            # Pass the dock callback to action buttons if available
+            if hasattr(self, '_dock_popup_callback') and self._dock_popup_callback is not None:
+                print(f"[NotificationWidget] Setting dock callback on action button: {action.label}")
+                action_button._dock_popup_callback = self._dock_popup_callback
+            else:
+                print(f"[NotificationWidget] No dock callback available for action button: {action.label}")
+            action_buttons.append(action_button)
+
         return Box(
             name="notification-action-buttons",
             spacing=4,
             h_expand=True,
-            children=[
-                ActionButton(action, i, len(notification.actions), self)
-                for i, action in enumerate(notification.actions)
-            ],
+            children=action_buttons,
         )
 
     def create_close_button(self):
         close_icon = Label(name="notif-close-label", markup=icons.cancel)
 
-        self.close_progress_bar = CircularProgressBar(
-            name="notif-close-progress",
-            size=28,
-            line_width=2,
-            start_angle=0,
-            end_angle=360,
-            value=0.0,
-            min_value=0.0,
-            max_value=1.0,
-            child=close_icon,
-        )
+        if self.show_progress:
+            # Create with circular progress bar for timeout notifications
+            self.close_progress_bar = CircularProgressBar(
+                name="notif-close-progress",
+                size=28,
+                line_width=2,
+                start_angle=0,
+                end_angle=360,
+                value=0.0,
+                min_value=0.0,
+                max_value=1.0,
+                child=close_icon,
+            )
+            button_child = self.close_progress_bar
+        else:
+            # Create simple button without progress bar for dock notifications
+            self.close_progress_bar = None
+            button_child = close_icon
 
         close_button = Button(
             name="notif-close-button",
-            child=self.close_progress_bar,
-            on_clicked=lambda *_: self.notification.close("dismissed-by-user"),
+            child=button_child,
+            on_clicked=self.on_close_clicked,
         )
         close_button.connect(
             "enter-notify-event", lambda *_: self.hover_button(close_button)
@@ -266,6 +318,17 @@ class NotificationWidget(Box):
             ellipsization="end",
         )
         return self.body_label
+
+    def on_close_clicked(self, *_):
+        """Handle close button click."""
+        print(f"[NotificationWidget] Close button clicked for notification: {self.notification.summary}")
+
+        # For dock notifications, we need to manually remove from cache
+        if hasattr(self, '_dock_popup_callback'):
+            self._dock_popup_callback(self.notification)
+        else:
+            # For regular popup notifications
+            self.notification.close("dismissed-by-user")
 
     def create_chevron_button(self):
         # Only show chevron button if there's something to expand
@@ -306,6 +369,7 @@ class NotificationWidget(Box):
             return Box()
 
     def toggle_expanded(self, *_):
+        print(f"[NotificationWidget] Chevron button clicked, expanding: {not self.is_expanded}")
         self.is_expanded = not self.is_expanded
         self.expanded_revealer.set_reveal_child(self.is_expanded)
 
@@ -336,7 +400,7 @@ class NotificationWidget(Box):
         pass
 
     def on_timeout_progress_changed(self, animator, value):
-        if hasattr(self, "close_progress_bar"):
+        if hasattr(self, "close_progress_bar") and self.close_progress_bar is not None:
             # Update progress bar value based on timeout progress (convert to float to avoid type issues)
             self.close_progress_bar.value = float(animator.value)
 
@@ -384,21 +448,23 @@ class NotificationWidget(Box):
             window.set_cursor(cursor)
 
     def hover_button(self, button):
-        self.pause_timeout()
+        if self.show_progress:
+            self.pause_timeout()
         self.set_pointer_cursor(button, "hand2")
 
         # On hover, show full progress (indicating ready to close)
-        if hasattr(self, "close_progress_bar"):
+        if hasattr(self, "close_progress_bar") and self.close_progress_bar is not None:
             self.close_progress_bar.value = 1.0
 
     def unhover_button(self, button):
-        self.resume_timeout()
+        if self.show_progress:
+            self.resume_timeout()
         self.set_pointer_cursor(button, "arrow")
 
         # On unhover, resume showing timeout progress
-        if hasattr(self, "timeout_progress_animator") and hasattr(
-            self, "close_progress_bar"
-        ):
+        if (hasattr(self, "timeout_progress_animator") and
+            hasattr(self, "close_progress_bar") and
+            self.close_progress_bar is not None):
             # Resume the timeout progress display
             current_progress = float(self.timeout_progress_animator.value)
             self.close_progress_bar.value = current_progress

@@ -51,7 +51,14 @@ class MusicPlayer(EventBox):
         self._create_music_player_view()
         self.add(self.main_container)
         self.connect("button-press-event", self._on_music_player_clicked)
-        self.set_visible(False)
+
+        # Set initial visibility based on configuration
+        initial_visibility = data.DOCK_COMPONENTS_VISIBILITY.get("music_player", True)
+        self.set_visible(initial_visibility)
+
+        # Ensure visualizer is disabled in vertical mode
+        if data.VERTICAL:
+            self._show_visualizer = False
 
         GLib.timeout_add(100, self._delayed_initial_update)
 
@@ -60,7 +67,7 @@ class MusicPlayer(EventBox):
 
         self.album_thumbnail = CircleImage(
             name="music-album-thumbnail",
-            size=34,
+            size=30,
             v_align="center",
             visible=True,
         )
@@ -68,13 +75,21 @@ class MusicPlayer(EventBox):
         self.album_thumbnail.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         self.album_thumbnail.connect("button-press-event", self._on_thumbnail_clicked)
 
+        # Create track label (hidden in vertical mode)
         self.track_label = Label(
             name="music-track",
             label="No Media",
             ellipsize=0,
             h_align="center",
         )
-        self.track_label.set_size_request(100, -1)
+
+        if data.VERTICAL:
+            self.track_label.set_visible(False)  # Hide label in vertical mode
+            self.track_label.set_size_request(-1, -1)
+        else:
+            self.track_label.set_visible(True)
+            self.track_label.set_size_request(100, -1)
+
         self.track_label.set_hexpand(False)
         self.track_label.set_vexpand(False)
 
@@ -104,6 +119,11 @@ class MusicPlayer(EventBox):
             center_children=self.center_stack,
             end_children=self.controls_box,
         )
+
+        # Add vertical class for CSS styling
+        if data.VERTICAL:
+            self.music_player_box.add_style_class("vertical")
+            self.main_container.add_style_class("vertical")
 
         self.main_container.add(self.music_player_box)
 
@@ -343,7 +363,19 @@ class MusicPlayer(EventBox):
                 self._connect_player_signals(self._current_player)
 
         if not self._current_player:
-            self.set_visible(False)
+            # Only hide if the component is disabled in settings
+            # If enabled in settings, show a "No Media" state instead of hiding
+            if not data.DOCK_COMPONENTS_VISIBILITY.get("music_player", True):
+                self.set_visible(False)
+            else:
+                # Show "No Media" state when enabled but no player is active
+                self.set_visible(True)
+                # Clear tooltips when no player is active
+                self.set_tooltip_text("No media player active")
+                self.album_thumbnail.set_tooltip_text("No media player active")
+                if not data.VERTICAL:
+                    self.track_label.set_tooltip_text("No media player active")
+
             if self._update_timeout_id:
                 GLib.source_remove(self._update_timeout_id)
                 self._update_timeout_id = None
@@ -353,7 +385,12 @@ class MusicPlayer(EventBox):
             self._stop_spin_animation()
             return False
 
-        self.set_visible(True)
+        # Only show if enabled in configuration
+        if data.DOCK_COMPONENTS_VISIBILITY.get("music_player", True):
+            self.set_visible(True)
+        else:
+            self.set_visible(False)
+            return False
 
         album_art_url = self._current_player.album_image_url
         if album_art_url:
@@ -370,18 +407,20 @@ class MusicPlayer(EventBox):
         else:
             play_pause_icon.set_markup(icons.play)
 
-        track_title = self._current_player.track_title or "Unknown Track"
-        max_display_chars = 12
+        # Skip text processing in vertical mode since label is hidden
+        if not data.VERTICAL:
+            track_title = self._current_player.track_title or "Unknown Track"
+            max_display_chars = 12
 
-        self._original_title = track_title
-        self._title_needs_marquee = len(track_title) > max_display_chars
+            self._original_title = track_title
+            self._title_needs_marquee = len(track_title) > max_display_chars
 
-        if self._original_title != getattr(self, "_last_original_title", ""):
-            self._last_original_title = self._original_title
-            self._marquee_position = 0
-            self._start_marquee_animation()
+            if self._original_title != getattr(self, "_last_original_title", ""):
+                self._last_original_title = self._original_title
+                self._marquee_position = 0
+                self._start_marquee_animation()
 
-        self._update_marquee_text()
+            self._update_marquee_text()
         self._update_tooltips()
 
         self.prev_button.set_sensitive(self._current_player.can_go_previous)
@@ -420,6 +459,11 @@ class MusicPlayer(EventBox):
         if not self._current_player:
             return
 
+        # Skip updating label text in vertical mode since it's hidden
+        if data.VERTICAL:
+            return
+
+        # Use the same character limit as in _update_display
         max_display_chars = 12
 
         if self._title_needs_marquee:
@@ -465,7 +509,14 @@ class MusicPlayer(EventBox):
         player_name = self._current_player.player_name or "Media Player"
 
         tooltip_text = f"{full_track_title}\nby {track_artist}\n\nPlayer: {player_name}"
-        self.track_label.set_tooltip_text(tooltip_text)
+
+        if data.VERTICAL:
+            # In vertical mode, show tooltip on the main container and album thumbnail
+            self.set_tooltip_text(tooltip_text)
+            self.album_thumbnail.set_tooltip_text(tooltip_text)
+        else:
+            # In horizontal mode, show tooltip on the track label
+            self.track_label.set_tooltip_text(tooltip_text)
 
     def _on_play_pause_clicked(self, _button):
         if self._current_player:
@@ -485,13 +536,15 @@ class MusicPlayer(EventBox):
             self._update_display()
 
     def _on_thumbnail_clicked(self, _widget, _event):
-        if self._current_player:
+        if self._current_player and not data.VERTICAL:
+            # Only toggle visualizer in horizontal mode
             self._show_visualizer = not self._show_visualizer
             self._update_stack_display()
         return True
 
     def _on_music_player_clicked(self, _widget, _event):
-        if self._current_player:
+        if self._current_player and not data.VERTICAL:
+            # Only toggle visualizer in horizontal mode
             self._show_visualizer = not self._show_visualizer
             self._update_stack_display()
         return True
@@ -511,7 +564,8 @@ class MusicPlayer(EventBox):
             self.cavalcade = None
 
     def _update_stack_display(self):
-        if self._show_visualizer and self._current_player:
+        # Never show visualizer in vertical mode
+        if self._show_visualizer and self._current_player and not data.VERTICAL:
             self._create_visualizer_if_needed()
             if self.cavalcade_box:
                 self.cavalcade_box.set_visible(True)

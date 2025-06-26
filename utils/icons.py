@@ -84,6 +84,7 @@ bluetooth: str = "&#xea37;"
 night: str = "&#xeaf8;"
 coffee: str = "&#xef0e;"
 notifications: str = "&#xea35;"
+notifications_dots: str = "&#xede3;"
 
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"

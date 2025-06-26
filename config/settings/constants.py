@@ -54,6 +54,7 @@ DEFAULTS = {
     "dock_date_time_visible": True,
     "dock_controls_visible": True,
     "dock_indicators_visible": True,
+    "dock_notifications_visible": True,
     "dock_applications_visible": True,
     "dock_language_visible": True,
     'dock_hide_special_workspace': True,

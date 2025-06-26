@@ -301,3 +301,60 @@ menu > menuitem:hover > label {
 #music-player-indicator-button:active #music-player-indicator-active {
   color: var(--shadow);
 }
+
+/* Vertical mode specific styles */
+#music-player-container.vertical {
+  padding: 8px 4px;
+}
+
+#music-player-centerbox.vertical {
+  padding: 4px 0;
+}
+
+#music-player-centerbox.vertical #music-track {
+  font-size: 10px;
+  margin: 4px 0;
+}
+
+#music-player.vertical {
+  padding: 8px 4px;
+}
+
+/* Adjust controls layout for vertical mode */
+#music-controls.vertical {
+  padding: 2px;
+}
+
+#music-controls.vertical #music-prev,
+#music-controls.vertical #music-next,
+#music-controls.vertical #music-play-pause {
+  padding: 2px;
+  margin: 1px 0;
+}
+
+#music-controls.vertical #music-play-pause {
+  padding: 4px;
+}
+
+#music-controls.vertical label {
+  font-size: 12px;
+}
+
+#music-controls.vertical #music-play-pause label {
+  font-size: 14px;
+}
+
+/* Player indicators in vertical mode */
+#music-player-indicators.vertical {
+  padding: 2px;
+}
+
+#music-player-indicators.vertical #music-player-indicator-button {
+  padding: 1px;
+  margin: 1px 0;
+}
+
+#music-player-indicators.vertical #music-player-indicator,
+#music-player-indicators.vertical #music-player-indicator-active {
+  font-size: 10px;
+}

@@ -12,6 +12,8 @@ from fabric.widgets.overlay import Overlay
 from gi.repository import Gdk, GLib, Gtk
 from loguru import logger
 
+import config.data as data
+
 
 def get_bars(file_path):
     config = configparser.ConfigParser()
@@ -205,25 +207,49 @@ class Spectrum:
     def redraw(self, widget, cr):
         """Draw spectrum graph"""
         cr.set_source_rgba(*self.color)
-        dx = 3
 
-        center_y = self.sizes.area.height / 2  # center vertical of the drawing area
-        for i, value in enumerate(self.audio_sample):
-            width = self.sizes.area.width / self.sizes.number - self.sizes.padding
-            radius = width / 2
-            height = max(self.sizes.bar.height * min(value, 1), self.sizes.zero) / 2
-            if height == self.sizes.zero / 2 + 1:
-                height *= 0.5
+        if data.VERTICAL:
+            # Vertical mode: draw bars horizontally (rotated 90 degrees)
+            dy = 3
+            center_x = self.sizes.area.width / 2  # center horizontal of the drawing area
 
-            height = min(height, self.max_height)
+            for i, value in enumerate(self.audio_sample):
+                height = self.sizes.area.height / self.sizes.number - self.sizes.padding
+                radius = height / 2
+                width = max(self.sizes.bar.width * min(value, 1), self.sizes.zero) / 2
+                if width == self.sizes.zero / 2 + 1:
+                    width *= 0.5
 
-            # Draw rectangle and arcs for rounded ends
-            cr.rectangle(dx, center_y - height, width, height * 2)
-            cr.arc(dx + radius, center_y - height, radius, 0, 2 * pi)
-            cr.arc(dx + radius, center_y + height, radius, 0, 2 * pi)
+                width = min(width, self.max_height)
 
-            cr.close_path()
-            dx += width + self.sizes.padding
+                # Draw rectangle and arcs for rounded ends (horizontal bars)
+                cr.rectangle(center_x - width, dy, width * 2, height)
+                cr.arc(center_x - width, dy + radius, radius, 0, 2 * pi)
+                cr.arc(center_x + width, dy + radius, radius, 0, 2 * pi)
+
+                cr.close_path()
+                dy += height + self.sizes.padding
+        else:
+            # Horizontal mode: draw bars vertically (original behavior)
+            dx = 3
+            center_y = self.sizes.area.height / 2  # center vertical of the drawing area
+
+            for i, value in enumerate(self.audio_sample):
+                width = self.sizes.area.width / self.sizes.number - self.sizes.padding
+                radius = width / 2
+                height = max(self.sizes.bar.height * min(value, 1), self.sizes.zero) / 2
+                if height == self.sizes.zero / 2 + 1:
+                    height *= 0.5
+
+                height = min(height, self.max_height)
+
+                # Draw rectangle and arcs for rounded ends (vertical bars)
+                cr.rectangle(dx, center_y - height, width, height * 2)
+                cr.arc(dx + radius, center_y - height, radius, 0, 2 * pi)
+                cr.arc(dx + radius, center_y + height, radius, 0, 2 * pi)
+
+                cr.close_path()
+                dx += width + self.sizes.padding
         cr.fill()
 
     def size_update(self, *args):
