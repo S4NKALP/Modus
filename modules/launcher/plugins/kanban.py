@@ -603,6 +603,10 @@ class KanbanBoard(Gtk.Box):
                 success = self._execute_move_command(text)
             elif command == "done":
                 success = self._execute_done_command(text)
+            elif command == "remove":
+                success = self._execute_remove_command(text)
+            elif command == "clear":
+                success = self._execute_clear_command()
 
             if success:
                 self._save_state()
@@ -683,6 +687,25 @@ class KanbanBoard(Gtk.Box):
         self.columns[2].add_note(note_text)  # Done column
         return True
 
+    def _execute_remove_command(self, todo_text: str) -> bool:
+        """Execute remove command to delete a specific todo."""
+        search_text = todo_text.lower().strip()
+
+        # Find todo across all columns
+        for column in self.columns:
+            notes = column.get_notes()
+            for note_text in notes:
+                if search_text in note_text.lower():
+                    self._remove_note_from_column(column, note_text)
+                    return True
+        return False
+
+    def _execute_clear_command(self) -> bool:
+        """Execute clear command to remove all todos from all columns."""
+        for column in self.columns:
+            column.clear_notes(suppress_signal=True)
+        return True
+
     def _remove_note_from_column(self, column: KanbanColumn, note_text: str):
         """Remove a specific note from a column."""
         for row in column.listbox.get_children():
@@ -709,7 +732,7 @@ class KanbanPlugin(PluginBase):
         self.set_triggers(["kanban"])
         self.description = (
             "Kanban board for task management. "
-            "Commands: 'add <text>', 'move <text>', 'done <text>'. "
+            "Commands: 'add <text>', 'move <text>', 'done <text>', 'remove <text>', 'clear'. "
             "Keyboard: Enter/F2 to edit, Del to delete, Ctrl+N to add note"
         )
         self._setup_launcher_hooks()
@@ -838,6 +861,25 @@ class KanbanPlugin(PluginBase):
         self._current_widget._save_state()
         self._delayed_reset_for_add()
 
+    def _execute_remove_action(self, todo_text: str):
+        """Execute the remove action and reset to trigger."""
+        if not self._current_widget:
+            return
+
+        success = self._current_widget._execute_remove_command(todo_text)
+        if success:
+            self._current_widget._save_state()
+        self._delayed_reset_for_add()
+
+    def _execute_clear_action(self):
+        """Execute the clear action and reset to trigger."""
+        if not self._current_widget:
+            return
+
+        self._current_widget._execute_clear_command()
+        self._current_widget._save_state()
+        self._delayed_reset_for_add()
+
     def query(self, query_string: str) -> List[Result]:
         """Process Kanban queries and return results."""
         query = query_string.strip()
@@ -880,6 +922,14 @@ class KanbanPlugin(PluginBase):
             todo_text = self._extract_command_text(query)
             if todo_text:
                 widget.pending_command = ("done", todo_text)
+
+        elif query.startswith("remove "):
+            todo_text = self._extract_command_text(query)
+            if todo_text:
+                widget.pending_command = ("remove", todo_text)
+
+        elif query.strip() == "clear":
+            widget.pending_command = ("clear", "")
 
     def _extract_command_text(self, query: str) -> Optional[str]:
         """Extract text from command query."""
