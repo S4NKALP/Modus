@@ -1,4 +1,4 @@
-from fabric.core import Service, Property, Signal
+from fabric.core import Property, Service, Signal
 from pydbus import SystemBus
 
 DeviceState = {
@@ -31,7 +31,11 @@ class Battery(Service):
 
     @Property(str, "readable")
     def temperature(self):
-        return f"{self._battery.Temperature}°C" if hasattr(self._battery, "Temperature") else "N/A"
+        return (
+            f"{self._battery.Temperature}°C"
+            if hasattr(self._battery, "Temperature")
+            else "N/A"
+        )
 
     @Property(str, "readable")
     def time_to_empty(self):
@@ -69,7 +73,7 @@ class Battery(Service):
             self.profile_changed.emit(profile)
             self.changed.emit()
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     def __init__(self):
@@ -78,17 +82,23 @@ class Battery(Service):
 
         # Battery device
         try:
-            self._battery = self._bus.get("org.freedesktop.UPower", "/org/freedesktop/UPower/devices/battery_BAT0")
+            self._battery = self._bus.get(
+                "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/battery_BAT0"
+            )
             self._battery.onPropertiesChanged = self.handle_battery_change
-        except Exception as e:
+        except Exception:
             return
 
         # PowerProfiles
         try:
-            self._profile_proxy = self._bus.get("net.hadess.PowerProfiles", "/net/hadess/PowerProfiles")
+            self._profile_proxy = self._bus.get(
+                "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"
+            )
             # Use onPropertiesChanged for consistency with battery device
-            self._profile_proxy.onPropertiesChanged = lambda _, changed, __: self._handle_profile_props_changed(changed)
-        except Exception as e:
+            self._profile_proxy.onPropertiesChanged = (
+                lambda _, changed, __: self._handle_profile_props_changed(changed)
+            )
+        except Exception:
             self._profile_proxy = None
 
         self.changed.emit()

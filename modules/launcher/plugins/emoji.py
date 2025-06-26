@@ -5,8 +5,9 @@ import time
 from collections import OrderedDict
 from typing import Dict, List
 
-import config.data as data
 from fabric.utils import get_relative_path
+
+import config.data as data
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -22,7 +23,7 @@ class EmojiPlugin(PluginBase):
         self.display_name = "Emoji"
         self.description = "Search and copy emojis"
         self.emoji_data = {}
-        self.emoji_path = get_relative_path("../../../config/json/emoji.json")
+        self.emoji_path = get_relative_path("../../../config/assets/emoji.json")
 
         # Use cache directory for recent emojis (save directly in cache dir)
         self.recent_emoji_path = os.path.join(data.CACHE_DIR, "recent_emoji.json")

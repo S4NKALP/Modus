@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import threading
 import time
@@ -7,8 +6,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
-from thefuzz import fuzz
 from fabric.utils.helpers import get_relative_path
+from thefuzz import fuzz
 
 import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
@@ -62,7 +61,9 @@ class BookmarkManager:
             current_time = time.time()
 
             # Check if cache is still valid
-            if (current_time - self.last_loaded) < self.cache_ttl and self.last_loaded > 0:
+            if (
+                current_time - self.last_loaded
+            ) < self.cache_ttl and self.last_loaded > 0:
                 return
 
             try:
@@ -83,8 +84,6 @@ class BookmarkManager:
         """Get bookmarks, loading from file if needed."""
         self._load_bookmarks()
         return self.bookmarks
-
-
 
     def _save_bookmarks_unlocked(self):
         """Save bookmarks to JSON file without acquiring lock."""
@@ -107,7 +106,9 @@ class BookmarkManager:
         with self.cache_lock:
             self._save_bookmarks_unlocked()
 
-    def add_bookmark(self, title: str, url: str, description: str = "", tags: List[str] = None) -> bool:
+    def add_bookmark(
+        self, title: str, url: str, description: str = "", tags: List[str] = None
+    ) -> bool:
         """Add a new bookmark."""
         try:
             url = self._normalize_url(url)
@@ -123,7 +124,7 @@ class BookmarkManager:
                 "description": description.strip(),
                 "tags": tags or [],
                 "created": time.time(),
-                "accessed": 0
+                "accessed": 0,
             }
 
             self.bookmarks.append(new_bookmark)
@@ -144,10 +145,11 @@ class BookmarkManager:
             identifier = identifier.lower().strip()
 
             for i, bookmark in enumerate(self.bookmarks):
-                if (bookmark["title"].lower() == identifier or
-                    bookmark["url"].lower() == identifier or
-                    self._extract_domain(bookmark["url"]).lower() == identifier):
-
+                if (
+                    bookmark["title"].lower() == identifier
+                    or bookmark["url"].lower() == identifier
+                    or self._extract_domain(bookmark["url"]).lower() == identifier
+                ):
                     self.bookmarks.pop(i)
                     self._save_bookmarks()
 
@@ -190,7 +192,9 @@ class BookmarksPlugin(PluginBase):
         self.description = "Manage and search your personal bookmarks"
 
         # Initialize bookmark manager with storage file
-        self.bookmark_file = Path(get_relative_path("../../../config/json/bookmarks.json"))
+        self.bookmark_file = Path(
+            get_relative_path("../../../config/assets/bookmarks.json")
+        )
         self.bookmark_manager = BookmarkManager(self.bookmark_file)
         self.max_results = 15
 
@@ -223,7 +227,8 @@ class BookmarksPlugin(PluginBase):
         if (
             not query_key.startswith(("add ", "remove ", "delete ", "rm "))
             and query_key in self._results_cache
-            and (current_time - self._cache_timestamps.get(query_key, 0)) < self._cache_ttl
+            and (current_time - self._cache_timestamps.get(query_key, 0))
+            < self._cache_ttl
         ):
             return self._results_cache[query_key]
 
@@ -267,7 +272,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
-                    data={"type": "info", "keep_launcher_open": True}
+                    data={"type": "info", "keep_launcher_open": True},
                 )
             ]
 
@@ -282,7 +287,7 @@ class BookmarksPlugin(PluginBase):
 
         # Sort by relevance and limit results
         results.sort(key=lambda r: r.relevance, reverse=True)
-        return results[:self.max_results]
+        return results[: self.max_results]
 
     def _get_recent_bookmarks(self) -> List[Result]:
         """Get recent/popular bookmarks when no query is provided."""
@@ -297,7 +302,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
-                    data={"type": "help", "keep_launcher_open": True}
+                    data={"type": "help", "keep_launcher_open": True},
                 ),
                 Result(
                     title="Example: Add Google",
@@ -306,12 +311,14 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
-                    data={"type": "example", "keep_launcher_open": True}
-                )
+                    data={"type": "example", "keep_launcher_open": True},
+                ),
             ]
 
         # Sort by access time (most recent first) and show top 10
-        sorted_bookmarks = sorted(bookmarks, key=lambda b: b.get("accessed", 0), reverse=True)
+        sorted_bookmarks = sorted(
+            bookmarks, key=lambda b: b.get("accessed", 0), reverse=True
+        )
         results = []
         for bookmark in sorted_bookmarks[:10]:
             result = self._create_bookmark_result(bookmark, 0.8)
@@ -331,7 +338,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
-                    data={"type": "help", "keep_launcher_open": True}
+                    data={"type": "help", "keep_launcher_open": True},
                 ),
                 Result(
                     title="Example",
@@ -340,8 +347,8 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
-                    data={"type": "example", "keep_launcher_open": True}
-                )
+                    data={"type": "example", "keep_launcher_open": True},
+                ),
             ]
 
         # Parse arguments: title url [description]
@@ -355,7 +362,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
+                    data={"type": "error", "keep_launcher_open": True},
                 )
             ]
 
@@ -366,7 +373,9 @@ class BookmarksPlugin(PluginBase):
         # Check if bookmark already exists
         normalized_url = self.bookmark_manager._normalize_url(url)
         existing_bookmarks = self.bookmark_manager.get_bookmarks()
-        already_exists = any(bookmark["url"] == normalized_url for bookmark in existing_bookmarks)
+        already_exists = any(
+            bookmark["url"] == normalized_url for bookmark in existing_bookmarks
+        )
 
         if already_exists:
             return [
@@ -377,7 +386,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
+                    data={"type": "error", "keep_launcher_open": True},
                 )
             ]
 
@@ -395,7 +404,7 @@ class BookmarksPlugin(PluginBase):
                 action=lambda: self._add_bookmark_action(title, url, description),
                 relevance=1.0,
                 plugin_name=self.display_name,
-                data={"type": "add", "name": title, "keep_launcher_open": True}
+                data={"type": "add", "name": title, "keep_launcher_open": True},
             )
         ]
 
@@ -410,9 +419,12 @@ class BookmarksPlugin(PluginBase):
 
         matching_bookmarks = []
         for bookmark in bookmarks:
-            if (bookmark["title"].lower() == identifier_lower or
-                bookmark["url"].lower() == identifier_lower or
-                self.bookmark_manager._extract_domain(bookmark["url"]).lower() == identifier_lower):
+            if (
+                bookmark["title"].lower() == identifier_lower
+                or bookmark["url"].lower() == identifier_lower
+                or self.bookmark_manager._extract_domain(bookmark["url"]).lower()
+                == identifier_lower
+            ):
                 matching_bookmarks.append(bookmark)
 
         if not matching_bookmarks:
@@ -424,7 +436,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True}
+                    data={"type": "error", "keep_launcher_open": True},
                 )
             ]
 
@@ -441,7 +453,7 @@ class BookmarksPlugin(PluginBase):
                 action=lambda: self._remove_bookmark_action(identifier),
                 relevance=1.0,
                 plugin_name=self.display_name,
-                data={"type": "remove", "name": title, "keep_launcher_open": True}
+                data={"type": "remove", "name": title, "keep_launcher_open": True},
             )
         ]
 
@@ -456,7 +468,7 @@ class BookmarksPlugin(PluginBase):
                 action=lambda: None,
                 relevance=1.0,
                 plugin_name=self.display_name,
-                data={"type": "help", "keep_launcher_open": True}
+                data={"type": "help", "keep_launcher_open": True},
             )
         ]
 
@@ -470,7 +482,7 @@ class BookmarksPlugin(PluginBase):
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
-                    data={"type": "info", "keep_launcher_open": True}
+                    data={"type": "info", "keep_launcher_open": True},
                 )
             )
 
@@ -486,7 +498,11 @@ class BookmarksPlugin(PluginBase):
                         action=lambda t=title: self._remove_bookmark_action(t),
                         relevance=0.8,
                         plugin_name=self.display_name,
-                        data={"type": "remove_option", "bookmark": bookmark, "keep_launcher_open": True}
+                        data={
+                            "type": "remove_option",
+                            "bookmark": bookmark,
+                            "keep_launcher_open": True,
+                        },
                     )
                 )
 
@@ -567,7 +583,9 @@ class BookmarksPlugin(PluginBase):
 
         return 0.0
 
-    def _create_bookmark_result(self, bookmark: Dict, relevance: float) -> Optional[Result]:
+    def _create_bookmark_result(
+        self, bookmark: Dict, relevance: float
+    ) -> Optional[Result]:
         """Create a Result object for a bookmark."""
         try:
             title = bookmark.get("title", "Untitled")
@@ -598,8 +616,8 @@ class BookmarksPlugin(PluginBase):
                     "domain": domain,
                     "description": description,
                     "keep_launcher_open": False,
-                    "alt_action": lambda t=title: self._remove_bookmark_with_reset(t)
-                }
+                    "alt_action": lambda t=title: self._remove_bookmark_with_reset(t),
+                },
             )
         except Exception as e:
             print(f"Error creating bookmark result: {e}")
@@ -625,9 +643,7 @@ class BookmarksPlugin(PluginBase):
 
             # Open URL
             subprocess.Popen(
-                ["xdg-open", url],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                ["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
         except Exception as e:
             print(f"Failed to open bookmark: {e}")
@@ -659,7 +675,9 @@ class BookmarksPlugin(PluginBase):
     def _reset_to_trigger(self):
         """Reset launcher to trigger word and refresh."""
         try:
-            if self._launcher_instance and hasattr(self._launcher_instance, "search_entry"):
+            if self._launcher_instance and hasattr(
+                self._launcher_instance, "search_entry"
+            ):
                 # Get the current trigger (bookmark or bm)
                 current_text = self._launcher_instance.search_entry.get_text()
                 trigger = "bookmark "

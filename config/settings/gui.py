@@ -930,7 +930,7 @@ class HyprConfGUI(Window):
             print(f"{start_time:.4f}: Background task started.")
 
             config_json = os.path.expanduser(
-                f"~/.config/{APP_NAME_CAP}/config/json/config.json"
+                f"~/.config/{APP_NAME_CAP}/config/assets/config.json"
             )
             os.makedirs(os.path.dirname(config_json), exist_ok=True)
             try:

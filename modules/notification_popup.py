@@ -1,6 +1,5 @@
 import os
 
-import utils.icons as icons
 from fabric.notifications import (
     Notification,
     NotificationAction,
@@ -15,6 +14,8 @@ from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GdkPixbuf, GLib
 from loguru import logger
+
+import utils.icons as icons
 from services import notification_service
 from utils.animator import Animator
 from utils.custom_image import CustomImage

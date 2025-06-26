@@ -1,15 +1,16 @@
 import json
 import subprocess
 
-import config.data as data
 import psutil
-import utils.icons as icons
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from gi.repository import GLib
+
+import config.data as data
+import utils.icons as icons
 
 
 class MetricsProvider:

@@ -1,12 +1,11 @@
-from gi.repository import Playerctl
-from typing import Optional
-import gi
 import contextlib
-from loguru import logger
+from typing import Optional
 
-from fabric.core.service import Service, Signal, Property
+import gi
+from fabric.core.service import Property, Service, Signal
 from fabric.utils.helpers import get_enum_member_name, snake_case_to_kebab_case
-
+from gi.repository import Playerctl
+from loguru import logger
 
 gi.require_version("Playerctl", "2.0")
 

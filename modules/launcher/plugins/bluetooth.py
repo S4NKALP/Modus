@@ -1,7 +1,8 @@
 from typing import List
 
-import utils.icons as icons
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 

@@ -1,11 +1,12 @@
 import json
 import subprocess
 
-import config.data as data
 from fabric.hyprland.service import Hyprland
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+
+import config.data as data
 
 CHINESE_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "〇"]
 
@@ -102,8 +103,8 @@ workspaces = Workspaces(
         for i in range(1, 11)
     ],
     buttons_factory=None
-            if data.DOCK_HIDE_SPECIAL_WORKSPACE
-            else Workspaces.default_buttons_factory,
+    if data.DOCK_HIDE_SPECIAL_WORKSPACE
+    else Workspaces.default_buttons_factory,
 )
 
 workspaces_num = Workspaces(
@@ -127,8 +128,8 @@ workspaces_num = Workspaces(
         for i in range(1, 11)
     ],
     buttons_factory=None
-            if data.DOCK_HIDE_SPECIAL_WORKSPACE
-            else Workspaces.default_buttons_factory,
+    if data.DOCK_HIDE_SPECIAL_WORKSPACE
+    else Workspaces.default_buttons_factory,
 )
 
 

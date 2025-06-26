@@ -8,13 +8,14 @@ import threading
 import time
 from typing import Dict, List, Optional
 
-import config.data as data
-import utils.icons as icons
 from fabric.utils.helpers import exec_shell_command_async
 from gi.repository import GdkPixbuf
+from PIL import Image
+
+import config.data as data
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-from PIL import Image
 
 
 class WallpaperPlugin(PluginBase):
@@ -319,34 +320,36 @@ class WallpaperPlugin(PluginBase):
                 wallpaper_path = os.readlink(current_wall)
                 if os.path.exists(wallpaper_path):
                     # Apply the new scheme to current wallpaper
-                    exec_shell_command_async(f'matugen image "{wallpaper_path}" -t {scheme}')
+                    exec_shell_command_async(
+                        f'matugen image "{wallpaper_path}" -t {scheme}'
+                    )
 
                     # Send notification
                     exec_shell_command_async(
-                        f"notify-send '🎨 Color Scheme' 'Applied {scheme_name} scheme' -a '{
-                            data.APP_NAME_CAP
-                        }' -e"
+                        f"notify-send '🎨 Color Scheme' 'Applied {
+                            scheme_name
+                        } scheme' -a '{data.APP_NAME_CAP}' -e"
                     )
                 else:
                     # No current wallpaper, just show scheme change notification
                     exec_shell_command_async(
-                        f"notify-send '🎨 Color Scheme' 'Set to {scheme_name} (will apply to next wallpaper)' -a '{
-                            data.APP_NAME_CAP
-                        }' -e"
+                        f"notify-send '🎨 Color Scheme' 'Set to {
+                            scheme_name
+                        } (will apply to next wallpaper)' -a '{data.APP_NAME_CAP}' -e"
                     )
             else:
                 # No current wallpaper, just show scheme change notification
                 exec_shell_command_async(
-                    f"notify-send '🎨 Color Scheme' 'Set to {scheme_name} (will apply to next wallpaper)' -a '{
-                        data.APP_NAME_CAP
-                    }' -e"
+                    f"notify-send '🎨 Color Scheme' 'Set to {
+                        scheme_name
+                    } (will apply to next wallpaper)' -a '{data.APP_NAME_CAP}' -e"
                 )
         else:
             # Matugen is disabled, just save the setting
             exec_shell_command_async(
-                f"notify-send '🎨 Color Scheme' 'Set to {scheme_name} (matugen disabled)' -a '{
-                    data.APP_NAME_CAP
-                }' -e"
+                f"notify-send '🎨 Color Scheme' 'Set to {
+                    scheme_name
+                } (matugen disabled)' -a '{data.APP_NAME_CAP}' -e"
             )
 
     def _apply_hex_color(self, hex_color: str, scheme: str = None):
@@ -501,7 +504,8 @@ class WallpaperPlugin(PluginBase):
                                         status_text
                                     }",
                                     icon_markup=icons.palette,
-                                    action=lambda c=hex_color, s=scheme: self._apply_hex_color_direct(c, s),
+                                    action=lambda c=hex_color,
+                                    s=scheme: self._apply_hex_color_direct(c, s),
                                     relevance=1.0,
                                     plugin_name=self.display_name,
                                     data={
@@ -541,7 +545,8 @@ class WallpaperPlugin(PluginBase):
                                     status_text
                                 }",
                                 icon_markup=icons.palette,
-                                action=lambda c=hex_color, s=scheme: self._apply_hex_color_direct(c, s)
+                                action=lambda c=hex_color,
+                                s=scheme: self._apply_hex_color_direct(c, s)
                                 if not matugen_enabled
                                 else None,
                                 relevance=0.9,
@@ -588,7 +593,9 @@ class WallpaperPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"Random Hex Color{indicator_text}",
-                                subtitle=f"Generate and apply random color with {scheme_name} scheme • {status_text}",
+                                subtitle=f"Generate and apply random color with {
+                                    scheme_name
+                                } scheme • {status_text}",
                                 icon_markup=icons.palette,
                                 action=lambda s=scheme: self._apply_hex_color_direct(
                                     self._generate_random_hex_color(), s

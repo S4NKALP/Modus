@@ -1,7 +1,8 @@
 from typing import List
 
-import utils.icons as icons
 from fabric.utils import exec_shell_command_async
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 

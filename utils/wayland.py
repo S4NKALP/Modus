@@ -1,4 +1,3 @@
-from gi.repository import Gdk, GObject, Gtk
 import re
 from collections.abc import Iterable
 from enum import Enum
@@ -9,6 +8,7 @@ import gi
 from fabric.core.service import Property
 from fabric.utils.helpers import extract_css_values, get_enum_member
 from fabric.widgets.window import Window
+from gi.repository import Gdk, GObject, Gtk
 from loguru import logger
 
 gi.require_version("Gtk", "3.0")

@@ -1,6 +1,5 @@
 import os
 
-import gi
 import setproctitle
 from fabric import Application
 from fabric.utils import exec_shell_command_async, get_relative_path, monitor_file
@@ -14,7 +13,6 @@ from modules.notification_popup import NotificationPopup
 from modules.osd import OSD
 from modules.switcher import ApplicationSwitcher
 
-gi.require_version("GLib", "2.0")
 
 for log in [
     "fabric.hyprland.widgets",

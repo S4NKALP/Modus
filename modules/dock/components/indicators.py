@@ -1,14 +1,16 @@
 import subprocess
-import config.data as data
-import utils.icons as icons
+
 from fabric.bluetooth import BluetoothClient
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-from fabric.utils import get_relative_path
 from gi.repository import GLib
+
+import config.data as data
+import utils.icons as icons
 from services.network import NetworkClient
 
 
@@ -188,16 +190,15 @@ class RecordingIndicator(Button):
 
         # Set up periodic checking for recording status
         self.check_recording_status()
-        self.timeout_id = GLib.timeout_add(1000, self.check_recording_status)  # Check every second
+        self.timeout_id = GLib.timeout_add(
+            1000, self.check_recording_status
+        )  # Check every second
 
     def check_recording_status(self):
         """Check if recording is currently active and update visibility."""
         try:
             result = subprocess.run(
-                [self.script_path, "status"],
-                capture_output=True,
-                text=True,
-                timeout=2
+                [self.script_path, "status"], capture_output=True, text=True, timeout=2
             )
             is_recording = result.stdout.strip() == "true"
 
@@ -209,7 +210,7 @@ class RecordingIndicator(Button):
                 if self.get_visible():
                     self.hide()
 
-        except Exception as e:
+        except Exception:
             # If we can't check status, hide the indicator
             if self.get_visible():
                 self.hide()
@@ -226,7 +227,7 @@ class RecordingIndicator(Button):
 
     def cleanup(self):
         """Clean up the timeout when the indicator is destroyed."""
-        if hasattr(self, 'timeout_id'):
+        if hasattr(self, "timeout_id"):
             GLib.source_remove(self.timeout_id)
 
 
@@ -245,5 +246,5 @@ class Indicators(Box):
 
     def cleanup(self):
         """Clean up all indicators when the dock is destroyed."""
-        if hasattr(self, 'recording_indicator'):
+        if hasattr(self, "recording_indicator"):
             self.recording_indicator.cleanup()

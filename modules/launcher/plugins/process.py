@@ -1,8 +1,9 @@
-import time
 import threading
+import time
 from typing import List
 
 import psutil
+
 import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
@@ -17,8 +18,6 @@ class ProcessPlugin(PluginBase):
         super().__init__()
         self.display_name = "Process Manager"
         self.description = "View and manage running processes"
-
-
 
         # Threading for auto-refresh
         self.refresh_thread = None
@@ -39,13 +38,17 @@ class ProcessPlugin(PluginBase):
     def _initialize_cpu_monitoring(self):
         """Initialize CPU monitoring for all processes to get meaningful readings immediately."""
         try:
-            for proc in psutil.process_iter(['pid']):
+            for proc in psutil.process_iter(["pid"]):
                 try:
-                    pid = proc.info['pid']
+                    pid = proc.info["pid"]
                     # Initialize CPU monitoring - this establishes baseline for future readings
                     proc.cpu_percent()
                     self._cpu_cache[pid] = proc
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
                     continue
             self._last_cpu_update = time.time()
         except Exception as e:
@@ -67,27 +70,31 @@ class ProcessPlugin(PluginBase):
             # Initialize CPU monitoring if this is the first call or enough time has passed
             if current_time - self._last_cpu_update > 0.1:  # Update every 100ms
                 # Pre-populate CPU cache for all processes
-                for proc in psutil.process_iter(['pid']):
+                for proc in psutil.process_iter(["pid"]):
                     try:
-                        pid = proc.info['pid']
+                        pid = proc.info["pid"]
                         # Initialize CPU monitoring - this call establishes baseline
                         proc.cpu_percent()
                         self._cpu_cache[pid] = proc
-                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    except (
+                        psutil.NoSuchProcess,
+                        psutil.AccessDenied,
+                        psutil.ZombieProcess,
+                    ):
                         continue
                 self._last_cpu_update = current_time
 
             # Group processes by application name
             app_groups = {}
 
-            for proc in psutil.process_iter(['pid', 'name', 'status', 'ppid']):
+            for proc in psutil.process_iter(["pid", "name", "status", "ppid"]):
                 try:
                     info = proc.info
-                    if info['status'] == psutil.STATUS_ZOMBIE:
+                    if info["status"] == psutil.STATUS_ZOMBIE:
                         continue
 
-                    pid = info['pid']
-                    name = info['name'] or 'Unknown'
+                    pid = info["pid"]
+                    name = info["name"] or "Unknown"
 
                     # Get CPU percentage - use cached process if available for better readings
                     if pid in self._cpu_cache:
@@ -110,13 +117,13 @@ class ProcessPlugin(PluginBase):
                     memory_mb = memory_info.rss / (1024 * 1024) if memory_info else 0
 
                     process_data = {
-                        'pid': pid,
-                        'ppid': info['ppid'],
-                        'name': name,
-                        'cpu_percent': cpu_percent,
-                        'memory_percent': memory_percent,
-                        'memory_mb': memory_mb,
-                        'status': info['status']
+                        "pid": pid,
+                        "ppid": info["ppid"],
+                        "name": name,
+                        "cpu_percent": cpu_percent,
+                        "memory_percent": memory_percent,
+                        "memory_mb": memory_mb,
+                        "status": info["status"],
                     }
 
                     # Group processes by application name
@@ -125,7 +132,11 @@ class ProcessPlugin(PluginBase):
                         app_groups[app_name] = []
                     app_groups[app_name].append(process_data)
 
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
                     continue
 
             # Create grouped results
@@ -134,37 +145,44 @@ class ProcessPlugin(PluginBase):
                 if len(app_processes) == 1:
                     # Single process - show as individual
                     proc = app_processes[0]
-                    proc['process_count'] = 1
+                    proc["process_count"] = 1
                     grouped_processes.append(proc)
                 else:
                     # Multiple processes - group them and sum resources
-                    total_cpu = sum(p['cpu_percent'] for p in app_processes)
-                    total_memory_mb = sum(p['memory_mb'] for p in app_processes)
-                    total_memory_percent = sum(p['memory_percent'] for p in app_processes)
+                    total_cpu = sum(p["cpu_percent"] for p in app_processes)
+                    total_memory_mb = sum(p["memory_mb"] for p in app_processes)
+                    total_memory_percent = sum(
+                        p["memory_percent"] for p in app_processes
+                    )
 
                     # Find the main process (usually the one with lowest PID)
-                    main_process = min(app_processes, key=lambda x: x['pid'])
+                    main_process = min(app_processes, key=lambda x: x["pid"])
 
                     grouped_process = {
-                        'pid': main_process['pid'],  # Use main process PID for killing
-                        'name': app_name,
-                        'cpu_percent': total_cpu,
-                        'memory_percent': total_memory_percent,
-                        'memory_mb': total_memory_mb,
-                        'status': main_process['status'],
-                        'process_count': len(app_processes),
-                        'child_pids': [p['pid'] for p in app_processes]
+                        # Use main process PID for killing
+                        "pid": main_process["pid"],
+                        "name": app_name,
+                        "cpu_percent": total_cpu,
+                        "memory_percent": total_memory_percent,
+                        "memory_mb": total_memory_mb,
+                        "status": main_process["status"],
+                        "process_count": len(app_processes),
+                        "child_pids": [p["pid"] for p in app_processes],
                     }
                     grouped_processes.append(grouped_process)
 
             # Clean up old entries from cache
             all_pids = set()
             for app_processes in app_groups.values():
-                all_pids.update(p['pid'] for p in app_processes)
-            self._cpu_cache = {pid: proc for pid, proc in self._cpu_cache.items() if pid in all_pids}
+                all_pids.update(p["pid"] for p in app_processes)
+            self._cpu_cache = {
+                pid: proc for pid, proc in self._cpu_cache.items() if pid in all_pids
+            }
 
             # Sort by combined CPU and memory usage for better display
-            grouped_processes.sort(key=lambda x: (x['cpu_percent'] + x['memory_percent']), reverse=True)
+            grouped_processes.sort(
+                key=lambda x: (x["cpu_percent"] + x["memory_percent"]), reverse=True
+            )
             return grouped_processes
 
         except Exception as e:
@@ -177,34 +195,50 @@ class ProcessPlugin(PluginBase):
         name = process_name.lower()
 
         # Handle common browser patterns
-        if 'firefox' in name:
-            return 'Firefox'
-        elif 'chrome' in name or 'chromium' in name:
-            return 'Chrome'
-        elif 'zen' in name or name in ['socket process', 'privileged cont', 'rdd process',
-                                       'isolated web co', 'web content', 'webextensions',
-                                       'utility process', 'isolated servic']:
-            return 'Zen Browser'
-        elif 'code' in name and ('helper' in name or 'oss' in name or name == 'code'):
-            return 'VS Code'
-        elif name.startswith('python') and len(name) > 6:
-            return 'Python'
-        elif name.startswith('node') and len(name) > 4:
-            return 'Node.js'
-        elif 'electron' in name:
-            return 'Electron'
-        elif 'java' in name:
-            return 'Java'
-        elif 'gnome' in name:
-            return 'GNOME'
-        elif 'gtk' in name:
-            return 'GTK App'
+        if "firefox" in name:
+            return "Firefox"
+        elif "chrome" in name or "chromium" in name:
+            return "Chrome"
+        elif "zen" in name or name in [
+            "socket process",
+            "privileged cont",
+            "rdd process",
+            "isolated web co",
+            "web content",
+            "webextensions",
+            "utility process",
+            "isolated servic",
+        ]:
+            return "Zen Browser"
+        elif "code" in name and ("helper" in name or "oss" in name or name == "code"):
+            return "VS Code"
+        elif name.startswith("python") and len(name) > 6:
+            return "Python"
+        elif name.startswith("node") and len(name) > 4:
+            return "Node.js"
+        elif "electron" in name:
+            return "Electron"
+        elif "java" in name:
+            return "Java"
+        elif "gnome" in name:
+            return "GNOME"
+        elif "gtk" in name:
+            return "GTK App"
 
         # Remove common suffixes
-        suffixes = ['-bin', '-real', '-wrapped', '.bin', '.exe', '-helper', '-gpu', '-renderer']
+        suffixes = [
+            "-bin",
+            "-real",
+            "-wrapped",
+            ".bin",
+            ".exe",
+            "-helper",
+            "-gpu",
+            "-renderer",
+        ]
         for suffix in suffixes:
             if name.endswith(suffix):
-                name = name[:-len(suffix)]
+                name = name[: -len(suffix)]
                 break
 
         # Capitalize first letter
@@ -222,8 +256,9 @@ class ProcessPlugin(PluginBase):
         filtered_processes = processes
         if query:
             filtered_processes = [
-                proc for proc in processes
-                if query in proc['name'].lower() or query in str(proc['pid'])
+                proc
+                for proc in processes
+                if query in proc["name"].lower() or query in str(proc["pid"])
             ]
 
         # Limit to top 20 processes to avoid overwhelming the UI
@@ -237,12 +272,12 @@ class ProcessPlugin(PluginBase):
     def _create_process_result(self, proc_data: dict) -> Result:
         """Create a Result object for a process or grouped application."""
         try:
-            pid = proc_data['pid']
-            name = proc_data['name']
-            cpu_percent = proc_data['cpu_percent']
-            memory_percent = proc_data['memory_percent']
-            memory_mb = proc_data['memory_mb']
-            process_count = proc_data.get('process_count', 1)
+            pid = proc_data["pid"]
+            name = proc_data["name"]
+            cpu_percent = proc_data["cpu_percent"]
+            memory_percent = proc_data["memory_percent"]
+            memory_mb = proc_data["memory_mb"]
+            process_count = proc_data.get("process_count", 1)
 
             # Format the title with process count if grouped
             if process_count > 1:
@@ -251,10 +286,14 @@ class ProcessPlugin(PluginBase):
                 title = f"{name} (PID: {pid})"
 
             # Add visual indicators for high usage
-            cpu_indicator = "🔥" if cpu_percent > 80 else "⚡" if cpu_percent > 50 else ""
+            cpu_indicator = (
+                "🔥" if cpu_percent > 80 else "⚡" if cpu_percent > 50 else ""
+            )
             mem_indicator = "💾" if memory_percent > 80 else ""
 
-            subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {memory_mb:.1f}MB ({memory_percent:.1f}%){mem_indicator}"
+            subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {
+                memory_mb:.1f
+            }MB ({memory_percent:.1f}%){mem_indicator}"
 
             # Choose icon based on CPU usage
             if cpu_percent > 50:
@@ -279,7 +318,7 @@ class ProcessPlugin(PluginBase):
                     "memory_percent": memory_percent,
                     "memory_mb": memory_mb,
                     "process_count": process_count,
-                    "child_pids": proc_data.get('child_pids', [pid]),
+                    "child_pids": proc_data.get("child_pids", [pid]),
                     "keep_launcher_open": True,  # Keep launcher open to see live updates
                     "alt_action": lambda data=proc_data: self._kill_process_group(data),
                 },
@@ -288,18 +327,16 @@ class ProcessPlugin(PluginBase):
             print(f"ProcessPlugin: Error creating process result: {e}")
             return None
 
-
-
     def _kill_process_group(self, proc_data: dict):
         """Kill a process group (application with all its subprocesses)."""
         try:
-            process_count = proc_data.get('process_count', 1)
-            child_pids = proc_data.get('child_pids', [proc_data['pid']])
-            app_name = proc_data['name']
+            process_count = proc_data.get("process_count", 1)
+            child_pids = proc_data.get("child_pids", [proc_data["pid"]])
+            app_name = proc_data["name"]
 
             if process_count == 1:
                 # Single process
-                self._kill_process(proc_data['pid'])
+                self._kill_process(proc_data["pid"])
             else:
                 # Multiple processes - kill all
                 killed_count = 0
@@ -307,7 +344,11 @@ class ProcessPlugin(PluginBase):
                     if self._kill_process(pid, silent=True):
                         killed_count += 1
 
-                print(f"✓ Terminated {killed_count}/{len(child_pids)} processes for '{app_name}'")
+                print(
+                    f"✓ Terminated {killed_count}/{len(child_pids)} processes for '{
+                        app_name
+                    }'"
+                )
 
         except Exception as e:
             print(f"✗ Error killing process group: {e}")
@@ -325,7 +366,9 @@ class ProcessPlugin(PluginBase):
             try:
                 proc.wait(timeout=3)
                 if not silent:
-                    print(f"✓ Successfully terminated process '{proc_name}' (PID: {pid})")
+                    print(
+                        f"✓ Successfully terminated process '{proc_name}' (PID: {pid})"
+                    )
                 return True
             except psutil.TimeoutExpired:
                 # Force kill if graceful termination failed
@@ -340,7 +383,9 @@ class ProcessPlugin(PluginBase):
             return False
         except psutil.AccessDenied:
             if not silent:
-                print(f"✗ Access denied - cannot kill process {pid} (insufficient permissions)")
+                print(
+                    f"✗ Access denied - cannot kill process {pid} (insufficient permissions)"
+                )
             return False
         except Exception as e:
             if not silent:
@@ -351,7 +396,8 @@ class ProcessPlugin(PluginBase):
         """Start background thread for auto-refreshing process data in milliseconds."""
 
         def refresh_loop():
-            while not self.stop_refresh.wait(0.5):  # Check every 500ms for real-time updates
+            # Check every 500ms for real-time updates
+            while not self.stop_refresh.wait(0.5):
                 current_time = time.time()
                 if current_time - self.last_update >= 0.5:  # Update every 500ms
                     self.last_update = current_time
@@ -368,6 +414,7 @@ class ProcessPlugin(PluginBase):
         """Update process data in existing result items (like OTP plugin)."""
         try:
             import gc
+
             from gi.repository import GLib
 
             def do_update():
@@ -408,11 +455,12 @@ class ProcessPlugin(PluginBase):
 
             # Run data collection in background to avoid blocking UI
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(get_data_async)
                 try:
                     current_processes = future.result(timeout=1.0)  # 1 second timeout
-                    process_dict = {proc['pid']: proc for proc in current_processes}
+                    process_dict = {proc["pid"]: proc for proc in current_processes}
 
                     for child in results_box.get_children():
                         if (
@@ -438,26 +486,32 @@ class ProcessPlugin(PluginBase):
                 return
 
             proc_data = process_dict[pid]
-            cpu_percent = proc_data['cpu_percent']
-            memory_percent = proc_data['memory_percent']
-            memory_mb = proc_data['memory_mb']
+            cpu_percent = proc_data["cpu_percent"]
+            memory_percent = proc_data["memory_percent"]
+            memory_mb = proc_data["memory_mb"]
 
             # CPU is already normalized in _get_live_process_data, so no need to normalize again
 
             # Update the subtitle with live data
-            cpu_indicator = "🔥" if cpu_percent > 80 else "⚡" if cpu_percent > 50 else ""
+            cpu_indicator = (
+                "🔥" if cpu_percent > 80 else "⚡" if cpu_percent > 50 else ""
+            )
             mem_indicator = "💾" if memory_percent > 80 else ""
-            new_subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {memory_mb:.1f}MB ({memory_percent:.1f}%){mem_indicator}"
+            new_subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {
+                memory_mb:.1f
+            }MB ({memory_percent:.1f}%){mem_indicator}"
 
             # Find and update the subtitle label widget
             self._find_and_update_subtitle_label(result_item, new_subtitle)
 
             # Update the result data for consistency
-            result_item.result.data.update({
-                "cpu_percent": cpu_percent,
-                "memory_percent": memory_percent,
-                "memory_mb": memory_mb,
-            })
+            result_item.result.data.update(
+                {
+                    "cpu_percent": cpu_percent,
+                    "memory_percent": memory_percent,
+                    "memory_mb": memory_mb,
+                }
+            )
 
         except Exception as e:
             print(f"Error updating process result item: {e}")

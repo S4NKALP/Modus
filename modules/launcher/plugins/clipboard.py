@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
 from gi.repository import GdkPixbuf, GLib
+
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 

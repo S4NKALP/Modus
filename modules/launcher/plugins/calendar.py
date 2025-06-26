@@ -3,9 +3,10 @@ import datetime
 from typing import List
 
 import gi
-import utils.icons as icons
 from fabric.widgets.label import Label
 from gi.repository import Gtk
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 

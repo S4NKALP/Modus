@@ -2,11 +2,12 @@ import subprocess
 from threading import Timer
 from typing import List
 
-import config.data as data
 import gi
-import utils.icons as icons
 from fabric.utils import get_relative_path
 from fabric.utils.helpers import exec_shell_command_async
+
+import config.data as data
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 

@@ -1,9 +1,10 @@
 from typing import List
 
-import utils.icons as icons
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
 from gi.repository import GLib
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from services.network import NetworkClient

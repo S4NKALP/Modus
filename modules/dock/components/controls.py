@@ -1,5 +1,3 @@
-import config.data as data
-import utils.icons as icons
 from fabric.audio.service import Audio
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -8,6 +6,9 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from gi.repository import Gdk, GLib
+
+import config.data as data
+import utils.icons as icons
 from services.brightness import Brightness as BrightnessService
 
 

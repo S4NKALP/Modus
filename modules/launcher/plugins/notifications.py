@@ -2,11 +2,12 @@ import time
 from datetime import datetime
 from typing import List, Optional
 
-import utils.icons as icons
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from gi.repository import GdkPixbuf
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from services import notification_service

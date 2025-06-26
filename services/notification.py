@@ -1,15 +1,16 @@
+import config.data as data
+from gi.repository import GLib
 import json
 import os
 from typing import List
 
+import gi
 from fabric import Signal
 from fabric.notifications import Notification, Notifications
 from loguru import logger
-import gi
-gi.require_version('GLib', '2.0')
-from gi.repository import GLib
 
-import config.data as data
+gi.require_version("GLib", "2.0")
+
 
 NOTIFICATION_CACHE_FILE = f"{data.CACHE_DIR}/notifications.json"
 
@@ -116,11 +117,9 @@ class CustomNotifications(Notifications):
         new_id = self._count
         timestamp = GLib.get_real_time() / 1000000  # Convert microseconds to seconds
         serialized_data = data.serialize()
-        serialized_data.update({
-            "id": new_id, 
-            "app_name": data.app_name,
-            "timestamp": timestamp
-        })
+        serialized_data.update(
+            {"id": new_id, "app_name": data.app_name, "timestamp": timestamp}
+        )
 
         # Append the new notification
         self.all_notifications.append(serialized_data)
@@ -164,7 +163,9 @@ class CustomNotifications(Notifications):
         try:
             notif = Notification.deserialize(notification)
             # Store the timestamp in the notification object
-            notif.timestamp = notification.get("timestamp", GLib.get_real_time() / 1000000)
+            notif.timestamp = notification.get(
+                "timestamp", GLib.get_real_time() / 1000000
+            )
             return notif
         except Exception as e:
             logger.error(

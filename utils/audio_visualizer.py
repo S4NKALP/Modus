@@ -16,11 +16,13 @@ from loguru import logger
 def get_bars(file_path):
     config = configparser.ConfigParser()
     config.read(file_path)
-    return int(config['general']['bars'])
+    return int(config["general"]["bars"])
+
 
 CAVA_CONFIG = get_relative_path("../config/cavalcade/cava.ini")
 
 bars = get_bars(CAVA_CONFIG)
+
 
 def set_death_signal():
     """
@@ -31,11 +33,13 @@ def set_death_signal():
     PR_SET_PDEATHSIG = 1
     libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
 
+
 class Cava:
     """
     CAVA wrapper.
     Launch cava process with certain settings and read output.
     """
+
     NONE = 0
     RUNNING = 1
     RESTARTING = 2
@@ -54,7 +58,9 @@ class Cava:
         self.env["LC_ALL"] = "en_US.UTF-8"  # not sure if it's necessary
 
         is_16bit = True
-        self.byte_type, self.byte_size, self.byte_norm = ("H", 2, 65535) if is_16bit else ("B", 1, 255)
+        self.byte_type, self.byte_size, self.byte_norm = (
+            ("H", 2, 65535) if is_16bit else ("B", 1, 255)
+        )
 
         if not os.path.exists(self.path):
             os.mkfifo(self.path)
@@ -71,7 +77,8 @@ class Cava:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 env=self.env,
-                preexec_fn=set_death_signal  # Ensure cava gets killed when the parent dies.
+                # Ensure cava gets killed when the parent dies.
+                preexec_fn=set_death_signal,
             )
             logger.debug("cava successfully launched!")
             self.state = self.RUNNING
@@ -84,13 +91,15 @@ class Cava:
         self.fifo_fd = os.open(self.path, os.O_RDONLY | os.O_NONBLOCK)
         # Open dummy write end to prevent getting an EOF on our FIFO
         self.fifo_dummy_fd = os.open(self.path, os.O_WRONLY | os.O_NONBLOCK)
-        self.io_watch_id = GLib.io_add_watch(self.fifo_fd, GLib.IO_IN, self._io_callback)
+        self.io_watch_id = GLib.io_add_watch(
+            self.fifo_fd, GLib.IO_IN, self._io_callback
+        )
 
     def _io_callback(self, source, condition):
         chunk = self.byte_size * self.bars  # number of bytes for given format
         try:
             data = os.read(self.fifo_fd, chunk)
-        except OSError as e:
+        except OSError:
             # logger.error("Error reading FIFO: {}".format(e))
             return False
 
@@ -145,16 +154,20 @@ class Cava:
         if os.path.exists(self.path):
             os.remove(self.path)
 
+
 class AttributeDict(dict):
     """Dictionary with keys as attributes. Does nothing but easy reading"""
+
     def __getattr__(self, attr):
         return self.get(attr, 3)
 
     def __setattr__(self, attr, value):
         self[attr] = value
 
+
 class Spectrum:
     """Spectrum drawing"""
+
     def __init__(self):
         self.silence_value = 0
         self.audio_sample = []
@@ -242,6 +255,7 @@ class Spectrum:
         blue = int(color[5:7], 16) / 255
         self.color = Gdk.RGBA(red=red, green=green, blue=blue, alpha=1.0)
 
+
 class SpectrumRender:
     def __init__(self, mode=None, **kwargs):
         self.mode = mode
@@ -252,7 +266,7 @@ class SpectrumRender:
 
     def get_spectrum_box(self):
         # Get the spectrum box
-        box = Overlay(name="cavalcade", h_align='center', v_align='center')
+        box = Overlay(name="cavalcade", h_align="center", v_align="center")
         box.set_size_request(90, 34)  # Better size for music player
         box.add_overlay(self.draw.area)
         box.show_all()  # Ensure everything is visible
@@ -264,6 +278,7 @@ class AudioVisualizer(Overlay):
     Simple AudioVisualizer wrapper around existing spectrum components
     for compatibility with the music player component.
     """
+
     def __init__(self, name=None, width=150, height=24, bars=20, **kwargs):
         super().__init__(name=name, **kwargs)
 
@@ -291,7 +306,10 @@ class AudioVisualizer(Overlay):
         super().set_visible(visible)
         if visible and self.is_playing:
             # Ensure spectrum is active when visible and playing
-            if hasattr(self.spectrum_render, 'cava') and self.spectrum_render.cava.state == 0:  # NONE
+            if (
+                hasattr(self.spectrum_render, "cava")
+                and self.spectrum_render.cava.state == 0
+            ):  # NONE
                 self.spectrum_render.cava.start()
         elif not visible:
             # Optionally pause spectrum when not visible to save resources

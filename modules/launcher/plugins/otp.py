@@ -6,8 +6,9 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import utils.icons as icons
 from fabric.utils import get_relative_path
+
+import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -28,7 +29,7 @@ class OTPPlugin(PluginBase):
         self.description = "Manage TOTP codes and 2FA authentication"
 
         self.secrets_file = Path(
-            get_relative_path("../../../config/json/accounts.json")
+            get_relative_path("../../../config/assets/accounts.json")
         )
         self.secrets: Dict[str, Dict] = {}
         self.last_update = 0

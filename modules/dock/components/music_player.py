@@ -2,9 +2,7 @@ import os
 import tempfile
 import urllib.parse
 
-import config.data as data
 import requests
-import utils.icons as icons
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -12,6 +10,9 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.stack import Stack
 from gi.repository import Gdk, GdkPixbuf, GLib
+
+import config.data as data
+import utils.icons as icons
 from services.mpris import MediaManager
 from utils.audio_visualizer import SpectrumRender
 from utils.circle_image import CircleImage

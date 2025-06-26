@@ -1,0 +1,9 @@
+{
+  "test": {
+    "secret": "IVLCHLVRZ37QOPYWBMOSDHQY75YR54J4",
+    "issuer": "",
+    "algorithm": "SHA1",
+    "digits": 6,
+    "period": 30
+  }
+}

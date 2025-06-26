@@ -2,14 +2,15 @@ import json
 import os
 from typing import Any, Dict, List
 
-import utils.icons as icons
 from fabric.utils import get_relative_path
+
+import utils.icons as icons
 
 
 class TriggerConfig:
     def __init__(self, config_path: str = None):
         if config_path is None:
-            config_path = get_relative_path("../../config/json/launcher.json")
+            config_path = get_relative_path("../../config/assets/launcher.json")
 
         self.config_path = config_path
 

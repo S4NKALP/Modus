@@ -1,0 +1,17 @@
+{
+  "bookmarks": [
+    {
+      "title": "GitHub",
+      "url": "https://github.com",
+      "description": "Code hosting platform",
+      "tags": [
+        "code",
+        "git",
+        "development"
+      ],
+      "created": 1750669725.8057194,
+      "accessed": 0
+    }
+  ],
+  "last_updated": 1750671530.1859832
+}

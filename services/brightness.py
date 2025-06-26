@@ -15,7 +15,7 @@ try:
     screen_device = os.listdir("/sys/class/backlight")
     screen_device = screen_device[0] if screen_device else ""
 except FileNotFoundError:
-    logger.error(f"No backlight devices found, brightness control disabled")
+    logger.error("No backlight devices found, brightness control disabled")
     screen_device = ""
 
 

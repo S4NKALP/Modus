@@ -194,7 +194,7 @@ def load_bind_vars():
     bind_vars.update(settings_constants.DEFAULTS.copy())
 
     config_json = os.path.expanduser(
-        f"~/.config/{APP_NAME_CAP}/config/json/config.json"
+        f"~/.config/{APP_NAME_CAP}/config/assets/config.json"
     )
     if os.path.exists(config_json):
         try:
@@ -245,8 +245,8 @@ def generate_hyprconf() -> str:
     """
     home = os.path.expanduser("~")
     # Determine animation type based on bar position
-    bar_position = bind_vars.get("bar_position", "Top")
-    is_vertical = bar_position in ["Left", "Right"]
+    dock_position = bind_vars.get("dock_position", "Bottom")
+    is_vertical = dock_position in ["Left", "Right"]
     animation_type = "slidefadevert" if is_vertical else "slidefade"
 
     return f"""exec-once = uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)

@@ -1,19 +1,19 @@
 # From https://github.com/stwa/wayland-idle-inhibitor
 # License: WTFPL Version 2
 
-import sys
-import os
-import time
 import argparse
+import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from signal import SIGINT, SIGTERM, signal
 from threading import Event, Timer
 
 import setproctitle
 from pywayland.client.display import Display
-from pywayland.protocol.idle_inhibit_unstable_v1.zwp_idle_inhibit_manager_v1 import \
-    ZwpIdleInhibitManagerV1
+from pywayland.protocol.idle_inhibit_unstable_v1.zwp_idle_inhibit_manager_v1 import (
+    ZwpIdleInhibitManagerV1,
+)
 from pywayland.protocol.wayland.wl_compositor import WlCompositor
 from pywayland.protocol.wayland.wl_registry import WlRegistryProxy
 from pywayland.protocol.wayland.wl_surface import WlSurface
@@ -30,18 +30,20 @@ def parse_duration(duration_str: str) -> int:
     Examples: '1h', '30m', '45s', '1.5h', '1.5m', '30.5s', 'on', 'off'
     """
     try:
-        if duration_str.lower() in ['on', 'off']:
+        if duration_str.lower() in ["on", "off"]:
             return 0
-        elif duration_str.endswith('h'):
+        elif duration_str.endswith("h"):
             return int(float(duration_str[:-1]) * 3600)
-        elif duration_str.endswith('m'):
+        elif duration_str.endswith("m"):
             return int(float(duration_str[:-1]) * 60)
-        elif duration_str.endswith('s'):
+        elif duration_str.endswith("s"):
             return int(float(duration_str[:-1]))
         else:
             return int(duration_str)
     except ValueError:
-        raise ValueError("Invalid duration format. Use '1h', '30m', '45s', 'on', 'off', etc.")
+        raise ValueError(
+            "Invalid duration format. Use '1h', '30m', '45s', 'on', 'off', etc."
+        )
 
 
 def kill_existing_inhibit_processes():
@@ -49,7 +51,7 @@ def kill_existing_inhibit_processes():
     try:
         # Find all modus-inhibit processes except the current one
         output = subprocess.check_output(["pgrep", "-f", "modus-inhibit"], text=True)
-        pids = output.strip().split('\n')
+        pids = output.strip().split("\n")
         current_pid = str(os.getpid())
 
         killed_count = 0
@@ -92,13 +94,19 @@ def handle_registry_global(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Inhibit system idle for a specified duration')
-    parser.add_argument('duration', nargs='?', default='0',
-                      help='Duration to inhibit (e.g., "1h", "30m", "45s", "on", "off"). Use "on" for indefinite, "off" to stop.')
+    parser = argparse.ArgumentParser(
+        description="Inhibit system idle for a specified duration"
+    )
+    parser.add_argument(
+        "duration",
+        nargs="?",
+        default="0",
+        help='Duration to inhibit (e.g., "1h", "30m", "45s", "on", "off"). Use "on" for indefinite, "off" to stop.',
+    )
     args = parser.parse_args()
 
     # Handle "off" argument - kill existing processes and exit
-    if args.duration.lower() == 'off':
+    if args.duration.lower() == "off":
         kill_existing_inhibit_processes()
         sys.exit(0)
 
@@ -132,7 +140,9 @@ def main() -> None:
         if global_registry.inhibit_manager is None:
             print("Error: Your Wayland compositor does not support idle inhibition.")
             print("This usually means either:")
-            print("1. Your compositor (like Hyprland) doesn't support the idle-inhibit protocol")
+            print(
+                "1. Your compositor (like Hyprland) doesn't support the idle-inhibit protocol"
+            )
             print("2. The protocol is not enabled in your compositor")
             print("\nFor Hyprland, you can enable it by adding to your config:")
             print("misc:disable_autoreload = true")

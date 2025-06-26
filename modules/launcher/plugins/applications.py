@@ -4,6 +4,7 @@ from typing import List
 
 from fabric.utils import DesktopApp
 from fabric.utils.helpers import get_desktop_applications, get_relative_path
+
 from modules.dock.main import Dock
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
@@ -46,7 +47,7 @@ class ApplicationsPlugin(PluginBase):
             if v is not None
         }
 
-        config_path = get_relative_path("../../../config/json/dock.json")
+        config_path = get_relative_path("../../../config/assets/dock.json")
         try:
             with open(config_path, "r") as file:
                 data = json.load(file)

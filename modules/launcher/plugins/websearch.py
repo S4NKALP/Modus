@@ -147,8 +147,6 @@ class WebSearchPlugin(PluginBase):
 
         return "", query
 
-
-
     def _is_url(self, text: str) -> bool:
         """Check if the text is a URL."""
         text = text.strip().lower()
@@ -257,4 +255,6 @@ class WebSearchPlugin(PluginBase):
         """Show help for a specific search engine."""
         engine_info = self.search_engines.get(engine_id)
         if engine_info:
-            print(f"Search engine: {engine_info['name']} - {engine_info['description']}")
+            print(
+                f"Search engine: {engine_info['name']} - {engine_info['description']}"
+            )

@@ -1,19 +1,23 @@
-import requests
-import time
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional, Tuple
+
+import requests
 
 
 class CurrencyCache:
     """Thread-safe currency exchange rate cache with background updates."""
 
     def __init__(self):
-        self._cache: Dict[str, Dict] = {}  # {base_currency: {rates_data, timestamp}}
+        # {base_currency: {rates_data, timestamp}}
+        self._cache: Dict[str, Dict] = {}
         self._cache_lock = threading.Lock()
         self._cache_ttl = 3600  # 1 hour in seconds
         self._request_timeout = 2  # 2 seconds for faster response
-        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="currency")
+        self._executor = ThreadPoolExecutor(
+            max_workers=2, thread_name_prefix="currency"
+        )
         self._pending_requests: Dict[str, threading.Event] = {}
 
     def get_rate(self, from_code: str, to_code: str) -> Optional[Tuple[float, float]]:
@@ -33,19 +37,22 @@ class CurrencyCache:
             # Check if we have fresh cached data
             if from_lower in self._cache:
                 cache_entry = self._cache[from_lower]
-                cache_age = current_time - cache_entry['timestamp']
+                cache_age = current_time - cache_entry["timestamp"]
 
-                if cache_age < self._cache_ttl and to_lower in cache_entry['rates']:
-                    rate = cache_entry['rates'][to_lower]['rate']
+                if cache_age < self._cache_ttl and to_lower in cache_entry["rates"]:
+                    rate = cache_entry["rates"][to_lower]["rate"]
                     return rate, cache_age
 
             # Check if we're already fetching this currency
             if from_lower in self._pending_requests:
                 # Don't wait, return cached data if available (even if stale)
-                if from_lower in self._cache and to_lower in self._cache[from_lower]['rates']:
+                if (
+                    from_lower in self._cache
+                    and to_lower in self._cache[from_lower]["rates"]
+                ):
                     cache_entry = self._cache[from_lower]
-                    cache_age = current_time - cache_entry['timestamp']
-                    rate = cache_entry['rates'][to_lower]['rate']
+                    cache_age = current_time - cache_entry["timestamp"]
+                    rate = cache_entry["rates"][to_lower]["rate"]
                     return rate, cache_age
                 return None
 
@@ -57,10 +64,13 @@ class CurrencyCache:
 
         # Return stale cached data if available
         with self._cache_lock:
-            if from_lower in self._cache and to_lower in self._cache[from_lower]['rates']:
+            if (
+                from_lower in self._cache
+                and to_lower in self._cache[from_lower]["rates"]
+            ):
                 cache_entry = self._cache[from_lower]
-                cache_age = current_time - cache_entry['timestamp']
-                rate = cache_entry['rates'][to_lower]['rate']
+                cache_age = current_time - cache_entry["timestamp"]
+                rate = cache_entry["rates"][to_lower]["rate"]
                 return rate, cache_age
 
         return None
@@ -77,8 +87,8 @@ class CurrencyCache:
 
                 with self._cache_lock:
                     self._cache[from_code] = {
-                        'rates': rates_data,
-                        'timestamp': current_time
+                        "rates": rates_data,
+                        "timestamp": current_time,
                     }
 
         except Exception as e:
@@ -102,7 +112,7 @@ class CurrencyCache:
 _currency_cache = CurrencyCache()
 
 
-class Units():
+class Units:
     def __init__(self):
         self.WEIGHT_CHART: dict[str, tuple[float, float]] = {
             "kilogram": (1, 1),
@@ -198,12 +208,18 @@ class Units():
         self.TEMPERATURE_CHART = {
             "celsius": (lambda v: v + 273.15, lambda v: v - 273.15),
             "c": (lambda v: v + 273.15, lambda v: v - 273.15),
-            "fahrenheit": (lambda v: (v - 32) * 5/9 + 273.15, lambda v: (v - 273.15) * 9/5 + 32),
-            "f": (lambda v: (v - 32) * 5/9 + 273.15, lambda v: (v - 273.15) * 9/5 + 32),
+            "fahrenheit": (
+                lambda v: (v - 32) * 5 / 9 + 273.15,
+                lambda v: (v - 273.15) * 9 / 5 + 32,
+            ),
+            "f": (
+                lambda v: (v - 32) * 5 / 9 + 273.15,
+                lambda v: (v - 273.15) * 9 / 5 + 32,
+            ),
             "kelvin": (lambda v: v, lambda v: v),
             "k": (lambda v: v, lambda v: v),
-            "rankine": (lambda v: v * 5/9, lambda v: v * 9/5),
-            "reaumur": (lambda v: v * 5/4 + 273.15, lambda v: (v - 273.15) * 4/5),
+            "rankine": (lambda v: v * 5 / 9, lambda v: v * 9 / 5),
+            "reaumur": (lambda v: v * 5 / 4 + 273.15, lambda v: (v - 273.15) * 4 / 5),
         }
 
         self.TIME_CHART: dict[str, float] = {
@@ -404,7 +420,7 @@ class Units():
         # We no longer use currency_converter here.
 
 
-class Conversion():
+class Conversion:
     def __init__(self):
         self.units = Units()
         self.currency_cache = _currency_cache
@@ -464,7 +480,12 @@ class Conversion():
 
         # 2) If both are currency codes (e.g. “USD”, “ARS”)
         #    we assume they are uppercase and have 3 letters.
-        if len(from_type) == 3 and len(to_type) == 3 and from_type.isalpha() and to_type.isalpha():
+        if (
+            len(from_type) == 3
+            and len(to_type) == 3
+            and from_type.isalpha()
+            and to_type.isalpha()
+        ):
             result = self._convert_currency_fast(value, from_type, to_type)
             if result is not None:
                 return result
@@ -474,7 +495,9 @@ class Conversion():
         # 3) If it doesn't fall into any case, error.
         raise ValueError(f"Unsupported conversion: {from_type} to {to_type}")
 
-    def _convert_currency_fast(self, value: float, from_code: str, to_code: str) -> Optional[float]:
+    def _convert_currency_fast(
+        self, value: float, from_code: str, to_code: str
+    ) -> Optional[float]:
         """
         Fast currency conversion using cached exchange rates.
         Returns None if rate is not available in cache.
@@ -485,7 +508,9 @@ class Conversion():
             return value * rate
         return None
 
-    def _convert_currency_via_floatrates(self, value: float, from_code: str, to_code: str) -> float:
+    def _convert_currency_via_floatrates(
+        self, value: float, from_code: str, to_code: str
+    ) -> float:
         """
         Converts using the JSON from floatrates.com:
         - Makes GET to https://www.floatrates.com/daily/{from_lower}.json
@@ -504,7 +529,11 @@ class Conversion():
 
         data = resp.json()
         if to_lower not in data:
-            raise ValueError(f"Target currency '{to_code}' not found in floatrates response for '{from_code}'")
+            raise ValueError(
+                f"Target currency '{to_code}' not found in floatrates response for '{
+                    from_code
+                }'"
+            )
 
         rate = data[to_lower]["rate"]
         return value * rate
@@ -516,7 +545,9 @@ class Conversion():
         if "and" in parts:  # value unit1 and value2 unit2 _ to target_unit
             parts.remove("and")
             if len(parts) != 6:
-                raise ValueError("Invalid format. Expected: 'value from_type and value2 from_type2 _ to_type'")
+                raise ValueError(
+                    "Invalid format. Expected: 'value from_type and value2 from_type2 _ to_type'"
+                )
 
             value1, from_type1, value2, from_type2, _, to_type = parts
             value1, value2 = float(value1), float(value2)
@@ -525,7 +556,9 @@ class Conversion():
             to_type = self.clean_type(to_type)
 
             if from_type1 == from_type2:
-                return self.convert(value1 + value2, from_type1, to_type), to_type + addition
+                return self.convert(
+                    value1 + value2, from_type1, to_type
+                ), to_type + addition
             else:
                 res = 0
                 res += self.convert(value1, from_type1, to_type)
@@ -533,7 +566,9 @@ class Conversion():
                 return res, to_type + addition
         else:
             if len(parts) != 4:
-                raise ValueError("Invalid format. Expected: 'value from_type _ to_type'")
+                raise ValueError(
+                    "Invalid format. Expected: 'value from_type _ to_type'"
+                )
             value, from_type, _, to_type = parts
             value = float(value)
             from_type = self.clean_type(from_type)
@@ -544,7 +579,7 @@ class Conversion():
         """
         If it's currency (3 letters), convert to uppercase.
         If it ends in 's' (and is not 'celsius'), remove the 's' for
-        other units. """
+        other units."""
         if len(type) == 3 and type.isalpha():
             return type.upper()
         if type.endswith("s") and type.lower() != "celsius":
@@ -561,7 +596,9 @@ class Conversion():
         """Cleanup resources."""
         self.currency_cache.cleanup()
 
-    def get_currency_cache_info(self, from_code: str, to_code: str) -> Optional[Tuple[bool, float]]:
+    def get_currency_cache_info(
+        self, from_code: str, to_code: str
+    ) -> Optional[Tuple[bool, float]]:
         """
         Get currency cache information for UI display.
         Returns (is_fresh, cache_age_seconds) or None if not cached.

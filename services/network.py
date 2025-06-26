@@ -1,8 +1,9 @@
-from gi.repository import NM, GLib
+from typing import Optional
+
 import gi
-from typing import List, Optional
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import bulk_connect, get_enum_member_name, snake_case_to_kebab_case
+from gi.repository import NM, GLib
 from loguru import logger
 
 gi.require_version("NM", "1.0")  # Ensure the correct version is loaded
@@ -65,8 +66,9 @@ class NetworkClient(Service):
         if not self._client:
             return "disconnected"
         return snake_case_to_kebab_case(
-            get_enum_member_name(self._client.get_property(
-                "state"), default="disconnected")
+            get_enum_member_name(
+                self._client.get_property("state"), default="disconnected"
+            )
         )
 
     @Property(str, "readable")
@@ -75,8 +77,9 @@ class NetworkClient(Service):
         if not self._client:
             return "disconnected"
         return snake_case_to_kebab_case(
-            get_enum_member_name(self._client.get_property(
-                "connectivity"), default="disconnected")
+            get_enum_member_name(
+                self._client.get_property("connectivity"), default="disconnected"
+            )
         )
 
     @Property(list, "readable")
@@ -92,7 +95,9 @@ class NetworkClient(Service):
     @Property(bool, "read-write", default_value=False)
     def networking_enabled(self) -> bool:
         """Checks if networking is enabled."""
-        return self._client.get_property("networking_enabled") if self._client else False
+        return (
+            self._client.get_property("networking_enabled") if self._client else False
+        )
 
     @networking_enabled.setter
     def networking_enabled(self, value: bool):
@@ -126,19 +131,26 @@ class NetworkClient(Service):
     def on_client_ready(self, source, result):
         """Callback when NM.Client is ready."""
         try:
-            self._client = NM.Client.new_finish(
-                result)  # Retrieve client instance
+            self._client = NM.Client.new_finish(result)  # Retrieve client instance
             logger.info("[Network] NM.Client initialized successfully!")
 
             # Connect signals
             bulk_connect(
                 self._client,
                 {
-                    "device-added": lambda _, device: self.on_device_added(device=device),
-                    "device-removed": lambda _, device: self.on_device_removed(device=device),
-                    "notify::state": lambda *args: self.notifier('state'),
-                    "notify::networking-enabled": lambda *args: self.notifier('networking-enabled'),
-                    "notify::wireless-enabled": lambda *args: self.notifier('wireless-enabled'),
+                    "device-added": lambda _, device: self.on_device_added(
+                        device=device
+                    ),
+                    "device-removed": lambda _, device: self.on_device_removed(
+                        device=device
+                    ),
+                    "notify::state": lambda *args: self.notifier("state"),
+                    "notify::networking-enabled": lambda *args: self.notifier(
+                        "networking-enabled"
+                    ),
+                    "notify::wireless-enabled": lambda *args: self.notifier(
+                        "wireless-enabled"
+                    ),
                     # "notify::primary-connection": lambda *args: self.notifier('primary-connection'),
                     # "notify::active-connection": lambda *args: self.notifier('active-connection'),
                     # "active-connection-added": lambda *args: self.emit("changed"),
@@ -150,10 +162,10 @@ class NetworkClient(Service):
             for device in self.do_get_raw_devices():
                 self.on_device_added(device=device)
 
-            self.notify('state')
-            self.notify('networking-enabled')
-            self.notify('wireless-enabled')
-            self.notify('is-ready')
+            self.notify("state")
+            self.notify("networking-enabled")
+            self.notify("wireless-enabled")
+            self.notify("is-ready")
             self.ready.emit()
 
         except Exception as e:
@@ -194,10 +206,8 @@ class NetworkClient(Service):
         self.networking_enabled = not self.networking_enabled
 
     def deactivate_connection(self, connection):
-        """ Disconnect """
-        self._client.deactivate_connection_async(
-            connection, None, None
-        )
+        """Disconnect"""
+        self._client.deactivate_connection_async(connection, None, None)
 
     def notifier(self, name):
         self.notify(name)
@@ -206,6 +216,7 @@ class NetworkClient(Service):
 
 class AccessPoint(Service):
     """A service to manage access points"""
+
     @Signal
     def changed(self) -> None: ...
 
@@ -215,7 +226,7 @@ class AccessPoint(Service):
 
     @Property(int, "readable")
     def strength(self) -> int:
-        return self._ap.get_property('strength')
+        return self._ap.get_property("strength")
 
     @Property(int, "readable")
     def frequency(self) -> int:
@@ -254,7 +265,10 @@ class AccessPoint(Service):
         connection = None
         for setting in settings:
             wifi_setting = setting.get_setting_wireless()
-            if wifi_setting and NM.utils_ssid_to_utf8(wifi_setting.get_ssid().get_data()) == ssid:
+            if (
+                wifi_setting
+                and NM.utils_ssid_to_utf8(wifi_setting.get_ssid().get_data()) == ssid
+            ):
                 connection = setting
                 break
         if not connection:
@@ -273,10 +287,10 @@ class AccessPoint(Service):
         self._device: Wifi = device
         self._ap: NM.AccessPoint = ap
 
-        self._ap.connect("notify::strength",
-                         lambda *args: self.notifier("strength"))
-        self._device.connect("notify::active-access-point",
-                             lambda *args: self.notifier("is-active"))
+        self._ap.connect("notify::strength", lambda *args: self.notifier("strength"))
+        self._device.connect(
+            "notify::active-access-point", lambda *args: self.notifier("is-active")
+        )
 
     def notifier(self, name: str, *args):
         self.notify(name)
@@ -298,7 +312,7 @@ class Wifi(Service):
 
     @Property(NetworkClient, "readable")
     def client(self) -> NetworkClient:
-        """Returns the client """
+        """Returns the client"""
         return self._client
 
     @Property(bool, "read-write", default_value=False)
@@ -312,7 +326,9 @@ class Wifi(Service):
 
     @Property(list[AccessPoint], "readable")
     def access_points(self) -> list[AccessPoint]:
-        return sorted(self._access_points.values(), key=lambda x: x.is_active, reverse=True)
+        return sorted(
+            self._access_points.values(), key=lambda x: x.is_active, reverse=True
+        )
 
     @Property(AccessPoint, "readable")
     def active_access_point(self) -> Optional[AccessPoint]:
@@ -330,13 +346,16 @@ class Wifi(Service):
             {
                 "notify::active-access-point": lambda *args: self.on_access_point_activated(),
                 "access-point-added": lambda _, ap: self.on_access_point_added(ap=ap),
-                "access-point-removed": lambda _, ap: self.on_access_point_removed(ap=ap),
+                "access-point-removed": lambda _, ap: self.on_access_point_removed(
+                    ap=ap
+                ),
                 # "state-changed": lambda device, new, old, reason: self.on_state_changed(new),
             },
         )
 
-        self._client.connect("notify::wireless-enabled",
-                             lambda *args: self.notifier('wireless-enabled'))
+        self._client.connect(
+            "notify::wireless-enabled", lambda *args: self.notifier("wireless-enabled")
+        )
 
         for ap in self.do_get_access_points():
             self.on_access_point_added(ap=ap)
@@ -353,10 +372,7 @@ class Wifi(Service):
         ssid = ap.get_ssid()
         ssid = NM.utils_ssid_to_utf8(ssid.get_data()) if ssid else "Unknown"
 
-        access_point: AccessPoint = AccessPoint(
-            ap=ap,
-            device=self
-        )
+        access_point: AccessPoint = AccessPoint(ap=ap, device=self)
 
         self._access_points[ssid] = access_point
 
@@ -382,8 +398,7 @@ class Wifi(Service):
     def on_access_point_activated(self):
         if self._device.get_active_access_point():
             self._active_access_point: AccessPoint = AccessPoint(
-                ap=self._device.get_active_access_point(),
-                device=self
+                ap=self._device.get_active_access_point(), device=self
             )
 
         else:
@@ -404,7 +419,7 @@ class Wifi(Service):
             None,
             lambda device, result: [
                 device.request_scan_finish(result),
-                self.notifier('access-points'),
+                self.notifier("access-points"),
             ],
         )
         logger.info("[Wifi] Scan started")
@@ -430,7 +445,10 @@ class Wifi(Service):
 
         for setting in settings:
             wifi_setting = setting.get_setting_wireless()
-            if wifi_setting and NM.utils_ssid_to_utf8(wifi_setting.get_ssid().get_data()) == ssid:
+            if (
+                wifi_setting
+                and NM.utils_ssid_to_utf8(wifi_setting.get_ssid().get_data()) == ssid
+            ):
                 connection = setting
                 break
 
@@ -443,16 +461,17 @@ class Wifi(Service):
             s_con = NM.SettingConnection.new()
             s_con.set_property(NM.SETTING_CONNECTION_ID, ssid)
             s_con.set_property(NM.SETTING_CONNECTION_TYPE, "802-11-wireless")
-            s_con.set_property(NM.SETTING_CONNECTION_INTERFACE_NAME,
-                               self._device.get_iface())  # Set interface name
+            s_con.set_property(
+                NM.SETTING_CONNECTION_INTERFACE_NAME, self._device.get_iface()
+            )  # Set interface name
             connection.add_setting(s_con)
 
             # Wireless settings
             s_wifi = NM.SettingWireless.new()
-            s_wifi.set_property(NM.SETTING_WIRELESS_SSID,
-                                GLib.Bytes.new(ssid.encode()))
-            s_wifi.set_property(NM.SETTING_WIRELESS_MODE,
-                                "infrastructure")  # Ensure mode is correct
+            s_wifi.set_property(NM.SETTING_WIRELESS_SSID, GLib.Bytes.new(ssid.encode()))
+            s_wifi.set_property(
+                NM.SETTING_WIRELESS_MODE, "infrastructure"
+            )  # Ensure mode is correct
             connection.add_setting(s_wifi)
 
             # Security settings (only if password is required and provided)
@@ -462,8 +481,7 @@ class Wifi(Service):
                     return False
 
                 s_sec = NM.SettingWirelessSecurity.new()
-                s_sec.set_property(
-                    NM.SETTING_WIRELESS_SECURITY_KEY_MGMT, "wpa-psk")
+                s_sec.set_property(NM.SETTING_WIRELESS_SECURITY_KEY_MGMT, "wpa-psk")
                 s_sec.set_property(NM.SETTING_WIRELESS_SECURITY_PSK, password)
                 connection.add_setting(s_sec)
 
@@ -482,16 +500,19 @@ class Wifi(Service):
                 try:
                     new_connection = client.add_connection_finish(result)
                     if not new_connection:
-                        logger.error(
-                            f"Failed to create connection for '{ssid}'")
+                        logger.error(f"Failed to create connection for '{ssid}'")
                         return
 
                     logger.info(f"Connection for '{ssid}' added successfully")
 
                     client.activate_connection_async(
-                        new_connection, device, None, None,
-                        lambda c, r: logger.info(f"Connected to '{ssid}'") if c else logger.error(
-                            f"Failed to connect to '{ssid}'")
+                        new_connection,
+                        device,
+                        None,
+                        None,
+                        lambda c, r: logger.info(f"Connected to '{ssid}'")
+                        if c
+                        else logger.error(f"Failed to connect to '{ssid}'"),
                     )
                 except Exception as e:
                     logger.error(f"Failed to add connection: {e}")
@@ -501,13 +522,16 @@ class Wifi(Service):
                 connection,
                 True,
                 None,
-                lambda c, r: on_connection_added(c, r, ssid, self._device)
+                lambda c, r: on_connection_added(c, r, ssid, self._device),
             )
 
         # Activate the connection
         self._client._client.activate_connection_async(
-            connection, self._device, None, None,
-            lambda client, result: logger.info(f"Connected to '{ssid}'")
+            connection,
+            self._device,
+            None,
+            None,
+            lambda client, result: logger.info(f"Connected to '{ssid}'"),
         )
 
         return True
@@ -535,16 +559,16 @@ class Ethernet(Service):
     @Property(str, "readable")
     def state(self) -> str:
         return snake_case_to_kebab_case(
-            get_enum_member_name(self._device.get_state(),
-                                 default="disconnected")
+            get_enum_member_name(self._device.get_state(), default="disconnected")
         )
 
     @Property(str, "readable")
     def internet(self) -> str:
         if self._active_connection:
             return snake_case_to_kebab_case(
-                get_enum_member_name(self._active_connection.get_state(),
-                                     default="disconnected")
+                get_enum_member_name(
+                    self._active_connection.get_state(), default="disconnected"
+                )
             )
         return "disconnected"
 
@@ -568,7 +592,8 @@ class Ethernet(Service):
         self._active_connection = None
 
         self._device.connect(
-            "state-changed", lambda *args: self.on_network_state_changed())
+            "state-changed", lambda *args: self.on_network_state_changed()
+        )
 
         self.update_active_connection()
 
@@ -586,15 +611,20 @@ class Ethernet(Service):
         if active_connection:
             self._active_connection = active_connection
             self._active_connection.connect(
-                "state-changed", lambda *args: self.emit('changed'))
+                "state-changed", lambda *args: self.emit("changed")
+            )
 
     def get_network_stats(self):
         """Fetch received and transmitted bytes from the system files"""
         try:
             # Read data from /sys/class/net for accurate speed
-            with open(f"/sys/class/net/{self.iface}/statistics/rx_bytes", "r") as rx_file:
+            with open(
+                f"/sys/class/net/{self.iface}/statistics/rx_bytes", "r"
+            ) as rx_file:
                 rx_bytes = int(rx_file.read().strip())
-            with open(f"/sys/class/net/{self.iface}/statistics/tx_bytes", "r") as tx_file:
+            with open(
+                f"/sys/class/net/{self.iface}/statistics/tx_bytes", "r"
+            ) as tx_file:
                 tx_bytes = int(tx_file.read().strip())
             return rx_bytes, tx_bytes
         except FileNotFoundError:

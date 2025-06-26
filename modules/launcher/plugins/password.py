@@ -1,16 +1,17 @@
-import json
 import base64
+import json
 import subprocess
 import threading
 import time
-from pathlib import Path
-from typing import List, Dict, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from fabric.utils import get_relative_path
 
 import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-from fabric.utils import get_relative_path
 
 
 class PasswordManager:
@@ -166,7 +167,7 @@ class PasswordPlugin(PluginBase):
 
         # Initialize password manager
         self.password_file = Path(
-            get_relative_path("../../../config/json/passwords.json")
+            get_relative_path("../../../config/assets/passwords.json")
         )
         self.password_manager = PasswordManager(self.password_file)
 
@@ -271,10 +272,10 @@ class PasswordPlugin(PluginBase):
             # Check if password is revealed
             if name in self.revealed_passwords:
                 title = f"{name}: {self.revealed_passwords[name]}"
-                subtitle = f"Password revealed - Enter: copy | Shift+Enter: hide"
+                subtitle = "Password revealed - Enter: copy | Shift+Enter: hide"
             else:
                 title = f"{name}: {'*' * 8}"
-                subtitle = f"Enter: copy | Shift+Enter: reveal password"
+                subtitle = "Enter: copy | Shift+Enter: reveal password"
 
             if description:
                 subtitle += f" | {description}"
@@ -328,7 +329,7 @@ class PasswordPlugin(PluginBase):
             results.append(
                 Result(
                     title=f"Update password for '{name}'?",
-                    subtitle=f"Password already exists. Click to update it.",
+                    subtitle="Password already exists. Click to update it.",
                     icon_markup=icons.key,
                     action=lambda: self._add_password_action(
                         name, password, description, update=True
@@ -342,7 +343,7 @@ class PasswordPlugin(PluginBase):
             results.append(
                 Result(
                     title=f"Add password for '{name}'",
-                    subtitle=f"Click to save password"
+                    subtitle="Click to save password"
                     + (f" | {description}" if description else ""),
                     icon_markup=icons.plus,
                     action=lambda: self._add_password_action(
@@ -449,10 +450,10 @@ class PasswordPlugin(PluginBase):
             # Check if password is revealed
             if name in self.revealed_passwords:
                 title = f"{name}: {self.revealed_passwords[name]}"
-                subtitle = f"Password revealed - Enter: copy | Shift+Enter: hide"
+                subtitle = "Password revealed - Enter: copy | Shift+Enter: hide"
             else:
                 title = f"{name}: {'*' * 8}"
-                subtitle = f"Enter: copy | Shift+Enter: reveal password"
+                subtitle = "Enter: copy | Shift+Enter: reveal password"
 
             if description:
                 subtitle += f" | {description}"
@@ -510,7 +511,6 @@ class PasswordPlugin(PluginBase):
         try:
             success = self.password_manager.remove_password(name)
             if success:
-
                 # Remove from revealed passwords if present
                 self.revealed_passwords.pop(name, None)
 

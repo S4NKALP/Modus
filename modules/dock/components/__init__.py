@@ -1,21 +1,25 @@
-import os
 import json
-import config.data as data
+import os
+
+from fabric.hyprland.service import HyprlandEvent
+from fabric.hyprland.widgets import Language, get_hyprland_connection
+from fabric.system_tray.widgets import SystemTray
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
+from fabric.widgets.button import Button
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.label import Label
-from fabric.widgets.button import Button
-from fabric.system_tray.widgets import SystemTray
-from .battery import Battery
-from .metrics import Metrics
-from .controls import Controls
-from .workspaces import workspace
-from .indicators import Indicators
-from .applications import Applications
-from .music_player import MusicPlayer
-from fabric.hyprland.widgets import get_hyprland_connection, Language
+
+import config.data as data
 import utils.icons as icons
-from fabric.hyprland.service import HyprlandEvent
+
+from .applications import Applications
+from .battery import Battery
+from .controls import Controls
+from .indicators import Indicators
+from .metrics import Metrics
+from .music_player import MusicPlayer
+from .workspaces import workspace
 
 
 class DockComponents(Box):
@@ -114,7 +118,7 @@ class DockComponents(Box):
                 # Special handling for applications component - let it manage its own visibility
                 if component_name == "applications":
                     # Only apply config visibility if the component has content
-                    if hasattr(widget, '_update_visibility_based_on_content'):
+                    if hasattr(widget, "_update_visibility_based_on_content"):
                         widget._update_visibility_based_on_content()
                     else:
                         widget.set_visible(self.component_visibility[component_name])
@@ -143,9 +147,7 @@ class DockComponents(Box):
                 self.component_visibility[component_name]
             )
 
-            config_file = os.path.expanduser(
-                f"~/.config/{data.APP_NAME}/config/config.json"
-            )
+            config_file = get_relative_path("../../../config/assets/config.json")
             if os.path.exists(config_file):
                 try:
                     with open(config_file, "r") as f:
