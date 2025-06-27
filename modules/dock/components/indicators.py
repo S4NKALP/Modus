@@ -241,7 +241,9 @@ class Indicators(Box):
             name="indicator",
             orientation="h" if not data.VERTICAL else "v",
             spacing=4,
-            children=[WifiIndicator(), BluetoothIndicator(), self.recording_indicator, self.notifications],
+            children=[WifiIndicator(), BluetoothIndicator(), self.recording_indicator, 
+                      self.notifications
+                    ],
             **kwargs,
         )
         self.show_all()
