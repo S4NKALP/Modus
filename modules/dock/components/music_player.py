@@ -52,9 +52,8 @@ class MusicPlayer(EventBox):
         self.add(self.main_container)
         self.connect("button-press-event", self._on_music_player_clicked)
 
-        # Set initial visibility based on configuration
-        initial_visibility = data.DOCK_COMPONENTS_VISIBILITY.get("music_player", True)
-        self.set_visible(initial_visibility)
+        # Start hidden - visibility will be managed by _update_display() based on media availability
+        self.set_visible(False)
 
         # Ensure visualizer is disabled in vertical mode
         if data.VERTICAL:
@@ -363,18 +362,8 @@ class MusicPlayer(EventBox):
                 self._connect_player_signals(self._current_player)
 
         if not self._current_player:
-            # Only hide if the component is disabled in settings
-            # If enabled in settings, show a "No Media" state instead of hiding
-            if not data.DOCK_COMPONENTS_VISIBILITY.get("music_player", True):
-                self.set_visible(False)
-            else:
-                # Show "No Media" state when enabled but no player is active
-                self.set_visible(True)
-                # Clear tooltips when no player is active
-                self.set_tooltip_text("No media player active")
-                self.album_thumbnail.set_tooltip_text("No media player active")
-                if not data.VERTICAL:
-                    self.track_label.set_tooltip_text("No media player active")
+            # Hide the component when there's no media player available
+            self.set_visible(False)
 
             if self._update_timeout_id:
                 GLib.source_remove(self._update_timeout_id)

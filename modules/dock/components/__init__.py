@@ -19,7 +19,6 @@ from .controls import Controls
 from .indicators import Indicators
 from .metrics import Metrics
 from .music_player import MusicPlayer
-from .notifications import Notifications
 from .workspaces import workspace
 
 import gi
@@ -112,7 +111,6 @@ class DockComponents(Box):
         )
         self.controls = Controls()
         self.indicators = Indicators()
-        self.notifications = Notifications()
         self.music_player = MusicPlayer()
         self.systray = SystemTray(
             icon_size=18,
@@ -128,7 +126,6 @@ class DockComponents(Box):
             self.controls,
             self.applications,
             self.indicators,
-            self.notifications,
             self.battery,
             self.music_player,
             self.date_time,
@@ -155,13 +152,12 @@ class DockComponents(Box):
 
     def apply_component_props(self):
         components = {
-            "workspaces": self.workspaces,
+            "workspace": self.workspaces,
             "metrics": self.metrics,
             "battery": self.battery,
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            "notifications": self.notifications,
             "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
@@ -170,30 +166,35 @@ class DockComponents(Box):
 
         for component_name, widget in components.items():
             if component_name in self.component_visibility:
+                visibility = self.component_visibility[component_name]
                 # Special handling for applications component - let it manage its own visibility
                 if component_name == "applications":
                     # Only apply config visibility if the component has content
                     if hasattr(widget, "_update_visibility_based_on_content"):
                         widget._update_visibility_based_on_content()
                     else:
-                        widget.set_visible(self.component_visibility[component_name])
+                        widget.set_visible(visibility)
                 # Special handling for music player - let it manage its own visibility based on media state
                 elif component_name == "music_player":
                     # Music player manages its own visibility based on config and media state
                     # Don't override its visibility here, let it handle it internally
                     pass
+                # Special handling for battery - let it manage its own visibility based on config and battery state
+                elif component_name == "battery":
+                    # Battery component manages its own visibility based on config and battery presence
+                    # Don't override its visibility here, let it handle it internally
+                    pass
                 else:
-                    widget.set_visible(self.component_visibility[component_name])
+                    widget.set_visible(visibility)
 
     def toggle_component_visibility(self, component_name):
         components = {
-            "workspaces": self.workspaces,
+            "workspace": self.workspaces,
             "metrics": self.metrics,
             "battery": self.battery,
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            "notifications": self.notifications,
             "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,

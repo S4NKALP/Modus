@@ -11,6 +11,7 @@ from gi.repository import GLib
 
 import config.data as data
 import utils.icons as icons
+from .notifications import Notifications
 from services.network import NetworkClient
 
 
@@ -234,12 +235,13 @@ class RecordingIndicator(Button):
 class Indicators(Box):
     def __init__(self, **kwargs):
         self.recording_indicator = RecordingIndicator()
+        self.notifications = Notifications()
 
         super().__init__(
             name="indicator",
             orientation="h" if not data.VERTICAL else "v",
             spacing=4,
-            children=[WifiIndicator(), BluetoothIndicator(), self.recording_indicator],
+            children=[WifiIndicator(), BluetoothIndicator(), self.recording_indicator, self.notifications],
             **kwargs,
         )
         self.show_all()

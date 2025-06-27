@@ -74,7 +74,7 @@ if os.path.exists(CONFIG_FILE):
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
     DOCK_COMPONENTS_VISIBILITY = {
-        "workspaces": config.get("dock_workspaces_visible", True),
+        "workspace": config.get("dock_workspace_visible", True),
         "metrics": config.get("dock_metrics_visible", True),
         "battery": config.get("dock_battery_visible", True),
         "date_time": config.get("dock_date_time_visible", True),
@@ -84,6 +84,7 @@ if os.path.exists(CONFIG_FILE):
         "systray": config.get("dock_tray_visible", True),
         "applications": config.get("dock_applications_visible", True),
         "music_player": config.get("dock_music_player_visible", True),
+        "language": config.get("dock_language_visible", True),
     }
 
     METRICS_DISKS = config.get("metrics_disks", ["/"])
@@ -106,7 +107,7 @@ else:
     DOCK_HIDE_SPECIAL_WORKSPACE = True
 
     DOCK_COMPONENTS_VISIBILITY = {
-        "workspaces": True,
+        "workspace": True,
         "metrics": True,
         "battery": True,
         "date_time": True,
@@ -116,6 +117,7 @@ else:
         "systray": True,
         "applications": True,
         "music_player": True,
+        "language": True,
     }
 
     METRICS_DISKS = ["/"]

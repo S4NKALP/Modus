@@ -240,5 +240,9 @@ class Battery(Box):
             self.icon.remove_style_class("alert")
             self.circle.remove_style_class("alert")
 
-        self.set_visible(True)
+        # Only show if enabled in configuration
+        if data.DOCK_COMPONENTS_VISIBILITY.get("battery", True):
+            self.set_visible(True)
+        else:
+            self.set_visible(False)
         return True
