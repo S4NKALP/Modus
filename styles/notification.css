@@ -38,6 +38,19 @@
   margin-top: 8px;
 }
 
+#no-notif {
+  font-size: 96px;
+  color: var(--surface);
+}
+
+#notification-history {
+  border-radius: 20px;
+  padding: 16px;
+  border: 2px solid var(--surface);
+  background-color: var(--shadow);
+  margin: 4px;
+  min-width: 430px;
+}
 #notification-stack-box {
   border-radius: 32px;
   padding: 16px;
@@ -166,6 +179,37 @@
 #dnd-label {
   font-size: 20px;
   margin-left: 4px;
+}
+
+#dnd-switch {
+  min-width: 40px;
+  min-height: 20px;
+  background-color: var(--surface);
+  border-radius: 15px;
+  padding: 2px;
+  transition: background-color 0.3s ease;
+}
+
+#dnd-switch slider {
+  background-color: var(--primary);
+  border-radius: 16px;
+  min-width: 16px;
+  min-height: 8px;
+  transition:
+    background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
+    transform 0.25s cubic-bezier(0.5, 0.25, 0, 1.25);
+}
+
+#dnd-switch:checked {
+  background-color: var(--primary);
+}
+
+#dnd-switch:checked slider {
+  background-color: var(--shadow);
+}
+
+#dnd-switch:checked image {
+  color: var(--shadow);
 }
 
 #notif-sep {

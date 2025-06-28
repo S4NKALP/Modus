@@ -291,9 +291,7 @@ class ProcessPlugin(PluginBase):
             )
             mem_indicator = "💾" if memory_percent > 80 else ""
 
-            subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {
-                memory_mb:.1f
-            }MB ({memory_percent:.1f}%){mem_indicator}"
+            subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {memory_mb:.1f}MB ({memory_percent:.1f}%){mem_indicator}"
 
             # Choose icon based on CPU usage
             if cpu_percent > 50:
@@ -344,11 +342,6 @@ class ProcessPlugin(PluginBase):
                     if self._kill_process(pid, silent=True):
                         killed_count += 1
 
-                print(
-                    f"✓ Terminated {killed_count}/{len(child_pids)} processes for '{
-                        app_name
-                    }'"
-                )
 
         except Exception as e:
             print(f"✗ Error killing process group: {e}")
@@ -365,10 +358,6 @@ class ProcessPlugin(PluginBase):
             # Wait a bit for graceful termination
             try:
                 proc.wait(timeout=3)
-                if not silent:
-                    print(
-                        f"✓ Successfully terminated process '{proc_name}' (PID: {pid})"
-                    )
                 return True
             except psutil.TimeoutExpired:
                 # Force kill if graceful termination failed
@@ -497,9 +486,7 @@ class ProcessPlugin(PluginBase):
                 "🔥" if cpu_percent > 80 else "⚡" if cpu_percent > 50 else ""
             )
             mem_indicator = "💾" if memory_percent > 80 else ""
-            new_subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {
-                memory_mb:.1f
-            }MB ({memory_percent:.1f}%){mem_indicator}"
+            new_subtitle = f"CPU: {cpu_percent:.1f}%{cpu_indicator} | Memory: {memory_mb:.1f}MB ({memory_percent:.1f}%){mem_indicator}"
 
             # Find and update the subtitle label widget
             self._find_and_update_subtitle_label(result_item, new_subtitle)

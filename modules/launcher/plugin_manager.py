@@ -93,7 +93,6 @@ class PluginManager:
             "network",
             "bluetooth",
             "otp",
-            "notifications",
             "password",
             "bookmarks",
             "process",

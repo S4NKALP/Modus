@@ -16,14 +16,13 @@
 
 #button-bar-recording {
   border-radius: 12px;
-  padding:4px;
+  padding: 4px;
   animation: recording-blink 1.5s ease-in-out infinite;
 }
 
 #button-bar-recording:hover {
   background-color: var(--red);
 }
-
 
 @keyframes recording-blink {
   0% {
@@ -51,162 +50,4 @@
 
 #button-bar-notifications:hover {
   background-color: var(--surface-bright);
-}
-
-
-#notifications-popup-main {
-  background-color: var(--surface);
-  margin:20px;
-}
-
-#notifications-popup-box {
-  background-color: var(--surface);
-}
-
-#notifications-scrolled {
-  background-color: var(--surface);
-  border-radius: 8px;
-}
-
-#notifications-scrolled scrollbar {
-  background-color: var(--surface-container);
-  border-radius: 4px;
-}
-
-#notifications-scrolled scrollbar slider {
-  background-color: var(--outline);
-  border-radius: 4px;
-  min-width: 8px;
-  min-height: 8px;
-}
-
-#notifications-scrolled scrollbar slider:hover {
-  background-color: var(--outline-variant);
-}
-
-/* Style close button in dock notifications */
-#notifications-popup-window #notif-close-button {
-  background-color: var(--surface-container);
-  border-radius: 50%;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 4px;
-  border: none;
-}
-
-#notifications-popup-window #notif-close-button:hover {
-  background-color: var(--error-container);
-}
-
-#notifications-popup-window #notif-close-label {
-  color: var(--on-surface-variant);
-  font-size: 14px;
-}
-
-#notifications-popup-window #notif-close-button:hover #notif-close-label {
-  color: var(--on-error-container);
-}
-
-#notifications-header {
-  padding: 8px;
-  border-bottom: 1px solid var(--outline);
-}
-
-#notifications-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: var(--on-surface);
-}
-
-#dnd-toggle-button {
-  background-color: var(--surface-container);
-  color: var(--on-surface-variant);
-  border-radius: 8px;
-  padding: 4px 8px;
-  border: 1px solid var(--outline);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-#dnd-toggle-button:hover {
-  background-color: var(--surface-bright);
-}
-
-#clear-all-button {
-  background-color: var(--primary);
-  color: var(--on-primary);
-  border-radius: 8px;
-  padding: 4px 8px;
-}
-
-#clear-all-button:hover {
-  background-color: var(--primary-bright);
-}
-
-#notifications-content {
-  padding: 8px;
-  background-color: var(--surface-container);
-  border-radius: 8px;
-  margin-top: 4px;
-  min-height: 200px;
-}
-
-#no-notifications-content {
-  background-color: var(--surface-container);
-  border-radius: 8px;
-  padding: 40px 20px;
-  margin: 20px;
-  min-width: 292px;
-}
-
-#no-notifications-icon {
-  font-size: 48px;
-  color: var(--on-surface-variant);
-  opacity: 0.6;
-}
-
-#no-notifications-message {
-  color: var(--on-surface-variant);
-  font-size: 16px;
-  font-weight: 500;
-}
-
-#simple-notification-box {
-  background-color: var(--surface-bright);
-  border-radius: 8px;
-  padding: 8px;
-  margin: 4px 0;
-}
-
-#simple-notification-box:hover {
-  background-color: var(--surface-dim);
-}
-
-#notification-remove-button {
-  background-color: var(--error);
-  color: var(--on-error);
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-weight: bold;
-}
-
-#notification-remove-button:hover {
-  background-color: var(--error-bright);
-}
-
-#no-notifications-content {
-  padding: 48px 32px;
-  min-height: 200px;
-}
-
-#no-notifications-icon {
-  font-size: 48px;
-  color: var(--outline);
-  opacity: 0.6;
-}
-
-#no-notifications-message {
-  font-size: 16px;
-  color: var(--on-surface);
-  opacity: 0.7;
 }

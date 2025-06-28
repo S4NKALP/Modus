@@ -45,8 +45,7 @@
     },
     "kanban": {
       "icon": "kanban",
-      "description": "Kanban - Task management with kanban-style columns",
-      "examples": ["kanban add Fix bug", "kanban move Fix bug", "kanban done Fix bug"]
+      "description": "Kanban - Task management with kanban-style columns"
     },
     "cal": {
       "icon": "calendar",
@@ -67,11 +66,6 @@
     "otp": {
       "icon": "auth",
       "description": "Manage TOTP codes and 2FA authentication"
-    },
-    "notif": {
-      "icon": "notifications",
-      "description": "Notification History - Search and manage notification history",
-      "examples": ["notif", "notif clear", "notif search term"]
     },
     "pass": {
       "icon": "key",
