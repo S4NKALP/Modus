@@ -523,6 +523,7 @@ class HyprConfGUI(Window):
             "battery": "Battery Indicator",
             "controls": "Control Panel",
             "indicators": "Indicators",
+            "music_player": "Music Player",
             "applications": "Taskbar",
             "language": "Language Indicator",
         }

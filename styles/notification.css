@@ -51,6 +51,11 @@
   margin: 4px;
   min-width: 430px;
 }
+
+#notification-history.vertical {
+  margin: 10px;
+}
+
 #notification-stack-box {
   border-radius: 32px;
   padding: 16px;

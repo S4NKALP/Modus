@@ -1,4 +1,3 @@
-import base64
 import json
 import subprocess
 import threading
@@ -11,13 +10,13 @@ from fabric.utils import get_relative_path
 import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
-
-try:
-    import pyotp
-
-    PYOTP_AVAILABLE = True
-except ImportError:
-    PYOTP_AVAILABLE = False
+from services.auth import (
+    generate_totp,
+    get_time_remaining_with_blink,
+    validate_base32_secret,
+    parse_otpauth_uri,
+    scan_qr_and_add_account,
+)
 
 
 class OTPPlugin(PluginBase):
@@ -40,11 +39,6 @@ class OTPPlugin(PluginBase):
 
     def initialize(self):
         """Initialize the OTP plugin."""
-        if not PYOTP_AVAILABLE:
-            raise RuntimeError(
-                "pyotp is required for OTP functionality. Install with: pip install pyotp"
-            )
-
         self.set_triggers(["otp"])
         self._load_secrets()
         self._ensure_config_file()
@@ -301,26 +295,11 @@ class OTPPlugin(PluginBase):
 
     def _generate_totp(self, secret: str) -> Optional[str]:
         """Generate TOTP code from secret."""
-        try:
-            return pyotp.TOTP(secret).now()
-        except Exception as e:
-            print(f"Error generating TOTP: {e}")
-            return None
-
-    def _get_time_remaining(self) -> int:
-        """Get seconds remaining until next token refresh."""
-        return 30 - (int(time.time()) % 30)
+        return generate_totp(secret)
 
     def _get_time_remaining_with_blink(self) -> str:
         """Get time remaining with blinking effect."""
-        time_remaining = self._get_time_remaining()
-        current_second = int(time.time())
-        should_blink = current_second % 2 == 0
-
-        if should_blink:
-            return f"<span alpha='30%'>{time_remaining}s</span>"
-        else:
-            return f"{time_remaining}s"
+        return get_time_remaining_with_blink()
 
     def query(self, query_string: str) -> List[Result]:
         """Process OTP queries."""
@@ -357,6 +336,13 @@ class OTPPlugin(PluginBase):
             else:
                 remove_content = query[7:].strip()
             return self._handle_remove_command(remove_content)
+        elif query_lower == "qr" or query_lower.startswith("qr "):
+            # Handle QR scanning command
+            if query_lower == "qr":
+                qr_content = ""
+            else:
+                qr_content = query[3:].strip()
+            return self._handle_qr_command(qr_content)
         else:
             return self._search_accounts(query)
 
@@ -413,7 +399,7 @@ class OTPPlugin(PluginBase):
             results.append(
                 Result(
                     title="Available commands:",
-                    subtitle="add <account> <secret> | remove <account>",
+                    subtitle="add <account> <secret> | remove <account> | qr <account>",
                     icon_markup=icons.info,
                     action=lambda: None,
                     relevance=0.9,
@@ -435,7 +421,7 @@ class OTPPlugin(PluginBase):
                 results.append(
                     Result(
                         title=f"{totp_code}",
-                        subtitle_markup=f"{display_name} • {time_display} remaining",
+                        subtitle_markup=f"{display_name} • {time_display} remaining • Shift+Enter: remove",
                         icon_markup=icons.key,
                         action=lambda code=totp_code: self._copy_to_clipboard(code),
                         relevance=1.0,
@@ -444,6 +430,7 @@ class OTPPlugin(PluginBase):
                             "type": "totp",
                             "account": account_name,
                             "code": totp_code,
+                            "alt_action": lambda acc=account_name: self._remove_account_and_refresh(acc),
                         },
                     )
                 )
@@ -492,7 +479,7 @@ class OTPPlugin(PluginBase):
                             title=f"{totp_code}",
                             subtitle_markup=f"{display_name} • {
                                 time_display
-                            } remaining",
+                            } remaining • Shift+Enter: remove",
                             icon_markup=icons.key,
                             action=lambda code=totp_code: self._copy_to_clipboard(code),
                             relevance=1.0,
@@ -501,6 +488,7 @@ class OTPPlugin(PluginBase):
                                 "type": "totp",
                                 "account": account_name,
                                 "code": totp_code,
+                                "alt_action": lambda acc=account_name: self._remove_account_and_refresh(acc),
                             },
                         )
                     )
@@ -520,7 +508,7 @@ class OTPPlugin(PluginBase):
             results.append(
                 Result(
                     title="Available commands:",
-                    subtitle="add <account> <secret> | remove <account>",
+                    subtitle="add <account> <secret> | remove <account> | qr <account>",
                     icon_markup=icons.info,
                     action=lambda: None,
                     relevance=0.4,
@@ -589,6 +577,66 @@ class OTPPlugin(PluginBase):
             ),
         ]
 
+    def _handle_qr_command(self, account_name: str) -> List[Result]:
+        """Handle QR scanning command."""
+        if not account_name:
+            return [
+                Result(
+                    title="Scan QR Code",
+                    subtitle="Click to scan QR code from screen",
+                    icon_markup=icons.connect,
+                    action=lambda: self._scan_qr_and_add_account(""),
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "qr_scan"},
+                ),
+                Result(
+                    title="QR Scan Instructions:",
+                    subtitle="Use 'qr <account_name>' to specify account name",
+                    icon_markup=icons.info,
+                    action=lambda: None,
+                    relevance=0.9,
+                    plugin_name=self.display_name,
+                    data={"type": "help", "keep_launcher_open": True},
+                ),
+            ]
+        else:
+            return [
+                Result(
+                    title=f"Scan QR Code for '{account_name}'",
+                    subtitle="Click to scan QR code from screen",
+                    icon_markup=icons.connect,
+                    action=lambda name=account_name: self._scan_qr_and_add_account(name),
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                    data={"type": "qr_scan"},
+                ),
+            ]
+
+    def _scan_qr_and_add_account(self, account_name: str):
+        """Scan QR code and add OTP account."""
+        print(f"QR scan action called for account: '{account_name}'")
+        print("Starting QR scan process asynchronously...")
+
+        # Run QR scanning asynchronously so launcher closes immediately
+        import threading
+        thread = threading.Thread(target=self._scan_qr_async, args=(account_name,))
+        thread.daemon = True
+        thread.start()
+
+    def _scan_qr_async(self, account_name: str):
+        """Async QR scanning process."""
+        result = scan_qr_and_add_account(account_name, str(self.secrets_file))
+
+        if result["success"]:
+            print(result["message"])
+            # Reload secrets from file
+            self._load_secrets()
+            # Trigger refresh to show the new account
+            self._trigger_refresh()
+        else:
+            print(f"QR scan failed: {result['error']}")
+
     def _handle_remove_command(self, account_name: str) -> List[Result]:
         """Handle removal of OTP account."""
         if not account_name:
@@ -636,18 +684,18 @@ class OTPPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"{totp_code}",
-                                subtitle_markup=f"Type: remove {acc_name} • {
+                                subtitle_markup=f"Press Enter to remove • {
                                     time_display
                                 } remaining",
                                 icon_markup=icons.trash,
-                                action=lambda: None,  # No action - shows instruction only
+                                action=lambda acc=acc_name: self._remove_account_and_refresh(acc),
                                 relevance=0.9,
                                 plugin_name=self.display_name,
                                 data={
                                     "type": "remove_instruction",
                                     "account": acc_name,
                                     "code": totp_code,
-                                    "keep_launcher_open": True,
+                                    "keep_launcher_open": True
                                 },
                             )
                         )
@@ -655,9 +703,9 @@ class OTPPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"Error: {acc_name}",
-                                subtitle=f"Type: remove {acc_name} (Invalid secret)",
+                                subtitle=f"Press Enter to remove (Invalid secret)",
                                 icon_markup=icons.trash,
-                                action=lambda: None,  # No action - shows instruction only
+                                action=lambda acc=acc_name: self._remove_account_and_refresh(acc),
                                 relevance=0.8,
                                 plugin_name=self.display_name,
                                 data={
@@ -689,114 +737,28 @@ class OTPPlugin(PluginBase):
         issuer = account_data.get("issuer", "")
         display_name = f"{issuer} - {account_name}" if issuer else account_name
 
-        # Remove the account
-        try:
-            del self.secrets[account_name]
-            self._save_secrets()
-
-            return [
-                Result(
-                    title=f"✓ Removed '{display_name}'",
-                    subtitle="OTP account removed successfully",
-                    icon_markup=icons.check,
-                    action=lambda: self._trigger_refresh(),
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "success", "keep_launcher_open": True},
-                )
-            ]
-        except Exception as e:
-            return [
-                Result(
-                    title="Error removing account",
-                    subtitle=f"Failed to remove account: {str(e)}",
-                    icon_markup=icons.cancel,
-                    action=lambda: None,
-                    relevance=0.5,
-                    plugin_name=self.display_name,
-                    data={"type": "error", "keep_launcher_open": True},
-                )
-            ]
+        # Show confirmation for removal
+        return [
+            Result(
+                title=f"Remove '{display_name}'?",
+                subtitle="Press Enter to confirm removal",
+                icon_markup=icons.trash,
+                action=lambda acc=account_name: self._remove_account_and_refresh(acc),
+                relevance=1.0,
+                plugin_name=self.display_name,
+                data={"type": "remove_confirm", "account": account_name,"keep_launcher_open": True,},
+            )
+        ]
 
     def _handle_base32_secret(self, account_name: str, secret: str) -> List[Result]:
         """Handle raw Base32 secret."""
-        try:
-            # Clean up the secret - remove spaces, dashes, and convert to uppercase
-            clean_secret = (
-                secret.replace(" ", "").replace("-", "").replace("_", "").upper()
-            )
+        result = validate_base32_secret(secret)
 
-            # Remove any non-base32 characters
-            import re
-
-            clean_secret = re.sub(r"[^A-Z2-7]", "", clean_secret)
-
-            # Add padding if needed (Base32 requires padding to multiple of 8)
-            while len(clean_secret) % 8 != 0:
-                clean_secret += "="
-
-            # Validate Base32 format
-            try:
-                base64.b32decode(clean_secret)
-            except Exception as e:
-                return [
-                    Result(
-                        title="Invalid Base32 secret",
-                        subtitle=f"Error: {str(e)}. Please check the secret format",
-                        icon_markup=icons.cancel,
-                        action=lambda: None,
-                        relevance=0.5,
-                        plugin_name=self.display_name,
-                        data={"type": "error", "keep_launcher_open": True},
-                    )
-                ]
-
-            # Test if the secret can generate a valid TOTP
-            try:
-                test_totp = pyotp.TOTP(clean_secret)
-                test_code = test_totp.now()
-                if not test_code or len(test_code) != 6:
-                    raise ValueError("Generated invalid TOTP code")
-            except Exception as e:
-                return [
-                    Result(
-                        title="Invalid secret for TOTP",
-                        subtitle=f"Cannot generate TOTP: {str(e)}",
-                        icon_markup=icons.cancel,
-                        action=lambda: None,
-                        relevance=0.5,
-                        plugin_name=self.display_name,
-                        data={"type": "error", "keep_launcher_open": True},
-                    )
-                ]
-
-            self.secrets[account_name] = {
-                "secret": clean_secret,
-                "issuer": "",
-                "algorithm": "SHA1",
-                "digits": 6,
-                "period": 30,
-            }
-            self._save_secrets()
-
+        if not result["success"]:
             return [
                 Result(
-                    title=f"✓ Added '{account_name}'",
-                    subtitle=f"OTP account added successfully (secret: {
-                        clean_secret[:4]
-                    }...)",
-                    icon_markup=icons.check,
-                    action=lambda: self._trigger_refresh(),
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "success", "keep_launcher_open": True},
-                )
-            ]
-        except Exception as e:
-            return [
-                Result(
-                    title="Error adding account",
-                    subtitle=f"Unexpected error: {str(e)}",
+                    title="Invalid Base32 secret",
+                    subtitle=result["error"],
                     icon_markup=icons.cancel,
                     action=lambda: None,
                     relevance=0.5,
@@ -804,80 +766,37 @@ class OTPPlugin(PluginBase):
                     data={"type": "error", "keep_launcher_open": True},
                 )
             ]
+
+        self.secrets[account_name] = {
+            "secret": result["secret"],
+            "issuer": "",
+            "algorithm": "SHA1",
+            "digits": 6,
+            "period": 30,
+        }
+        self._save_secrets()
+
+        return [
+            Result(
+                title=f"✓ Added '{account_name}'",
+                subtitle=f"OTP account added successfully (secret: {result['secret'][:4]}...)",
+                icon_markup=icons.check,
+                action=lambda: self._trigger_refresh(),
+                relevance=1.0,
+                plugin_name=self.display_name,
+                data={"type": "success", "keep_launcher_open": True},
+            )
+        ]
 
     def _handle_otpauth_uri(self, account_name: str, uri: str) -> List[Result]:
         """Handle otpauth:// URI."""
-        try:
-            from urllib.parse import parse_qs, urlparse
+        result = parse_otpauth_uri(uri, account_name)
 
-            parsed = urlparse(uri)
-            if parsed.scheme != "otpauth" or parsed.netloc != "totp":
-                return [
-                    Result(
-                        title="Invalid otpauth URI",
-                        subtitle="Only otpauth://totp/ URIs are supported",
-                        icon_markup=icons.cancel,
-                        action=lambda: None,
-                        relevance=0.5,
-                        plugin_name=self.display_name,
-                        data={"type": "error", "keep_launcher_open": True},
-                    )
-                ]
-
-            if not account_name:
-                account_path = parsed.path.lstrip("/")
-                if ":" in account_path:
-                    issuer, extracted_name = account_path.split(":", 1)
-                    account_name = extracted_name
-                else:
-                    account_name = account_path
-
-            params = parse_qs(parsed.query)
-            secret = params.get("secret", [""])[0]
-            issuer = params.get("issuer", [""])[0]
-            algorithm = params.get("algorithm", ["SHA1"])[0]
-            digits = int(params.get("digits", ["6"])[0])
-            period = int(params.get("period", ["30"])[0])
-
-            if not secret:
-                return [
-                    Result(
-                        title="No secret in URI",
-                        subtitle="otpauth URI must contain a secret parameter",
-                        icon_markup=icons.cancel,
-                        action=lambda: None,
-                        relevance=0.5,
-                        plugin_name=self.display_name,
-                        data={"type": "error", "keep_launcher_open": True},
-                    )
-                ]
-
-            self.secrets[account_name] = {
-                "secret": secret,
-                "issuer": issuer,
-                "algorithm": algorithm,
-                "digits": digits,
-                "period": period,
-            }
-            self._save_secrets()
-
-            display_name = f"{issuer} - {account_name}" if issuer else account_name
-            return [
-                Result(
-                    title=f"✓ Added '{display_name}'",
-                    subtitle="OTP account added from URI",
-                    icon_markup=icons.check,
-                    action=lambda: self._trigger_refresh(),
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"type": "success", "keep_launcher_open": True},
-                )
-            ]
-        except Exception as e:
+        if not result["success"]:
             return [
                 Result(
                     title="Error parsing otpauth URI",
-                    subtitle=str(e),
+                    subtitle=result["error"],
                     icon_markup=icons.cancel,
                     action=lambda: None,
                     relevance=0.5,
@@ -885,3 +804,25 @@ class OTPPlugin(PluginBase):
                     data={"type": "error", "keep_launcher_open": True},
                 )
             ]
+
+        self.secrets[result["account_name"]] = {
+            "secret": result["secret"],
+            "issuer": result["issuer"],
+            "algorithm": result["algorithm"],
+            "digits": result["digits"],
+            "period": result["period"],
+        }
+        self._save_secrets()
+
+        display_name = f"{result['issuer']} - {result['account_name']}" if result['issuer'] else result['account_name']
+        return [
+            Result(
+                title=f"✓ Added '{display_name}'",
+                subtitle="OTP account added from URI",
+                icon_markup=icons.check,
+                action=lambda: self._trigger_refresh(),
+                relevance=1.0,
+                plugin_name=self.display_name,
+                data={"type": "success", "keep_launcher_open": True},
+            )
+        ]

@@ -10,6 +10,7 @@ gi.require_version("Gtk", "3.0")
 APP_NAME = "modus"
 APP_NAME_CAP = "Modus"
 
+ALLOWED_PLAYERS = ["vlc", "mpv", "cmus", "firefox", "spotify", "chromium"]
 
 NOTIF_POS_KEY = "notif_pos"
 NOTIF_POS_DEFAULT = "Top"
@@ -80,6 +81,7 @@ if os.path.exists(CONFIG_FILE):
         "date_time": config.get("dock_date_time_visible", True),
         "controls": config.get("dock_controls_visible", True),
         "indicators": config.get("dock_indicators_visible", True),
+        "music_player": config.get("dock_music_player_visible", True),
         "notifications": config.get("dock_notifications_visible", True),
         "systray": config.get("dock_tray_visible", True),
         "applications": config.get("dock_applications_visible", True),
@@ -112,6 +114,7 @@ else:
         "date_time": True,
         "controls": True,
         "indicators": True,
+        "music_player": True,
         "notifications": True,
         "systray": True,
         "applications": True,

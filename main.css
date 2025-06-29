@@ -10,6 +10,7 @@
 @import url("./styles/kanban.css");
 @import url("./styles/calendar.css");
 @import url("./styles/notification.css");
+@import url("./styles/player.css");
 
 * {
   all: unset;

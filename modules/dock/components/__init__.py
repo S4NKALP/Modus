@@ -18,6 +18,7 @@ from .battery import Battery
 from .controls import Controls
 from .indicators import Indicators
 from .metrics import Metrics
+from .music_player import MusicPlayer
 from .workspaces import workspace
 
 import gi
@@ -110,6 +111,7 @@ class DockComponents(Box):
         )
         self.controls = Controls()
         self.indicators = Indicators()
+        self.music_player = MusicPlayer()
         self.systray = SystemTray(
             icon_size=18,
             spacing=4,
@@ -122,6 +124,7 @@ class DockComponents(Box):
             self.workspaces,
             self.metrics,
             self.controls,
+            self.music_player,
             self.applications,
             self.indicators,
             self.battery,
@@ -155,6 +158,7 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
+            "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
             "language": self.language,
@@ -186,6 +190,7 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
+            "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
             "language": self.language,

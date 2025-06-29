@@ -49,6 +49,7 @@ PACKAGES=(
 	python-ijson
 	python-watchdog
 	python-pyotp
+	python-pyzbar
 	ttf-nerd-fonts-symbols-mono
 	swww
 	swappy

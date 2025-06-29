@@ -1,209 +1,141 @@
-import contextlib
-from typing import Optional
+from gi.repository import Playerctl, GLib
+from fabric.utils import bulk_connect
+from fabric.core.service import Service, Signal
+from fabric import Fabricator
+
+from config.data import ALLOWED_PLAYERS
 
 import gi
-from fabric.core.service import Property, Service, Signal
-from fabric.utils.helpers import get_enum_member_name, snake_case_to_kebab_case
-from gi.repository import Playerctl
-from loguru import logger
 
 gi.require_version("Playerctl", "2.0")
 
 
-class MediaPlayer(Service):
-    """A service to manage a media player."""
+class PlayerService(Service):
+    @Signal
+    def shuffle_toggle(self, player: Playerctl.Player, status: bool) -> None: ...
 
     @Signal
-    def exit(self) -> None: ...
+    def meta_change(self, metadata: GLib.Variant, player: Playerctl.Player) -> None: ...
 
     @Signal
-    def metadata_changed(self) -> None: ...
+    def pause(self) -> None: ...
 
     @Signal
-    def playback_status_changed(self) -> None: ...
+    def play(self) -> None: ...
 
-    @Property(str, flags="read-write")
-    def player_name(self) -> str:
-        return self._player.get_property("player_name")
+    @Signal
+    def track_position(self, pos: float, dur: float) -> None: ...
 
-    @Property(int, "read-write", default_value=0)
-    def track_position(self) -> int:
-        return self._player.get_property("position")
+    def __init__(self, player: Playerctl.Player, **kwargs):
+        self._player: Playerctl.Player = player
+        super().__init__(**kwargs)
+        if player.props.player_name in ALLOWED_PLAYERS:
+            self._player.connect("playback-status::playing", self.on_play)
+            self._player.connect("playback-status::paused", self.on_pause)
+            self._player.connect("shuffle", self.on_shuffle)
+            self._player.connect("metadata", self.on_metadata)
+            self._player.connect("seeked", self.on_seeked)
+            print(type(player))
 
-    @track_position.setter
-    def track_position(self, new_pos: int):
-        self._player.set_position(new_pos)
-
-    @Property(str, flags="read-write")
-    def album_image_url(self) -> str:
-        return self._player.get_property("metadata").unpack().get("mpris:artUrl", None)
-
-    @Property(int, flags="read-write")
-    def track_duration(self) -> int:
-        default_duration = minutes_to_microseconds(5)
-        metadata = self._player.get_property("metadata").unpack()
-        duration = metadata.get("mpris:length", default_duration)  # Default: 5 minutes
-        return default_duration if duration == 0 else duration
-
-    @Property(str, flags="readable")
-    def status(self) -> str:
-        return snake_case_to_kebab_case(
-            get_enum_member_name(
-                self._player.get_property("playback-status"),  # type: ignore
-                default="unknown",
-            )
+        self.status = self._player.props.playback_status
+        self.pos_fabricator = Fabricator(
+            interval=1000,  # 1s
+            poll_from=lambda f, *_: self._player.get_position(),
+            on_changed=lambda f, *_: self.fabricating(),
         )
+        self.poll_progress()
 
-    @Property(str, flags="readable")
-    def track(self) -> str:
-        return (
-            f"{self.track_artist} {self.track_title}"
-            if self.player_name == "spotify"
-            else self.track_title or "Music"
-        )
+    def on_seeked(self, player, position):
+        if self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
+            self.pos_fabricator.start()
 
-    @Property(str, flags="readable")
-    def track_title(self) -> str:
-        return self._player.get_title()
+    def set_position(self, pos: float):
+        print("seeking in the service")
+        self.pos_fabricator.stop()
+        micro_pos = int(pos * 1_000_000)
+        try:
+            self._player.set_position(micro_pos)
+            print(f"Set position to {micro_pos}")
+        except GLib.Error as e:
+            print(f"Failed to seek: {e}")
 
-    @Property(str, flags="readable")
-    def track_artist(self) -> str:
-        return self._player.get_artist()
+    def poll_progress(self):
+        if self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
+            self.pos_fabricator.start()
+        else:
+            self.pos_fabricator.stop()
 
-    @Property(bool, "readable", default_value=False)
-    def can_go_next(self) -> bool:
-        return self._player.get_property("can_go_next")
+    def fabricating(self):
+        pos = self._player.get_position() / 1_000_000  # seconds
+        # seconds
+        dur = self._player.props.metadata["mpris:length"] / 1_000_000
+        # print(self._player.get_position())
+        # print(f"[progress] {pos:.2f}s / {dur:.2f}s")
+        self.track_position(pos, dur)
 
-    @Property(bool, "readable", default_value=False)
-    def can_go_previous(self) -> bool:
-        return self._player.get_property("can_go_previous")
+    def on_play(self, player, status):
+        print("player is playing: {}".format(player.props.player_name))
+        self.status = player.props.playback_status
+        self.poll_progress()
+        self.play()
 
-    @Property(bool, "readable", default_value=False)
-    def can_seek(self) -> bool:
-        return self._player.get_property("can_seek")
+    def on_pause(self, player, status):
+        print("player is paused: {}".format(player.props.player_name))
+        self.status = player.props.playback_status
+        self.poll_progress()
+        self.pause()
 
-    @Property(bool, "readable", default_value=False)
-    def can_pause(self) -> bool:
-        return self._player.get_property("can_pause")
+    def on_shuffle(self, player, status):
+        print("suffle status changed for: {}".format(player.props.player_name))
+        print(type(status), "here is the status type")
+        self.shuffle_toggle(player, status)
 
-    def __init__(self, player):
-        super().__init__()
-        self._player = player
-        self._signal_connectors = {}
-
-        signals = {
-            "seeked": lambda *args: self.notify("track_position"),
-            "playback-status": lambda *args: self._on_playback_status_changed(),
-            "metadata": lambda *args: self._on_metadata_changed(),
-            "exit": lambda *args: self._on_exit(),
-        }
-
-        for signal_name, handler in signals.items():
-            self._signal_connectors[signal_name] = self._player.connect(
-                signal_name, handler
+    def on_metadata(self, player, metadata):
+        keys = metadata.keys()
+        if "xesam:artist" in keys and "xesam:title" in keys:
+            print(
+                "{} - {}".format(metadata["xesam:artist"][0], metadata["xesam:title"])
             )
-
-    def _on_playback_status_changed(self):
-        self.notify("status")
-        self.playback_status_changed.emit()
-
-    def _on_metadata_changed(self):
-        for prop in [
-            "track_duration",
-            "track_position",
-            "track_title",
-            "track_artist",
-            "track",
-            "album_image_url",
-        ]:
-            self.notify(prop)
-        self.metadata_changed.emit()
-
-    def _on_exit(self):
-        for signal_id in self._signal_connectors.values():
-            with contextlib.suppress(Exception):
-                self._player.disconnect(signal_id)
-        del self._player
-        self.exit.emit()
-
-    def play_pause(self):
-        if self.can_pause:
-            self._player.play_pause()
-
-    def next(self):
-        if self.can_go_next:
-            self._player.next()
-
-    def previous(self):
-        if self.can_go_previous:
-            self._player.previous()
-
-    def get_position(self):
-        return self._player.get_position() if self._player else 0
+        self.meta_change(metadata, player)
 
 
-@staticmethod
-def minutes_to_microseconds(minutes):
-    return minutes * 60 * 1000000
-
-
-class MediaManager(Service):
-    """MediaManager Service using Playerctl to control media players"""
+class PlayerManager(Service):
+    @Signal
+    def new_player(self, player: Playerctl.Player) -> Playerctl.Player: ...
 
     @Signal
-    def player_appeared(self) -> None: ...
+    def player_vanish(self, player: Playerctl.Player) -> None: ...
 
-    @Signal
-    def player_vanished(self) -> None: ...
-
-    @Property(list, "readable")
-    def player_names(self):
-        return self._manager.get_property("player_names")
-
-    @Property(list[MediaPlayer], "readable")
-    def players(self) -> list[MediaPlayer]:
-        return self._players.values()
-
-    @Property(MediaPlayer, "readable")
-    def current_player(self) -> Optional[MediaPlayer]:
-        current_player = None
-        for player in self.players:
-            if player.status == "playing":
-                return player
-            current_player = player
-        return current_player
-
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._manager = Playerctl.PlayerManager()
-        self._players: dict[str, MediaPlayer] = {}
-
+        self._manager.connect("name-appeared", self._on_name_appeared, self._manager)
         self._manager.connect(
-            "name-appeared", lambda _, player: self._on_player_appeared(player=player)
+            "player-vanished", self._on_player_vanished, self._manager
         )
-        self._manager.connect(
-            "player-vanished", lambda _, player: self._on_player_vanished(player=player)
-        )
+        print("playerctl init done")
 
-        for player in self._manager.get_property("player-names"):
-            self._on_player_appeared(player=player)
+        self._players = {}
 
-    def _on_player_appeared(self, player):
-        """Callback when a new player appears"""
-        player = Playerctl.Player.new_from_name(player)
-        player_name = player.get_property("player_name")
+    def init_all_players(self):
+        # invoked in the UI
+        for player_obj in self._manager.props.player_names:
+            name_str = player_obj.name
+            print(f"{name_str} appeared")
+            if name_str in ALLOWED_PLAYERS:
+                player = Playerctl.Player.new_from_name(player_obj)
+                self._manager.manage_player(player)
+                self.new_player(player)
 
-        logger.info(f"[Media] New player appeared: {player_name}")
+    def _on_name_appeared(self, sender, name, manager):
+        name_str = name.name
+        print(f"{name_str} appeared")
+        if name_str in ALLOWED_PLAYERS:
+            player = Playerctl.Player.new_from_name(name)
+            self._manager.manage_player(player)
+            self.new_player(player)
 
-        self._manager.manage_player(player)
-        self._players[player_name] = MediaPlayer(player=player)
-        self.notify("current-player")
-        self.player_appeared.emit()
-
-    def _on_player_vanished(self, player):
-        """Callback when a player disappears"""
-        player_name = player.get_property("player_name") or "Unknown"
-        logger.info(f"[Media] Player vanished: {player_name}")
-        self._players.pop(player_name)
-        self.notify("current-player")
-        self.player_vanished.emit()
+    def _on_player_vanished(self, sender, player, manager):
+        print("player has exited: {}".format(player.props.player_name))
+        print(type(player))
+        self.player_vanish(player)

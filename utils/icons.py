@@ -189,6 +189,7 @@ star: str = "&#xeb2e;"
 process: str = "&#xf292;"
 
 
+music: str = "&#xf00d;"
 # otp
 check: str = "&#xea5e;"
 bulb: str = "&#xea51;"
