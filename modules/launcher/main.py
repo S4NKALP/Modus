@@ -367,9 +367,40 @@ class Launcher(Window):
                     print(f"Error in triggered plugin {triggered_plugin.name}: {e}")
                     all_results = []
             else:
-                # No trigger detected - only show trigger suggestions
+                # No trigger detected - search for applications and other general content
                 self.triggered_plugin = None
                 self.active_trigger = ""
+
+                all_results = []
+
+                # For general queries, load applications plugin on-demand
+                if "applications" not in self.plugin_manager.active_plugins:
+                    app_plugin = self.plugin_manager.get_plugin_for_trigger("app")
+                    if app_plugin:
+                        try:
+                            app_results = app_plugin.query(query)
+                            all_results.extend(app_results)
+                        except Exception as e:
+                            print(f"Error in applications plugin: {e}")
+                else:
+                    # Applications plugin already loaded, use it
+                    app_plugin = self.plugin_manager.plugins.get("applications")
+                    if app_plugin:
+                        try:
+                            app_results = app_plugin.query(query)
+                            all_results.extend(app_results)
+                        except Exception as e:
+                            print(f"Error in applications plugin: {e}")
+
+                # Search across any other loaded plugins for general queries
+                for plugin in self.plugin_manager.get_active_plugins():
+                    if plugin.name != "applications":  # Skip applications as we handled it above
+                        try:
+                            if plugin.handles_query(query):
+                                plugin_results = plugin.query(query)
+                                all_results.extend(plugin_results)
+                        except Exception as e:
+                            print(f"Error in plugin {plugin.name}: {e}")
 
                 # Show trigger suggestions if query matches trigger prefixes
                 trigger_suggestions = self._get_trigger_suggestions(query)
@@ -445,7 +476,7 @@ class Launcher(Window):
 
     def _detect_trigger(self, query: str) -> Tuple[Optional[object], str]:
         """
-        Detect if query starts with a trigger keyword.
+        Detect if query starts with a trigger keyword and lazy load the plugin.
 
         Args:
             query: The search query
@@ -456,7 +487,15 @@ class Launcher(Window):
         if not query.strip():
             return None, ""
 
-        # Check all plugins for triggers
+        # First check if any trigger matches without loading plugins
+        plugin_name, trigger = self.plugin_manager.find_trigger_plugin(query)
+        if plugin_name and trigger:
+            # Load the plugin on demand
+            plugin = self.plugin_manager.get_plugin_for_trigger(trigger)
+            if plugin:
+                return plugin, trigger
+
+        # Fallback: check already loaded plugins
         for plugin in self.plugin_manager.get_active_plugins():
             trigger = plugin.get_active_trigger(query)
             if trigger:
@@ -581,14 +620,8 @@ class Launcher(Window):
             trigger_part = parts[0]
             query_part = parts[1] if len(parts) > 1 else ""
 
-            # Find the plugin that handles this trigger
-            triggered_plugin = None
-
-            for plugin in self.plugin_manager.get_active_plugins():
-                trigger = plugin.get_active_trigger(f"{trigger_part} ")
-                if trigger:
-                    triggered_plugin = plugin
-                    break
+            # Find the plugin that handles this trigger (lazy load if needed)
+            triggered_plugin = self.plugin_manager.get_plugin_for_trigger(trigger_part)
 
             if not triggered_plugin:
                 print(f"No plugin found for trigger: {trigger_part}")
