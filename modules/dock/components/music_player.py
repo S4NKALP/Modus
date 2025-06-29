@@ -10,13 +10,13 @@ import config.data as data
 import utils.icons as icons
 from services.mpris import PlayerManager, PlayerService
 from utils.wayland import WaylandWindow as Window
-from player import PlayerContainer
+from modules.dock.components.player import PlayerContainer
 
 
 class MusicPlayerPopup(Window):
     """Popup window that shows the full music player interface"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, dock_component=None, **kwargs):
         # Get dock position for proper anchoring
         dock_position = data.DOCK_POSITION
         popup_anchor = self._get_popup_anchor(dock_position)
@@ -34,13 +34,23 @@ class MusicPlayerPopup(Window):
             **kwargs,
         )
 
+        self.dock_component = dock_component
         self.player_container = PlayerContainer()
         self.add(self.player_container)
+
+        # Connect player container events to sync with dock
+        if self.dock_component:
+            self.player_container.connect("active-player-changed", self.on_active_player_changed)
 
         # Connect to escape key to close
         self.connect("key-press-event", self.on_key_press)
         self.connect("button-press-event", self.on_button_press)
         self.set_can_focus(True)
+
+    def on_active_player_changed(self, container, player):
+        """Handle active player change from player container"""
+        if self.dock_component and player:
+            self.dock_component.set_current_player(player)
 
     def on_key_press(self, widget, event):
         """Handle key press events"""
@@ -140,11 +150,18 @@ class MusicPlayer(Box):
         # Set initial visibility
         self.update_visibility()
 
+        # Set up periodic check for active player
+        from gi.repository import GLib
+        self.active_player_check_timeout = GLib.timeout_add_seconds(2, self.check_active_player)
+
         # Connect to destroy signal for cleanup
         self.connect("destroy", self.on_destroy)
 
     def on_destroy(self, widget):
         """Clean up popup when component is destroyed"""
+        if hasattr(self, 'active_player_check_timeout'):
+            from gi.repository import GLib
+            GLib.source_remove(self.active_player_check_timeout)
         if self.popup:
             self.popup.destroy()
             self.popup = None
@@ -156,6 +173,11 @@ class MusicPlayer(Box):
         # If this is our first player, make it current
         if not self.current_player:
             self.set_current_player(player)
+        else:
+            # If the new player is playing, switch to it
+            if (player.props.playback_status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING" and
+                self.current_player.props.playback_status.value_name != "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
+                self.set_current_player(player)
 
         self.update_visibility()
 
@@ -171,13 +193,93 @@ class MusicPlayer(Box):
             self.current_player = None
             self.current_player_service = None
 
-            # Try to find another active player
-            # This is a simple approach - in a real implementation you might want more sophisticated logic
+            # Try to find another player with media content
+            if hasattr(self.manager, '_manager') and hasattr(self.manager._manager, 'props'):
+                for player_name in self.manager._manager.props.player_names:
+                    try:
+                        from gi.repository import Playerctl
+                        candidate_player = Playerctl.Player.new_from_name(player_name)
+
+                        # Check if this player has media content
+                        if (hasattr(candidate_player, 'props') and
+                            hasattr(candidate_player.props, 'metadata')):
+                            metadata = candidate_player.props.metadata
+                            if metadata and len(metadata.keys()) > 0:
+                                keys = metadata.keys()
+                                if ("xesam:title" in keys or
+                                    "xesam:artist" in keys or
+                                    "mpris:length" in keys):
+                                    print(f"[DEBUG] Switching to player with media: {candidate_player.props.player_name}")
+                                    self.set_current_player(candidate_player)
+                                    break
+                    except Exception as e:
+                        print(f"[DEBUG] Error checking candidate player {player_name}: {e}")
+                        continue
 
         self.update_visibility()
 
+    def get_playing_player(self):
+        """Find a currently playing player from the manager"""
+        try:
+            if hasattr(self.manager, '_manager') and hasattr(self.manager._manager, 'props'):
+                for player_name in self.manager._manager.props.player_names:
+                    try:
+                        from gi.repository import Playerctl
+                        player = Playerctl.Player.new_from_name(player_name)
+                        if (hasattr(player, 'props') and
+                            hasattr(player.props, 'playback_status') and
+                            player.props.playback_status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
+                            print(f"[DEBUG] Found playing player: {player.props.player_name}")
+                            return player
+                    except Exception as e:
+                        print(f"[DEBUG] Error checking player {player_name}: {e}")
+                        continue
+        except Exception as e:
+            print(f"[DEBUG] Error in get_playing_player: {e}")
+        return None
+
+    def check_active_player(self):
+        """Periodically check for the currently playing player and switch if needed"""
+        try:
+            # Find the currently playing player
+            playing_player = self.get_playing_player()
+
+            if playing_player:
+                # If we found a playing player and it's different from current, switch to it
+                if (not self.current_player or
+                    self.current_player.props.player_name != playing_player.props.player_name):
+                    print(f"[DEBUG] Switching to playing player: {playing_player.props.player_name}")
+                    self.set_current_player(playing_player)
+            elif self.current_player:
+                # If no player is playing, check if current player is paused
+                if (self.current_player.props.playback_status.value_name != "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
+                    # Current player is paused, see if there's another player available
+                    if hasattr(self.manager, '_manager') and hasattr(self.manager._manager, 'props'):
+                        for player_name in self.manager._manager.props.player_names:
+                            try:
+                                from gi.repository import Playerctl
+                                player = Playerctl.Player.new_from_name(player_name)
+                                if player.props.player_name != self.current_player.props.player_name:
+                                    # Switch to a different available player
+                                    print(f"[DEBUG] Switching to available player: {player.props.player_name}")
+                                    self.set_current_player(player)
+                                    break
+                            except:
+                                continue
+
+            # Update visibility based on current state
+            self.update_visibility()
+
+        except Exception as e:
+            print(f"[DEBUG] Error in check_active_player: {e}")
+
+        # Return True to continue the timeout
+        return True
+
     def set_current_player(self, player):
         """Set the current active player"""
+        print(f"[DEBUG] Setting current player to: {player.props.player_name}")
+
         # Disconnect from previous player
         if self.current_player_service:
             try:
@@ -238,6 +340,11 @@ class MusicPlayer(Box):
         if hasattr(self, '_current_track_info'):
             self.event_box.set_tooltip_text(f"{self._current_track_info} (Playing)")
 
+        # Trigger immediate check for active player when play state changes
+        self.check_active_player()
+        # Update visibility when playback state changes
+        self.update_visibility()
+
     def on_pause(self, service):
         """Handle pause state"""
         # Always use generic music icon when paused
@@ -246,6 +353,11 @@ class MusicPlayer(Box):
         # Update tooltip to show paused state
         if hasattr(self, '_current_track_info'):
             self.event_box.set_tooltip_text(f"{self._current_track_info} (Paused)")
+
+        # Trigger immediate check for active player when pause state changes
+        self.check_active_player()
+        # Update visibility when playback state changes
+        self.update_visibility()
 
     def on_metadata(self, service, metadata, player):
         """Handle metadata changes"""
@@ -276,6 +388,9 @@ class MusicPlayer(Box):
             self._current_track_info = "Music Player"
             self.event_box.set_tooltip_text("Music Player")
 
+        # Update visibility when metadata changes (media content appears/disappears)
+        self.update_visibility()
+
     def update_playback_state(self):
         """Update the visual state based on current playback"""
         if not self.current_player:
@@ -296,7 +411,7 @@ class MusicPlayer(Box):
         else:
             # Create popup on-demand if it doesn't exist
             if not self.popup:
-                self.popup = MusicPlayerPopup()
+                self.popup = MusicPlayerPopup(dock_component=self)
             self.popup.show_popup()
 
     def on_scroll(self, widget, event):
@@ -320,11 +435,47 @@ class MusicPlayer(Box):
 
         return True
 
+    def has_running_players(self):
+        """Check if there are any players that actually have media content running"""
+        try:
+            if hasattr(self.manager, '_manager') and hasattr(self.manager._manager, 'props'):
+                for player_name in self.manager._manager.props.player_names:
+                    try:
+                        from gi.repository import Playerctl
+                        player = Playerctl.Player.new_from_name(player_name)
+
+                        # Check if player has metadata indicating actual media content
+                        if hasattr(player, 'props') and hasattr(player.props, 'metadata'):
+                            metadata = player.props.metadata
+                            if metadata and len(metadata.keys()) > 0:
+                                # Check for essential metadata that indicates real media
+                                keys = metadata.keys()
+                                if ("xesam:title" in keys or
+                                    "xesam:artist" in keys or
+                                    "mpris:length" in keys):
+                                    print(f"[DEBUG] Found player with media content: {player.props.player_name}")
+                                    return True
+
+                        # Also check if player is currently playing (even without full metadata)
+                        if (hasattr(player, 'props') and
+                            hasattr(player.props, 'playback_status') and
+                            player.props.playback_status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
+                            print(f"[DEBUG] Found playing player: {player.props.player_name}")
+                            return True
+
+                    except Exception as e:
+                        print(f"[DEBUG] Error checking player {player_name}: {e}")
+                        continue
+        except Exception as e:
+            print(f"[DEBUG] Error in has_running_players: {e}")
+
+        return False
+
     def update_visibility(self):
-        """Update component visibility based on available players"""
-        # Show component only if there are active players
-        has_players = self.current_player is not None
-        self.set_visible(has_players)
+        """Update component visibility based on players with actual media content"""
+        # Show component only if there are players with actual media content
+        has_media_players = self.has_running_players()
+        self.set_visible(has_media_players)
 
         # Hide in vertical mode if user preference is set
         if data.VERTICAL and hasattr(data, "DOCK_COMPONENTS_VISIBILITY"):

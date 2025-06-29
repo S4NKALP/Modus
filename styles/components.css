@@ -1,8 +1,18 @@
+#music-player{
+  background-color: var(--surface);
+  padding: 4px;
+}
+
+#music-player.invert {
+  border-radius: 12px;
+}
+
 #player-circle {
   padding: 4px;
   color: var(--surface-bright);
   border: 3px solid var(--primary);
 }
+
 /*
  * ── language indicator ────────────────────────────────────────────────
 */

@@ -3,12 +3,13 @@ from fabric.widgets.label import Label
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
+from fabric.core.service import Signal
 
-from player_service import PlayerManager, PlayerService
-from wiggle_bar import WigglyWidget
+from services.mpris import PlayerManager, PlayerService
+from utils.wiggle_bar import WigglyWidget
 
-import icons as icons
-import info as info
+import utils.icons as icons
+import config.data as data
 
 from loguru import logger
 
@@ -17,7 +18,10 @@ class Player(Box):
     def __init__(self, player, **kwargs):
         super().__init__(style_classes="player", orientation="v", **kwargs)
 
-        if not info.VERTICAL:
+        # Check if we're in vertical mode based on dock position
+        vertical_mode = data.DOCK_POSITION in ["Left", "Right"] if hasattr(data, 'DOCK_POSITION') else False
+
+        if not vertical_mode:
             # vertical class binding from unknown source
             self.remove_style_class("vertical")
 
@@ -37,8 +41,9 @@ class Player(Box):
             markup=getattr(icons, player.props.player_name, icons.disc),
         )
 
+        # Use a fallback background image
         self.set_style(
-            f"background-image:url('{info.HOME_DIR}/.cache/walls/low_rez.png')"
+            f"background-image:url('{data.HOME_DIR}/.current.wall')"
         )
 
         self.song = Label(
@@ -63,7 +68,7 @@ class Player(Box):
             name="pause-button",
             child=Label(name="pause-label", markup=icons.play),
             style_classes="pause-track",
-            tooltip_text="Exit",
+            tooltip_text="Play/Pause",
             on_clicked=lambda b, *_: self.handle_play_pause(player),
         )
 
@@ -88,21 +93,17 @@ class Player(Box):
             Box(name="source", h_expand=True, v_expand=True, children=self.player_name),
             CenterBox(
                 name="details",
-                # h_expand=True,
-                # v_expand=True,
                 start_children=self.music,
-                end_children=self.play_pause_button if not info.VERTICAL else [],
+                end_children=self.play_pause_button if not vertical_mode else [],
             ),
             Box(
                 name="controls",
-                # h_expand=True,
-                # v_expand=True,
-                style_classes="horizontal" if not info.VERTICAL else "vertical",
+                style_classes="horizontal" if not vertical_mode else "vertical",
                 spacing=5,
                 children=[
                     Button(
                         name="prev-button",
-                        child=Label(name="play-previous", markup=icons.previous),
+                        child=Label(name="play-previous", markup=icons.prev),
                         on_clicked=lambda b, *_: self.handle_prev(player),
                     ),
                     CenterBox(
@@ -119,7 +120,7 @@ class Player(Box):
                     ),
                     self.shuffle_button,
                 ]
-                if not info.VERTICAL
+                if not vertical_mode
                 else [
                     CenterBox(
                         orientation="v",
@@ -133,7 +134,7 @@ class Player(Box):
                                     Button(
                                         name="prev-button",
                                         child=Label(
-                                            name="play-previous", markup=icons.previous
+                                            name="play-previous", markup=icons.prev
                                         ),
                                         on_clicked=lambda b, *_: self.handle_prev(
                                             player
@@ -169,7 +170,8 @@ class Player(Box):
 
     def on_update_track_position(self, sender, pos, dur):
         self.duration = dur
-        self.wiggly.update_value_from_signal(pos / dur)
+        if dur > 0:
+            self.wiggly.update_value_from_signal(pos / dur)
 
     def on_seek(self, sender, ratio):
         pos = ratio * self.duration  # duration in seconds
@@ -179,7 +181,10 @@ class Player(Box):
     def on_metadata(self, sender, metadata, player):
         keys = metadata.keys()
         if "xesam:artist" in keys and "xesam:title" in keys:
-            _max_chars = 43 if not info.VERTICAL else 30
+            # Check if we're in vertical mode
+            vertical_mode = data.DOCK_POSITION in ["Left", "Right"] if hasattr(data, 'DOCK_POSITION') else False
+            _max_chars = 43 if not vertical_mode else 30
+
             song_title = metadata["xesam:title"]
             if len(song_title) > _max_chars:
                 song_title = song_title[: _max_chars - 1] + "…"
@@ -190,8 +195,25 @@ class Player(Box):
             if len(artist_name) > _max_chars:
                 artist_name = artist_name[: _max_chars - 1] + "…"
             self.artist.set_label(artist_name)
+
             if "mpris:artUrl" in keys:
                 self.set_style(f"background-image:url('{metadata['mpris:artUrl']}')")
+            elif "xesam:url" in keys and "youtube.com" in metadata["xesam:url"]:
+                # Simple YouTube thumbnail extraction for Firefox
+                import re
+                url = metadata["xesam:url"]
+                match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
+                if match:
+                    video_id = match.group(1)
+                    thumbnail_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+                    self.set_style(f"background-image:url('{thumbnail_url}')")
+                    print(f"Using YouTube thumbnail: {thumbnail_url}")
+                else:
+                    # Fallback to default wallpaper
+                    self.set_style(f"background-image:url('{data.HOME_DIR}/.current.wall')")
+            else:
+                # Fallback to default wallpaper when no artwork is available
+                self.set_style(f"background-image:url('{data.HOME_DIR}/.current.wall')")
 
         if (
             player.props.playback_status.value_name
@@ -200,7 +222,7 @@ class Player(Box):
             self.on_play(self._player)
 
         if player.props.shuffle == True:
-            self.shuffle_button.get_child().set_markup(icons.disable_shuffle)
+            self.shuffle_button.get_child().set_markup(icons.shuffle)  # Use same icon for now
             self.shuffle_button.get_child().set_name("disable-shuffle")
         else:
             self.shuffle_button.get_child().set_markup(icons.shuffle)
@@ -228,7 +250,7 @@ class Player(Box):
             self.shuffle_button.get_child().set_markup(icons.shuffle)
             self.shuffle_button.get_child().set_name("shuffle")
         else:
-            self.shuffle_button.get_child().set_markup(icons.disable_shuffle)
+            self.shuffle_button.get_child().set_markup(icons.shuffle)  # Use same icon for now
             self.shuffle_button.get_child().set_name("disable-shuffle")
 
         self.shuffle_button.get_child().set_style("color: white")
@@ -278,6 +300,9 @@ class Player(Box):
 
 
 class PlayerContainer(Box):
+    @Signal
+    def active_player_changed(self, player) -> None: ...
+
     def __init__(self, **kwargs):
         super().__init__(name="player-container", orientation="v", **kwargs)
 
@@ -298,16 +323,21 @@ class PlayerContainer(Box):
             children=[],
         )
 
+        # Check if we're in vertical mode
+        vertical_mode = data.DOCK_POSITION in ["Left", "Right"] if hasattr(data, 'DOCK_POSITION') else False
+
         self.player_switch_container = CenterBox(
             name="player-switch-container",
             orientation="h",
             style_classes="horizontal-player"
-            if not info.VERTICAL
+            if not vertical_mode
             else "vertical-player",
             center_children=[],
         )
         self.children = [self.stack, self.player_switch_container]
         self.player = []
+        self.player_objects = {}  # Map player names to player objects
+        self.active_player = None  # Track the currently active player
         self.manager.init_all_players()
 
     def new_player(self, manager, player):
@@ -317,7 +347,8 @@ class PlayerContainer(Box):
         new_player.gtk_wrapper.queue_draw()
         new_player.set_name(player.props.player_name)
         self.player.append(new_player)
-        print("stacking dis bitvch")
+        self.player_objects[player.props.player_name] = player  # Store the player object
+        print("stacking player")
         self.stack.add_named(new_player, player.props.player_name)
 
         self.player_switch_container.add_center(
@@ -327,6 +358,12 @@ class PlayerContainer(Box):
                 on_clicked=lambda b: self.switch_player(player.props.player_name, b),
             )
         )
+
+        # If this is the first player, make it active
+        if not self.active_player:
+            self.active_player = player
+            self.active_player_changed(player)
+
         self.update_player_list()
 
     def switch_player(self, player_name, button):
@@ -336,22 +373,44 @@ class PlayerContainer(Box):
             btn.remove_style_class("active")
         button.add_style_class("active")
 
+        # Get the player object and emit signal
+        if player_name in self.player_objects:
+            self.active_player = self.player_objects[player_name]
+            self.active_player_changed(self.active_player)
+
     def on_player_vanish(self, manager, player):
+        player_name = player.props.player_name
+
         for player_instance in self.player:
-            if player_instance.get_name() == player.props.player_name:
+            if player_instance.get_name() == player_name:
                 self.stack.remove(player_instance)
                 self.player.remove(player_instance)
                 for btn in self.player_switch_container.center_children:
-                    if btn.get_name() == player_instance.get_name():
+                    if btn.get_name() == player_name:
                         self.player_switch_container.remove_center(btn)
-                self.update_player_list()
                 break
+
+        # Clean up player objects dictionary
+        if player_name in self.player_objects:
+            del self.player_objects[player_name]
+
+        # If the active player vanished, switch to another one
+        if self.active_player and self.active_player.props.player_name == player_name:
+            self.active_player = None
+            # Try to find another player to make active
+            if self.player_objects:
+                first_player_name = next(iter(self.player_objects))
+                self.active_player = self.player_objects[first_player_name]
+                self.active_player_changed(self.active_player)
+
+        self.update_player_list()
 
     def update_player_list(self):
         curr = self.stack.get_visible_child()
-        for btn in self.player_switch_container.center_children:
-            print(btn.get_name())
-            if btn.get_name() == curr.get_name():
-                btn.add_style_class("active")
-            else:
-                btn.remove_style_class("active")
+        if curr:
+            for btn in self.player_switch_container.center_children:
+                print(btn.get_name())
+                if btn.get_name() == curr.get_name():
+                    btn.add_style_class("active")
+                else:
+                    btn.remove_style_class("active")
