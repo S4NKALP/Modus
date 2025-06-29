@@ -13,9 +13,9 @@ from modules.launcher.result import Result
 from services.auth import (
     generate_totp,
     get_time_remaining_with_blink,
-    validate_base32_secret,
     parse_otpauth_uri,
     scan_qr_and_add_account,
+    validate_base32_secret,
 )
 
 
@@ -421,7 +421,9 @@ class OTPPlugin(PluginBase):
                 results.append(
                     Result(
                         title=f"{totp_code}",
-                        subtitle_markup=f"{display_name} • {time_display} remaining • Shift+Enter: remove",
+                        subtitle_markup=f"{display_name} • {
+                            time_display
+                        } remaining • Shift+Enter: remove",
                         icon_markup=icons.key,
                         action=lambda code=totp_code: self._copy_to_clipboard(code),
                         relevance=1.0,
@@ -430,7 +432,9 @@ class OTPPlugin(PluginBase):
                             "type": "totp",
                             "account": account_name,
                             "code": totp_code,
-                            "alt_action": lambda acc=account_name: self._remove_account_and_refresh(acc),
+                            "alt_action": lambda acc=account_name: self._remove_account_and_refresh(
+                                acc
+                            ),
                         },
                     )
                 )
@@ -488,7 +492,9 @@ class OTPPlugin(PluginBase):
                                 "type": "totp",
                                 "account": account_name,
                                 "code": totp_code,
-                                "alt_action": lambda acc=account_name: self._remove_account_and_refresh(acc),
+                                "alt_action": lambda acc=account_name: self._remove_account_and_refresh(
+                                    acc
+                                ),
                             },
                         )
                     )
@@ -606,7 +612,9 @@ class OTPPlugin(PluginBase):
                     title=f"Scan QR Code for '{account_name}'",
                     subtitle="Click to scan QR code from screen",
                     icon_markup=icons.connect,
-                    action=lambda name=account_name: self._scan_qr_and_add_account(name),
+                    action=lambda name=account_name: self._scan_qr_and_add_account(
+                        name
+                    ),
                     relevance=1.0,
                     plugin_name=self.display_name,
                     data={"type": "qr_scan"},
@@ -620,6 +628,7 @@ class OTPPlugin(PluginBase):
 
         # Run QR scanning asynchronously so launcher closes immediately
         import threading
+
         thread = threading.Thread(target=self._scan_qr_async, args=(account_name,))
         thread.daemon = True
         thread.start()
@@ -688,14 +697,16 @@ class OTPPlugin(PluginBase):
                                     time_display
                                 } remaining",
                                 icon_markup=icons.trash,
-                                action=lambda acc=acc_name: self._remove_account_and_refresh(acc),
+                                action=lambda acc=acc_name: self._remove_account_and_refresh(
+                                    acc
+                                ),
                                 relevance=0.9,
                                 plugin_name=self.display_name,
                                 data={
                                     "type": "remove_instruction",
                                     "account": acc_name,
                                     "code": totp_code,
-                                    "keep_launcher_open": True
+                                    "keep_launcher_open": True,
                                 },
                             )
                         )
@@ -703,9 +714,11 @@ class OTPPlugin(PluginBase):
                         results.append(
                             Result(
                                 title=f"Error: {acc_name}",
-                                subtitle=f"Press Enter to remove (Invalid secret)",
+                                subtitle="Press Enter to remove (Invalid secret)",
                                 icon_markup=icons.trash,
-                                action=lambda acc=acc_name: self._remove_account_and_refresh(acc),
+                                action=lambda acc=acc_name: self._remove_account_and_refresh(
+                                    acc
+                                ),
                                 relevance=0.8,
                                 plugin_name=self.display_name,
                                 data={
@@ -746,7 +759,11 @@ class OTPPlugin(PluginBase):
                 action=lambda acc=account_name: self._remove_account_and_refresh(acc),
                 relevance=1.0,
                 plugin_name=self.display_name,
-                data={"type": "remove_confirm", "account": account_name,"keep_launcher_open": True,},
+                data={
+                    "type": "remove_confirm",
+                    "account": account_name,
+                    "keep_launcher_open": True,
+                },
             )
         ]
 
@@ -779,7 +796,9 @@ class OTPPlugin(PluginBase):
         return [
             Result(
                 title=f"✓ Added '{account_name}'",
-                subtitle=f"OTP account added successfully (secret: {result['secret'][:4]}...)",
+                subtitle=f"OTP account added successfully (secret: {
+                    result['secret'][:4]
+                }...)",
                 icon_markup=icons.check,
                 action=lambda: self._trigger_refresh(),
                 relevance=1.0,
@@ -814,7 +833,11 @@ class OTPPlugin(PluginBase):
         }
         self._save_secrets()
 
-        display_name = f"{result['issuer']} - {result['account_name']}" if result['issuer'] else result['account_name']
+        display_name = (
+            f"{result['issuer']} - {result['account_name']}"
+            if result["issuer"]
+            else result["account_name"]
+        )
         return [
             Result(
                 title=f"✓ Added '{display_name}'",

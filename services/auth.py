@@ -1,13 +1,15 @@
-import subprocess
-import time
 import json
 import os
+import subprocess
+import time
 from datetime import datetime
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+import pyotp
 from PIL import Image
 from pyzbar.pyzbar import decode
-import pyotp
-from urllib.parse import urlparse, parse_qs
-from pathlib import Path
+
 import config.data as data
 
 
@@ -197,9 +199,7 @@ def validate_base32_secret(secret: str) -> dict:
 
     try:
         # Clean up the secret - remove spaces, dashes, and convert to uppercase
-        clean_secret = (
-            secret.replace(" ", "").replace("-", "").replace("_", "").upper()
-        )
+        clean_secret = secret.replace(" ", "").replace("-", "").replace("_", "").upper()
 
         # Remove any non-base32 characters
         clean_secret = re.sub(r"[^A-Z2-7]", "", clean_secret)
@@ -233,7 +233,10 @@ def parse_otpauth_uri(uri: str, account_name: str = "") -> dict:
     try:
         parsed = urlparse(uri)
         if parsed.scheme != "otpauth" or parsed.netloc != "totp":
-            return {"success": False, "error": "Only otpauth://totp/ URIs are supported"}
+            return {
+                "success": False,
+                "error": "Only otpauth://totp/ URIs are supported",
+            }
 
         if not account_name:
             account_path = parsed.path.lstrip("/")
@@ -280,7 +283,10 @@ def scan_qr_and_add_account(account_name: str, secrets_file_path: str) -> dict:
             decoded_objects = decode(img)
 
             if not decoded_objects:
-                return {"success": False, "error": "No QR code detected in selected area"}
+                return {
+                    "success": False,
+                    "error": "No QR code detected in selected area",
+                }
 
             # Process the first QR code found
             qr_data = decoded_objects[0].data.decode("utf-8")
@@ -316,14 +322,21 @@ def scan_qr_and_add_account(account_name: str, secrets_file_path: str) -> dict:
                     with open(secrets_file_path, "w", encoding="utf-8") as f:
                         json.dump(secrets, f, indent=2)
                 except Exception as e:
-                    return {"success": False, "error": f"Error saving secrets: {str(e)}"}
+                    return {
+                        "success": False,
+                        "error": f"Error saving secrets: {str(e)}",
+                    }
 
-                display_name = f"{result['issuer']} - {result['account_name']}" if result['issuer'] else result['account_name']
+                display_name = (
+                    f"{result['issuer']} - {result['account_name']}"
+                    if result["issuer"]
+                    else result["account_name"]
+                )
                 return {
                     "success": True,
                     "account_name": result["account_name"],
                     "display_name": display_name,
-                    "message": f"Successfully added OTP account: {display_name}"
+                    "message": f"Successfully added OTP account: {display_name}",
                 }
             else:
                 return {"success": False, "error": "QR code is not an otpauth URI"}

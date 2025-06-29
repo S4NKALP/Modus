@@ -7,32 +7,31 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GLib, Gtk, Gdk
+from gi.repository import Gdk, GLib, Gtk
 
 import config.data as data
 import utils.icons as icons
 from modules.notification_popup import NotificationBox
 from utils.custom_image import CustomImage
-from utils.wayland import WaylandWindow as Window
 from utils.notification_utils import (
+    CONFIG_FILE,
     PERSISTENT_DIR,
     PERSISTENT_HISTORY_FILE,
-    CONFIG_FILE,
-    load_scaled_pixbuf,
-    get_shared_notification_history,
     cleanup_orphan_cached_images,
-    get_date_header,
-    schedule_midnight_update,
     compute_time_label,
     create_historical_notification_from_data,
-    save_persistent_history
+    get_date_header,
+    get_shared_notification_history,
+    load_scaled_pixbuf,
+    save_persistent_history,
+    schedule_midnight_update,
 )
+from utils.wayland import WaylandWindow as Window
 
 
 class NotificationIndicator(Button):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-notifications", **kwargs)
-
 
         self.notification_icon = Label(
             name="notification-icon", markup=icons.notifications
@@ -45,7 +44,6 @@ class NotificationIndicator(Button):
         self.set_tooltip_text("Notifications")
 
         self.popup_window = None
-
 
         self._connect_to_dnd_state()
 
@@ -64,14 +62,15 @@ class NotificationIndicator(Button):
 
     def _connect_to_dnd_state(self):
         try:
-
             self.notification_history = get_shared_notification_history()
 
+            self.notification_history.connect(
+                "dnd-state-changed", self._on_dnd_state_changed
+            )
 
-            self.notification_history.connect('dnd-state-changed', self._on_dnd_state_changed)
-
-
-            self._update_icon_for_dnd_state(self.notification_history.do_not_disturb_enabled)
+            self._update_icon_for_dnd_state(
+                self.notification_history.do_not_disturb_enabled
+            )
         except Exception as e:
             print(f"Could not connect to DND state: {e}")
 
@@ -85,9 +84,6 @@ class NotificationIndicator(Button):
         else:
             self.notification_icon.set_markup(icons.notifications)
             self.set_tooltip_text("Notifications")
-
-
-
 
 
 class NotificationHistory(Box):
@@ -169,9 +165,7 @@ class NotificationHistory(Box):
         cleanup_orphan_cached_images(self.persistent_notifications)
         self.schedule_midnight_update()
 
-
         self._connect_to_shared_history()
-
 
         self._load_and_sync_dnd_state()
 
@@ -180,7 +174,9 @@ class NotificationHistory(Box):
     def _connect_to_shared_history(self):
         try:
             shared_history = get_shared_notification_history()
-            shared_history.connect('notification-added', self._on_shared_notification_added)
+            shared_history.connect(
+                "notification-added", self._on_shared_notification_added
+            )
         except Exception as e:
             print(f"Could not connect to shared notification history: {e}")
 
@@ -189,19 +185,16 @@ class NotificationHistory(Box):
 
     def _refresh_history(self):
         try:
-
             for child in self.notifications_list.get_children()[:]:
                 self.notifications_list.remove(child)
-                if hasattr(child, 'destroy'):
+                if hasattr(child, "destroy"):
                     child.destroy()
 
             self.containers.clear()
 
-
             if os.path.exists(PERSISTENT_HISTORY_FILE):
                 with open(PERSISTENT_HISTORY_FILE, "r") as f:
                     self.persistent_notifications = json.load(f)
-
 
                 for note in reversed(self.persistent_notifications[-50:]):
                     self._add_historical_notification(note)
@@ -212,17 +205,14 @@ class NotificationHistory(Box):
 
     def _load_and_sync_dnd_state(self):
         try:
-
             dnd_enabled = False
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, "r") as f:
                     config_data = json.load(f)
                     dnd_enabled = config_data.get("dnd_enabled", False)
 
-
             shared_history = get_shared_notification_history()
             shared_history.do_not_disturb_enabled = dnd_enabled
-
 
             self.header_switch.set_active(dnd_enabled)
             self.do_not_disturb_enabled = dnd_enabled
@@ -284,8 +274,6 @@ class NotificationHistory(Box):
     def on_do_not_disturb_changed(self, switch, pspec):
         self.do_not_disturb_enabled = switch.get_active()
 
-
-
         try:
             shared_history = get_shared_notification_history()
             shared_history.set_do_not_disturb_enabled(self.do_not_disturb_enabled)
@@ -305,8 +293,6 @@ class NotificationHistory(Box):
             self.notifications_list.remove(child)
             child.destroy()
 
-
-
         if os.path.exists(PERSISTENT_HISTORY_FILE):
             try:
                 os.remove(PERSISTENT_HISTORY_FILE)
@@ -322,13 +308,10 @@ class NotificationHistory(Box):
         if not os.path.exists(PERSISTENT_DIR):
             os.makedirs(PERSISTENT_DIR, exist_ok=True)
 
-
         if os.path.exists(PERSISTENT_HISTORY_FILE):
             try:
                 with open(PERSISTENT_HISTORY_FILE, "r") as f:
                     self.persistent_notifications = json.load(f)
-
-
 
                 for note in reversed(self.persistent_notifications[-50:]):
                     self._add_historical_notification(note)
@@ -348,8 +331,6 @@ class NotificationHistory(Box):
         has_notifications = bool(self.containers)
         self.no_notifications_box.set_visible(not has_notifications)
         self.notifications_list.set_visible(has_notifications)
-
-
 
     def _add_historical_notification(self, note):
         hist_notif = create_historical_notification_from_data(note)
@@ -497,8 +478,6 @@ class NotificationHistory(Box):
         if removed_from_list:
             self.persistent_notifications = new_persistent_notifications
 
-
-
         self._save_persistent_history()
         container.destroy()
         self.containers = [c for c in self.containers if c != container]
@@ -507,9 +486,7 @@ class NotificationHistory(Box):
 
 class NotificationHistoryWindow(Window):
     def __init__(self):
-
         self.notification_history = NotificationHistory()
-
 
         scrolled = ScrolledWindow(
             name="notifications-scrolled",
@@ -533,10 +510,8 @@ class NotificationHistoryWindow(Window):
             children=[scrolled],
         )
 
-
         dock_position = data.DOCK_POSITION
         popup_anchor = self._get_popup_anchor(dock_position)
-
 
         margin = self._get_popup_margin(dock_position)
 
@@ -551,14 +526,11 @@ class NotificationHistoryWindow(Window):
             all_visible=True,
         )
 
-
         self.connect("button-press-event", self.on_button_press)
         self.connect("key-press-event", self.on_key_press)
 
-
         self.set_can_focus(True)
         self.grab_focus()
-
 
         self.set_tooltip_text(
             "Keyboard shortcuts:\n• Escape: Close popup\n• Ctrl+D: Toggle DND\n• Ctrl+A: Clear all notifications"
@@ -586,22 +558,16 @@ class NotificationHistoryWindow(Window):
         pass
 
     def on_key_press(self, _widget, event):
-
         if event.keyval == Gdk.KEY_Escape:
-
             self.set_visible(False)
             return True
 
-
         elif event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval == Gdk.KEY_d:
-
             current_dnd = self.notification_history.do_not_disturb_enabled
             self.notification_history.header_switch.set_active(not current_dnd)
             return True
 
-
         elif event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval == Gdk.KEY_a:
-
             self.notification_history.clear_history()
             return True
 

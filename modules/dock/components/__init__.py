@@ -1,6 +1,9 @@
+from gi.repository import Gtk
+from fabric.system_tray.widgets import SystemTrayItem
 import json
 import os
 
+import gi
 from fabric.hyprland.service import HyprlandEvent
 from fabric.hyprland.widgets import Language, get_hyprland_connection
 from fabric.system_tray.widgets import SystemTray
@@ -21,12 +24,9 @@ from .metrics import Metrics
 from .music_player import MusicPlayer
 from .workspaces import workspace
 
-import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
-
 # Monkey patch SystemTray to use GTK theme icons
-from fabric.system_tray.widgets import SystemTrayItem
+
 
 def _patched_do_update_properties(self, *_):
     """Enhanced update method that prioritizes GTK theme icons"""
@@ -65,9 +65,12 @@ def _patched_do_update_properties(self, *_):
     # Set tooltip (same as original)
     tooltip = self._item.tooltip
     self.set_tooltip_markup(
-        tooltip.description or tooltip.title or self._item.title.title() if self._item.title else "Unknown"
+        tooltip.description or tooltip.title or self._item.title.title()
+        if self._item.title
+        else "Unknown"
     )
     return
+
 
 # Apply the patch
 SystemTrayItem.do_update_properties = _patched_do_update_properties
@@ -142,7 +145,8 @@ class DockComponents(Box):
 
         # Apply invert style for specific themes and positions
         should_invert = data.DOCK_THEME in ["Dense", "Edge"] or (
-            data.DOCK_THEME == "Pills" and data.DOCK_POSITION in ["Left", "Right", "Top"]
+            data.DOCK_THEME == "Pills"
+            and data.DOCK_POSITION in ["Left", "Right", "Top"]
         )
 
         if should_invert:

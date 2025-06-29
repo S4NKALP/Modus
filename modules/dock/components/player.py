@@ -1,17 +1,15 @@
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.button import Button
-from fabric.widgets.stack import Stack
 from fabric.core.service import Signal
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
+from fabric.widgets.stack import Stack
+from loguru import logger
 
+import config.data as data
+import utils.icons as icons
 from services.mpris import PlayerManager, PlayerService
 from utils.wiggle_bar import WigglyWidget
-
-import utils.icons as icons
-import config.data as data
-
-from loguru import logger
 
 
 class Player(Box):
@@ -19,7 +17,11 @@ class Player(Box):
         super().__init__(style_classes="player", orientation="v", **kwargs)
 
         # Check if we're in vertical mode based on dock position
-        vertical_mode = data.DOCK_POSITION in ["Left", "Right"] if hasattr(data, 'DOCK_POSITION') else False
+        vertical_mode = (
+            data.DOCK_POSITION in ["Left", "Right"]
+            if hasattr(data, "DOCK_POSITION")
+            else False
+        )
 
         if not vertical_mode:
             # vertical class binding from unknown source
@@ -42,9 +44,7 @@ class Player(Box):
         )
 
         # Use a fallback background image
-        self.set_style(
-            f"background-image:url('{data.HOME_DIR}/.current.wall')"
-        )
+        self.set_style(f"background-image:url('{data.HOME_DIR}/.current.wall')")
 
         self.song = Label(
             name="song",
@@ -182,7 +182,11 @@ class Player(Box):
         keys = metadata.keys()
         if "xesam:artist" in keys and "xesam:title" in keys:
             # Check if we're in vertical mode
-            vertical_mode = data.DOCK_POSITION in ["Left", "Right"] if hasattr(data, 'DOCK_POSITION') else False
+            vertical_mode = (
+                data.DOCK_POSITION in ["Left", "Right"]
+                if hasattr(data, "DOCK_POSITION")
+                else False
+            )
             _max_chars = 43 if not vertical_mode else 30
 
             song_title = metadata["xesam:title"]
@@ -201,16 +205,21 @@ class Player(Box):
             elif "xesam:url" in keys and "youtube.com" in metadata["xesam:url"]:
                 # Simple YouTube thumbnail extraction for Firefox
                 import re
+
                 url = metadata["xesam:url"]
-                match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
+                match = re.search(r"(?:v=|/)([a-zA-Z0-9_-]{11})", url)
                 if match:
                     video_id = match.group(1)
-                    thumbnail_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+                    thumbnail_url = (
+                        f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+                    )
                     self.set_style(f"background-image:url('{thumbnail_url}')")
                     print(f"Using YouTube thumbnail: {thumbnail_url}")
                 else:
                     # Fallback to default wallpaper
-                    self.set_style(f"background-image:url('{data.HOME_DIR}/.current.wall')")
+                    self.set_style(
+                        f"background-image:url('{data.HOME_DIR}/.current.wall')"
+                    )
             else:
                 # Fallback to default wallpaper when no artwork is available
                 self.set_style(f"background-image:url('{data.HOME_DIR}/.current.wall')")
@@ -222,7 +231,9 @@ class Player(Box):
             self.on_play(self._player)
 
         if player.props.shuffle == True:
-            self.shuffle_button.get_child().set_markup(icons.shuffle)  # Use same icon for now
+            self.shuffle_button.get_child().set_markup(
+                icons.shuffle
+            )  # Use same icon for now
             self.shuffle_button.get_child().set_name("disable-shuffle")
         else:
             self.shuffle_button.get_child().set_markup(icons.shuffle)
@@ -250,7 +261,9 @@ class Player(Box):
             self.shuffle_button.get_child().set_markup(icons.shuffle)
             self.shuffle_button.get_child().set_name("shuffle")
         else:
-            self.shuffle_button.get_child().set_markup(icons.shuffle)  # Use same icon for now
+            self.shuffle_button.get_child().set_markup(
+                icons.shuffle
+            )  # Use same icon for now
             self.shuffle_button.get_child().set_name("disable-shuffle")
 
         self.shuffle_button.get_child().set_style("color: white")
@@ -324,7 +337,11 @@ class PlayerContainer(Box):
         )
 
         # Check if we're in vertical mode
-        vertical_mode = data.DOCK_POSITION in ["Left", "Right"] if hasattr(data, 'DOCK_POSITION') else False
+        vertical_mode = (
+            data.DOCK_POSITION in ["Left", "Right"]
+            if hasattr(data, "DOCK_POSITION")
+            else False
+        )
 
         self.player_switch_container = CenterBox(
             name="player-switch-container",
@@ -347,7 +364,8 @@ class PlayerContainer(Box):
         new_player.gtk_wrapper.queue_draw()
         new_player.set_name(player.props.player_name)
         self.player.append(new_player)
-        self.player_objects[player.props.player_name] = player  # Store the player object
+        # Store the player object
+        self.player_objects[player.props.player_name] = player
         print("stacking player")
         self.stack.add_named(new_player, player.props.player_name)
 

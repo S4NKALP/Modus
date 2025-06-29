@@ -1,10 +1,6 @@
-"""
-Common notification utilities and shared functionality
-"""
 import json
 import locale
 import os
-import uuid
 from datetime import datetime, timedelta
 
 from fabric.utils.helpers import get_relative_path
@@ -31,7 +27,9 @@ _shared_notification_history = None
 class HistoricalNotification:
     """Data structure for historical notification data"""
 
-    def __init__(self, id, app_icon, summary, body, app_name, timestamp, cached_image_path=None):
+    def __init__(
+        self, id, app_icon, summary, body, app_name, timestamp, cached_image_path=None
+    ):
         self.id = id
         self.app_icon = app_icon
         self.summary = summary
@@ -51,12 +49,17 @@ def cache_notification_pixbuf(notification_box):
     if notification.image_pixbuf:
         os.makedirs(PERSISTENT_DIR, exist_ok=True)
         cache_file = os.path.join(
-            PERSISTENT_DIR, f"{NOTIFICATION_IMAGE_PREFIX}{notification_box.uuid}{NOTIFICATION_IMAGE_SUFFIX}"
+            PERSISTENT_DIR,
+            f"{NOTIFICATION_IMAGE_PREFIX}{notification_box.uuid}{
+                NOTIFICATION_IMAGE_SUFFIX
+            }",
         )
 
         try:
             scaled = notification.image_pixbuf.scale_simple(
-                DEFAULT_NOTIFICATION_IMAGE_SIZE, DEFAULT_NOTIFICATION_IMAGE_SIZE, GdkPixbuf.InterpType.BILINEAR
+                DEFAULT_NOTIFICATION_IMAGE_SIZE,
+                DEFAULT_NOTIFICATION_IMAGE_SIZE,
+                GdkPixbuf.InterpType.BILINEAR,
             )
             scaled.savev(cache_file, "png", [], [])
             return cache_file
@@ -84,23 +87,33 @@ def load_scaled_pixbuf(notification_box, width, height):
     ):
         try:
             logger.debug(
-                f"Attempting to load cached image from: {notification_box.cached_image_path} "
+                f"Attempting to load cached image from: {
+                    notification_box.cached_image_path
+                } "
                 f"for notification {notification.id}"
             )
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(notification_box.cached_image_path)
             if pixbuf:
-                pixbuf = pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+                pixbuf = pixbuf.scale_simple(
+                    width, height, GdkPixbuf.InterpType.BILINEAR
+                )
             return pixbuf
         except Exception as e:
             logger.error(
                 f"Error loading cached image from {notification_box.cached_image_path} "
                 f"for notification {notification.id}: {e}"
             )
-            logger.warning(f"Falling back to notification.image_pixbuf for notification {notification.id}")
+            logger.warning(
+                f"Falling back to notification.image_pixbuf for notification {
+                    notification.id
+                }"
+            )
 
     # Fall back to notification image_pixbuf
     if notification.image_pixbuf:
-        pixbuf = notification.image_pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+        pixbuf = notification.image_pixbuf.scale_simple(
+            width, height, GdkPixbuf.InterpType.BILINEAR
+        )
         return pixbuf
 
     # Fall back to app icon
@@ -130,8 +143,10 @@ def cleanup_orphan_cached_images(persistent_notifications):
         return
 
     cached_files = [
-        f for f in os.listdir(PERSISTENT_DIR)
-        if f.startswith(NOTIFICATION_IMAGE_PREFIX) and f.endswith(NOTIFICATION_IMAGE_SUFFIX)
+        f
+        for f in os.listdir(PERSISTENT_DIR)
+        if f.startswith(NOTIFICATION_IMAGE_PREFIX)
+        and f.endswith(NOTIFICATION_IMAGE_SUFFIX)
     ]
     if not cached_files:
         return
@@ -141,7 +156,9 @@ def cleanup_orphan_cached_images(persistent_notifications):
     }
     for cached_file in cached_files:
         try:
-            uuid_from_filename = cached_file[len(NOTIFICATION_IMAGE_PREFIX):-len(NOTIFICATION_IMAGE_SUFFIX)]
+            uuid_from_filename = cached_file[
+                len(NOTIFICATION_IMAGE_PREFIX) : -len(NOTIFICATION_IMAGE_SUFFIX)
+            ]
             if uuid_from_filename not in history_uuids:
                 cache_file_path = os.path.join(PERSISTENT_DIR, cached_file)
                 os.remove(cache_file_path)
@@ -256,7 +273,9 @@ def load_persistent_history():
         try:
             with open(PERSISTENT_HISTORY_FILE, "r") as f:
                 notifications = json.load(f)
-            logger.info(f"Loaded {len(notifications)} notifications from persistent history")
+            logger.info(
+                f"Loaded {len(notifications)} notifications from persistent history"
+            )
             return notifications
         except Exception as e:
             logger.error(f"Error loading persistent history: {e}")
@@ -363,13 +382,16 @@ class NotificationHistory(Box):
         try:
             original_count = len(self.persistent_notifications)
             self.persistent_notifications = [
-                notif for notif in self.persistent_notifications
+                notif
+                for notif in self.persistent_notifications
                 if notif.get("app_name") != app_name
             ]
             removed_count = original_count - len(self.persistent_notifications)
             if removed_count > 0:
                 self._save_persistent_history()
-                logger.info(f"Cleared {removed_count} notifications for app: {app_name}")
+                logger.info(
+                    f"Cleared {removed_count} notifications for app: {app_name}"
+                )
         except Exception as e:
             print(f"Error clearing history for app {app_name}: {e}")
 
