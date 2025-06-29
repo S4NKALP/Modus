@@ -1,4 +1,4 @@
-#music-player{
+#music-player {
   background-color: var(--surface);
   padding: 4px;
 }
@@ -12,8 +12,8 @@
   color: var(--surface-bright);
   border: 3px solid var(--primary);
 }
-#music-label{
-  font-size: 16x;
+#music-label {
+  font-size: 16px;
 }
 
 /*
