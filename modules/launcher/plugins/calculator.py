@@ -58,8 +58,8 @@ class CalculatorPlugin(PluginBase):
         self._cache_cleanup_interval = 300  # 5 minutes
 
     def initialize(self):
-        """Initialize the calculator plugin."""
-        self.set_triggers(["=", "calc"])
+        """Initialize the files plugin."""
+        self.set_triggers(["="])
 
     def _cleanup_cache(self):
         """Clean up old cache entries."""
@@ -95,7 +95,7 @@ class CalculatorPlugin(PluginBase):
                     self._conversion_cache[cache_key] = result
                     subtitle = f"{value} {from_unit} = {result:.6g} {to_unit}"
 
-
+    
 
                 return [
                     Result(
