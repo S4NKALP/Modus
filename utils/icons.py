@@ -21,7 +21,7 @@ ssfull: str = "&#xec3c;"
 ssregion: str = "&#xf201;"
 sswindow: str = "&#xeaea;"
 screenshots: str = "&#xeb0a;"
-screenrecord: str = "&#xed22;"
+screenrecord: str = "&#xf692;"
 recordings: str = "&#xeafa;"
 ocr: str = "&#xfcc3;"
 gamemode: str = "&#xf026;"
@@ -187,7 +187,6 @@ auth: str = "&#xeca0;"
 bookmark: str = "&#xea3a;"
 star: str = "&#xeb2e;"
 process: str = "&#xf292;"
-screentime: str = "&#xf1c0;"
 
 
 # otp

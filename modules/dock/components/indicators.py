@@ -177,26 +177,19 @@ class RecordingIndicator(Button):
     def __init__(self, **kwargs):
         super().__init__(name="button-bar-recording", **kwargs)
 
-        # Path to the screen-capture script
         self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
 
         self.recording_label = Label(name="recording-label", markup=icons.screenrecord)
         self.add(self.recording_label)
 
-        # Connect click to stop recording
         self.connect("clicked", self.on_stop_recording)
 
-        # Start with indicator hidden
         self.hide()
 
-        # Set up periodic checking for recording status
         self.check_recording_status()
-        self.timeout_id = GLib.timeout_add(
-            1000, self.check_recording_status
-        )  # Check every second
+        self.timeout_id = GLib.timeout_add(1000, self.check_recording_status)
 
     def check_recording_status(self):
-        """Check if recording is currently active and update visibility."""
         try:
             result = subprocess.run(
                 [self.script_path, "status"], capture_output=True, text=True, timeout=2
@@ -219,15 +212,12 @@ class RecordingIndicator(Button):
         return True  # Continue the timeout
 
     def on_stop_recording(self, *args):
-        """Stop the current recording."""
         try:
             subprocess.Popen([self.script_path, "record", "stop"])
-            # The indicator will hide automatically on next status check
         except Exception as e:
             print(f"Error stopping recording: {e}")
 
     def cleanup(self):
-        """Clean up the timeout when the indicator is destroyed."""
         if hasattr(self, "timeout_id"):
             GLib.source_remove(self.timeout_id)
 
@@ -241,14 +231,16 @@ class Indicators(Box):
             name="indicator",
             orientation="h" if not data.VERTICAL else "v",
             spacing=4,
-            children=[WifiIndicator(), BluetoothIndicator(), self.recording_indicator, 
-                      self.notifications
-                    ],
+            children=[
+                WifiIndicator(),
+                BluetoothIndicator(),
+                self.recording_indicator,
+                self.notifications,
+            ],
             **kwargs,
         )
         self.show_all()
 
     def cleanup(self):
-        """Clean up all indicators when the dock is destroyed."""
         if hasattr(self, "recording_indicator"):
             self.recording_indicator.cleanup()
