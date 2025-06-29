@@ -1,7 +1,7 @@
 #osd {
   background: var(--shadow);
   padding: 12px 20px;
-  margin-bottom: 60px;
+  margin: 70px;
 }
 
 #osd scale {

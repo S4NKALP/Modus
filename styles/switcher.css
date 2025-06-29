@@ -1,8 +1,4 @@
-/* #application-switcher {
-  background-color: var(--shadow);
-} */
-
-#application-switcher-container{
+#application-switcher-container {
   background: var(--shadow);
 }
 
