@@ -48,7 +48,6 @@ class ModusMemoryMonitor:
             'dock_controls': ['controls'],
             'dock_indicators': ['indicators'],
             'dock_metrics': ['metrics'],
-            'dock_music_player': ['music_player', 'music'],
             'dock_notifications': ['dock_notifications'],
             'dock_workspaces': ['workspaces'],
 

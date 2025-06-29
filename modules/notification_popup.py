@@ -1,121 +1,27 @@
-import json
-import os
 import uuid
-from datetime import datetime
 
 from fabric.notifications.service import Notification, NotificationAction, Notifications
-from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
-from gi.repository import GdkPixbuf, GLib, GObject, Gtk
+from gi.repository import GLib, Gtk
 from loguru import logger
 
 import config.data as data
 import utils.icons as icons
 from utils.custom_image import CustomImage
 from utils.wayland import WaylandWindow as Window
-
-PERSISTENT_DIR = f"/tmp/{data.APP_NAME}/notifications"
-PERSISTENT_HISTORY_FILE = os.path.join(PERSISTENT_DIR, "notification_history.json")
-CONFIG_FILE = get_relative_path("../config/assets/config.json")
-
-# Global shared notification history instance for DND state
-_shared_notification_history = None
-
-
-def get_shared_notification_history():
-    global _shared_notification_history
-    if _shared_notification_history is None:
-        _shared_notification_history = NotificationHistory()
-    return _shared_notification_history
-
-
-def cache_notification_pixbuf(notification_box):
-    notification = notification_box.notification
-    if notification.image_pixbuf:
-        os.makedirs(PERSISTENT_DIR, exist_ok=True)
-        cache_file = os.path.join(
-            PERSISTENT_DIR, f"notification_{notification_box.uuid}.png"
-        )
-
-        try:
-            scaled = notification.image_pixbuf.scale_simple(
-                48, 48, GdkPixbuf.InterpType.BILINEAR
-            )
-            scaled.savev(cache_file, "png", [], [])
-
-            return cache_file
-        except Exception as e:
-            logger.error(f"Error caching image for notification {notification.id}: {e}")
-            return None
-    else:
-        logger.debug(f"Notification {notification.id} has no image_pixbuf to cache.")
-        return None
-
-
-def load_scaled_pixbuf(notification_box, width, height):
-    notification = notification_box.notification
-    if not hasattr(notification_box, "notification") or notification is None:
-        return None
-
-    pixbuf = None
-    if (
-        hasattr(notification_box, "cached_image_path")
-        and notification_box.cached_image_path
-        and os.path.exists(notification_box.cached_image_path)
-    ):
-        try:
-            logger.debug(
-                f"Attempting to load cached image from: {
-                    notification_box.cached_image_path
-                } for notification {notification.id}"
-            )
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(notification_box.cached_image_path)
-            if pixbuf:
-                pixbuf = pixbuf.scale_simple(
-                    width, height, GdkPixbuf.InterpType.BILINEAR
-                )
-
-            return pixbuf
-        except Exception as e:
-            logger.error(
-                f"Error loading cached image from {
-                    notification_box.cached_image_path
-                } for notification {notification.id}: {e}"
-            )
-            logger.warning(
-                f"Falling back to notification.image_pixbuf for notification {
-                    notification.id
-                }"
-            )
-
-    if notification.image_pixbuf:
-        pixbuf = notification.image_pixbuf.scale_simple(
-            width, height, GdkPixbuf.InterpType.BILINEAR
-        )
-        return pixbuf
-
-    return get_app_icon_pixbuf(notification.app_icon, width, height)
-
-
-def get_app_icon_pixbuf(icon_path, width, height):
-    if not icon_path:
-        return None
-    if icon_path.startswith("file://"):
-        icon_path = icon_path[7:]
-    if not os.path.exists(icon_path):
-        logger.warning(f"Icon path does not exist: {icon_path}")
-        return None
-    try:
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(icon_path)
-        return pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
-    except Exception as e:
-        logger.error(f"Failed to load or scale icon: {e}")
-        return None
+from utils.notification_utils import (
+    LIMITED_APPS,
+    cache_notification_pixbuf,
+    load_scaled_pixbuf,
+    get_shared_notification_history,
+    NotificationHistory,
+    delete_cached_image
+)
 
 
 class ActionButton(Button):
@@ -394,16 +300,9 @@ class NotificationBox(Box):
         if (
             hasattr(self, "cached_image_path")
             and self.cached_image_path
-            and os.path.exists(self.cached_image_path)
             and (not self._is_history or from_history_delete)
         ):
-            try:
-                os.remove(self.cached_image_path)
-                logger.info(f"Deleted cached image: {self.cached_image_path}")
-            except Exception as e:
-                logger.error(
-                    f"Error deleting cached image {self.cached_image_path}: {e}"
-                )
+            delete_cached_image(self.cached_image_path)
         self._destroyed = True
         self.stop_timeout()
         super().destroy()
@@ -417,130 +316,7 @@ class NotificationBox(Box):
             self._container.resume_all_timeouts()
 
 
-class NotificationHistory(Box):
-    __gsignals__ = {
-        "dnd-state-changed": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
-        "notification-added": (GObject.SignalFlags.RUN_FIRST, None, ()),
-    }
-
-    def __init__(self, **kwargs):
-        super().__init__(name="notification-history", orientation="v", **kwargs)
-        self.do_not_disturb_enabled = False
-        self.persistent_notifications = []
-        self._load_persistent_history()
-        self._load_dnd_state()
-
-    def set_do_not_disturb_enabled(self, enabled):
-        if self.do_not_disturb_enabled != enabled:
-            self.do_not_disturb_enabled = enabled
-            self._save_dnd_state()
-            self.emit("dnd-state-changed", enabled)
-
-    def _load_persistent_history(self):
-        if not os.path.exists(PERSISTENT_DIR):
-            os.makedirs(PERSISTENT_DIR, exist_ok=True)
-
-        if os.path.exists(PERSISTENT_HISTORY_FILE):
-            try:
-                with open(PERSISTENT_HISTORY_FILE, "r") as f:
-                    self.persistent_notifications = json.load(f)
-                logger.info(
-                    f"Loaded {
-                        len(self.persistent_notifications)
-                    } notifications from persistent history"
-                )
-            except Exception as e:
-                logger.error(f"Error loading persistent history: {e}")
-                self.persistent_notifications = []
-        else:
-            self.persistent_notifications = []
-
-    def _load_dnd_state(self):
-        try:
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, "r") as f:
-                    config_data = json.load(f)
-                    self.do_not_disturb_enabled = config_data.get("dnd_enabled", False)
-                    logger.info(f"Loaded DND state: {self.do_not_disturb_enabled}")
-        except Exception as e:
-            logger.error(f"Error loading DND state: {e}")
-            self.do_not_disturb_enabled = False
-
-    def _save_dnd_state(self):
-        try:
-            config_data = {}
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, "r") as f:
-                    config_data = json.load(f)
-
-            config_data["dnd_enabled"] = self.do_not_disturb_enabled
-
-            with open(CONFIG_FILE, "w") as f:
-                json.dump(config_data, f, indent=4)
-            logger.debug(f"Saved DND state: {self.do_not_disturb_enabled}")
-        except Exception as e:
-            logger.error(f"Error saving DND state: {e}")
-
-    def _save_persistent_history(self):
-        try:
-            with open(PERSISTENT_HISTORY_FILE, "w") as f:
-                json.dump(self.persistent_notifications, f, indent=2)
-            logger.info(
-                f"Saved {
-                    len(self.persistent_notifications)
-                } notifications to persistent history"
-            )
-        except Exception as e:
-            logger.error(f"Error saving persistent history: {e}")
-
-    def add_notification(self, notification_box):
-        try:
-            notification = notification_box.notification
-
-            hist_data = {
-                "id": notification_box.uuid,
-                "app_icon": getattr(
-                    notification, "app_icon", "dialog-information-symbolic"
-                ),
-                "summary": getattr(notification, "summary", "No summary"),
-                "body": getattr(notification, "body", ""),
-                "app_name": getattr(notification, "app_name", "Unknown"),
-                "timestamp": datetime.now().isoformat(),
-                "cached_image_path": getattr(
-                    notification_box, "cached_image_path", None
-                ),
-            }
-            self.persistent_notifications.append(hist_data)
-            if len(self.persistent_notifications) > 100:
-                old_notif = self.persistent_notifications.pop(0)
-
-            self._save_persistent_history()
-
-            self.emit("notification-added")
-
-        except Exception as e:
-            logger.error(f"Error adding notification to history: {e}")
-
-    def clear_history_for_app(self, app_name):
-        try:
-            original_count = len(self.persistent_notifications)
-            self.persistent_notifications = [
-                notif
-                for notif in self.persistent_notifications
-                if notif.get("app_name") != app_name
-            ]
-            removed_count = original_count - len(self.persistent_notifications)
-            if removed_count > 0:
-                self._save_persistent_history()
-                logger.info(
-                    f"Cleared {removed_count} notifications for app: {app_name}"
-                )
-        except Exception as e:
-            logger.error(f"Error clearing history for app {app_name}: {e}")
-
-
 class NotificationContainer(Box):
-    LIMITED_APPS = ["Spotify"]
 
     def __init__(
         self,
@@ -641,7 +417,7 @@ class NotificationContainer(Box):
         notification.connect("closed", self.on_notification_closed)
 
         app_name = notification.app_name
-        if app_name in self.LIMITED_APPS:
+        if app_name in LIMITED_APPS:
             notification_history_instance.clear_history_for_app(app_name)
 
             existing_notification_index = -1

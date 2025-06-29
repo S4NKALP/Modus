@@ -22,7 +22,6 @@ INSTALL_DIR="$HOME/.config/Modus"
 
 PACKAGES=(
 	fabric-cli-git
-	cava
 	cliphist
 	gnome-bluetooth-3.0
 	gobject-introspection

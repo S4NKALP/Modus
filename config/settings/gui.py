@@ -40,14 +40,14 @@ class HyprConfGUI(Window):
         root_box = Box(orientation="v", spacing=10, style="margin: 10px;")
         self.add(root_box)
 
-        main_content_box = Box(orientation="h", spacing=6, v_expand=True, h_expand=True)
+        main_content_box = Box(orientation="h", spacing=6, v_expand=False, h_expand=False)
         root_box.add(main_content_box)
 
         self.tab_stack = Stack(
             transition_type="slide-up-down",
             transition_duration=250,
-            v_expand=True,
-            h_expand=True,
+            v_expand=False,
+            h_expand=False,
         )
 
         self.key_bindings_tab_content = self.create_key_bindings_tab()
@@ -79,15 +79,24 @@ class HyprConfGUI(Window):
         button_box.add(accept_btn)
         root_box.add(button_box)
 
+        # Force window size after all content is added
+        self.connect("realize", self._force_window_size)
+
+    def _force_window_size(self, widget):
+        """Force the window to respect the declared size"""
+        self.resize(640, 640)
+        self.set_size_request(640, 640)
+
     def create_key_bindings_tab(self):
         scrolled_window = ScrolledWindow(
             h_scrollbar_policy="never",
             v_scrollbar_policy="automatic",
-            h_expand=True,
-            v_expand=True,
-            propagate_width=False,
-            propagate_height=False,
+            h_expand=False,
+            v_expand=False,
+            propagate_width=True,
+            propagate_height=True,
         )
+        scrolled_window.set_size_request(620, 580)  # Set explicit size for content area
 
         main_vbox = Box(orientation="v", spacing=10, style="margin: 15px;")
         scrolled_window.add(main_vbox)
@@ -516,7 +525,6 @@ class HyprConfGUI(Window):
             "indicators": "Indicators",
             "applications": "Taskbar",
             "language": "Language Indicator",
-            "music_player": "Music Player",
         }
 
         self.corners_switch = Gtk.Switch(active=bind_vars.get("corners_visible", True))

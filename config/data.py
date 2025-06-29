@@ -83,7 +83,6 @@ if os.path.exists(CONFIG_FILE):
         "notifications": config.get("dock_notifications_visible", True),
         "systray": config.get("dock_tray_visible", True),
         "applications": config.get("dock_applications_visible", True),
-        "music_player": config.get("dock_music_player_visible", True),
         "language": config.get("dock_language_visible", True),
     }
 
@@ -116,7 +115,6 @@ else:
         "notifications": True,
         "systray": True,
         "applications": True,
-        "music_player": True,
         "language": True,
     }
 

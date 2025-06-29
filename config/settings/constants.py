@@ -61,7 +61,6 @@ DEFAULTS = {
     "workspace_nums": False,
     "workspace_use_chinese_numerals": False,
     "workspace_dots": False,
-    "dock_music_player": True,
     "window_switcher_items_per_row": 13,
     "metrics_visible": {
         "cpu": True,

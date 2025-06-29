@@ -1,9 +1,7 @@
 import json
-import locale
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -13,13 +11,22 @@ from gi.repository import GLib, Gtk, Gdk
 
 import config.data as data
 import utils.icons as icons
-from modules.notification_popup import NotificationBox, load_scaled_pixbuf, get_shared_notification_history
+from modules.notification_popup import NotificationBox
 from utils.custom_image import CustomImage
 from utils.wayland import WaylandWindow as Window
-
-PERSISTENT_DIR = f"/tmp/{data.APP_NAME}/notifications"
-PERSISTENT_HISTORY_FILE = os.path.join(PERSISTENT_DIR, "notification_history.json")
-CONFIG_FILE = get_relative_path("../../../config/assets/config.json")
+from utils.notification_utils import (
+    PERSISTENT_DIR,
+    PERSISTENT_HISTORY_FILE,
+    CONFIG_FILE,
+    load_scaled_pixbuf,
+    get_shared_notification_history,
+    cleanup_orphan_cached_images,
+    get_date_header,
+    schedule_midnight_update,
+    compute_time_label,
+    create_historical_notification_from_data,
+    save_persistent_history
+)
 
 
 class NotificationIndicator(Button):
@@ -80,20 +87,7 @@ class NotificationIndicator(Button):
             self.set_tooltip_text("Notifications")
 
 
-class HistoricalNotification(object):
-    def __init__(
-        self, id, app_icon, summary, body, app_name, timestamp, cached_image_path=None
-    ):
-        self.id = id
-        self.app_icon = app_icon
-        self.summary = summary
-        self.body = body
-        self.app_name = app_name
-        self.timestamp = timestamp
-        self.cached_image_path = cached_image_path
-        self.image_pixbuf = None
-        self.actions = []
-        self.cached_scaled_pixbuf = None
+
 
 
 class NotificationHistory(Box):
@@ -172,7 +166,7 @@ class NotificationHistory(Box):
         self.add(self.history_header)
         self.add(self.scrolled_window)
         self._load_persistent_history()
-        self._cleanup_orphan_cached_images()
+        cleanup_orphan_cached_images(self.persistent_notifications)
         self.schedule_midnight_update()
 
 
@@ -236,45 +230,8 @@ class NotificationHistory(Box):
         except Exception as e:
             print(f"Could not sync DND state: {e}")
 
-    def get_ordinal(self, n):
-        if 11 <= (n % 100) <= 13:
-            return "th"
-        else:
-            return {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-
-    def get_date_header(self, dt):
-        now = datetime.now()
-        today = now.date()
-        date = dt.date()
-        if date == today:
-            return "Today"
-        elif date == today - timedelta(days=1):
-            return "Yesterday"
-        else:
-            original_locale = locale.getlocale(locale.LC_TIME)
-            try:
-                locale.setlocale(locale.LC_TIME, ("en_US", "UTF-8"))
-            except locale.Error:
-                locale.setlocale(locale.LC_TIME, "C")
-            try:
-                day = dt.day
-                ordinal = self.get_ordinal(day)
-                month = dt.strftime("%B")
-                if dt.year == now.year:
-                    result = f"{month} {day}{ordinal}"
-                else:
-                    result = f"{month} {day}{ordinal}, {dt.year}"
-            finally:
-                locale.setlocale(locale.LC_TIME, original_locale)
-            return result
-
     def schedule_midnight_update(self):
-        now = datetime.now()
-        next_midnight = datetime.combine(
-            now.date() + timedelta(days=1), datetime.min.time()
-        )
-        delta_seconds = (next_midnight - now).total_seconds()
-        GLib.timeout_add_seconds(int(delta_seconds), self.on_midnight)
+        schedule_midnight_update(self.on_midnight)
 
     def on_midnight(self):
         self.rebuild_with_separators()
@@ -308,7 +265,7 @@ class NotificationHistory(Box):
             self.containers, key=lambda x: x.arrival_time, reverse=True
         ):
             arrival_time = container.arrival_time
-            date_header = self.get_date_header(arrival_time)
+            date_header = get_date_header(arrival_time)
             if date_header != current_date_header:
                 sep = self.create_date_separator(date_header)
                 self.notifications_list.add(sep)
@@ -385,62 +342,17 @@ class NotificationHistory(Box):
         GLib.idle_add(self.update_no_notifications_label_visibility)
 
     def _save_persistent_history(self):
-        try:
-            with open(PERSISTENT_HISTORY_FILE, "w") as f:
-                json.dump(self.persistent_notifications, f)
-        except Exception as e:
-            print(f"Error saving persistent history: {e}")
+        save_persistent_history(self.persistent_notifications)
 
     def update_no_notifications_label_visibility(self):
         has_notifications = bool(self.containers)
         self.no_notifications_box.set_visible(not has_notifications)
         self.notifications_list.set_visible(has_notifications)
 
-    def _cleanup_orphan_cached_images(self):
-
-        if not os.path.exists(PERSISTENT_DIR):
-
-            return
-
-        cached_files = [
-            f
-            for f in os.listdir(PERSISTENT_DIR)
-            if f.startswith("notification_") and f.endswith(".png")
-        ]
-        if not cached_files:
-
-            return
-
-        history_uuids = {
-            note.get("id") for note in self.persistent_notifications if note.get("id")
-        }
-        deleted_count = 0
-        for cached_file in cached_files:
-            try:
-                uuid_from_filename = cached_file[len("notification_") : -len(".png")]
-                if uuid_from_filename not in history_uuids:
-                    cache_file_path = os.path.join(PERSISTENT_DIR, cached_file)
-                    os.remove(cache_file_path)
-
-                    deleted_count += 1
-
-            except Exception as e:
-                print(
-                    f"Error processing cached file {cached_file} during cleanup: {e}"
-                )
-
 
 
     def _add_historical_notification(self, note):
-        hist_notif = HistoricalNotification(
-            id=note.get("id"),
-            app_icon=note.get("app_icon"),
-            summary=note.get("summary"),
-            body=note.get("body"),
-            app_name=note.get("app_name"),
-            timestamp=note.get("timestamp"),
-            cached_image_path=note.get("cached_image_path"),
-        )
+        hist_notif = create_historical_notification_from_data(note)
 
         hist_box = NotificationBox(hist_notif, timeout_ms=0)
         hist_box.uuid = hist_notif.id
@@ -461,9 +373,6 @@ class NotificationHistory(Box):
         except Exception:
             arrival = datetime.now()
         container.arrival_time = arrival
-
-        def compute_time_label(arrival_time):
-            return arrival_time.strftime("%H:%M")
 
         self.hist_time_label = Label(
             name="notification-timestamp",

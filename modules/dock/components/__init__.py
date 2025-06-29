@@ -18,7 +18,6 @@ from .battery import Battery
 from .controls import Controls
 from .indicators import Indicators
 from .metrics import Metrics
-from .music_player import MusicPlayer
 from .workspaces import workspace
 
 import gi
@@ -111,7 +110,6 @@ class DockComponents(Box):
         )
         self.controls = Controls()
         self.indicators = Indicators()
-        self.music_player = MusicPlayer()
         self.systray = SystemTray(
             icon_size=18,
             spacing=4,
@@ -127,7 +125,6 @@ class DockComponents(Box):
             self.applications,
             self.indicators,
             self.battery,
-            self.music_player,
             self.date_time,
             self.language,
             self.systray,
@@ -158,7 +155,6 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
             "language": self.language,
@@ -174,11 +170,6 @@ class DockComponents(Box):
                         widget._update_visibility_based_on_content()
                     else:
                         widget.set_visible(visibility)
-                # Special handling for music player - let it manage its own visibility based on media state
-                elif component_name == "music_player":
-                    # Music player manages its own visibility based on config and media state
-                    # Don't override its visibility here, let it handle it internally
-                    pass
                 # Special handling for battery - let it manage its own visibility based on config and battery state
                 elif component_name == "battery":
                     # Battery component manages its own visibility based on config and battery presence
@@ -195,7 +186,6 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
             "language": self.language,
@@ -206,17 +196,9 @@ class DockComponents(Box):
                 component_name
             ]
 
-            # Special handling for music player - update the global config and let it handle its own visibility
-            if component_name == "music_player":
-                # Update the global config data
-                import config.data as data
-                data.DOCK_COMPONENTS_VISIBILITY[component_name] = self.component_visibility[component_name]
-                # Let the music player update its own visibility based on the new config
-                components[component_name]._update_display()
-            else:
-                components[component_name].set_visible(
-                    self.component_visibility[component_name]
-                )
+            components[component_name].set_visible(
+                self.component_visibility[component_name]
+            )
 
             config_file = get_relative_path("../../../config/assets/config.json")
             if os.path.exists(config_file):
