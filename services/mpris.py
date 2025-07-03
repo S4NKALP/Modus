@@ -45,6 +45,14 @@ class PlayerService(Service):
         )
         self.poll_progress()
 
+    def cleanup(self):
+        """Clean up resources when service is no longer needed"""
+        try:
+            if hasattr(self, 'pos_fabricator') and self.pos_fabricator:
+                self.pos_fabricator.stop()
+        except Exception as e:
+            print(f"[DEBUG] Error during PlayerService cleanup: {e}")
+
     def on_seeked(self, player, position):
         if self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
             self.pos_fabricator.start()
@@ -66,12 +74,39 @@ class PlayerService(Service):
             self.pos_fabricator.stop()
 
     def fabricating(self):
-        pos = self._player.get_position() / 1_000_000  # seconds
-        # seconds
-        dur = self._player.props.metadata["mpris:length"] / 1_000_000
-        # print(self._player.get_position())
-        # print(f"[progress] {pos:.2f}s / {dur:.2f}s")
-        self.track_position(pos, dur)
+        try:
+            # Validate player object
+            if not self._player or not hasattr(self._player, 'get_position'):
+                return
+
+            # Get position safely
+            try:
+                pos = self._player.get_position() / 1_000_000  # seconds
+            except Exception as e:
+                print(f"[DEBUG] Error getting player position: {e}")
+                return
+
+            # Get duration safely from metadata
+            try:
+                if (hasattr(self._player, 'props') and
+                    hasattr(self._player.props, 'metadata') and
+                    self._player.props.metadata and
+                    "mpris:length" in self._player.props.metadata):
+
+                    dur = self._player.props.metadata["mpris:length"] / 1_000_000  # seconds
+                else:
+                    # No duration available, skip this update
+                    return
+            except Exception as e:
+                print(f"[DEBUG] Error getting track duration: {e}")
+                return
+
+            # Validate values before emitting signal
+            if pos is not None and dur is not None and dur > 0:
+                self.track_position(pos, dur)
+
+        except Exception as e:
+            print(f"[DEBUG] Error in fabricating: {e}")
 
     def on_play(self, player, status):
         print("player is playing: {}".format(player.props.player_name))

@@ -1,10 +1,12 @@
+import time
+
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-from gi.repository import Gdk
+from gi.repository import Gdk, GLib, Playerctl
 
 import config.data as data
 import utils.icons as icons
@@ -113,6 +115,10 @@ class MusicPlayer(Box):
         self.position = 0.0
         self._current_track_info = "Music Player"
 
+        # Debouncing for player switching to prevent rapid changes
+        self._last_player_switch = 0
+        self._switch_debounce_time = 1.0  # 1 second minimum between switches
+
         # Create circular progress bar
         self.progress_bar = CircularProgressBar(
             name="player-circle",
@@ -153,8 +159,6 @@ class MusicPlayer(Box):
         self.update_visibility()
 
         # Set up periodic check for active player
-        from gi.repository import GLib
-
         self.active_player_check_timeout = GLib.timeout_add_seconds(
             2, self.check_active_player
         )
@@ -164,13 +168,29 @@ class MusicPlayer(Box):
 
     def on_destroy(self, widget):
         """Clean up popup when component is destroyed"""
-        if hasattr(self, "active_player_check_timeout"):
-            from gi.repository import GLib
+        try:
+            # Remove timeout
+            if hasattr(self, "active_player_check_timeout"):
+                GLib.source_remove(self.active_player_check_timeout)
 
-            GLib.source_remove(self.active_player_check_timeout)
-        if self.popup:
-            self.popup.destroy()
-            self.popup = None
+            # Clean up current player service
+            if hasattr(self, 'current_player_service') and self.current_player_service:
+                try:
+                    if hasattr(self.current_player_service, 'cleanup'):
+                        self.current_player_service.cleanup()
+                except Exception as e:
+                    print(f"[DEBUG] Error cleaning up player service on destroy: {e}")
+
+            # Clean up popup
+            if hasattr(self, 'popup') and self.popup:
+                try:
+                    self.popup.destroy()
+                    self.popup = None
+                except Exception as e:
+                    print(f"[DEBUG] Error destroying popup: {e}")
+
+        except Exception as e:
+            print(f"[DEBUG] Error in on_destroy: {e}")
 
     def on_new_player(self, manager, player):
         """Handle new player detection"""
@@ -209,8 +229,6 @@ class MusicPlayer(Box):
             ):
                 for player_name in self.manager._manager.props.player_names:
                     try:
-                        from gi.repository import Playerctl
-
                         candidate_player = Playerctl.Player.new_from_name(player_name)
 
                         # Check if this player has media content
@@ -245,29 +263,49 @@ class MusicPlayer(Box):
     def get_playing_player(self):
         """Find a currently playing player from the manager"""
         try:
-            if hasattr(self.manager, "_manager") and hasattr(
-                self.manager._manager, "props"
-            ):
-                for player_name in self.manager._manager.props.player_names:
-                    try:
-                        from gi.repository import Playerctl
+            if not hasattr(self.manager, "_manager") or not hasattr(self.manager._manager, "props"):
+                return None
 
-                        player = Playerctl.Player.new_from_name(player_name)
-                        if (
-                            hasattr(player, "props")
-                            and hasattr(player.props, "playback_status")
-                            and player.props.playback_status.value_name
-                            == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"
-                        ):
-                            print(
-                                f"[DEBUG] Found playing player: {
-                                    player.props.player_name
-                                }"
-                            )
-                            return player
-                    except Exception as e:
-                        print(f"[DEBUG] Error checking player {player_name}: {e}")
+            player_names = self.manager._manager.props.player_names
+            if not player_names:
+                return None
+
+            for player_name in player_names:
+                try:
+                    # Validate player_name before creating player
+                    if not player_name or not hasattr(player_name, 'name'):
                         continue
+
+                    player = Playerctl.Player.new_from_name(player_name)
+
+                    # Comprehensive validation of player object
+                    if not player:
+                        continue
+
+                    if not hasattr(player, "props"):
+                        continue
+
+                    if not hasattr(player.props, "playback_status"):
+                        continue
+
+                    if not hasattr(player.props, "player_name"):
+                        continue
+
+                    # Check if player is actually playing
+                    try:
+                        status = player.props.playback_status
+                        if status and hasattr(status, 'value_name'):
+                            if status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
+                                print(f"[DEBUG] Found playing player: {player.props.player_name}")
+                                return player
+                    except Exception as e:
+                        print(f"[DEBUG] Error checking playback status for {player_name}: {e}")
+                        continue
+
+                except Exception as e:
+                    print(f"[DEBUG] Error checking player {player_name}: {e}")
+                    continue
+
         except Exception as e:
             print(f"[DEBUG] Error in get_playing_player: {e}")
         return None
@@ -275,51 +313,61 @@ class MusicPlayer(Box):
     def check_active_player(self):
         """Periodically check for the currently playing player and switch if needed"""
         try:
+            current_time = time.time()
+
+            # Debounce player switching to prevent rapid changes
+            if current_time - self._last_player_switch < self._switch_debounce_time:
+                return True
+
             # Find the currently playing player
             playing_player = self.get_playing_player()
 
             if playing_player:
                 # If we found a playing player and it's different from current, switch to it
-                if (
-                    not self.current_player
-                    or self.current_player.props.player_name
-                    != playing_player.props.player_name
-                ):
-                    print(
-                        f"[DEBUG] Switching to playing player: {
-                            playing_player.props.player_name
-                        }"
-                    )
-                    self.set_current_player(playing_player)
-            elif self.current_player:
-                # If no player is playing, check if current player is paused
-                if (
-                    self.current_player.props.playback_status.value_name
-                    != "PLAYERCTL_PLAYBACK_STATUS_PLAYING"
-                ):
-                    # Current player is paused, see if there's another player available
-                    if hasattr(self.manager, "_manager") and hasattr(
-                        self.manager._manager, "props"
-                    ):
-                        for player_name in self.manager._manager.props.player_names:
-                            try:
-                                from gi.repository import Playerctl
+                should_switch = False
 
-                                player = Playerctl.Player.new_from_name(player_name)
-                                if (
-                                    player.props.player_name
-                                    != self.current_player.props.player_name
-                                ):
-                                    # Switch to a different available player
-                                    print(
-                                        f"[DEBUG] Switching to available player: {
-                                            player.props.player_name
-                                        }"
-                                    )
-                                    self.set_current_player(player)
-                                    break
-                            except:
-                                continue
+                if not self.current_player:
+                    should_switch = True
+                else:
+                    try:
+                        # Safely compare player names
+                        if (hasattr(self.current_player, 'props') and
+                            hasattr(self.current_player.props, 'player_name') and
+                            hasattr(playing_player, 'props') and
+                            hasattr(playing_player.props, 'player_name')):
+
+                            if self.current_player.props.player_name != playing_player.props.player_name:
+                                should_switch = True
+                        else:
+                            # If we can't safely compare, assume we should switch
+                            should_switch = True
+                    except Exception as e:
+                        print(f"[DEBUG] Error comparing players: {e}")
+                        should_switch = True
+
+                if should_switch:
+                    print(f"[DEBUG] Switching to playing player: {playing_player.props.player_name}")
+                    self.set_current_player(playing_player)
+                    self._last_player_switch = current_time
+
+            elif self.current_player:
+                # If no player is playing, check if current player is still valid and paused
+                try:
+                    if (hasattr(self.current_player, 'props') and
+                        hasattr(self.current_player.props, 'playback_status') and
+                        hasattr(self.current_player.props.playback_status, 'value_name')):
+
+                        if self.current_player.props.playback_status.value_name != "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
+                            # Current player is paused, see if there's another player available
+                            self._try_switch_to_alternative_player(current_time)
+                    else:
+                        # Current player is invalid, try to find another
+                        self._try_switch_to_alternative_player(current_time)
+
+                except Exception as e:
+                    print(f"[DEBUG] Error checking current player status: {e}")
+                    # Current player seems invalid, try to find another
+                    self._try_switch_to_alternative_player(current_time)
 
             # Update visibility based on current state
             self.update_visibility()
@@ -330,63 +378,184 @@ class MusicPlayer(Box):
         # Return True to continue the timeout
         return True
 
+    def _try_switch_to_alternative_player(self, current_time):
+        """Try to switch to an alternative player when current is paused/invalid"""
+        try:
+            if not hasattr(self.manager, "_manager") or not hasattr(self.manager._manager, "props"):
+                return
+
+            player_names = self.manager._manager.props.player_names
+            if not player_names:
+                return
+
+            for player_name in player_names:
+                try:
+                    # Validate player_name
+                    if not player_name or not hasattr(player_name, 'name'):
+                        continue
+
+                    player = Playerctl.Player.new_from_name(player_name)
+
+                    # Validate player object
+                    if not player or not hasattr(player, 'props') or not hasattr(player.props, 'player_name'):
+                        continue
+
+                    # Skip if this is the same as current player
+                    if (self.current_player and
+                        hasattr(self.current_player, 'props') and
+                        hasattr(self.current_player.props, 'player_name') and
+                        player.props.player_name == self.current_player.props.player_name):
+                        continue
+
+                    # Switch to a different available player
+                    print(f"[DEBUG] Switching to available player: {player.props.player_name}")
+                    self.set_current_player(player)
+                    self._last_player_switch = current_time
+                    break
+
+                except Exception as e:
+                    print(f"[DEBUG] Error checking alternative player {player_name}: {e}")
+                    continue
+
+        except Exception as e:
+            print(f"[DEBUG] Error in _try_switch_to_alternative_player: {e}")
+
     def set_current_player(self, player):
         """Set the current active player"""
-        print(f"[DEBUG] Setting current player to: {player.props.player_name}")
+        try:
+            # Validate player before proceeding
+            if not player or not hasattr(player, 'props') or not hasattr(player.props, 'player_name'):
+                print("[DEBUG] Invalid player object, skipping")
+                return
 
-        # Disconnect from previous player
-        if self.current_player_service:
+            print(f"[DEBUG] Setting current player to: {player.props.player_name}")
+
+            # Properly cleanup previous player service
+            if self.current_player_service:
+                try:
+                    # Use the cleanup method if available
+                    if hasattr(self.current_player_service, 'cleanup'):
+                        self.current_player_service.cleanup()
+                    else:
+                        # Fallback: Stop any running fabricators/timers manually
+                        if hasattr(self.current_player_service, 'pos_fabricator'):
+                            self.current_player_service.pos_fabricator.stop()
+
+                    # Disconnect signals with specific error handling
+                    try:
+                        self.current_player_service.disconnect_by_func(self.on_track_position)
+                    except (TypeError, AttributeError) as e:
+                        print(f"[DEBUG] Error disconnecting track_position: {e}")
+
+                    try:
+                        self.current_player_service.disconnect_by_func(self.on_play)
+                    except (TypeError, AttributeError) as e:
+                        print(f"[DEBUG] Error disconnecting play: {e}")
+
+                    try:
+                        self.current_player_service.disconnect_by_func(self.on_pause)
+                    except (TypeError, AttributeError) as e:
+                        print(f"[DEBUG] Error disconnecting pause: {e}")
+
+                    try:
+                        self.current_player_service.disconnect_by_func(self.on_metadata)
+                    except (TypeError, AttributeError) as e:
+                        print(f"[DEBUG] Error disconnecting metadata: {e}")
+
+                except Exception as e:
+                    print(f"[DEBUG] Error during player service cleanup: {e}")
+
+            self.current_player = player
+
+            # Create new player service with error handling
             try:
-                self.current_player_service.disconnect_by_func(self.on_track_position)
-                self.current_player_service.disconnect_by_func(self.on_play)
-                self.current_player_service.disconnect_by_func(self.on_pause)
-                self.current_player_service.disconnect_by_func(self.on_metadata)
-            except:
-                pass
+                self.current_player_service = PlayerService(player=player)
+            except Exception as e:
+                print(f"[DEBUG] Error creating PlayerService: {e}")
+                self.current_player_service = None
+                return
 
-        self.current_player = player
-        self.current_player_service = PlayerService(player=player)
+            # Connect to player events with error handling
+            if self.current_player_service:
+                try:
+                    self.current_player_service.connect("track-position", self.on_track_position)
+                    self.current_player_service.connect("play", self.on_play)
+                    self.current_player_service.connect("pause", self.on_pause)
+                    self.current_player_service.connect("meta-change", self.on_metadata)
+                except Exception as e:
+                    print(f"[DEBUG] Error connecting to player service signals: {e}")
 
-        # Connect to player events
-        self.current_player_service.connect("track-position", self.on_track_position)
-        self.current_player_service.connect("play", self.on_play)
-        self.current_player_service.connect("pause", self.on_pause)
-        self.current_player_service.connect("meta-change", self.on_metadata)
+            # Always use generic music icon, not player-specific icons
+            self.music_label.set_markup(icons.music)
 
-        # Always use generic music icon, not player-specific icons
-        self.music_label.set_markup(icons.music)
+            # Update initial state
+            self.update_playback_state()
 
-        # Update initial state
-        self.update_playback_state()
+        except Exception as e:
+            print(f"[DEBUG] Critical error in set_current_player: {e}")
+            # Reset to safe state
+            self.current_player = None
+            self.current_player_service = None
 
     def on_track_position(self, service, pos, dur):
         """Handle track position updates"""
-        self.position = pos
-        self.duration = dur
+        try:
+            # Validate input parameters
+            if pos is None or dur is None:
+                return
 
-        if dur > 0:
-            progress = pos / dur
-            # Use value property instead of set_percentage for CircularProgressBar
-            self.progress_bar.value = progress
+            # Ensure pos and dur are numeric
+            try:
+                pos = float(pos)
+                dur = float(dur)
+            except (ValueError, TypeError):
+                print(f"[DEBUG] Invalid position/duration values: pos={pos}, dur={dur}")
+                return
 
-            # Update tooltip with timestamp info
-            pos_min = int(pos // 60)
-            pos_sec = int(pos % 60)
-            dur_min = int(dur // 60)
-            dur_sec = int(dur % 60)
-            timestamp_text = (
-                f"{pos_min:02d}:{pos_sec:02d} / {dur_min:02d}:{dur_sec:02d}"
-            )
+            # Validate ranges
+            if pos < 0 or dur < 0:
+                return
 
-            # Get current track info if available
-            if hasattr(self, "_current_track_info"):
-                tooltip = f"{self._current_track_info}\n{timestamp_text}"
+            self.position = pos
+            self.duration = dur
+
+            if dur > 0:
+                progress = min(pos / dur, 1.0)  # Ensure progress doesn't exceed 1.0
+
+                # Safely update progress bar
+                try:
+                    self.progress_bar.value = progress
+                except Exception as e:
+                    print(f"[DEBUG] Error updating progress bar: {e}")
+
+                # Update tooltip with timestamp info
+                try:
+                    pos_min = int(pos // 60)
+                    pos_sec = int(pos % 60)
+                    dur_min = int(dur // 60)
+                    dur_sec = int(dur % 60)
+                    timestamp_text = (
+                        f"{pos_min:02d}:{pos_sec:02d} / {dur_min:02d}:{dur_sec:02d}"
+                    )
+
+                    # Get current track info if available
+                    if hasattr(self, "_current_track_info") and self._current_track_info:
+                        tooltip = f"{self._current_track_info}\n{timestamp_text}"
+                    else:
+                        tooltip = f"Music Player\n{timestamp_text}"
+
+                    self.event_box.set_tooltip_text(tooltip)
+                except Exception as e:
+                    print(f"[DEBUG] Error updating tooltip: {e}")
             else:
-                tooltip = f"Music Player\n{timestamp_text}"
-            self.event_box.set_tooltip_text(tooltip)
-        else:
-            self.progress_bar.value = 0
-            self.event_box.set_tooltip_text("Music Player")
+                try:
+                    self.progress_bar.value = 0
+                    self.event_box.set_tooltip_text("Music Player")
+                except Exception as e:
+                    print(f"[DEBUG] Error resetting progress bar: {e}")
+
+        except Exception as e:
+            print(f"[DEBUG] Error in on_track_position: {e}")
 
     def on_play(self, service):
         """Handle play state"""
@@ -500,19 +669,28 @@ class MusicPlayer(Box):
     def has_running_players(self):
         """Check if there are any players that actually have media content running"""
         try:
-            if hasattr(self.manager, "_manager") and hasattr(
-                self.manager._manager, "props"
-            ):
-                for player_name in self.manager._manager.props.player_names:
-                    try:
-                        from gi.repository import Playerctl
+            if not hasattr(self.manager, "_manager") or not hasattr(self.manager._manager, "props"):
+                return False
 
-                        player = Playerctl.Player.new_from_name(player_name)
+            player_names = self.manager._manager.props.player_names
+            if not player_names:
+                return False
 
-                        # Check if player has metadata indicating actual media content
-                        if hasattr(player, "props") and hasattr(
-                            player.props, "metadata"
-                        ):
+            for player_name in player_names:
+                try:
+                    # Validate player_name before creating player
+                    if not player_name or not hasattr(player_name, 'name'):
+                        continue
+
+                    player = Playerctl.Player.new_from_name(player_name)
+
+                    # Validate player object
+                    if not player or not hasattr(player, "props"):
+                        continue
+
+                    # Check if player has metadata indicating actual media content
+                    if hasattr(player.props, "metadata"):
+                        try:
                             metadata = player.props.metadata
                             if metadata and len(metadata.keys()) > 0:
                                 # Check for essential metadata that indicates real media
@@ -522,30 +700,26 @@ class MusicPlayer(Box):
                                     or "xesam:artist" in keys
                                     or "mpris:length" in keys
                                 ):
-                                    print(
-                                        f"[DEBUG] Found player with media content: {
-                                            player.props.player_name
-                                        }"
-                                    )
+                                    print(f"[DEBUG] Found player with media content: {player.props.player_name}")
                                     return True
+                        except Exception as e:
+                            print(f"[DEBUG] Error checking metadata for {player_name}: {e}")
 
-                        # Also check if player is currently playing (even without full metadata)
-                        if (
-                            hasattr(player, "props")
-                            and hasattr(player.props, "playback_status")
-                            and player.props.playback_status.value_name
-                            == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"
-                        ):
-                            print(
-                                f"[DEBUG] Found playing player: {
-                                    player.props.player_name
-                                }"
-                            )
-                            return True
+                    # Also check if player is currently playing (even without full metadata)
+                    if hasattr(player.props, "playback_status"):
+                        try:
+                            status = player.props.playback_status
+                            if (status and hasattr(status, 'value_name') and
+                                status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
+                                print(f"[DEBUG] Found playing player: {player.props.player_name}")
+                                return True
+                        except Exception as e:
+                            print(f"[DEBUG] Error checking playback status for {player_name}: {e}")
 
-                    except Exception as e:
-                        print(f"[DEBUG] Error checking player {player_name}: {e}")
-                        continue
+                except Exception as e:
+                    print(f"[DEBUG] Error checking player {player_name}: {e}")
+                    continue
+
         except Exception as e:
             print(f"[DEBUG] Error in has_running_players: {e}")
 

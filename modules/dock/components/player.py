@@ -1,3 +1,5 @@
+import re
+
 from fabric.core.service import Signal
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -204,8 +206,6 @@ class Player(Box):
                 self.set_style(f"background-image:url('{metadata['mpris:artUrl']}')")
             elif "xesam:url" in keys and "youtube.com" in metadata["xesam:url"]:
                 # Simple YouTube thumbnail extraction for Firefox
-                import re
-
                 url = metadata["xesam:url"]
                 match = re.search(r"(?:v=|/)([a-zA-Z0-9_-]{11})", url)
                 if match:
