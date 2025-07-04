@@ -72,7 +72,7 @@ class KanbanEditor(Gtk.Box):
     def _setup_text_view(self, initial_text: str):
         """Setup the text view component."""
         self.text_view = Gtk.TextView()
-        self.text_view.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.text_view.connect("key-press-event", self._on_key_press)
 
         buffer = self.text_view.get_buffer()
@@ -335,9 +335,7 @@ class KanbanColumn(Gtk.Frame):
 
         # Scrolled window for notes
         self.scroller = ScrolledWindow(
-            name="scrolled-window",
-            propagate_height=False,
-            propagate_width=False
+            name="scrolled-window", propagate_height=False, propagate_width=False
         )
         self.scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.scroller.add(self.listbox)
@@ -501,6 +499,7 @@ class KanbanBoard(Gtk.Box):
 
         # Hidden entry for launcher Enter key handling
         from fabric.widgets.entry import Entry
+
         self.hidden_entry = Entry(name="kanban-hidden-entry")
         self.hidden_entry.set_size_request(1, 1)
         self.hidden_entry.set_opacity(0.0)
@@ -552,8 +551,7 @@ class KanbanBoard(Gtk.Box):
         """Save kanban state to file."""
         state = {
             "columns": [
-                {"title": col.title, "notes": col.get_notes()}
-                for col in self.columns
+                {"title": col.title, "notes": col.get_notes()} for col in self.columns
             ]
         }
         try:
@@ -577,11 +575,7 @@ class KanbanBoard(Gtk.Box):
 
         # Ctrl+1, Ctrl+2, Ctrl+3 - add note to specific column
         if event.state & Gdk.ModifierType.CONTROL_MASK:
-            column_shortcuts = {
-                Gdk.KEY_1: 0,
-                Gdk.KEY_2: 1,
-                Gdk.KEY_3: 2
-            }
+            column_shortcuts = {Gdk.KEY_1: 0, Gdk.KEY_2: 1, Gdk.KEY_3: 2}
             if keyval in column_shortcuts:
                 column_idx = column_shortcuts[keyval]
                 if column_idx < len(self.columns):
@@ -666,7 +660,9 @@ class KanbanBoard(Gtk.Box):
         done_notes = self.columns[2].get_notes()
         return not any(search_text in note.lower() for note in done_notes)
 
-    def _move_note_to_next_column(self, current_column: KanbanColumn, note_text: str, col_idx: int) -> bool:
+    def _move_note_to_next_column(
+        self, current_column: KanbanColumn, note_text: str, col_idx: int
+    ) -> bool:
         """Move a note to the next column in sequence."""
         # Determine next column
         if col_idx == 0:  # To Do -> In Progress
@@ -681,7 +677,9 @@ class KanbanBoard(Gtk.Box):
         self.columns[next_col_idx].add_note(note_text)
         return True
 
-    def _move_note_to_done_column(self, current_column: KanbanColumn, note_text: str) -> bool:
+    def _move_note_to_done_column(
+        self, current_column: KanbanColumn, note_text: str
+    ) -> bool:
         """Move a note directly to the Done column."""
         self._remove_note_from_column(current_column, note_text)
         self.columns[2].add_note(note_text)  # Done column
@@ -711,8 +709,10 @@ class KanbanBoard(Gtk.Box):
         for row in column.listbox.get_children():
             if row.get_children():
                 note_widget = row.get_children()[0]
-                if (isinstance(note_widget, KanbanNote) and
-                    note_widget.label.get_text() == note_text):
+                if (
+                    isinstance(note_widget, KanbanNote)
+                    and note_widget.label.get_text() == note_text
+                ):
                     row.destroy()
                     break
 
@@ -754,11 +754,14 @@ class KanbanPlugin(PluginBase):
         """Setup hooks to monitor launcher state."""
         try:
             import gc
+
             # Find the launcher instance using garbage collection
             for obj in gc.get_objects():
-                if (hasattr(obj, "__class__") and
-                    obj.__class__.__name__ == "Launcher" and
-                    hasattr(obj, "close_launcher")):
+                if (
+                    hasattr(obj, "__class__")
+                    and obj.__class__.__name__ == "Launcher"
+                    and hasattr(obj, "close_launcher")
+                ):
                     self._launcher_instance = obj
                     break
         except Exception as e:
@@ -770,12 +773,14 @@ class KanbanPlugin(PluginBase):
 
     def _reset_to_trigger(self):
         """Reset launcher to trigger word and refresh."""
-        if not (self._launcher_instance and
-                hasattr(self._launcher_instance, "search_entry")):
+        if not (
+            self._launcher_instance and hasattr(self._launcher_instance, "search_entry")
+        ):
             return
 
         trigger = "kanban "
         try:
+
             def reset_and_refresh():
                 self._launcher_instance.search_entry.set_text(trigger)
                 self._launcher_instance.search_entry.set_position(-1)
@@ -793,7 +798,9 @@ class KanbanPlugin(PluginBase):
         except ImportError:
             self._reset_to_trigger()
 
-    def _find_todo_in_columns(self, search_text: str) -> Tuple[Optional[int], Optional[str]]:
+    def _find_todo_in_columns(
+        self, search_text: str
+    ) -> Tuple[Optional[int], Optional[str]]:
         """Find a todo by partial text match across all columns."""
         if not self._current_widget:
             return None, None
@@ -818,7 +825,7 @@ class KanbanPlugin(PluginBase):
         # Determine next column
         state_transitions = {
             0: (1, "In Progress"),  # To Do -> In Progress
-            1: (2, "Done"),         # In Progress -> Done
+            1: (2, "Done"),  # In Progress -> Done
         }
 
         if col_idx not in state_transitions:
@@ -897,7 +904,9 @@ class KanbanPlugin(PluginBase):
         """Get existing widget or create a new one."""
         if not self._current_widget:
             self._current_widget = KanbanBoard()
-            self._current_widget.connect("todo-added", lambda _: self._delayed_reset_for_add())
+            self._current_widget.connect(
+                "todo-added", lambda _: self._delayed_reset_for_add()
+            )
         return self._current_widget
 
     def _process_command(self, widget: KanbanBoard, query: str):
