@@ -436,11 +436,67 @@ class Applications(Box):
             self.update_pinned_apps_file()
             self.update_applications()
 
+    def create_context_menu(self, widget, event):
+        """Create and show context menu for application"""
+        menu = Gtk.Menu()
+
+        app_identifier = widget.app_identifier
+        instances = widget.instances
+        is_pinned = self.is_app_pinned(app_identifier)
+
+        # Send to workspace submenu
+        workspace_menu = Gtk.Menu()
+        workspace_item = Gtk.MenuItem(label="Send to workspace")
+        workspace_item.set_submenu(workspace_menu)
+
+        # Get available workspaces (1-10)
+        for i in range(1, 11):
+            workspace_menu_item = Gtk.MenuItem(label=f"Workspace {i}")
+            workspace_menu_item.connect("activate", lambda item, ws=i: self.send_to_workspace(instances, ws))
+            workspace_menu.append(workspace_menu_item)
+
+        menu.append(workspace_item)
+
+        # Pin/Unpin app
+        pin_label = "Unpin app" if is_pinned else "Pin app"
+        pin_item = Gtk.MenuItem(label=pin_label)
+        pin_item.connect("activate", lambda item: self.toggle_pin_app(app_identifier))
+        menu.append(pin_item)
+
+        # Close app (only if instances exist)
+        if instances:
+            close_item = Gtk.MenuItem(label="Close app")
+            close_item.connect("activate", lambda item: self.close_app(instances))
+            menu.append(close_item)
+
+            # Float window
+            float_item = Gtk.MenuItem(label="Float window")
+            float_item.connect("activate", lambda item: self.float_window(instances))
+            menu.append(float_item)
+
+            # Fullscreen
+            fullscreen_item = Gtk.MenuItem(label="Fullscreen")
+            fullscreen_item.connect("activate", lambda item: self.fullscreen_window(instances))
+            menu.append(fullscreen_item)
+
+        menu.show_all()
+
+        # Attach menu to widget for proper positioning
+        menu.attach_to_widget(widget, None)
+
+        # Use popup_at_pointer for reliable positioning near the widget
+        try:
+            # Modern GTK approach - popup at the event location
+            menu.popup_at_pointer(event)
+        except AttributeError:
+            # Fallback for older GTK versions
+            menu.popup(None, None, None, None, event.button, event.time)
+
+        return True
+
     def on_button_press(self, widget, event):
         if event.button == 3:  # Right mouse button
-            app_identifier = widget.app_identifier
-            self.update_pinned_apps(app_identifier)
-            return True
+            return self.create_context_menu(widget, event)
         return False
 
     def on_drag_begin(self, widget, drag_context):
@@ -561,3 +617,77 @@ class Applications(Box):
             ).get("address", "")
         except json.JSONDecodeError:
             return ""
+
+    def is_app_pinned(self, app_identifier):
+        """Check if an app is pinned"""
+        for pinned_app in self.pinned:
+            if (
+                isinstance(app_identifier, dict)
+                and isinstance(pinned_app, dict)
+                and app_identifier.get("name") == pinned_app.get("name")
+            ):
+                return True
+            elif app_identifier == pinned_app:
+                return True
+        return False
+
+    def toggle_pin_app(self, app_identifier):
+        """Toggle pin state of an app"""
+        if self.is_app_pinned(app_identifier):
+            self.unpin_app(app_identifier)
+        else:
+            self.update_pinned_apps(app_identifier)
+
+    def unpin_app(self, app_identifier):
+        """Remove app from pinned apps"""
+        for i, pinned_app in enumerate(self.pinned):
+            if (
+                isinstance(app_identifier, dict)
+                and isinstance(pinned_app, dict)
+                and app_identifier.get("name") == pinned_app.get("name")
+            ):
+                self.pinned.pop(i)
+                break
+            elif app_identifier == pinned_app:
+                self.pinned.pop(i)
+                break
+
+        self.config["pinned_apps"] = self.pinned
+        self.update_pinned_apps_file()
+        self.update_applications()
+
+    def send_to_workspace(self, instances, workspace):
+        """Send window(s) to specified workspace"""
+        if not instances:
+            return
+
+        # Send the first instance (focused window) to the workspace
+        address = instances[0]["address"]
+        exec_shell_command_async(f"hyprctl dispatch movetoworkspace {workspace},address:{address}")
+
+    def close_app(self, instances):
+        """Close all instances of the app"""
+        if not instances:
+            return
+
+        for instance in instances:
+            address = instance["address"]
+            exec_shell_command_async(f"hyprctl dispatch closewindow address:{address}")
+
+    def float_window(self, instances):
+        """Toggle float state of the window"""
+        if not instances:
+            return
+
+        # Toggle float for the first instance
+        address = instances[0]["address"]
+        exec_shell_command_async(f"hyprctl dispatch togglefloating address:{address}")
+
+    def fullscreen_window(self, instances):
+        """Toggle fullscreen state of the window"""
+        if not instances:
+            return
+
+        # Toggle fullscreen for the first instance
+        address = instances[0]["address"]
+        exec_shell_command_async(f"hyprctl dispatch fullscreen address:{address}")
