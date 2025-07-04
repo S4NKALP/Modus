@@ -152,11 +152,11 @@ class MusicPlayer(Box):
         # Popup window will be created on-demand
         self.popup = None
 
-        # Initialize players
-        self.manager.init_all_players()
+        # Initialize players with delayed visibility check
+        GLib.timeout_add(500, self._delayed_init)
 
-        # Set initial visibility
-        self.update_visibility()
+        # Hide initially - will show only when media players are detected
+        self.hide()
 
         # Set up periodic check for active player
         self.active_player_check_timeout = GLib.timeout_add_seconds(
@@ -377,6 +377,15 @@ class MusicPlayer(Box):
 
         # Return True to continue the timeout
         return True
+
+    def _delayed_init(self):
+        """Initialize players after a delay to prevent showing during dock startup"""
+        try:
+            self.manager.init_all_players()
+            self.update_visibility()
+        except Exception as e:
+            print(f"[DEBUG] Error in delayed music player init: {e}")
+        return False  # Don't repeat this timeout
 
     def _try_switch_to_alternative_player(self, current_time):
         """Try to switch to an alternative player when current is paused/invalid"""
@@ -727,12 +736,13 @@ class MusicPlayer(Box):
 
     def update_visibility(self):
         """Update component visibility based on players with actual media content"""
-        # Show component only if there are players with actual media content
-        has_media_players = self.has_running_players()
-        self.set_visible(has_media_players)
-
-        # Hide in vertical mode if user preference is set
-        if data.VERTICAL and hasattr(data, "DOCK_COMPONENTS_VISIBILITY"):
+        # Check if music player is enabled in configuration
+        if hasattr(data, "DOCK_COMPONENTS_VISIBILITY"):
             music_visible = data.DOCK_COMPONENTS_VISIBILITY.get("music_player", True)
             if not music_visible:
                 self.set_visible(False)
+                return
+
+        # Show component only if there are players with actual media content
+        has_media_players = self.has_running_players()
+        self.set_visible(has_media_players)

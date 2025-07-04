@@ -183,6 +183,11 @@ class DockComponents(Box):
                     # Battery component manages its own visibility based on config and battery presence
                     # Don't override its visibility here, let it handle it internally
                     pass
+                # Special handling for music player - let it manage its own visibility based on media content
+                elif component_name == "music_player":
+                    # Music player component manages its own visibility based on config and media presence
+                    # Don't override its visibility here, let it handle it internally
+                    pass
                 else:
                     widget.set_visible(visibility)
 

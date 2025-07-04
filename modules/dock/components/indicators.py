@@ -195,8 +195,8 @@ class RecordingIndicator(Button):
 
         self.hide()
 
-        self.check_recording_status()
-        self.timeout_id = GLib.timeout_add(1000, self.check_recording_status)
+        # Delay initial check to prevent showing during dock initialization
+        GLib.timeout_add(1000, self._delayed_init)
 
     def check_recording_status(self):
         try:
@@ -249,6 +249,15 @@ class RecordingIndicator(Button):
             subprocess.Popen([self.script_path, "record", "stop"])
         except Exception as e:
             print(f"Error stopping recording: {e}")
+
+    def _delayed_init(self):
+        """Initialize recording status check after a delay to prevent showing during dock startup"""
+        try:
+            self.check_recording_status()
+            self.timeout_id = GLib.timeout_add(1000, self.check_recording_status)
+        except Exception as e:
+            print(f"[DEBUG] Error in delayed recording indicator init: {e}")
+        return False  # Don't repeat this timeout
 
     def cleanup(self):
         if hasattr(self, "timeout_id"):
