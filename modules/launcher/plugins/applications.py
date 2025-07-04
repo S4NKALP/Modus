@@ -15,22 +15,13 @@ class ApplicationsPlugin(PluginBase):
         super().__init__()
         self.display_name = "Applications"
         self.description = "Search and launch desktop applications"
-        self.applications = []
 
     def initialize(self):
         # Set up triggers for applications - both with and without spaces
         self.set_triggers(["app"])
-        self._load_applications()
 
     def cleanup(self):
-        self.applications = []
-
-    def _load_applications(self):
-        try:
-            self.applications = get_desktop_applications(include_hidden=False)
-        except Exception as e:
-            print(f"Failed to load applications: {e}")
-            self.applications = []
+        pass
 
     def _pin_application(self, app):
         """Pin an application to the dock."""
@@ -82,10 +73,17 @@ class ApplicationsPlugin(PluginBase):
         if not query_string.strip():
             return []
 
+        # Get fresh applications list each time (like examples/app-launcher)
+        try:
+            applications = get_desktop_applications(include_hidden=False)
+        except Exception as e:
+            print(f"Failed to load applications: {e}")
+            applications = []
+
         query = query_string.lower().strip()
         results = []
 
-        for app in self.applications:
+        for app in applications:
             relevance = self._calculate_relevance(app, query)
             if relevance > 0:
                 # Truncate description to prevent overflow beyond 550px window

@@ -1266,6 +1266,5 @@ class Launcher(Window):
                 if not is_trigger_suggestion and not keep_launcher_open:
                     self.close_launcher()
                 # For trigger suggestions and keep_launcher_open actions, the launcher stays open
-
             except Exception as e:
                 print(f"Error activating result: {e}")
