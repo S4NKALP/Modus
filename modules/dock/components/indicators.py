@@ -1,4 +1,5 @@
 import subprocess
+import time
 
 from fabric.bluetooth import BluetoothClient
 from fabric.utils import get_relative_path
@@ -178,9 +179,17 @@ class RecordingIndicator(Button):
         super().__init__(name="button-bar-recording", **kwargs)
 
         self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
+        self.recording_start_time = None
 
         self.recording_label = Label(name="recording-label", markup=icons.screenrecord)
-        self.add(self.recording_label)
+        self.time_label = Label(name="recording-time-label", markup="00:00")
+
+        self.recording_box = Box(
+            orientation="h",
+            spacing=4,
+            children=[self.recording_label, self.time_label]
+        )
+        self.add(self.recording_box)
 
         self.connect("clicked", self.on_stop_recording)
 
@@ -199,17 +208,41 @@ class RecordingIndicator(Button):
             if is_recording:
                 if not self.get_visible():
                     self.show()
-                self.set_tooltip_text("Recording in progress - Click to stop")
+
+                # Get the recording start time if we don't have it
+                if self.recording_start_time is None:
+                    self.recording_start_time = self.get_recording_start_time()
+
+                # Update the recording time display
+                if self.recording_start_time:
+                    elapsed_seconds = int(time.time() - self.recording_start_time)
+                    minutes = elapsed_seconds // 60
+                    seconds = elapsed_seconds % 60
+                    time_text = f"{minutes:02d}:{seconds:02d}"
+                    self.time_label.set_markup(time_text)
+                    self.set_tooltip_text(f"Recording in progress ({time_text}) - Click to stop")
+                else:
+                    self.set_tooltip_text("Recording in progress - Click to stop")
             else:
                 if self.get_visible():
                     self.hide()
+                    self.recording_start_time = None
 
         except Exception:
             # If we can't check status, hide the indicator
             if self.get_visible():
                 self.hide()
+                self.recording_start_time = None
 
         return True  # Continue the timeout
+
+    def get_recording_start_time(self):
+        """Get the recording start time from the file"""
+        try:
+            with open("/tmp/recording_start_time.txt", "r") as f:
+                return float(f.read().strip())
+        except Exception:
+            return None
 
     def on_stop_recording(self, *args):
         try:
@@ -234,8 +267,8 @@ class Indicators(Box):
             children=[
                 WifiIndicator(),
                 BluetoothIndicator(),
-                self.recording_indicator,
                 self.notifications,
+                self.recording_indicator,
             ],
             **kwargs,
         )

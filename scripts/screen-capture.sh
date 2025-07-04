@@ -111,6 +111,8 @@ wf-recorder_check() {
 		else
 			notify-send "Recording stopped" "wf-recorder process terminated"
 		fi
+		# Clean up recording start time file
+		rm -f /tmp/recording_start_time.txt
 		exit 0
 	fi
 }
@@ -267,16 +269,19 @@ case "$COMMAND" in
 	"selection")
 		wf-recorder_check
 		echo "$VID" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		record_video "$VID" -g "$(slurp)"
 		;;
 	"eDP-1")
 		wf-recorder_check
 		echo "$VID" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		record_video "$VID" -a -o eDP-1
 		;;
 	"HDMI-A-1")
 		wf-recorder_check
 		echo "$VID" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		record_video "$VID" -a -o HDMI-A-1
 		;;
 	*)
@@ -294,16 +299,19 @@ case "$COMMAND" in
 	"selection")
 		wf-recorder_check
 		echo "$VID" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		record_video_noaudio "$VID" -g "$(slurp)"
 		;;
 	"eDP-1")
 		wf-recorder_check
 		echo "$VID" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		record_video_noaudio "$VID" -o eDP-1
 		;;
 	"HDMI-A-1")
 		wf-recorder_check
 		echo "$VID" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		record_video_noaudio "$VID" -o HDMI-A-1
 		;;
 	*)
@@ -324,18 +332,21 @@ case "$COMMAND" in
 	"selection")
 		wf-recorder_check
 		echo "$VID_HQ" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		notify-send "High Quality Recording" "Starting YouTube-quality recording..."
 		record_high_quality "$VID_HQ" -g "$(slurp)"
 		;;
 	"eDP-1")
 		wf-recorder_check
 		echo "$VID_HQ" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		notify-send "High Quality Recording" "Starting YouTube-quality recording on eDP-1..."
 		record_high_quality "$VID_HQ" -a -o eDP-1
 		;;
 	"HDMI-A-1")
 		wf-recorder_check
 		echo "$VID_HQ" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		notify-send "High Quality Recording" "Starting YouTube-quality recording on HDMI-A-1..."
 		record_high_quality "$VID_HQ" -a -o HDMI-A-1
 		;;
@@ -357,18 +368,21 @@ case "$COMMAND" in
 	"selection")
 		wf-recorder_check
 		echo "$GIF" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		notify-send "GIF Recording" "Starting GIF recording (15 FPS)..."
 		record_gif "$GIF" -g "$(slurp)"
 		;;
 	"eDP-1")
 		wf-recorder_check
 		echo "$GIF" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		notify-send "GIF Recording" "Starting GIF recording on eDP-1..."
 		record_gif "$GIF" -o eDP-1
 		;;
 	"HDMI-A-1")
 		wf-recorder_check
 		echo "$GIF" >/tmp/recording.txt
+		date +%s >/tmp/recording_start_time.txt
 		notify-send "GIF Recording" "Starting GIF recording on HDMI-A-1..."
 		record_gif "$GIF" -o HDMI-A-1
 		;;
