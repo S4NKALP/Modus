@@ -114,13 +114,19 @@ class NotificationBox(Box):
         self._is_history = False
 
     def set_is_history(self, is_history):
+        # Ensure the object is properly initialized
+        if not hasattr(self, '_is_history'):
+            self._is_history = False
         self._is_history = is_history
 
     def set_container(self, container):
+        # Ensure the object is properly initialized
+        if not hasattr(self, '_container'):
+            self._container = None
         self._container = container
 
     def get_container(self):
-        return self._container
+        return getattr(self, '_container', None)
 
     def create_header(self):
         notification = self.notification
@@ -262,23 +268,30 @@ class NotificationBox(Box):
         return self.close_button
 
     def on_hover_enter(self, *args):
-        if self._container:
-            self._container.pause_and_reset_all_timeouts()
+        container = getattr(self, '_container', None)
+        if container:
+            container.pause_and_reset_all_timeouts()
 
     def on_hover_leave(self, *args):
-        if self._container:
-            self._container.resume_all_timeouts()
+        container = getattr(self, '_container', None)
+        if container:
+            container.resume_all_timeouts()
 
     def start_timeout(self):
         self.stop_timeout()
         self._timeout_id = GLib.timeout_add(self.timeout_ms, self.close_notification)
 
     def stop_timeout(self):
-        if self._timeout_id is not None:
+        if hasattr(self, '_timeout_id') and self._timeout_id is not None:
             GLib.source_remove(self._timeout_id)
             self._timeout_id = None
 
     def close_notification(self):
+        # Safety check: ensure _destroyed attribute exists
+        if not hasattr(self, '_destroyed'):
+            logger.warning(f"NotificationBox {getattr(self, 'uuid', 'unknown')} missing _destroyed attribute, skipping close")
+            return False
+
         if not self._destroyed:
             try:
                 logger.debug(
@@ -300,20 +313,29 @@ class NotificationBox(Box):
         if (
             hasattr(self, "cached_image_path")
             and self.cached_image_path
-            and (not self._is_history or from_history_delete)
+            and (not getattr(self, '_is_history', False) or from_history_delete)
         ):
             delete_cached_image(self.cached_image_path)
-        self._destroyed = True
+
+        # Ensure _destroyed attribute exists before setting it
+        if hasattr(self, '_destroyed'):
+            self._destroyed = True
+        else:
+            # If _destroyed doesn't exist, create it
+            self._destroyed = True
+
         self.stop_timeout()
         super().destroy()
 
     def hover_button(self, button):
-        if self._container:
-            self._container.pause_and_reset_all_timeouts()
+        container = getattr(self, '_container', None)
+        if container:
+            container.pause_and_reset_all_timeouts()
 
     def unhover_button(self, button):
-        if self._container:
-            self._container.resume_all_timeouts()
+        container = getattr(self, '_container', None)
+        if container:
+            container.resume_all_timeouts()
 
 
 class NotificationContainer(Box):
