@@ -21,7 +21,9 @@ REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
 PACKAGES=(
+	python-fabric-git
 	fabric-cli-git
+	gray-git
 	cliphist
 	gnome-bluetooth-3.0
 	gobject-introspection
