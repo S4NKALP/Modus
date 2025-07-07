@@ -58,7 +58,7 @@ DEFAULTS = {
     "dock_notifications_visible": True,
     "dock_applications_visible": True,
     "dock_language_visible": True,
-    'dock_hide_special_workspace': True,
+    "dock_hide_special_workspace": True,
     "workspace_nums": False,
     "workspace_use_chinese_numerals": False,
     "workspace_dots": False,
@@ -71,4 +71,6 @@ DEFAULTS = {
         "gpu": False,
     },
     "metrics_disks": ["/"],
+    "limited_apps_history": ["Spotify"],
+    "history_ignored_apps": ["Modus"],
 }

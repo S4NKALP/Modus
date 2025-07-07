@@ -662,6 +662,63 @@ class HyprConfGUI(Window):
             )
             system_grid.attach(note_label, 2, row, 2, 1)
 
+        # Notifications app lists section
+        notifications_header = Label(
+            markup="<b>Notification Settings</b>", h_align="start"
+        )
+        vbox.add(notifications_header)
+
+        notif_grid = Gtk.Grid()
+        notif_grid.set_column_spacing(20)
+        notif_grid.set_row_spacing(10)
+        notif_grid.set_margin_start(10)
+        notif_grid.set_margin_top(5)
+        notif_grid.set_margin_bottom(15)
+        vbox.add(notif_grid)
+
+        # Limited Apps History
+        limited_apps_label = Label(
+            label="Limited Apps History:", h_align="start", v_align="center"
+        )
+        notif_grid.attach(limited_apps_label, 0, 0, 1, 1)
+
+        limited_apps_list = bind_vars.get("limited_apps_history", ["Spotify"])
+        limited_apps_text = ", ".join(f'"{app}"' for app in limited_apps_list)
+        self.limited_apps_entry = Entry(
+            text=limited_apps_text,
+            tooltip_text='Enter app names separated by commas, e.g: "Spotify", "Discord"',
+            h_expand=True,
+        )
+        notif_grid.attach(self.limited_apps_entry, 1, 0, 1, 1)
+
+        limited_apps_hint = Label(
+            markup='<small>Apps with limited notification history (format: "App1", "App2")</small>',
+            h_align="start",
+        )
+        notif_grid.attach(limited_apps_hint, 0, 1, 2, 1)
+
+        # History Ignored Apps
+        ignored_apps_label = Label(
+            label="History Ignored Apps:", h_align="start", v_align="center"
+        )
+        notif_grid.attach(ignored_apps_label, 0, 2, 1, 1)
+
+        ignored_apps_list = bind_vars.get("history_ignored_apps", ["Modus"])
+        ignored_apps_text = ", ".join(f'"{app}"' for app in ignored_apps_list)
+        self.ignored_apps_entry = Entry(
+            text=ignored_apps_text,
+            tooltip_text='Enter app names separated by commas, e.g: "Modus", "Screenshot"',
+            h_expand=True,
+        )
+        notif_grid.attach(self.ignored_apps_entry, 1, 2, 1, 1)
+
+        ignored_apps_hint = Label(
+            markup='<small>Apps whose notifications are ignored in history (format: "App1", "App2")</small>',
+            h_align="start",
+        )
+        notif_grid.attach(ignored_apps_hint, 0, 3, 2, 1)
+
+
         metrics_header = Label(markup="<b>System Metrics Options</b>", h_align="start")
         vbox.add(metrics_header)
         metrics_grid = Gtk.Grid(
@@ -771,18 +828,6 @@ class HyprConfGUI(Window):
         repo_box.add(repo_link)
         vbox.add(repo_box)
 
-        # def on_kofi_clicked(_):
-        #     import webbrowser
-
-        #     webbrowser.open("https://github.com/S4NKALP")
-
-        # kofi_btn = Button(
-        #     label="Support on Ko-Fi ❤️",
-        #     on_clicked=on_kofi_clicked,
-        #     tooltip_text="Support S4NKALP on Ko-Fi",
-        #     style="margin-top: 18px; min-width: 160px;",
-        # )
-        # vbox.add(kofi_btn)
         vbox.add(Box(v_expand=True))
         return vbox
 
@@ -918,6 +963,29 @@ class HyprConfGUI(Window):
             and child.get_children()
             and isinstance(child.get_children()[0], Entry)
         ]
+
+        # Parse notification app lists
+        def parse_app_list(text):
+            """Parse comma-separated app names with quotes"""
+            if not text.strip():
+                return []
+            apps = []
+            for app in text.split(","):
+                app = app.strip()
+                if app.startswith('"') and app.endswith('"'):
+                    app = app[1:-1]
+                elif app.startswith("'") and app.endswith("'"):
+                    app = app[1:-1]
+                if app:
+                    apps.append(app)
+            return apps
+
+        current_bind_vars_snapshot["limited_apps_history"] = parse_app_list(
+            self.limited_apps_entry.get_text()
+        )
+        current_bind_vars_snapshot["history_ignored_apps"] = parse_app_list(
+            self.ignored_apps_entry.get_text()
+        )
 
         selected_icon_path = self.selected_face_icon
         replace_lock = self.lock_switch and self.lock_switch.get_active()
@@ -1187,6 +1255,15 @@ class HyprConfGUI(Window):
 
             for p in DEFAULTS.get("metrics_disks", ["/"]):
                 self._add_disk_edit_entry_func(p)
+
+            # Reset notification app lists
+            limited_apps_list = DEFAULTS.get("limited_apps_history", ["Spotify"])
+            limited_apps_text = ", ".join(f'"{app}"' for app in limited_apps_list)
+            self.limited_apps_entry.set_text(limited_apps_text)
+
+            ignored_apps_list = DEFAULTS.get("history_ignored_apps", ["Hyprshot"])
+            ignored_apps_text = ", ".join(f'"{app}"' for app in ignored_apps_list)
+            self.ignored_apps_entry.set_text(ignored_apps_text)
 
             self._update_panel_position_sensitivity()
 

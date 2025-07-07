@@ -41,12 +41,11 @@ DOCK_THEME = "Pills"
 
 def load_config():
     """Load the configuration from config.json"""
-    config_path = os.path.expanduser(f"~/{APP_NAME_CAP}/config/assets/config.json")
     config = {}
 
-    if os.path.exists(config_path):
+    if os.path.exists(CONFIG_FILE):
         try:
-            with open(config_path, "r") as f:
+            with open(CONFIG_FILE, "r") as f:
                 config = json.load(f)
         except Exception as e:
             print(f"Error loading config: {e}")

@@ -15,13 +15,22 @@ import utils.icons as icons
 from utils.custom_image import CustomImage
 from utils.wayland import WaylandWindow as Window
 from utils.notification_utils import (
-    LIMITED_APPS,
     cache_notification_pixbuf,
     load_scaled_pixbuf,
     get_shared_notification_history,
     NotificationHistory,
-    delete_cached_image
+    delete_cached_image,
 )
+
+
+def get_limited_apps_history():
+    config = data.load_config()
+    return config.get("limited_apps_history", ["Spotify"])
+
+
+def get_history_ignored_apps():
+    config = data.load_config()
+    return config.get("history_ignored_apps", ["Modus"])
 
 
 class ActionButton(Button):
@@ -115,18 +124,18 @@ class NotificationBox(Box):
 
     def set_is_history(self, is_history):
         # Ensure the object is properly initialized
-        if not hasattr(self, '_is_history'):
+        if not hasattr(self, "_is_history"):
             self._is_history = False
         self._is_history = is_history
 
     def set_container(self, container):
         # Ensure the object is properly initialized
-        if not hasattr(self, '_container'):
+        if not hasattr(self, "_container"):
             self._container = None
         self._container = container
 
     def get_container(self):
-        return getattr(self, '_container', None)
+        return getattr(self, "_container", None)
 
     def create_header(self):
         notification = self.notification
@@ -268,12 +277,12 @@ class NotificationBox(Box):
         return self.close_button
 
     def on_hover_enter(self, *args):
-        container = getattr(self, '_container', None)
+        container = getattr(self, "_container", None)
         if container:
             container.pause_and_reset_all_timeouts()
 
     def on_hover_leave(self, *args):
-        container = getattr(self, '_container', None)
+        container = getattr(self, "_container", None)
         if container:
             container.resume_all_timeouts()
 
@@ -282,14 +291,18 @@ class NotificationBox(Box):
         self._timeout_id = GLib.timeout_add(self.timeout_ms, self.close_notification)
 
     def stop_timeout(self):
-        if hasattr(self, '_timeout_id') and self._timeout_id is not None:
+        if hasattr(self, "_timeout_id") and self._timeout_id is not None:
             GLib.source_remove(self._timeout_id)
             self._timeout_id = None
 
     def close_notification(self):
         # Safety check: ensure _destroyed attribute exists
-        if not hasattr(self, '_destroyed'):
-            logger.warning(f"NotificationBox {getattr(self, 'uuid', 'unknown')} missing _destroyed attribute, skipping close")
+        if not hasattr(self, "_destroyed"):
+            logger.warning(
+                f"NotificationBox {
+                    getattr(self, 'uuid', 'unknown')
+                } missing _destroyed attribute, skipping close"
+            )
             return False
 
         if not self._destroyed:
@@ -313,12 +326,12 @@ class NotificationBox(Box):
         if (
             hasattr(self, "cached_image_path")
             and self.cached_image_path
-            and (not getattr(self, '_is_history', False) or from_history_delete)
+            and (not getattr(self, "_is_history", False) or from_history_delete)
         ):
             delete_cached_image(self.cached_image_path)
 
         # Ensure _destroyed attribute exists before setting it
-        if hasattr(self, '_destroyed'):
+        if hasattr(self, "_destroyed"):
             self._destroyed = True
         else:
             # If _destroyed doesn't exist, create it
@@ -328,18 +341,17 @@ class NotificationBox(Box):
         super().destroy()
 
     def hover_button(self, button):
-        container = getattr(self, '_container', None)
+        container = getattr(self, "_container", None)
         if container:
             container.pause_and_reset_all_timeouts()
 
     def unhover_button(self, button):
-        container = getattr(self, '_container', None)
+        container = getattr(self, "_container", None)
         if container:
             container.resume_all_timeouts()
 
 
 class NotificationContainer(Box):
-
     def __init__(
         self,
         notification_history_instance: NotificationHistory,
@@ -439,7 +451,25 @@ class NotificationContainer(Box):
         notification.connect("closed", self.on_notification_closed)
 
         app_name = notification.app_name
-        if app_name in LIMITED_APPS:
+        if app_name in get_history_ignored_apps():
+            logger.info(
+                f"Ignoring notification from {app_name} as it is in the ignored list."
+            )
+            # Don't add to history, just show the notification and let it timeout normally
+            new_box.set_is_history(False)
+            # Continue with normal notification display but skip history logic
+            self.stack.add_named(new_box, str(id))
+            self.notifications.append(new_box)
+            self.current_index = len(self.notifications) - 1
+            self.stack.set_visible_child(new_box)
+
+            for notification_box in self.notifications:
+                notification_box.start_timeout()
+            self.main_revealer.show_all()
+            self.main_revealer.set_reveal_child(True)
+            self.update_navigation_buttons()
+            return
+        if app_name in get_limited_apps_history():
             notification_history_instance.clear_history_for_app(app_name)
 
             existing_notification_index = -1
@@ -531,32 +561,40 @@ class NotificationContainer(Box):
 
             notification_history_instance = self.notification_history
 
-            notif_box.set_is_history(True)
-            notification_history_instance.add_notification(notif_box)
-            notif_box.stop_timeout()
+            # Check if this notification should be ignored from history
+            app_name = notification.app_name
+            if app_name not in get_history_ignored_apps():
+                notif_box.set_is_history(True)
+                notification_history_instance.add_notification(notif_box)
 
-            if reason_str == "NotificationCloseReason.DISMISSED_BY_USER":
-                logger.info(
-                    f"User dismissed notification {
-                        notification.id
-                    }, but still added to history"
-                )
-            elif (
-                reason_str == "NotificationCloseReason.EXPIRED"
-                or reason_str == "NotificationCloseReason.CLOSED"
-                or reason_str == "NotificationCloseReason.UNDEFINED"
-            ):
-                logger.info(
-                    f"Notification {
-                        notification.id
-                    } closed automatically, added to history"
-                )
+                if reason_str == "NotificationCloseReason.DISMISSED_BY_USER":
+                    logger.info(
+                        f"User dismissed notification {
+                            notification.id
+                        }, added to history"
+                    )
+                elif (
+                    reason_str == "NotificationCloseReason.EXPIRED"
+                    or reason_str == "NotificationCloseReason.CLOSED"
+                    or reason_str == "NotificationCloseReason.UNDEFINED"
+                ):
+                    logger.info(
+                        f"Notification {
+                            notification.id
+                        } closed automatically, added to history"
+                    )
+                else:
+                    logger.warning(
+                        f"Unknown close reason: {reason_str} for notification {
+                            notification.id
+                        }. Still added to history."
+                    )
             else:
-                logger.warning(
-                    f"Unknown close reason: {reason_str} for notification {
-                        notification.id
-                    }. Still added to history."
+                logger.info(
+                    f"Notification from {app_name} closed but not added to history (ignored app)"
                 )
+
+            notif_box.stop_timeout()
 
             if len(self.notifications) == 1:
                 self._is_destroying = True

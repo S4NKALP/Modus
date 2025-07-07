@@ -11,7 +11,7 @@ from gi.repository import Gdk, GLib, Gtk
 
 import config.data as data
 import utils.icons as icons
-from modules.notification_popup import NotificationBox
+from modules.notification_popup import NotificationBox, get_limited_apps_history, get_history_ignored_apps
 from utils.custom_image import CustomImage
 from utils.notification_utils import (
     CONFIG_FILE,
@@ -168,8 +168,6 @@ class NotificationHistory(Box):
         self._connect_to_shared_history()
 
         self._load_and_sync_dnd_state()
-
-        self.LIMITED_APPS_HISTORY = ["Spotify"]
 
     def _connect_to_shared_history(self):
         try:

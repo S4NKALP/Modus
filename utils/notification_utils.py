@@ -18,7 +18,6 @@ NOTIFICATION_IMAGE_PREFIX = "notification_"
 NOTIFICATION_IMAGE_SUFFIX = ".png"
 DEFAULT_NOTIFICATION_IMAGE_SIZE = 48
 MAX_PERSISTENT_NOTIFICATIONS = 100
-LIMITED_APPS = ["Spotify"]
 
 # Global shared notification history instance
 _shared_notification_history = None
