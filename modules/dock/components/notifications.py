@@ -212,7 +212,8 @@ class NotificationIndicator(EventBox):
         self.connect("leave-notify-event", self.on_leave_notify)
         self.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
 
-        self.popup = None
+        # Pre-create popup for immediate display on hover
+        self.popup = NotificationHistoryPopup(dock_component=self)
         self._hover_timeout = None
 
         self._connect_to_dnd_state()
@@ -228,8 +229,8 @@ class NotificationIndicator(EventBox):
                 GLib.source_remove(self._hover_timeout)
                 self._hover_timeout = None
 
-            # Clean up popup
-            if hasattr(self, 'popup') and self.popup:
+            # Clean up popup (popup is always created now)
+            if self.popup:
                 try:
                     self.popup.destroy()
                     self.popup = None
@@ -247,10 +248,8 @@ class NotificationIndicator(EventBox):
             GLib.source_remove(self._hover_timeout)
             self._hover_timeout = None
 
-        # Show popup immediately on hover
-        if not self.popup or not self.popup.get_visible():
-            if not self.popup:
-                self.popup = NotificationHistoryPopup(dock_component=self)
+        # Show popup immediately on hover (popup is pre-created)
+        if not self.popup.get_visible():
             self.popup.show_popup()
         return False
 

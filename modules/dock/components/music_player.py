@@ -98,8 +98,8 @@ class MusicPlayerPopup(Window):
         anchor_map = {
             "Top": "top",
             "Bottom": "bottom",
-            "Left": "left",
-            "Right": "right",
+            "Left": "top left",
+            "Right": "top right",
         }
         return anchor_map.get(dock_position, "bottom")
 
@@ -108,8 +108,8 @@ class MusicPlayerPopup(Window):
         margin_map = {
             "Top": "60px 10px 10px 10px",
             "Bottom": "10px 10px 60px 10px",
-            "Left": "10px 10px 10px 60px",
-            "Right": "10px 60px 10px 10px",
+            "Left": "330px 10px 10px 60px",
+            "Right": "330px 60px 10px 10px",
         }
         return margin_map.get(dock_position, "10px 10px 60px 10px")
 
@@ -202,8 +202,8 @@ class MusicPlayer(Box):
 
         self.add(self.event_box)
 
-        # Popup window will be created on-demand
-        self.popup = None
+        # Pre-create popup for immediate display on hover
+        self.popup = MusicPlayerPopup(dock_component=self)
 
         # Hover timeout for debouncing
         self._hover_timeout = None
@@ -654,11 +654,8 @@ class MusicPlayer(Box):
             GLib.source_remove(self._hover_timeout)
             self._hover_timeout = None
 
-        # Show popup immediately on hover
-        if not self.popup or not self.popup.get_visible():
-            # Create popup on-demand if it doesn't exist
-            if not self.popup:
-                self.popup = MusicPlayerPopup(dock_component=self)
+        # Show popup immediately on hover (popup is pre-created)
+        if not self.popup.get_visible():
             self.popup.show_popup()
         return False
 
