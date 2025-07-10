@@ -55,7 +55,7 @@ class Battery(Service):
 
     @Property(str, "readable")
     def capacity(self):
-        return f"{self._battery.Capacity}%"
+        return f"{int(self._battery.Capacity)}%"
 
     @Property(bool, "readable", default_value=False)
     def is_present(self):

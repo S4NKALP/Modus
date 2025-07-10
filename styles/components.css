@@ -107,6 +107,80 @@
 }
 
 /*
+ * ── battery popup ─────────────────────────────────────────────────────
+*/
+
+#battery-popup-content {
+  background-color: var(--shadow);
+  border: 1px solid var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 4px;
+}
+
+.power-profiles {
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+#bat-icon {
+  font-size: 18px;
+}
+
+.power-profile-btn {
+  background-color: var(--surface);
+  border-radius: 8px;
+  padding: 10px 20px;
+  transition: all 0.2s ease;
+}
+.power-profile-btn:hover,
+.power-profile-btn:focus {
+  background-color: var(--surface-bright);
+}
+
+.power-profile-btn.active {
+  background-color: var(--primary);
+}
+
+.power-profile-btn.active #bat-icon {
+  color: var(--shadow);
+}
+
+/* Battery info styles */
+.battery-percentage {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.battery-state {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.battery-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 80px;
+}
+
+.battery-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+#percentage-state-box {
+  margin-bottom: 8px;
+}
+
+#capacity-box,
+#time-box,
+#profile-label-box {
+  margin-bottom: 4px;
+}
+
+/*
  * ── metrics ───────────────────────────────────────────────────────────
 */
 
