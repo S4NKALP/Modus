@@ -176,21 +176,21 @@ class MusicPlayer(Box):
         # Create music icon label - always use generic music icon
         self.music_label = Label(name="music-label", markup=icons.music)
 
-        # Create button for the music icon with hover detection
-        self.music_button = Button(
-            child=self.music_label,
-            on_state_flags_changed=self.on_hover_state_changed,
-        )
+        # Create button for the music icon
+        self.music_button = Button(child=self.music_label)
 
-        # Create event box for scroll events (volume control)
+        # Create event box for scroll events and hover detection
         self.event_box = EventBox(
-            events=["scroll", "smooth-scroll"],
+            events=["scroll", "smooth-scroll", "enter-notify", "leave-notify"],
             child=Overlay(child=self.progress_bar, overlays=self.music_button),
         )
 
         # Connect scroll events for seeking
         self.event_box.connect("scroll-event", self.on_scroll)
-        self.add_events(Gdk.EventMask.SCROLL_MASK | Gdk.EventMask.SMOOTH_SCROLL_MASK)
+        # Connect hover events
+        self.event_box.connect("enter-notify-event", self.on_enter_notify)
+        self.event_box.connect("leave-notify-event", self.on_leave_notify)
+        self.add_events(Gdk.EventMask.SCROLL_MASK | Gdk.EventMask.SMOOTH_SCROLL_MASK | Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
 
         self.add(self.event_box)
 
@@ -639,26 +639,26 @@ class MusicPlayer(Box):
         else:
             self.on_pause(None)
 
-    def on_hover_state_changed(self, button, *_):
-        """Handle hover state changes - show/hide popup on hover"""
-        # Check if button is hovered (state flag 2 is PRELIGHT/hover)
-        is_hovered = (button.get_state_flags() & 2) != 0
-
+    def on_enter_notify(self, widget, event):
+        """Handle mouse entering the music player component"""
         # Cancel any pending hover timeout
         if self._hover_timeout:
             GLib.source_remove(self._hover_timeout)
             self._hover_timeout = None
 
-        if is_hovered:
-            # Show popup immediately on hover
-            if not self.popup or not self.popup.get_visible():
-                # Create popup on-demand if it doesn't exist
-                if not self.popup:
-                    self.popup = MusicPlayerPopup(dock_component=self)
-                self.popup.show_popup()
-        else:
-            # Hide popup with a small delay to prevent flickering
-            self._hover_timeout = GLib.timeout_add(100, self._hide_popup_delayed)
+        # Show popup immediately on hover
+        if not self.popup or not self.popup.get_visible():
+            # Create popup on-demand if it doesn't exist
+            if not self.popup:
+                self.popup = MusicPlayerPopup(dock_component=self)
+            self.popup.show_popup()
+        return False
+
+    def on_leave_notify(self, widget, event):
+        """Handle mouse leaving the music player component"""
+        # Hide popup with a small delay to prevent flickering
+        self._hover_timeout = GLib.timeout_add(100, self._hide_popup_delayed)
+        return False
 
     def _hide_popup_delayed(self):
         """Hide popup after delay"""
