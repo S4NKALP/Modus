@@ -292,6 +292,7 @@ class MusicPlayer(Box):
                     continue
 
         except Exception as e:
+            print(f"[DEBUG] Error in get_playing_player: {e}")
         return None
 
     def check_active_player(self):
@@ -326,6 +327,7 @@ class MusicPlayer(Box):
                             # If we can't safely compare, assume we should switch
                             should_switch = True
                     except Exception as e:
+                        print(f"[DEBUG] Error comparing players: {e}")
                         should_switch = True
 
                 if should_switch:
@@ -354,6 +356,7 @@ class MusicPlayer(Box):
             self.update_visibility()
 
         except Exception as e:
+            print(f"[DEBUG] Error in check_active_player: {e}")
 
         # Return True to continue the timeout
         return True
@@ -364,6 +367,7 @@ class MusicPlayer(Box):
             self.manager.init_all_players()
             self.update_visibility()
         except Exception as e:
+            print(f"[DEBUG] Error in delayed music player init: {e}")
         return False  # Don't repeat this timeout
 
     def _try_switch_to_alternative_player(self, current_time):
@@ -404,6 +408,7 @@ class MusicPlayer(Box):
                     continue
 
         except Exception as e:
+            pass
 
     def set_current_player(self, player):
         """Set the current active player"""
@@ -709,6 +714,7 @@ class MusicPlayer(Box):
                                 ):
                                     return True
                         except Exception as e:
+                            pass
 
                     # Also check if player is currently playing (even without full metadata)
                     if hasattr(player.props, "playback_status"):
@@ -718,11 +724,13 @@ class MusicPlayer(Box):
                                 status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
                                 return True
                         except Exception as e:
+                            pass
 
                 except Exception as e:
-                    continue
+                    pass
 
         except Exception as e:
+            pass
 
         return False
 

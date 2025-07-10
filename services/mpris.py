@@ -35,7 +35,6 @@ class PlayerService(Service):
             self._player.connect("shuffle", self.on_shuffle)
             self._player.connect("metadata", self.on_metadata)
             self._player.connect("seeked", self.on_seeked)
-            print(type(player))
 
         self.status = self._player.props.playback_status
         self.pos_fabricator = Fabricator(
@@ -58,12 +57,10 @@ class PlayerService(Service):
             self.pos_fabricator.start()
 
     def set_position(self, pos: float):
-        print("seeking in the service")
         self.pos_fabricator.stop()
         micro_pos = int(pos * 1_000_000)
         try:
             self._player.set_position(micro_pos)
-            print(f"Set position to {micro_pos}")
         except GLib.Error as e:
             print(f"Failed to seek: {e}")
 
@@ -132,28 +129,19 @@ class PlayerService(Service):
             pass
 
     def on_play(self, player, status):
-        print("player is playing: {}".format(player.props.player_name))
         self.status = player.props.playback_status
         self.poll_progress()
         self.play()
 
     def on_pause(self, player, status):
-        print("player is paused: {}".format(player.props.player_name))
-        self.status = player.props.playback_status
         self.poll_progress()
         self.pause()
 
     def on_shuffle(self, player, status):
-        print("suffle status changed for: {}".format(player.props.player_name))
-        print(type(status), "here is the status type")
         self.shuffle_toggle(player, status)
 
     def on_metadata(self, player, metadata):
         keys = metadata.keys()
-        if "xesam:artist" in keys and "xesam:title" in keys:
-            print(
-                "{} - {}".format(metadata["xesam:artist"][0], metadata["xesam:title"])
-            )
         self.meta_change(metadata, player)
 
 
@@ -171,7 +159,6 @@ class PlayerManager(Service):
         self._manager.connect(
             "player-vanished", self._on_player_vanished, self._manager
         )
-        print("playerctl init done")
 
         self._players = {}
 
@@ -179,7 +166,6 @@ class PlayerManager(Service):
         # invoked in the UI
         for player_obj in self._manager.props.player_names:
             name_str = player_obj.name
-            print(f"{name_str} appeared")
             if name_str in ALLOWED_PLAYERS:
                 player = Playerctl.Player.new_from_name(player_obj)
                 self._manager.manage_player(player)
@@ -187,13 +173,10 @@ class PlayerManager(Service):
 
     def _on_name_appeared(self, sender, name, manager):
         name_str = name.name
-        print(f"{name_str} appeared")
         if name_str in ALLOWED_PLAYERS:
             player = Playerctl.Player.new_from_name(name)
             self._manager.manage_player(player)
             self.new_player(player)
 
     def _on_player_vanished(self, sender, player, manager):
-        print("player has exited: {}".format(player.props.player_name))
-        print(type(player))
         self.player_vanish(player)

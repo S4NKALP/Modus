@@ -10,6 +10,7 @@ from fabric.widgets.revealer import Revealer
 from gi.repository import GLib
 
 import config.data as data
+from utils.animatedcircularprogressbar import AnimatedCircularProgressBar
 import utils.icons as icons
 
 
@@ -155,7 +156,7 @@ class SingularMetric:
         self.icon_markup = icon
 
         self.icon = Label(name="metrics-icon", markup=icon)
-        self.circle = CircularProgressBar(
+        self.circle = AnimatedCircularProgressBar(
             name="metrics-circle",
             value=0,
             size=28,

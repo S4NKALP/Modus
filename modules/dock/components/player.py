@@ -186,7 +186,6 @@ class Player(Box):
 
     def on_seek(self, sender, ratio):
         pos = ratio * self.duration  # duration in seconds
-        print(f"Seeking to {pos:.2f}s")
         self._player.set_position(int(pos))
 
     def on_metadata(self, sender, metadata, player):
@@ -223,7 +222,7 @@ class Player(Box):
                         f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
                     )
                     self.set_style(f"background-image:url('{thumbnail_url}')")
-                    print(f"Using YouTube thumbnail: {thumbnail_url}")
+
                 else:
                     # Fallback to default wallpaper
                     self.set_style(
@@ -265,7 +264,6 @@ class Player(Box):
         self.play_pause_button.remove_style_class("pause-track")
 
     def on_shuffle(self, sender, player, status):
-        print("callback status", status)
         if status == False:
             self.shuffle_button.get_child().set_markup(icons.shuffle)
             self.shuffle_button.get_child().set_name("shuffle")
@@ -278,10 +276,18 @@ class Player(Box):
         self.shuffle_button.get_child().set_style("color: white")
 
     def handle_next(self, player):
-        player.next()
+        try:
+            player.next()
+        except Exception:
+            # Next is not available for this player (common with browsers)
+            pass
 
     def handle_prev(self, player):
-        player.previous()
+        try:
+            player.previous()
+        except Exception:
+            # Previous is not available for this player (common with browsers)
+            pass
 
     def handle_play_pause(self, player):
         is_playing = self.play_pause_button.get_child().get_name() == "play-label"
@@ -312,13 +318,15 @@ class Player(Box):
             logger.warning("Failed to toggle playback:", e)
 
     def handle_shuffle(self, shuffle_button, player):
-        print("shuffle", player.props.shuffle)
-        if player.props.shuffle == False:
-            player.set_shuffle(True)
-            print("setting to true", player.props.player_name)
-        else:
-            player.set_shuffle(False)
-        shuffle_button.get_child().set_style("color: var(--outline)")
+        try:
+            if player.props.shuffle == False:
+                player.set_shuffle(True)
+            else:
+                player.set_shuffle(False)
+            shuffle_button.get_child().set_style("color: var(--outline)")
+        except Exception:
+            # Shuffle is not available for this player (common with browsers)
+            pass
 
 
 class PlayerContainer(Box):
@@ -367,15 +375,12 @@ class PlayerContainer(Box):
         self.manager.init_all_players()
 
     def new_player(self, manager, player):
-        print(player.props.player_name, "new player")
-        print(player)
         new_player = Player(player=player)
         new_player.gtk_wrapper.queue_draw()
         new_player.set_name(player.props.player_name)
         self.player.append(new_player)
         # Store the player object
         self.player_objects[player.props.player_name] = player
-        print("stacking player")
         self.stack.add_named(new_player, player.props.player_name)
 
         self.player_switch_container.add_center(
@@ -436,7 +441,6 @@ class PlayerContainer(Box):
         curr = self.stack.get_visible_child()
         if curr:
             for btn in self.player_switch_container.center_children:
-                print(btn.get_name())
                 if btn.get_name() == curr.get_name():
                     btn.add_style_class("active")
                 else:
