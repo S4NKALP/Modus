@@ -50,6 +50,7 @@ class MusicPlayerPopup(Window):
             transition_type=transition_type,
             transition_duration=300,
             child=self.player_container,
+            reveal_child=False,
         )
 
         self.add(self.revealer)
@@ -82,8 +83,15 @@ class MusicPlayerPopup(Window):
     def show_popup(self):
         """Show the music player popup"""
         self.set_visible(True)
-        self.revealer.reveal()
+        self.show_all()
+        # Use GLib.idle_add to ensure the window is shown before revealing
+        GLib.idle_add(self._reveal_popup)
+
+    def _reveal_popup(self):
+        """Reveal the popup after window is shown"""
+        self.revealer.set_reveal_child(True)
         self.grab_focus()
+        return False  # Don't repeat
 
     def _get_popup_anchor(self, dock_position):
         """Get popup anchor based on dock position"""
@@ -136,7 +144,7 @@ class MusicPlayerPopup(Window):
 
     def hide_popup(self):
         """Hide the music player popup"""
-        self.revealer.unreveal()
+        self.revealer.set_reveal_child(False)
         # Hide window after transition completes
         GLib.timeout_add(350, lambda: self.set_visible(False))
 

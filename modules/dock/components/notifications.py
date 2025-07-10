@@ -5,7 +5,9 @@ from datetime import datetime
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import Gdk, GLib, Gtk
 
@@ -29,36 +31,241 @@ from utils.notification_utils import (
 from utils.wayland import WaylandWindow as Window
 
 
-class NotificationIndicator(Button):
-    def __init__(self, **kwargs):
-        super().__init__(name="button-bar-notifications", **kwargs)
+class NotificationHistoryPopup(Window):
+    """Popup window that shows notification history with hover-based reveal"""
 
+    def __init__(self, dock_component=None, **kwargs):
+        # Get dock position for proper anchoring
+        dock_position = data.DOCK_POSITION
+        popup_anchor = self._get_popup_anchor(dock_position)
+        margin = self._get_popup_margin(dock_position)
+
+        super().__init__(
+            name="notification-history-popup",
+            layer="top",
+            anchor=popup_anchor,
+            margin=margin,
+            exclusive=False,
+            keyboard_mode="on-demand",
+            visible=False,
+            all_visible=False,
+            **kwargs,
+        )
+
+        self.dock_component = dock_component
+
+        # Get transition type based on dock position
+        transition_type = self._get_revealer_transition(dock_position)
+
+        # Create notification history content
+        self.notification_history = NotificationHistory()
+
+        # Create scrolled window for the history
+        self.scrolled = ScrolledWindow(
+            name="notifications-scrolled",
+            child=self.notification_history,
+            h_scrollbar_policy="never",
+            v_scrollbar_policy="automatic",
+            min_content_size=(400, 450),
+            max_content_size=(450, 500),
+            h_expand=True,
+            v_expand=True,
+            propagate_width=True,
+            propagate_height=True,
+        )
+
+        # Create main content box
+        self.content_box = Box(
+            name="notification-history-popup-content",
+            orientation="v",
+            spacing=8,
+            h_expand=True,
+            v_expand=True,
+            children=[self.scrolled],
+            style_classes=["notification-history-popup"],
+        )
+
+        # Create revealer for slide transition
+        self.revealer = Revealer(
+            transition_type=transition_type,
+            transition_duration=300,
+            child=self.content_box,
+            reveal_child=False,
+        )
+
+        self.add(self.revealer)
+
+        # Connect to escape key to close
+        self.connect("key-press-event", self.on_key_press)
+        self.connect("button-press-event", self.on_button_press)
+        self.connect("enter-notify-event", self.on_enter_notify)
+        self.connect("leave-notify-event", self.on_leave_notify)
+        self.set_can_focus(True)
+
+    def _get_popup_anchor(self, dock_position):
+        """Get popup anchor based on dock position"""
+        anchor_map = {
+            "Top": "top",
+            "Bottom": "bottom right",
+            "Left": "left",
+            "Right": "right",
+        }
+        return anchor_map.get(dock_position, "bottom")
+
+    def _get_popup_margin(self, dock_position):
+        """Get popup margin based on dock position"""
+        margin_map = {
+            "Top": "60px 10px 10px 10px",
+            "Bottom": "10px 650px 60px 10px",
+            "Left": "10px 10px 10px 60px",
+            "Right": "10px 60px 10px 10px",
+        }
+        return margin_map.get(dock_position, "10px 10px 60px 10px")
+
+    def _get_revealer_transition(self, dock_position):
+        """Get revealer transition type based on dock position"""
+        transition_map = {
+            "Top": "slide-down",
+            "Bottom": "slide-up",
+            "Left": "slide-right",
+            "Right": "slide-left",
+        }
+        return transition_map.get(dock_position, "slide-up")
+
+    def on_key_press(self, widget, event):
+        """Handle key press events"""
+        if event.keyval == Gdk.KEY_Escape:
+            self.hide_popup()
+            return True
+        elif event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval == Gdk.KEY_d:
+            current_dnd = self.notification_history.do_not_disturb_enabled
+            self.notification_history.header_switch.set_active(not current_dnd)
+            return True
+        elif event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval == Gdk.KEY_a:
+            self.notification_history.clear_history()
+            return True
+        return False
+
+    def on_button_press(self, widget, event):
+        """Handle button press events"""
+        return False
+
+    def on_enter_notify(self, widget, event):
+        """Handle mouse entering popup"""
+        # Cancel any pending hide from dock component
+        if self.dock_component and hasattr(self.dock_component, '_hover_timeout'):
+            if self.dock_component._hover_timeout:
+                GLib.source_remove(self.dock_component._hover_timeout)
+                self.dock_component._hover_timeout = None
+        return False
+
+    def on_leave_notify(self, widget, event):
+        """Handle mouse leaving popup"""
+        # Hide popup when mouse leaves
+        self.hide_popup()
+        return False
+
+    def show_popup(self):
+        """Show the notification history popup"""
+        self.set_visible(True)
+        self.show_all()
+        # Use GLib.idle_add to ensure the window is shown before revealing
+        GLib.idle_add(self._reveal_popup)
+
+    def _reveal_popup(self):
+        """Reveal the popup after window is shown"""
+        self.revealer.set_reveal_child(True)
+        self.grab_focus()
+        return False  # Don't repeat
+
+    def hide_popup(self):
+        """Hide the notification history popup"""
+        self.revealer.set_reveal_child(False)
+        # Hide window after transition completes
+        GLib.timeout_add(350, lambda: self.set_visible(False))
+
+
+class NotificationIndicator(EventBox):
+    def __init__(self, **kwargs):
         self.notification_icon = Label(
             name="notification-icon", markup=icons.notifications
         )
 
-        self.add(self.notification_icon)
+        # Create button for the icon
+        self.icon_button = Button(
+            name="button-bar-notifications",
+            child=self.notification_icon,
+        )
 
-        self.connect("clicked", self.on_clicked)
+        super().__init__(
+            name="notification-indicator",
+            child=self.icon_button,
+            **kwargs
+        )
 
-        self.set_tooltip_text("Notifications")
+        # Set up event box for proper event handling
+        self.set_visible_window(False)
+        self.set_above_child(True)
 
-        self.popup_window = None
+        # Connect hover events
+        self.connect("enter-notify-event", self.on_enter_notify)
+        self.connect("leave-notify-event", self.on_leave_notify)
+        self.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+
+        self.popup = None
+        self._hover_timeout = None
 
         self._connect_to_dnd_state()
 
-    def on_clicked(self, _button):
-        if self.popup_window and self.popup_window.get_visible():
-            self.popup_window.set_visible(False)
-        else:
-            self.show_notifications_popup()
+        # Connect to destroy signal for cleanup
+        self.connect("destroy", self.on_destroy)
 
-    def show_notifications_popup(self):
-        if self.popup_window:
-            self.popup_window.destroy()
+    def on_destroy(self, widget):
+        """Clean up popup when component is destroyed"""
+        try:
+            # Remove hover timeout
+            if hasattr(self, "_hover_timeout") and self._hover_timeout:
+                GLib.source_remove(self._hover_timeout)
+                self._hover_timeout = None
 
-        self.popup_window = NotificationHistoryWindow()
-        self.popup_window.show_all()
+            # Clean up popup
+            if hasattr(self, 'popup') and self.popup:
+                try:
+                    self.popup.destroy()
+                    self.popup = None
+                except Exception:
+                    pass
+
+        except Exception:
+            pass
+
+    def on_enter_notify(self, widget, event):
+        """Handle mouse entering the notification component"""
+        print("Notification hover detected!")  # Debug print
+        # Cancel any pending hover timeout
+        if self._hover_timeout:
+            GLib.source_remove(self._hover_timeout)
+            self._hover_timeout = None
+
+        # Show popup immediately on hover
+        if not self.popup or not self.popup.get_visible():
+            if not self.popup:
+                self.popup = NotificationHistoryPopup(dock_component=self)
+            self.popup.show_popup()
+        return False
+
+    def on_leave_notify(self, widget, event):
+        """Handle mouse leaving the notification component"""
+        # Hide popup with a small delay to prevent flickering
+        self._hover_timeout = GLib.timeout_add(100, self._hide_popup_delayed)
+        return False
+
+    def _hide_popup_delayed(self):
+        """Hide popup after delay"""
+        if self.popup and self.popup.get_visible():
+            self.popup.hide_popup()
+        self._hover_timeout = None
+        return False  # Don't repeat timeout
 
     def _connect_to_dnd_state(self):
         try:
@@ -80,10 +287,8 @@ class NotificationIndicator(Button):
     def _update_icon_for_dnd_state(self, dnd_enabled):
         if dnd_enabled:
             self.notification_icon.set_markup(icons.notifications_off)
-            self.set_tooltip_text("Do Not Disturb enabled")
         else:
             self.notification_icon.set_markup(icons.notifications)
-            self.set_tooltip_text("Notifications")
 
 
 class NotificationHistory(Box):
