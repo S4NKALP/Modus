@@ -6,6 +6,7 @@ from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
+from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Playerctl
 
 import config.data as data
@@ -37,8 +38,21 @@ class MusicPlayerPopup(Window):
         )
 
         self.dock_component = dock_component
+
+        # Create player container first
         self.player_container = PlayerContainer()
-        self.add(self.player_container)
+
+        # Get transition type based on dock position
+        transition_type = self._get_revealer_transition(dock_position)
+
+        # Create revealer with position-appropriate transition
+        self.revealer = Revealer(
+            transition_type=transition_type,
+            transition_duration=300,
+            child=self.player_container,
+        )
+
+        self.add(self.revealer)
 
         # Connect player container events to sync with dock
         if self.dock_component:
@@ -49,6 +63,8 @@ class MusicPlayerPopup(Window):
         # Connect to escape key to close
         self.connect("key-press-event", self.on_key_press)
         self.connect("button-press-event", self.on_button_press)
+        self.connect("enter-notify-event", self.on_enter_notify)
+        self.connect("leave-notify-event", self.on_leave_notify)
         self.set_can_focus(True)
 
     def on_active_player_changed(self, container, player):
@@ -66,6 +82,7 @@ class MusicPlayerPopup(Window):
     def show_popup(self):
         """Show the music player popup"""
         self.set_visible(True)
+        self.revealer.reveal()
         self.grab_focus()
 
     def _get_popup_anchor(self, dock_position):
@@ -88,13 +105,40 @@ class MusicPlayerPopup(Window):
         }
         return margin_map.get(dock_position, "10px 10px 60px 10px")
 
+    def _get_revealer_transition(self, dock_position):
+        """Get revealer transition type based on dock position"""
+        transition_map = {
+            "Top": "slide-down",
+            "Bottom": "slide-up",
+            "Left": "slide-right",
+            "Right": "slide-left",
+        }
+        return transition_map.get(dock_position, "slide-up")
+
     def on_button_press(self, widget, event):
         """Handle button press events"""
         return False
 
+    def on_enter_notify(self, widget, event):
+        """Handle mouse entering popup"""
+        # Cancel any pending hide from dock component
+        if self.dock_component and hasattr(self.dock_component, '_hover_timeout'):
+            if self.dock_component._hover_timeout:
+                GLib.source_remove(self.dock_component._hover_timeout)
+                self.dock_component._hover_timeout = None
+        return False
+
+    def on_leave_notify(self, widget, event):
+        """Handle mouse leaving popup"""
+        # Hide popup when mouse leaves
+        self.hide_popup()
+        return False
+
     def hide_popup(self):
         """Hide the music player popup"""
-        self.set_visible(False)
+        self.revealer.unreveal()
+        # Hide window after transition completes
+        GLib.timeout_add(350, lambda: self.set_visible(False))
 
 
 class MusicPlayer(Box):
@@ -132,9 +176,10 @@ class MusicPlayer(Box):
         # Create music icon label - always use generic music icon
         self.music_label = Label(name="music-label", markup=icons.music)
 
-        # Create button for the music icon
+        # Create button for the music icon with hover detection
         self.music_button = Button(
-            on_clicked=self.on_music_clicked, child=self.music_label
+            child=self.music_label,
+            on_state_flags_changed=self.on_hover_state_changed,
         )
 
         # Create event box for scroll events (volume control)
@@ -151,6 +196,9 @@ class MusicPlayer(Box):
 
         # Popup window will be created on-demand
         self.popup = None
+
+        # Hover timeout for debouncing
+        self._hover_timeout = None
 
         # Initialize players with delayed visibility check
         GLib.timeout_add(500, self._delayed_init)
@@ -172,6 +220,11 @@ class MusicPlayer(Box):
             # Remove timeout
             if hasattr(self, "active_player_check_timeout"):
                 GLib.source_remove(self.active_player_check_timeout)
+
+            # Remove hover timeout
+            if hasattr(self, "_hover_timeout") and self._hover_timeout:
+                GLib.source_remove(self._hover_timeout)
+                self._hover_timeout = None
 
             # Clean up current player service
             if hasattr(self, 'current_player_service') and self.current_player_service:
@@ -518,51 +571,16 @@ class MusicPlayer(Box):
                 except Exception:
                     pass
 
-                # Update tooltip with timestamp info
-                try:
-                    pos_min = int(pos // 60)
-                    pos_sec = int(pos % 60)
-                    dur_min = int(dur // 60)
-                    dur_sec = int(dur % 60)
-                    timestamp_text = (
-                        f"{pos_min:02d}:{pos_sec:02d} / {dur_min:02d}:{dur_sec:02d}"
-                    )
 
-                    # Get current track info if available
-                    if hasattr(self, "_current_track_info") and self._current_track_info:
-                        tooltip = f"{self._current_track_info}\n{timestamp_text}"
-                    else:
-                        tooltip = f"Music Player\n{timestamp_text}"
-
-                    self.event_box.set_tooltip_text(tooltip)
-                except Exception:
-                    pass
             else:
                 # Duration is 0 or unknown - show position only if available
                 try:
                     if pos > 0:
-                        # Show position even without duration
-                        pos_min = int(pos // 60)
-                        pos_sec = int(pos % 60)
-                        timestamp_text = f"{pos_min:02d}:{pos_sec:02d}"
-
-                        # Get current track info if available
-                        if hasattr(self, "_current_track_info") and self._current_track_info:
-                            tooltip = f"{self._current_track_info}\n{timestamp_text} (Duration unknown)"
-                        else:
-                            tooltip = f"Music Player\n{timestamp_text} (Duration unknown)"
-
-                        self.event_box.set_tooltip_text(tooltip)
-
                         # Set progress bar to indeterminate state or small progress
                         # Use a pulsing animation or small fixed progress to show activity
                         self.progress_bar.value = 0.1  # Small progress to show activity
                     else:
                         self.progress_bar.value = 0
-                        if hasattr(self, "_current_track_info") and self._current_track_info:
-                            self.event_box.set_tooltip_text(f"{self._current_track_info} (Duration unknown)")
-                        else:
-                            self.event_box.set_tooltip_text("Music Player")
                 except Exception:
                     pass
 
@@ -573,9 +591,6 @@ class MusicPlayer(Box):
         """Handle play state"""
         self.music_label.set_markup(icons.music)
         self.progress_bar.remove_style_class("paused")
-        # Update tooltip to show playing state
-        if hasattr(self, "_current_track_info"):
-            self.event_box.set_tooltip_text(f"{self._current_track_info} (Playing)")
 
         # Trigger immediate check for active player when play state changes
         self.check_active_player()
@@ -587,9 +602,6 @@ class MusicPlayer(Box):
         # Always use generic music icon when paused
         self.music_label.set_markup(icons.music)
         self.progress_bar.add_style_class("paused")
-        # Update tooltip to show paused state
-        if hasattr(self, "_current_track_info"):
-            self.event_box.set_tooltip_text(f"{self._current_track_info} (Paused)")
 
         # Trigger immediate check for active player when pause state changes
         self.check_active_player()
@@ -598,7 +610,7 @@ class MusicPlayer(Box):
 
     def on_metadata(self, service, metadata, player):
         """Handle metadata changes"""
-        # Update tooltip with current track info
+        # Store current track info for internal use
         keys = metadata.keys()
         if "xesam:artist" in keys and "xesam:title" in keys:
             artist = (
@@ -608,28 +620,8 @@ class MusicPlayer(Box):
             )
             title = metadata["xesam:title"]
             self._current_track_info = f"{artist} - {title}"
-
-            # If we have position info, include timestamp
-            if (
-                hasattr(self, "position")
-                and hasattr(self, "duration")
-                and self.duration > 0
-            ):
-                pos_min = int(self.position // 60)
-                pos_sec = int(self.position % 60)
-                dur_min = int(self.duration // 60)
-                dur_sec = int(self.duration % 60)
-                timestamp_text = (
-                    f"{pos_min:02d}:{pos_sec:02d} / {dur_min:02d}:{dur_sec:02d}"
-                )
-                tooltip = f"{self._current_track_info}\n{timestamp_text}"
-            else:
-                tooltip = self._current_track_info
-
-            self.event_box.set_tooltip_text(tooltip)
         else:
             self._current_track_info = "Music Player"
-            self.event_box.set_tooltip_text("Music Player")
 
         # Update visibility when metadata changes (media content appears/disappears)
         self.update_visibility()
@@ -647,15 +639,33 @@ class MusicPlayer(Box):
         else:
             self.on_pause(None)
 
-    def on_music_clicked(self, button):
-        """Handle music button click - show popup"""
+    def on_hover_state_changed(self, button, *_):
+        """Handle hover state changes - show/hide popup on hover"""
+        # Check if button is hovered (state flag 2 is PRELIGHT/hover)
+        is_hovered = (button.get_state_flags() & 2) != 0
+
+        # Cancel any pending hover timeout
+        if self._hover_timeout:
+            GLib.source_remove(self._hover_timeout)
+            self._hover_timeout = None
+
+        if is_hovered:
+            # Show popup immediately on hover
+            if not self.popup or not self.popup.get_visible():
+                # Create popup on-demand if it doesn't exist
+                if not self.popup:
+                    self.popup = MusicPlayerPopup(dock_component=self)
+                self.popup.show_popup()
+        else:
+            # Hide popup with a small delay to prevent flickering
+            self._hover_timeout = GLib.timeout_add(100, self._hide_popup_delayed)
+
+    def _hide_popup_delayed(self):
+        """Hide popup after delay"""
         if self.popup and self.popup.get_visible():
             self.popup.hide_popup()
-        else:
-            # Create popup on-demand if it doesn't exist
-            if not self.popup:
-                self.popup = MusicPlayerPopup(dock_component=self)
-            self.popup.show_popup()
+        self._hover_timeout = None
+        return False  # Don't repeat timeout
 
     def on_scroll(self, widget, event):
         """Handle scroll events for seeking"""
