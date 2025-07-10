@@ -82,31 +82,54 @@ class PlayerService(Service):
             # Get position safely
             try:
                 pos = self._player.get_position() / 1_000_000  # seconds
-            except Exception as e:
-                print(f"[DEBUG] Error getting player position: {e}")
+            except Exception:
                 return
 
-            # Get duration safely from metadata
-            try:
-                if (hasattr(self._player, 'props') and
-                    hasattr(self._player.props, 'metadata') and
-                    self._player.props.metadata and
-                    "mpris:length" in self._player.props.metadata):
+            # Get duration safely from multiple sources
+            dur = 0.0  # Default to 0
 
-                    dur = self._player.props.metadata["mpris:length"] / 1_000_000  # seconds
-                else:
-                    # No duration available, skip this update
-                    return
-            except Exception as e:
-                print(f"[DEBUG] Error getting track duration: {e}")
-                return
+            if (hasattr(self._player, 'props') and
+                hasattr(self._player.props, 'metadata') and
+                self._player.props.metadata):
+
+                metadata = self._player.props.metadata
+
+                # Try mpris:length first (most common)
+                try:
+                    raw_dur = metadata["mpris:length"]
+                    if raw_dur and raw_dur > 0:
+                        dur = float(raw_dur) / 1_000_000  # seconds
+                except (KeyError, Exception):
+                    pass
+
+                # Fallback to xesam:duration (alternative field)
+                if dur <= 0:
+                    try:
+                        raw_dur = metadata["xesam:duration"]
+                        if raw_dur and raw_dur > 0:
+                            dur = float(raw_dur) / 1_000_000  # seconds
+                    except (KeyError, Exception):
+                        pass
+
+                # Try to get duration from player directly (some players support this)
+                if dur <= 0:
+                    try:
+                        if hasattr(self._player, 'get_metadata'):
+                            player_metadata = self._player.get_metadata()
+                            if player_metadata:
+                                raw_dur = player_metadata["mpris:length"]
+                                if raw_dur and raw_dur > 0:
+                                    dur = float(raw_dur) / 1_000_000
+                    except (KeyError, Exception):
+                        pass
 
             # Validate values before emitting signal
-            if pos is not None and dur is not None and dur > 0:
+            # Allow dur=0 for position-only tracking
+            if pos is not None and dur is not None and pos >= 0 and dur >= 0:
                 self.track_position(pos, dur)
 
-        except Exception as e:
-            print(f"[DEBUG] Error in fabricating: {e}")
+        except Exception:
+            pass
 
     def on_play(self, player, status):
         print("player is playing: {}".format(player.props.player_name))

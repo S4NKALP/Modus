@@ -10,7 +10,7 @@ gi.require_version("Gtk", "3.0")
 APP_NAME = "modus"
 APP_NAME_CAP = "Modus"
 
-ALLOWED_PLAYERS = ["vlc", "cmus", "firefox", "spotify", "chromium"]
+ALLOWED_PLAYERS = ["vlc", "cmus", "firefox", "spotify", "chromium", "vivaldi", "brave"]
 
 NOTIF_POS_KEY = "notif_pos"
 NOTIF_POS_DEFAULT = "Top"

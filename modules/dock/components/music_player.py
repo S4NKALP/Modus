@@ -178,24 +178,22 @@ class MusicPlayer(Box):
                 try:
                     if hasattr(self.current_player_service, 'cleanup'):
                         self.current_player_service.cleanup()
-                except Exception as e:
-                    print(f"[DEBUG] Error cleaning up player service on destroy: {e}")
+                except Exception:
+                    pass
 
             # Clean up popup
             if hasattr(self, 'popup') and self.popup:
                 try:
                     self.popup.destroy()
                     self.popup = None
-                except Exception as e:
-                    print(f"[DEBUG] Error destroying popup: {e}")
+                except Exception:
+                    pass
 
-        except Exception as e:
-            print(f"[DEBUG] Error in on_destroy: {e}")
+        except Exception:
+            pass
 
     def on_new_player(self, manager, player):
         """Handle new player detection"""
-        print(f"Music dock component: New player detected - {player.props.player_name}")
-
         # If this is our first player, make it current
         if not self.current_player:
             self.set_current_player(player)
@@ -213,7 +211,6 @@ class MusicPlayer(Box):
 
     def on_player_vanish(self, manager, player):
         """Handle player disappearing"""
-        print(f"Music dock component: Player vanished - {player.props.player_name}")
 
         # If the current player vanished, find another one
         if (
@@ -243,19 +240,10 @@ class MusicPlayer(Box):
                                     or "xesam:artist" in keys
                                     or "mpris:length" in keys
                                 ):
-                                    print(
-                                        f"[DEBUG] Switching to player with media: {
-                                            candidate_player.props.player_name
-                                        }"
-                                    )
+                                    pass
                                     self.set_current_player(candidate_player)
                                     break
-                    except Exception as e:
-                        print(
-                            f"[DEBUG] Error checking candidate player {player_name}: {
-                                e
-                            }"
-                        )
+                    except Exception:
                         continue
 
         self.update_visibility()
@@ -296,18 +284,14 @@ class MusicPlayer(Box):
                         status = player.props.playback_status
                         if status and hasattr(status, 'value_name'):
                             if status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
-                                print(f"[DEBUG] Found playing player: {player.props.player_name}")
                                 return player
                     except Exception as e:
-                        print(f"[DEBUG] Error checking playback status for {player_name}: {e}")
                         continue
 
                 except Exception as e:
-                    print(f"[DEBUG] Error checking player {player_name}: {e}")
                     continue
 
         except Exception as e:
-            print(f"[DEBUG] Error in get_playing_player: {e}")
         return None
 
     def check_active_player(self):
@@ -342,11 +326,9 @@ class MusicPlayer(Box):
                             # If we can't safely compare, assume we should switch
                             should_switch = True
                     except Exception as e:
-                        print(f"[DEBUG] Error comparing players: {e}")
                         should_switch = True
 
                 if should_switch:
-                    print(f"[DEBUG] Switching to playing player: {playing_player.props.player_name}")
                     self.set_current_player(playing_player)
                     self._last_player_switch = current_time
 
@@ -365,7 +347,6 @@ class MusicPlayer(Box):
                         self._try_switch_to_alternative_player(current_time)
 
                 except Exception as e:
-                    print(f"[DEBUG] Error checking current player status: {e}")
                     # Current player seems invalid, try to find another
                     self._try_switch_to_alternative_player(current_time)
 
@@ -373,7 +354,6 @@ class MusicPlayer(Box):
             self.update_visibility()
 
         except Exception as e:
-            print(f"[DEBUG] Error in check_active_player: {e}")
 
         # Return True to continue the timeout
         return True
@@ -384,7 +364,6 @@ class MusicPlayer(Box):
             self.manager.init_all_players()
             self.update_visibility()
         except Exception as e:
-            print(f"[DEBUG] Error in delayed music player init: {e}")
         return False  # Don't repeat this timeout
 
     def _try_switch_to_alternative_player(self, current_time):
@@ -417,27 +396,22 @@ class MusicPlayer(Box):
                         continue
 
                     # Switch to a different available player
-                    print(f"[DEBUG] Switching to available player: {player.props.player_name}")
                     self.set_current_player(player)
                     self._last_player_switch = current_time
                     break
 
                 except Exception as e:
-                    print(f"[DEBUG] Error checking alternative player {player_name}: {e}")
                     continue
 
         except Exception as e:
-            print(f"[DEBUG] Error in _try_switch_to_alternative_player: {e}")
 
     def set_current_player(self, player):
         """Set the current active player"""
         try:
             # Validate player before proceeding
             if not player or not hasattr(player, 'props') or not hasattr(player.props, 'player_name'):
-                print("[DEBUG] Invalid player object, skipping")
                 return
 
-            print(f"[DEBUG] Setting current player to: {player.props.player_name}")
 
             # Properly cleanup previous player service
             if self.current_player_service:
@@ -448,60 +422,63 @@ class MusicPlayer(Box):
                     else:
                         # Fallback: Stop any running fabricators/timers manually
                         if hasattr(self.current_player_service, 'pos_fabricator'):
-                            self.current_player_service.pos_fabricator.stop()
+                            try:
+                                self.current_player_service.pos_fabricator.stop()
+                            except Exception:
+                                pass
 
-                    # Disconnect signals with specific error handling
+                    # Disconnect signals - only if they were actually connected
+                    # Use a more robust disconnection approach
                     try:
-                        self.current_player_service.disconnect_by_func(self.on_track_position)
-                    except (TypeError, AttributeError) as e:
-                        print(f"[DEBUG] Error disconnecting track_position: {e}")
+                        # Get all signal handlers and disconnect them
+                        if hasattr(self.current_player_service, 'disconnect'):
+                            # Try to disconnect all signals from this service
+                            self.current_player_service.disconnect()
+                    except Exception:
+                        # If bulk disconnect fails, try individual disconnections
+                        pass
 
-                    try:
-                        self.current_player_service.disconnect_by_func(self.on_play)
-                    except (TypeError, AttributeError) as e:
-                        print(f"[DEBUG] Error disconnecting play: {e}")
-
-                    try:
-                        self.current_player_service.disconnect_by_func(self.on_pause)
-                    except (TypeError, AttributeError) as e:
-                        print(f"[DEBUG] Error disconnecting pause: {e}")
-
-                    try:
-                        self.current_player_service.disconnect_by_func(self.on_metadata)
-                    except (TypeError, AttributeError) as e:
-                        print(f"[DEBUG] Error disconnecting metadata: {e}")
-
-                except Exception as e:
-                    print(f"[DEBUG] Error during player service cleanup: {e}")
+                except Exception:
+                    pass
 
             self.current_player = player
+            self.current_player_service = None
 
-            # Create new player service with error handling
+            # Create new player service with error handling and recursion prevention
             try:
-                self.current_player_service = PlayerService(player=player)
-            except Exception as e:
-                print(f"[DEBUG] Error creating PlayerService: {e}")
-                self.current_player_service = None
-                return
+                # Validate player before creating service
+                if (hasattr(player, 'props') and
+                    hasattr(player.props, 'player_name') and
+                    player.props.player_name):
 
-            # Connect to player events with error handling
-            if self.current_player_service:
-                try:
-                    self.current_player_service.connect("track-position", self.on_track_position)
-                    self.current_player_service.connect("play", self.on_play)
-                    self.current_player_service.connect("pause", self.on_pause)
-                    self.current_player_service.connect("meta-change", self.on_metadata)
-                except Exception as e:
-                    print(f"[DEBUG] Error connecting to player service signals: {e}")
+                    self.current_player_service = PlayerService(player=player)
+
+                    # Connect to player events with error handling
+                    if self.current_player_service:
+                        try:
+                            self.current_player_service.connect("track-position", self.on_track_position)
+                            self.current_player_service.connect("play", self.on_play)
+                            self.current_player_service.connect("pause", self.on_pause)
+                            self.current_player_service.connect("meta-change", self.on_metadata)
+                        except Exception:
+                            # If signal connection fails, clean up the service
+                            if hasattr(self.current_player_service, 'cleanup'):
+                                self.current_player_service.cleanup()
+                            self.current_player_service = None
+                else:
+                    pass
+
+            except Exception:
+                self.current_player_service = None
 
             # Always use generic music icon, not player-specific icons
             self.music_label.set_markup(icons.music)
 
-            # Update initial state
-            self.update_playback_state()
+            # Update initial state only if we have a valid service
+            if self.current_player_service:
+                self.update_playback_state()
 
         except Exception as e:
-            print(f"[DEBUG] Critical error in set_current_player: {e}")
             # Reset to safe state
             self.current_player = None
             self.current_player_service = None
@@ -518,7 +495,6 @@ class MusicPlayer(Box):
                 pos = float(pos)
                 dur = float(dur)
             except (ValueError, TypeError):
-                print(f"[DEBUG] Invalid position/duration values: pos={pos}, dur={dur}")
                 return
 
             # Validate ranges
@@ -534,8 +510,8 @@ class MusicPlayer(Box):
                 # Safely update progress bar
                 try:
                     self.progress_bar.value = progress
-                except Exception as e:
-                    print(f"[DEBUG] Error updating progress bar: {e}")
+                except Exception:
+                    pass
 
                 # Update tooltip with timestamp info
                 try:
@@ -554,17 +530,39 @@ class MusicPlayer(Box):
                         tooltip = f"Music Player\n{timestamp_text}"
 
                     self.event_box.set_tooltip_text(tooltip)
-                except Exception as e:
-                    print(f"[DEBUG] Error updating tooltip: {e}")
+                except Exception:
+                    pass
             else:
+                # Duration is 0 or unknown - show position only if available
                 try:
-                    self.progress_bar.value = 0
-                    self.event_box.set_tooltip_text("Music Player")
-                except Exception as e:
-                    print(f"[DEBUG] Error resetting progress bar: {e}")
+                    if pos > 0:
+                        # Show position even without duration
+                        pos_min = int(pos // 60)
+                        pos_sec = int(pos % 60)
+                        timestamp_text = f"{pos_min:02d}:{pos_sec:02d}"
 
-        except Exception as e:
-            print(f"[DEBUG] Error in on_track_position: {e}")
+                        # Get current track info if available
+                        if hasattr(self, "_current_track_info") and self._current_track_info:
+                            tooltip = f"{self._current_track_info}\n{timestamp_text} (Duration unknown)"
+                        else:
+                            tooltip = f"Music Player\n{timestamp_text} (Duration unknown)"
+
+                        self.event_box.set_tooltip_text(tooltip)
+
+                        # Set progress bar to indeterminate state or small progress
+                        # Use a pulsing animation or small fixed progress to show activity
+                        self.progress_bar.value = 0.1  # Small progress to show activity
+                    else:
+                        self.progress_bar.value = 0
+                        if hasattr(self, "_current_track_info") and self._current_track_info:
+                            self.event_box.set_tooltip_text(f"{self._current_track_info} (Duration unknown)")
+                        else:
+                            self.event_box.set_tooltip_text("Music Player")
+                except Exception:
+                    pass
+
+        except Exception:
+            pass
 
     def on_play(self, service):
         """Handle play state"""
@@ -709,10 +707,8 @@ class MusicPlayer(Box):
                                     or "xesam:artist" in keys
                                     or "mpris:length" in keys
                                 ):
-                                    print(f"[DEBUG] Found player with media content: {player.props.player_name}")
                                     return True
                         except Exception as e:
-                            print(f"[DEBUG] Error checking metadata for {player_name}: {e}")
 
                     # Also check if player is currently playing (even without full metadata)
                     if hasattr(player.props, "playback_status"):
@@ -720,17 +716,13 @@ class MusicPlayer(Box):
                             status = player.props.playback_status
                             if (status and hasattr(status, 'value_name') and
                                 status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
-                                print(f"[DEBUG] Found playing player: {player.props.player_name}")
                                 return True
                         except Exception as e:
-                            print(f"[DEBUG] Error checking playback status for {player_name}: {e}")
 
                 except Exception as e:
-                    print(f"[DEBUG] Error checking player {player_name}: {e}")
                     continue
 
         except Exception as e:
-            print(f"[DEBUG] Error in has_running_players: {e}")
 
         return False
 

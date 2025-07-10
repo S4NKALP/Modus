@@ -1,5 +1,6 @@
 import re
 
+from gi.repository import Playerctl
 from fabric.core.service import Signal
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -174,6 +175,14 @@ class Player(Box):
         self.duration = dur
         if dur > 0:
             self.wiggly.update_value_from_signal(pos / dur)
+        else:
+            # Duration is 0 or unknown - show some activity but don't update progress
+            # Keep the current progress or set to a small value to indicate activity
+            if pos > 0:
+                # Show minimal progress to indicate playback is active
+                self.wiggly.update_value_from_signal(0.1)
+            else:
+                self.wiggly.update_value_from_signal(0.0)
 
     def on_seek(self, sender, ratio):
         pos = ratio * self.duration  # duration in seconds
@@ -314,7 +323,7 @@ class Player(Box):
 
 class PlayerContainer(Box):
     @Signal
-    def active_player_changed(self, player) -> None: ...
+    def active_player_changed(self, player: Playerctl.Player) -> None: ...
 
     def __init__(self, **kwargs):
         super().__init__(name="player-container", orientation="v", **kwargs)
