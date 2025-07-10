@@ -465,6 +465,26 @@ class HyprConfGUI(Window):
         dock_hide_special_switch_container.add(self.dock_hide_special_switch)
         layout_grid.attach(dock_hide_special_switch_container, 3, 3, 1, 1)
 
+        # Add dock hide special workspace apps option
+        dock_hide_special_apps_label = Label(
+            label="Hide Special Workspace Apps", h_align="start", v_align="center"
+        )
+        layout_grid.attach(dock_hide_special_apps_label, 2, 5, 1, 1)
+        dock_hide_special_apps_switch_container = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.START,
+            valign=Gtk.Align.CENTER,
+        )
+        self.dock_hide_special_apps_switch = Gtk.Switch(
+            active=bind_vars.get("dock_hide_special_workspace_apps", True),
+            sensitive=self.dock_switch.get_active(),
+        )
+        self.dock_hide_special_apps_switch.set_tooltip_text(
+            "Hide applications that are in special workspaces (scratchpad) from the dock"
+        )
+        dock_hide_special_apps_switch_container.add(self.dock_hide_special_apps_switch)
+        layout_grid.attach(dock_hide_special_apps_switch_container, 3, 5, 1, 1)
+
         notification_pos_label = Label(
             label="Notification Position", h_align="start", v_align="center"
         )
@@ -856,10 +876,12 @@ class HyprConfGUI(Window):
         self.dock_hover_switch.set_sensitive(is_active)
         self.dock_auto_hide_switch.set_sensitive(is_active)
         self.dock_hide_special_switch.set_sensitive(is_active)
+        self.dock_hide_special_apps_switch.set_sensitive(is_active)
         if not is_active:
             self.dock_hover_switch.set_active(False)
             self.dock_auto_hide_switch.set_active(False)
             self.dock_hide_special_switch.set_active(False)
+            self.dock_hide_special_apps_switch.set_active(False)
 
     def on_select_face_icon(self, widget):
         dialog = Gtk.FileChooserDialog(
@@ -921,6 +943,9 @@ class HyprConfGUI(Window):
         )
         current_bind_vars_snapshot["dock_hide_special_workspace"] = (
             self.dock_hide_special_switch.get_active()
+        )
+        current_bind_vars_snapshot["dock_hide_special_workspace_apps"] = (
+            self.dock_hide_special_apps_switch.get_active()
         )
         current_bind_vars_snapshot["dock_icon_size"] = int(
             self.icon_size_scale.get_value()
@@ -1189,9 +1214,13 @@ class HyprConfGUI(Window):
             self.dock_hide_special_switch.set_active(
                 utils.bind_vars.get("dock_hide_special_workspace", True)
             )
+            self.dock_hide_special_apps_switch.set_active(
+                utils.bind_vars.get("dock_hide_special_workspace_apps", True)
+            )
             self.dock_hover_switch.set_sensitive(self.dock_switch.get_active())
             self.dock_auto_hide_switch.set_sensitive(self.dock_switch.get_active())
             self.dock_hide_special_switch.set_sensitive(self.dock_switch.get_active())
+            self.dock_hide_special_apps_switch.set_sensitive(self.dock_switch.get_active())
             self.terminal_entry.set_text(utils.bind_vars["terminal_command"])
 
             default_dock_theme_val = DEFAULTS.get("dock_theme", "Pills")

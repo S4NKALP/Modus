@@ -59,6 +59,7 @@ DEFAULTS = {
     "dock_applications_visible": True,
     "dock_language_visible": True,
     "dock_hide_special_workspace": True,
+    "dock_hide_special_workspace_apps": True,
     "workspace_nums": False,
     "workspace_use_chinese_numerals": False,
     "workspace_dots": False,

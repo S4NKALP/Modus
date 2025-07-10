@@ -70,6 +70,7 @@ if os.path.exists(CONFIG_FILE):
     WORKSPACE_DOTS = config.get("workspace_dots", False)
     WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 13)
     DOCK_HIDE_SPECIAL_WORKSPACE = config.get("dock_hide_special_workspace", True)
+    DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get("dock_hide_special_workspace_apps", True)
 
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
@@ -105,6 +106,7 @@ else:
     WINDOW_SWITCHER_ITEMS_PER_ROW = 13
     NOTIF_POS = NOTIF_POS_DEFAULT
     DOCK_HIDE_SPECIAL_WORKSPACE = True
+    DOCK_HIDE_SPECIAL_WORKSPACE_APPS = True
 
     DOCK_COMPONENTS_VISIBILITY = {
         "workspace": True,

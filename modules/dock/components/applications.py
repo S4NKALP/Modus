@@ -278,6 +278,26 @@ class Applications(Box):
                 normalized = normalized[: -len(suffix)]
         return normalized
 
+    def _is_special_workspace(self, client):
+        """Check if a client is in a special workspace"""
+        if "workspace" not in client:
+            return False
+
+        workspace = client["workspace"]
+        if "name" in workspace:
+            workspace_name = str(workspace["name"])
+            # Special workspaces typically start with "special:" or have negative IDs
+            if workspace_name.startswith("special:"):
+                return True
+
+        if "id" in workspace:
+            workspace_id = workspace["id"]
+            # Special workspaces have negative IDs
+            if workspace_id < 0:
+                return True
+
+        return False
+
     def update_applications(self):
         for child in self.get_children():
             self.remove(child)
@@ -292,6 +312,10 @@ class Applications(Box):
 
         running_windows = {}
         for client in clients:
+            # Skip clients in special workspaces if the setting is enabled
+            if data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS and self._is_special_workspace(client):
+                continue
+
             class_name = client.get("class", "").lower()
             if class_name:
                 if class_name not in running_windows:
