@@ -184,11 +184,21 @@ class RecordingIndicator(Button):
         self.recording_label = Label(name="recording-label", markup=icons.screenrecord)
         self.time_label = Label(name="recording-time-label", markup="00:00")
 
-        self.recording_box = Box(
-            orientation="h",
-            spacing=4,
-            children=[self.recording_label, self.time_label]
-        )
+        # Adapt layout based on dock position
+        if data.VERTICAL:
+            # Vertical dock: show only icon
+            self.recording_box = Box(
+                orientation="v",
+                spacing=2,
+                children=[self.recording_label]
+            )
+        else:
+            # Horizontal dock: place icon and time side by side
+            self.recording_box = Box(
+                orientation="h",
+                spacing=4,
+                children=[self.recording_label, self.time_label]
+            )
         self.add(self.recording_box)
 
         self.connect("clicked", self.on_stop_recording)
@@ -218,9 +228,11 @@ class RecordingIndicator(Button):
                     elapsed_seconds = int(time.time() - self.recording_start_time)
                     minutes = elapsed_seconds // 60
                     seconds = elapsed_seconds % 60
-                    time_text = f"{minutes:02d}:{seconds:02d}"
-                    self.time_label.set_markup(time_text)
-                    self.set_tooltip_text(f"Recording in progress ({time_text}) - Click to stop")
+                    # Only update time label in horizontal mode
+                    if not data.VERTICAL:
+                        time_text = f"{minutes:02d}:{seconds:02d}"
+                        self.time_label.set_markup(time_text)
+                    self.set_tooltip_text(f"Recording in progress ({minutes:02d}:{seconds:02d}) - Click to stop")
                 else:
                     self.set_tooltip_text("Recording in progress - Click to stop")
             else:
