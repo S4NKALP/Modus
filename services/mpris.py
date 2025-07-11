@@ -42,22 +42,44 @@ class PlayerService(Service):
             poll_from=lambda f, *_: self._player.get_position(),
             on_changed=lambda f, *_: self.fabricating(),
         )
+        # Add state tracking to prevent repeated operations
+        self._fabricator_running = False
+        self._cleanup_done = False
         self.poll_progress()
 
     def cleanup(self):
         """Clean up resources when service is no longer needed"""
+        if self._cleanup_done:
+            return  # Already cleaned up
+
         try:
             if hasattr(self, 'pos_fabricator') and self.pos_fabricator:
-                self.pos_fabricator.stop()
+                if self._fabricator_running:
+                    self.pos_fabricator.stop()
+                    self._fabricator_running = False
+                self.pos_fabricator = None
+            self._cleanup_done = True
         except Exception as e:
             print(f"[DEBUG] Error during PlayerService cleanup: {e}")
 
     def on_seeked(self, player, position):
-        if self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
-            self.pos_fabricator.start()
+        if (not self._cleanup_done and
+            self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING" and
+            not self._fabricator_running):
+            try:
+                self.pos_fabricator.start()
+                self._fabricator_running = True
+            except Exception:
+                pass  # Ignore if already started
 
     def set_position(self, pos: float):
-        self.pos_fabricator.stop()
+        if not self._cleanup_done and self._fabricator_running:
+            try:
+                self.pos_fabricator.stop()
+                self._fabricator_running = False
+            except Exception:
+                pass  # Ignore if already stopped
+
         micro_pos = int(pos * 1_000_000)
         try:
             self._player.set_position(micro_pos)
@@ -65,10 +87,23 @@ class PlayerService(Service):
             print(f"Failed to seek: {e}")
 
     def poll_progress(self):
+        if self._cleanup_done:
+            return  # Don't operate on cleaned up fabricator
+
         if self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING":
-            self.pos_fabricator.start()
+            if not self._fabricator_running:
+                try:
+                    self.pos_fabricator.start()
+                    self._fabricator_running = True
+                except Exception:
+                    pass  # Ignore if already started
         else:
-            self.pos_fabricator.stop()
+            if self._fabricator_running:
+                try:
+                    self.pos_fabricator.stop()
+                    self._fabricator_running = False
+                except Exception:
+                    pass  # Ignore if already stopped
 
     def fabricating(self):
         try:

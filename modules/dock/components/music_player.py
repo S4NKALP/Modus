@@ -219,6 +219,11 @@ class MusicPlayer(Box):
             2, self.check_active_player
         )
 
+        # Add recursion protection and debouncing
+        self._in_player_switch = False
+        self._last_player_switch_time = 0
+        self._switch_debounce_ms = 500  # 500ms debounce
+
         # Connect to destroy signal for cleanup
         self.connect("destroy", self.on_destroy)
 
@@ -358,6 +363,10 @@ class MusicPlayer(Box):
 
     def check_active_player(self):
         """Periodically check for the currently playing player and switch if needed"""
+        # Prevent recursion during player checking
+        if self._in_player_switch:
+            return True  # Continue the timeout
+
         try:
             current_time = time.time()
 
@@ -473,6 +482,18 @@ class MusicPlayer(Box):
 
     def set_current_player(self, player):
         """Set the current active player"""
+        # Prevent recursion during player switching
+        if self._in_player_switch:
+            return
+
+        # Add debouncing to prevent rapid switching
+        import time
+        current_time = time.time() * 1000  # Convert to milliseconds
+        if current_time - self._last_player_switch_time < self._switch_debounce_ms:
+            return
+
+        self._in_player_switch = True
+        self._last_player_switch_time = current_time
         try:
             # Validate player before proceeding
             if not player or not hasattr(player, 'props') or not hasattr(player.props, 'player_name'):
@@ -493,16 +514,15 @@ class MusicPlayer(Box):
                             except Exception:
                                 pass
 
-                    # Disconnect signals - only if they were actually connected
-                    # Use a more robust disconnection approach
-                    try:
-                        # Get all signal handlers and disconnect them
-                        if hasattr(self.current_player_service, 'disconnect'):
-                            # Try to disconnect all signals from this service
-                            self.current_player_service.disconnect()
-                    except Exception:
-                        # If bulk disconnect fails, try individual disconnections
-                        pass
+                    # Disconnect signals safely - avoid bulk disconnect which can cause recursion
+                    # Store signal handler IDs for proper cleanup
+                    if hasattr(self.current_player_service, '_signal_handlers'):
+                        try:
+                            for handler_id in self.current_player_service._signal_handlers:
+                                self.current_player_service.disconnect(handler_id)
+                            self.current_player_service._signal_handlers.clear()
+                        except Exception:
+                            pass
 
                 except Exception:
                     pass
@@ -519,13 +539,24 @@ class MusicPlayer(Box):
 
                     self.current_player_service = PlayerService(player=player)
 
-                    # Connect to player events with error handling
+                    # Connect to player events with error handling and store handler IDs
                     if self.current_player_service:
                         try:
-                            self.current_player_service.connect("track-position", self.on_track_position)
-                            self.current_player_service.connect("play", self.on_play)
-                            self.current_player_service.connect("pause", self.on_pause)
-                            self.current_player_service.connect("meta-change", self.on_metadata)
+                            # Initialize signal handlers list for proper cleanup
+                            self.current_player_service._signal_handlers = []
+
+                            # Connect signals and store handler IDs
+                            handler_id = self.current_player_service.connect("track-position", self.on_track_position)
+                            self.current_player_service._signal_handlers.append(handler_id)
+
+                            handler_id = self.current_player_service.connect("play", self.on_play)
+                            self.current_player_service._signal_handlers.append(handler_id)
+
+                            handler_id = self.current_player_service.connect("pause", self.on_pause)
+                            self.current_player_service._signal_handlers.append(handler_id)
+
+                            handler_id = self.current_player_service.connect("meta-change", self.on_metadata)
+                            self.current_player_service._signal_handlers.append(handler_id)
                         except Exception:
                             # If signal connection fails, clean up the service
                             if hasattr(self.current_player_service, 'cleanup'):
@@ -548,6 +579,9 @@ class MusicPlayer(Box):
             # Reset to safe state
             self.current_player = None
             self.current_player_service = None
+        finally:
+            # Always reset recursion protection flag
+            self._in_player_switch = False
 
     def on_track_position(self, service, pos, dur):
         """Handle track position updates"""
