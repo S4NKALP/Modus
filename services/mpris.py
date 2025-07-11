@@ -39,13 +39,29 @@ class PlayerService(Service):
         self.status = self._player.props.playback_status
         self.pos_fabricator = Fabricator(
             interval=1000,  # 1s
-            poll_from=lambda f, *_: self._player.get_position(),
+            poll_from=lambda f, *_: self._safe_get_position(),
             on_changed=lambda f, *_: self.fabricating(),
         )
         # Add state tracking to prevent repeated operations
         self._fabricator_running = False
         self._cleanup_done = False
         self.poll_progress()
+
+    def _safe_get_position(self):
+        """Safely get player position with error handling"""
+        try:
+            if not self._player or self._cleanup_done:
+                return 0
+            return self._player.get_position()
+        except Exception:
+            # Player is no longer available, stop the fabricator
+            if hasattr(self, 'pos_fabricator') and self.pos_fabricator and self._fabricator_running:
+                try:
+                    self.pos_fabricator.stop()
+                    self._fabricator_running = False
+                except Exception:
+                    pass
+            return 0
 
     def cleanup(self):
         """Clean up resources when service is no longer needed"""
@@ -107,6 +123,10 @@ class PlayerService(Service):
 
     def fabricating(self):
         try:
+            # Check if cleanup has been done
+            if self._cleanup_done:
+                return
+
             # Validate player object
             if not self._player or not hasattr(self._player, 'get_position'):
                 return
@@ -115,6 +135,13 @@ class PlayerService(Service):
             try:
                 pos = self._player.get_position() / 1_000_000  # seconds
             except Exception:
+                # Player is no longer available, stop fabricator
+                if self._fabricator_running:
+                    try:
+                        self.pos_fabricator.stop()
+                        self._fabricator_running = False
+                    except Exception:
+                        pass
                 return
 
             # Get duration safely from multiple sources

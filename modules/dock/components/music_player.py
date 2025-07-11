@@ -171,6 +171,10 @@ class MusicPlayer(Box):
         self._last_player_switch = 0
         self._switch_debounce_time = 1.0  # 1 second minimum between switches
 
+        # Visibility debouncing to prevent immediate hiding when player closes
+        self._visibility_timeout = None
+        self._hide_delay = 2.0  # 2 seconds delay before hiding when no players
+
         # Create circular progress bar
         self.progress_bar = CircularProgressBar(
             name="player-circle",
@@ -238,6 +242,11 @@ class MusicPlayer(Box):
             if hasattr(self, "_hover_timeout") and self._hover_timeout:
                 GLib.source_remove(self._hover_timeout)
                 self._hover_timeout = None
+
+            # Remove visibility timeout
+            if hasattr(self, "_visibility_timeout") and self._visibility_timeout:
+                GLib.source_remove(self._visibility_timeout)
+                self._visibility_timeout = None
 
             # Clean up current player service
             if hasattr(self, 'current_player_service') and self.current_player_service:
@@ -730,6 +739,20 @@ class MusicPlayer(Box):
     def has_running_players(self):
         """Check if there are any players that actually have media content running"""
         try:
+            # First check if we have a current player that's still valid
+            if self.current_player and self.current_player_service:
+                try:
+                    # Check if current player still exists and has media
+                    if hasattr(self.current_player.props, "metadata"):
+                        metadata = self.current_player.props.metadata
+                        if metadata and len(metadata.keys()) > 0:
+                            keys = metadata.keys()
+                            if ("xesam:title" in keys or "xesam:artist" in keys or "mpris:length" in keys):
+                                return True
+                except Exception:
+                    pass
+
+            # Check all available players
             if not hasattr(self.manager, "_manager") or not hasattr(self.manager._manager, "props"):
                 return False
 
@@ -762,23 +785,30 @@ class MusicPlayer(Box):
                                     or "mpris:length" in keys
                                 ):
                                     return True
-                        except Exception as e:
+                        except Exception:
                             pass
 
                     # Also check if player is currently playing (even without full metadata)
+                    # But be more strict - only count as "has media" if actually playing
                     if hasattr(player.props, "playback_status"):
                         try:
                             status = player.props.playback_status
                             if (status and hasattr(status, 'value_name') and
                                 status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"):
-                                return True
-                        except Exception as e:
+                                # Double-check that this isn't just a phantom player
+                                # by trying to get position or metadata
+                                try:
+                                    player.get_position()  # This will fail if player is dead
+                                    return True
+                                except Exception:
+                                    pass
+                        except Exception:
                             pass
 
-                except Exception as e:
+                except Exception:
                     pass
 
-        except Exception as e:
+        except Exception:
             pass
 
         return False
@@ -792,6 +822,31 @@ class MusicPlayer(Box):
                 self.set_visible(False)
                 return
 
-        # Show component only if there are players with actual media content
+        # Check if there are players with actual media content
         has_media_players = self.has_running_players()
-        self.set_visible(has_media_players)
+
+        if has_media_players:
+            # Cancel any pending hide timeout
+            if self._visibility_timeout:
+                GLib.source_remove(self._visibility_timeout)
+                self._visibility_timeout = None
+            # Show immediately when media is available
+            self.set_visible(True)
+        else:
+            # Don't hide immediately - use a delay to prevent flickering
+            # when players are restarting or switching
+            if not self._visibility_timeout:
+                self._visibility_timeout = GLib.timeout_add_seconds(
+                    int(self._hide_delay),
+                    self._delayed_hide
+                )
+
+    def _delayed_hide(self):
+        """Hide the component after delay if still no media players"""
+        # Double-check that we still don't have media players
+        if not self.has_running_players():
+            self.set_visible(False)
+
+        # Clear the timeout
+        self._visibility_timeout = None
+        return False  # Don't repeat the timeout
