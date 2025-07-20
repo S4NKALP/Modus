@@ -20,18 +20,16 @@ class ClipboardPlugin(PluginBase):
         self.display_name = "Clipboard History"
         self.description = "Search and manage clipboard history using cliphist"
 
-        # Performance settings
-        self.max_results = 20
+        # Performance settings - show more history like example_cliphist.py
+        self.max_results = 50
         # Cache clipboard items for 5 seconds (more responsive)
         self.cache_ttl = 5
-        self.image_cache_ttl = 300  # Cache images for 5 minutes
 
         # Initialize cache and temp directory
         self.tmp_dir = tempfile.mkdtemp(prefix="cliphist-")
-        self.image_cache: Dict[str, GdkPixbuf.Pixbuf] = {}
+        self.image_cache: Dict[str, GdkPixbuf.Pixbuf] = {}  # Cache images forever like example_cliphist.py
         self.clipboard_items_cache: List[str] = []
         self.cache_timestamp = 0
-        self.image_cache_timestamps: Dict[str, float] = {}
 
         # Threading
         self.executor = ThreadPoolExecutor(
@@ -73,7 +71,6 @@ class ClipboardPlugin(PluginBase):
             with self.cache_lock:
                 self.image_cache.clear()
                 self.clipboard_items_cache.clear()
-                self.image_cache_timestamps.clear()
         except Exception as e:
             print(f"Error cleaning up temporary files: {e}", file=sys.stderr)
 
@@ -82,8 +79,7 @@ class ClipboardPlugin(PluginBase):
         with self.cache_lock:
             self.clipboard_items_cache.clear()
             self.cache_timestamp = 0
-            self.image_cache.clear()
-            self.image_cache_timestamps.clear()
+            # Keep image cache forever like example_cliphist.py
 
     def _force_launcher_refresh(self):
         """Force the launcher to refresh its results."""
@@ -174,10 +170,7 @@ class ClipboardPlugin(PluginBase):
                 self.clipboard_items_cache = items
                 self.cache_timestamp = current_time
 
-                # If data changed significantly, clear image cache too
-                if data_changed:
-                    self.image_cache.clear()
-                    self.image_cache_timestamps.clear()
+                # Keep image cache forever like example_cliphist.py - don't clear on data changes
 
             return items
         except subprocess.CalledProcessError as e:
@@ -217,9 +210,13 @@ class ClipboardPlugin(PluginBase):
             return None
 
     def _is_image_data(self, content: str) -> bool:
-        """Determine if clipboard content is likely an image."""
-        return "binary" in content.lower() and any(
-            ext in content.lower() for ext in ["jpg", "jpeg", "png", "bmp", "gif"]
+        """Determine if clipboard content is likely an image (like example_cliphist.py)."""
+        return (
+            content.startswith("data:image/") or
+            content.startswith("\x89PNG") or
+            content.startswith("GIF8") or
+            content.startswith("\xff\xd8\xff") or
+            "binary" in content.lower() and any(ext in content.lower() for ext in ["jpg", "jpeg", "png", "bmp", "gif"])
         )
 
     def _get_text_preview(self, content: str) -> str:
@@ -229,17 +226,10 @@ class ClipboardPlugin(PluginBase):
         return content
 
     def _load_image_preview_cached(self, item_id: str) -> Optional[GdkPixbuf.Pixbuf]:
-        """Load image preview with caching and timeout."""
-        current_time = time.time()
-
-        # Check cache first
+        """Load image preview with forever caching (like example_cliphist.py)."""
+        # Check cache first - cache forever like example_cliphist.py
         with self.cache_lock:
-            if (
-                item_id in self.image_cache
-                and item_id in self.image_cache_timestamps
-                and current_time - self.image_cache_timestamps[item_id]
-                < self.image_cache_ttl
-            ):
+            if item_id in self.image_cache:
                 return self.image_cache[item_id]
 
         try:
@@ -253,7 +243,7 @@ class ClipboardPlugin(PluginBase):
             if pixbuf:
                 with self.cache_lock:
                     self.image_cache[item_id] = pixbuf
-                    self.image_cache_timestamps[item_id] = current_time
+
             return pixbuf
         except Exception as e:
             print(f"Error loading image preview: {e}", file=sys.stderr)
@@ -312,15 +302,15 @@ class ClipboardPlugin(PluginBase):
                 item_id = parts[0] if len(parts) > 1 else str(i)
                 content = parts[1] if len(parts) > 1 else item
 
-                # Handle image content with lazy loading
+                # Handle image content like example_cliphist.py
                 if self._is_image_data(content):
-                    # Check if image is already cached
+                    # Check if image is already cached (forever cache like example_cliphist.py)
                     cached_pixbuf = None
                     with self.cache_lock:
                         cached_pixbuf = self.image_cache.get(item_id)
 
                     if cached_pixbuf:
-                        # Use cached image
+                        # Use cached image immediately
                         result = Result(
                             title="Image from clipboard",
                             subtitle="Click to copy image to clipboard",
@@ -332,19 +322,45 @@ class ClipboardPlugin(PluginBase):
                             data={"bypass_max_results": True},
                         )
                     else:
-                        # Show placeholder and load image in background
-                        result = Result(
-                            title="Image from clipboard",
-                            subtitle="Loading preview...",
-                            description="Image content",
-                            icon_name="image-x-generic",
-                            relevance=relevance,
-                            plugin_name=self.name,
-                            action=lambda id=item_id: self._copy_to_clipboard(id),
-                            data={"bypass_max_results": True},
-                        )
-                        # Load image in background (don't wait for it)
-                        self.executor.submit(self._load_image_preview_cached, item_id)
+                        # Try to load image immediately like example_cliphist.py
+                        try:
+                            immediate_pixbuf = self._load_image_preview_cached(item_id)
+                            if immediate_pixbuf:
+                                # Successfully loaded immediately
+                                result = Result(
+                                    title="Image from clipboard",
+                                    subtitle="Click to copy image to clipboard",
+                                    description="Image content",
+                                    icon=immediate_pixbuf,
+                                    relevance=relevance,
+                                    plugin_name=self.name,
+                                    action=lambda id=item_id: self._copy_to_clipboard(id),
+                                    data={"bypass_max_results": True},
+                                )
+                            else:
+                                # Show placeholder if loading failed
+                                result = Result(
+                                    title="Image from clipboard",
+                                    subtitle="Click to copy image to clipboard",
+                                    description="Image content",
+                                    icon_name="image-x-generic",
+                                    relevance=relevance,
+                                    plugin_name=self.name,
+                                    action=lambda id=item_id: self._copy_to_clipboard(id),
+                                    data={"bypass_max_results": True},
+                                )
+                        except Exception:
+                            # Fallback to placeholder
+                            result = Result(
+                                title="Image from clipboard",
+                                subtitle="Click to copy image to clipboard",
+                                description="Image content",
+                                icon_name="image-x-generic",
+                                relevance=relevance,
+                                plugin_name=self.name,
+                                action=lambda id=item_id: self._copy_to_clipboard(id),
+                                data={"bypass_max_results": True},
+                            )
 
                     results.append(result)
                     continue
@@ -400,8 +416,11 @@ class ClipboardPlugin(PluginBase):
                     timeout=3,
                 )
 
-            # Invalidate cache since clipboard content has changed
-            self.invalidate_cache()
+            # Don't invalidate image cache - keep images cached forever like example_cliphist.py
+            # Only invalidate clipboard items cache
+            with self.cache_lock:
+                self.clipboard_items_cache.clear()
+                self.cache_timestamp = 0
 
         except subprocess.SubprocessError as e:
             print(f"Error copying to clipboard: {e}", file=sys.stderr)

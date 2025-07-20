@@ -36,11 +36,27 @@ def test_clipboard_search():
             for i, result in enumerate(results[:5]):  # Show first 5
                 print(f"  {i+1}. {result.relevance:.2f} - {result.title[:50]}...")
         
+        # Test image handling
+        print("\n🖼️ Testing image handling...")
+        image_results = [r for r in results if "Image from clipboard" in r.title]
+        if image_results:
+            print(f"Found {len(image_results)} image results")
+            for img_result in image_results[:3]:  # Show first 3
+                has_icon = hasattr(img_result, 'icon') and img_result.icon is not None
+                print(f"  - {img_result.subtitle} (Icon loaded: {has_icon})")
+        else:
+            print("No image results found (normal if no images in clipboard)")
+
         print("\n✅ Clipboard search test completed!")
         print("The plugin now:")
         print("  - Searches through ALL clipboard items (not just first 20)")
         print("  - Sorts results by relevance (exact matches first)")
+        print("  - Shows up to 50 results (increased from 20)")
         print("  - Limits results only after filtering and sorting")
+        print("  - FOREVER image caching (like example_cliphist.py)")
+        print("  - Better image detection (supports more formats)")
+        print("  - Immediate image loading when cached")
+        print("  - No cache expiration - images stay cached until restart")
         
         plugin.cleanup()
         
