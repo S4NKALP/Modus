@@ -67,6 +67,26 @@ class ApplicationSwitcher(Window):
         self.hide()
         self.ungrab_keyboard()
 
+    def _is_special_workspace(self, client):
+        """Check if a client is in a special workspace"""
+        if "workspace" not in client:
+            return False
+
+        workspace = client["workspace"]
+        if "name" in workspace:
+            workspace_name = str(workspace["name"])
+            # Special workspaces typically start with "special:" or have negative IDs
+            if workspace_name.startswith("special:"):
+                return True
+
+        if "id" in workspace:
+            workspace_id = workspace["id"]
+            # Special workspaces have negative IDs
+            if workspace_id < 0:
+                return True
+
+        return False
+
     def update_windows(self) -> None:
         for child in self.view.get_children():
             self.view.remove(child)
@@ -76,7 +96,18 @@ class ApplicationSwitcher(Window):
             if not clients_data:
                 return
             clients = json.loads(clients_data.decode("utf-8"))
-            self.windows = [c for c in clients if not c.get("hidden", False)]
+
+            # Filter out hidden windows and optionally special workspace windows
+            filtered_windows = []
+            for c in clients:
+                if c.get("hidden", False):
+                    continue
+                # Skip clients in special workspaces if the setting is enabled
+                if data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS and self._is_special_workspace(c):
+                    continue
+                filtered_windows.append(c)
+
+            self.windows = filtered_windows
 
             active_data = self.conn.send_command("j/activewindow").reply
             active_window = (
