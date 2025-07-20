@@ -97,6 +97,7 @@ class PluginManager:
             "bookmarks",
             "process",
             "bash_scripts",
+            "tmux",
         ]
 
         for plugin_name in default_plugins:

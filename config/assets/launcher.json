@@ -95,6 +95,10 @@
     "sh": {
       "icon": "terminal",
       "description": "Bash Scripts - Manage and execute bash scripts"
+    },
+    "tmux": {
+      "icon": "terminal",
+      "description": "Tmux Manager - Create, attach, rename, and kill tmux sessions"
     }
   },
   "settings": {
