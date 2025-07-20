@@ -109,6 +109,9 @@ class WallpaperPlugin(PluginBase):
         except Exception as e:
             print(f"Error writing matugen state to config: {e}")
 
+        # Clear the search query after toggling matugen
+        self._clear_launcher_query()
+
         # # Send notification
         # status = "enabled" if enabled else "disabled"
         # exec_shell_command_async(
@@ -116,6 +119,53 @@ class WallpaperPlugin(PluginBase):
         #         data.APP_NAME_CAP
         #     }' -e"
         # )
+
+    def _clear_launcher_query(self):
+        """Clear the launcher search query and reset to trigger."""
+        try:
+            # Try to access the launcher through the fabric Application
+            from fabric import Application
+            from gi.repository import GLib
+
+            app = Application.get_default()
+
+            if app and hasattr(app, "launcher"):
+                launcher = app.launcher
+                if launcher and hasattr(launcher, "search_entry"):
+                    def clear_and_refresh():
+                        # Clear the search entry to just the trigger
+                        launcher.search_entry.set_text("wall ")
+                        # Position cursor at the end
+                        launcher.search_entry.set_position(-1)
+                        # Trigger the search to show default wallpaper view
+                        if hasattr(launcher, "_perform_search"):
+                            launcher._perform_search("wall ")
+                        return False
+
+                    # Use a small delay to ensure the action completes first
+                    GLib.timeout_add(50, clear_and_refresh)
+                    return
+
+            # Fallback: try to find launcher instance through other means
+            import gc
+
+            for obj in gc.get_objects():
+                if (
+                    hasattr(obj, "__class__")
+                    and obj.__class__.__name__ == "Launcher"
+                ):
+                    if hasattr(obj, "search_entry") and hasattr(obj, "_perform_search"):
+                        def clear_and_refresh():
+                            obj.search_entry.set_text("wall ")
+                            obj.search_entry.set_position(-1)
+                            obj._perform_search("wall ")
+                            return False
+
+                        GLib.timeout_add(50, clear_and_refresh)
+                        return
+
+        except Exception as e:
+            print(f"Could not clear launcher query: {e}")
 
     def _get_cache_path(self, filename: str) -> str:
         """Get cache path for wallpaper thumbnail."""
@@ -653,7 +703,7 @@ class WallpaperPlugin(PluginBase):
                 results.append(
                     Result(
                         title="Hex Color Commands",
-                        subtitle="Use: color #FF5733, hex #00FF00, color random, or add scheme name",
+                        subtitle="Use: color #FF5733, hex #00FF00, color random",
                         icon_markup=icons.palette,
                         action=lambda: None,
                         relevance=0.8,
@@ -867,23 +917,6 @@ class WallpaperPlugin(PluginBase):
                 )
             )
 
-        # Handle empty query (just trigger keywords: wall, wallpaper, wp)
-        if not query:
-            # Show status and quick actions when just typing trigger keywords
-            results.append(
-                Result(
-                    title=f"Wallpaper System{indicator_text}",
-                    subtitle=f"{
-                        status_text
-                    } • Type commands: random, scheme, status, matugen",
-                    icon_markup=icons.wallpapers,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                    data={"action": "overview", "bypass_max_results": True},
-                )
-            )
-
             # Show quick actions
             results.append(
                 Result(
@@ -910,7 +943,7 @@ class WallpaperPlugin(PluginBase):
                 )
             )
 
-        # Search wallpapers by filename
+        # Search wallpapers by filename - Show ALL wallpapers like example_wallpapers.py
         if not query or (
             query
             and "matugen" not in query
@@ -930,13 +963,10 @@ class WallpaperPlugin(PluginBase):
                         relevance = 0.8
                     matching_wallpapers.append((wallpaper, relevance))
 
-            # Sort by relevance and limit results for better performance
+            # Sort by relevance and show ALL wallpapers (like example_wallpapers.py)
             matching_wallpapers.sort(key=lambda x: x[1], reverse=True)
 
-            # Limit to first 50 results for performance (can be increased if needed)
-            max_results = 50 if query else 20  # Show fewer when no query to load faster
-            matching_wallpapers = matching_wallpapers[:max_results]
-
+            # Show ALL wallpapers instead of limiting (following example_wallpapers.py pattern)
             for wallpaper, relevance in matching_wallpapers:
                 # Use fast thumbnail loading
                 icon = self._get_thumbnail_fast(wallpaper)
