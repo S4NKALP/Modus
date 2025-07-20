@@ -27,7 +27,8 @@ class ClipboardPlugin(PluginBase):
 
         # Initialize cache and temp directory
         self.tmp_dir = tempfile.mkdtemp(prefix="cliphist-")
-        self.image_cache: Dict[str, GdkPixbuf.Pixbuf] = {}  # Cache images forever like example_cliphist.py
+        # Cache images forever like example_cliphist.py
+        self.image_cache: Dict[str, GdkPixbuf.Pixbuf] = {}
         self.clipboard_items_cache: List[str] = []
         self.cache_timestamp = 0
 
@@ -212,11 +213,14 @@ class ClipboardPlugin(PluginBase):
     def _is_image_data(self, content: str) -> bool:
         """Determine if clipboard content is likely an image (like example_cliphist.py)."""
         return (
-            content.startswith("data:image/") or
-            content.startswith("\x89PNG") or
-            content.startswith("GIF8") or
-            content.startswith("\xff\xd8\xff") or
-            "binary" in content.lower() and any(ext in content.lower() for ext in ["jpg", "jpeg", "png", "bmp", "gif"])
+            content.startswith("data:image/")
+            or content.startswith("\x89PNG")
+            or content.startswith("GIF8")
+            or content.startswith("\xff\xd8\xff")
+            or "binary" in content.lower()
+            and any(
+                ext in content.lower() for ext in ["jpg", "jpeg", "png", "bmp", "gif"]
+            )
         )
 
     def _get_text_preview(self, content: str) -> str:
@@ -288,13 +292,15 @@ class ClipboardPlugin(PluginBase):
                         elif query_lower in content_lower:
                             # Position-based scoring: earlier matches get higher scores
                             position = content_lower.find(query_lower)
-                            relevance = max(0.5, 1.0 - (position / len(content_lower)) * 0.4)
+                            relevance = max(
+                                0.5, 1.0 - (position / len(content_lower)) * 0.4
+                            )
 
                     filtered_items.append((item, relevance))
 
             # Sort by relevance (highest first) and then limit results
             filtered_items.sort(key=lambda x: x[1], reverse=True)
-            filtered_items = filtered_items[:self.max_results]
+            filtered_items = filtered_items[: self.max_results]
 
             # Process items with lazy image loading
             for i, (item, relevance) in enumerate(filtered_items):
@@ -334,7 +340,9 @@ class ClipboardPlugin(PluginBase):
                                     icon=immediate_pixbuf,
                                     relevance=relevance,
                                     plugin_name=self.name,
-                                    action=lambda id=item_id: self._copy_to_clipboard(id),
+                                    action=lambda id=item_id: self._copy_to_clipboard(
+                                        id
+                                    ),
                                     data={"bypass_max_results": True},
                                 )
                             else:
@@ -346,7 +354,9 @@ class ClipboardPlugin(PluginBase):
                                     icon_name="image-x-generic",
                                     relevance=relevance,
                                     plugin_name=self.name,
-                                    action=lambda id=item_id: self._copy_to_clipboard(id),
+                                    action=lambda id=item_id: self._copy_to_clipboard(
+                                        id
+                                    ),
                                     data={"bypass_max_results": True},
                                 )
                         except Exception:

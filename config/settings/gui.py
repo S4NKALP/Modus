@@ -808,7 +808,7 @@ class HyprConfGUI(Window):
         return scrolled_window
 
     def _add_disk_entry_widget(self, path):
-        """Helper para añadir una fila de entrada de disco al Box disk_entries."""
+        """Helper to add a disk entry row to the disk_entries Box."""
         bar = Box(orientation="h", spacing=10, h_align="start")
         entry = Entry(text=path, h_expand=True)
         bar.add(entry)
@@ -1123,7 +1123,7 @@ class HyprConfGUI(Window):
                     stderr=subprocess.DEVNULL,
                 )
                 kill_proc.wait(timeout=2)
-                print(f"{time.time():.4f}: killall process finished (o timed out).")
+                print(f"{time.time():.4f}: killall process finished (or timed out).")
             except subprocess.TimeoutExpired:
                 print("Warning: killall command timed out.")
             except Exception as e:

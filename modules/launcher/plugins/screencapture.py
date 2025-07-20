@@ -115,7 +115,6 @@ class ScreencapturePlugin(PluginBase):
     def _get_command_result(self, command: str) -> Result:
         """Get a Result object for a specific command."""
         # Import here to avoid circular imports
-        from utils.icons import screenrecord, screenshots, ssfull, ssregion, stop
 
         command_info = {
             # Screenshot commands
@@ -436,7 +435,6 @@ class ScreencapturePlugin(PluginBase):
     def query(self, query_string: str) -> List[Result]:
         """Search for screencapture actions based on query."""
         # Import here to avoid circular imports
-        from utils.icons import screenrecord, screenshots, ssfull, ssregion, stop
 
         # Clean the query string
         query = query_string.strip().lower()
@@ -463,14 +461,17 @@ class ScreencapturePlugin(PluginBase):
 
             if command in file_conversion_commands:
                 format_type = file_conversion_commands[command]
-                return [Result(
-                    title=f"Convert {file_param} to {format_type.upper()}",
-                    subtitle=f"Convert specified file to {format_type} format",
-                    icon_markup=screenrecord,
-                    action=lambda fp=file_param, ft=format_type: self._run_script_with_file(ft, fp),
-                    relevance=1.0,
-                    plugin_name=self.display_name,
-                )]
+                return [
+                    Result(
+                        title=f"Convert {file_param} to {format_type.upper()}",
+                        subtitle=f"Convert specified file to {format_type} format",
+                        icon_markup=screenrecord,
+                        action=lambda fp=file_param,
+                        ft=format_type: self._run_script_with_file(ft, fp),
+                        relevance=1.0,
+                        plugin_name=self.display_name,
+                    )
+                ]
 
         # Check if query matches a command and return it as a result
         command_result = self._get_command_result(query)
