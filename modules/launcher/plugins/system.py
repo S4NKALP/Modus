@@ -56,7 +56,6 @@ class SystemPlugin(PluginBase):
                     cache_data = json.load(f)
                     self._bin_cache = set(cache_data.get("binaries", []))
                     self._last_bin_update = cache_data.get("last_update", 0)
-                    print(f"SystemPlugin: Loaded {len(self._bin_cache)} binaries from cache")
             else:
                 print("SystemPlugin: No cache file found, will build cache in background")
         except Exception as e:
@@ -78,7 +77,6 @@ class SystemPlugin(PluginBase):
 
             with open(self.bin_cache_file, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, indent=2)
-            print(f"SystemPlugin: Saved {len(self._bin_cache)} binaries to cache")
         except Exception as e:
             print(f"SystemPlugin: Error saving binary cache: {e}")
 
@@ -101,7 +99,6 @@ class SystemPlugin(PluginBase):
     def _build_bin_cache_background(self):
         """Build binary cache in background thread."""
         try:
-            print("SystemPlugin: Building binary cache in background...")
             new_cache = set()
             processed_paths = set()  # Avoid duplicate paths
 
@@ -129,7 +126,6 @@ class SystemPlugin(PluginBase):
             # Save to disk
             self._save_bin_cache()
 
-            print(f"SystemPlugin: Background cache update completed. Found {len(self._bin_cache)} binaries")
 
         except Exception as e:
             print(f"SystemPlugin: Error building binary cache: {e}")
@@ -236,6 +232,3 @@ class SystemPlugin(PluginBase):
                 exec_shell_command_async(command)
         except Exception as e:
             print(f"SystemPlugin: Error executing command '{command}': {e}")
-            import traceback
-
-            traceback.print_exc()
