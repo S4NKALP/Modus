@@ -20,11 +20,17 @@ class ResultItem(EventBox):
         """Emitted when result is clicked."""
         pass
 
-    def __init__(self, result: Result, selected: bool = False, **kwargs):
+    @Signal
+    def hovered(self, index: int) -> None:
+        """Emitted when result is hovered."""
+        pass
+
+    def __init__(self, result: Result, selected: bool = False, index: int = 0, **kwargs):
         super().__init__(name="launcher-result-item", **kwargs)
 
         self.result = result
         self._selected = selected
+        self.index = index
 
         # Setup UI
         self._setup_ui()
@@ -32,6 +38,7 @@ class ResultItem(EventBox):
         # Connect signals
         self.connect("button-press-event", self._on_button_press)
         self.connect("enter-notify-event", self._on_enter)
+        self.connect("leave-notify-event", self._on_leave)
 
         # Set initial selection state
         self.set_selected(selected)
@@ -138,11 +145,17 @@ class ResultItem(EventBox):
     def _on_button_press(self, widget, event):
         """Handle button press events."""
         if event.button == 1:  # Left click
-            self.clicked.emit(0)  # Emit with dummy index, parent will handle
+            self.clicked.emit(self.index)
             return True
         return False
 
     def _on_enter(self, widget, event):
         """Handle mouse enter events."""
-        # Could be used for hover effects
+        # Emit hover signal to update selection
+        self.hovered.emit(self.index)
+        return False
+
+    def _on_leave(self, widget, event):
+        """Handle mouse leave events."""
+        # Could be used for hover effects cleanup
         return False

@@ -668,10 +668,13 @@ class Launcher(Window):
             else:
                 # Create normal result item
                 result_item = ResultItem(
-                    result=result, selected=(i == self.selected_index)
+                    result=result, selected=(i == self.selected_index), index=i
                 )
                 result_item.clicked.connect(
                     lambda _, idx=i: self._on_result_clicked(result_item, idx)
+                )
+                result_item.hovered.connect(
+                    lambda _, idx=i: self._on_result_hovered(idx)
                 )
                 self.results_box.add(result_item)
 
@@ -1032,13 +1035,21 @@ class Launcher(Window):
         self.selected_index = index
         self._activate_selected()
 
+    def _on_result_hovered(self, index):
+        """Handle result item hover."""
+        # Update selection when mouse hovers over a result (without scrolling)
+        if 0 <= index < len(self.results):
+            self.selected_index = index
+            self.focus_mode = "results"  # Switch to results focus mode
+            self._update_selection_visual_only()
+
     def _is_mouse_over_results(self):
         """Check if mouse is over the results area."""
         # Simple check - if we have results visible, assume user might be interacting
         return len(self.results) > 0 and self.results_scroll.get_visible()
 
     def _update_selection(self):
-        """Update the visual selection of results."""
+        """Update the visual selection of results with scrolling (for keyboard navigation)."""
         children = self.results_box.get_children()
         selected_widget = None
 
@@ -1064,6 +1075,24 @@ class Launcher(Window):
             self._scroll_to_widget(selected_widget)
             # Also schedule a more accurate scroll after layout is complete
             GLib.idle_add(self._ensure_selected_visible)
+
+    def _update_selection_visual_only(self):
+        """Update the visual selection of results without scrolling (for mouse hover)."""
+        children = self.results_box.get_children()
+
+        for i, child in enumerate(children):
+            if isinstance(child, ResultItem):
+                is_selected = i == self.selected_index
+                child.set_selected(is_selected)
+            # For custom widgets, we don't need to handle selection visually
+            # since they manage their own interaction
+
+        # Focus custom widgets when selected for keyboard interaction
+        if self.results and 0 <= self.selected_index < len(self.results):
+            result = self.results[self.selected_index]
+            if result.custom_widget and result.custom_widget.get_can_focus():
+                # Give focus to the custom widget for keyboard interaction
+                result.custom_widget.grab_focus()
 
     def _scroll_to_widget(self, widget):
         """Scroll the results container to make the widget visible."""
