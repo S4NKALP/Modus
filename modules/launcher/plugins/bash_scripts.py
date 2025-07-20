@@ -28,6 +28,11 @@ class BashScriptsPlugin(PluginBase):
         # Default script directory to scan (only Modus scripts)
         self.modus_scripts_dir = os.path.expanduser("~/.config/Modus/scripts")
 
+        # Scripts to exclude from discovery
+        self.excluded_scripts = {
+            "screen-capture.sh"  # Exclude screen-capture.sh as it's handled by screencapture plugin
+        }
+
         # In-memory cache
         self._scripts_cache: Dict[str, Dict] = {}
         self._last_cache_update = 0
@@ -141,6 +146,10 @@ class BashScriptsPlugin(PluginBase):
                         script_path = entry.path
                         script_name = entry.name
 
+                        # Skip excluded scripts
+                        if script_name in self.excluded_scripts:
+                            continue
+
                         # Check if it's a script file
                         if self._is_script_file(script_path):
                             cache[script_name] = {
@@ -237,11 +246,16 @@ class BashScriptsPlugin(PluginBase):
         # Sort scripts by name for consistent ordering
         sorted_scripts = sorted(self._scripts_cache.items(), key=lambda x: x[1].get("name", ""))
 
-        # Add scripts (limit to remaining space)
-        remaining_slots = max_results - len(results)
-        for script_name, script_info in sorted_scripts[:remaining_slots]:
-            result = self._create_script_result(script_name, script_info, 0.8)
-            results.append(result)
+        # Add scripts (limit to max_results)
+        for script_name, script_info in sorted_scripts:
+            script_results = self._create_script_results_with_args(script_name, script_info, 0.8)
+            for script_result in script_results:
+                if len(results) < max_results:
+                    results.append(script_result)
+                else:
+                    break
+            if len(results) >= max_results:
+                break
 
         return results
 
@@ -279,9 +293,15 @@ class BashScriptsPlugin(PluginBase):
         all_matches = exact_matches + prefix_matches + partial_matches + description_matches
 
         # Convert to Result objects
-        for script_name, script_info, relevance in all_matches[:max_results]:
-            result = self._create_script_result(script_name, script_info, relevance)
-            results.append(result)
+        for script_name, script_info, relevance in all_matches:
+            script_results = self._create_script_results_with_args(script_name, script_info, relevance)
+            for script_result in script_results:
+                if len(results) < max_results:
+                    results.append(script_result)
+                else:
+                    break
+            if len(results) >= max_results:
+                break
 
         return results
 
@@ -322,10 +342,50 @@ class BashScriptsPlugin(PluginBase):
             data={"script_name": script_name, "script_path": script_path, "type": script_type}
         )
 
+    def _create_script_results_with_args(self, script_name: str, script_info: Dict, relevance: float) -> List[Result]:
+        """Create multiple Result objects for scripts that support arguments."""
+        results = []
+
+        # Check for special scripts that need argument variants
+        if script_name == "hyprpicker.sh":
+            # For hyprpicker, only show the argument variants (skip basic version)
+            variants = [
+                ("-rgb", "Pick RGB color"),
+                ("-hex", "Pick HEX color"),
+                ("-hsv", "Pick HSV color")
+            ]
+
+            for arg, desc in variants:
+                variant_result = Result(
+                    title=f"{script_name} {arg}",
+                    subtitle=f"{desc} | [scripts]",
+                    icon_markup=icons.terminal,
+                    action=self._create_script_action_with_args(script_name, script_info, [arg]),
+                    relevance=relevance + 0.1,  # Slightly higher relevance for specific variants
+                    plugin_name=self.display_name,
+                    data={"script_name": script_name, "script_path": script_info.get("path", ""), "type": script_info.get("type", "discovered"), "args": [arg]}
+                )
+                results.append(variant_result)
+        else:
+            # For other scripts, create the basic result
+            basic_result = self._create_script_result(script_name, script_info, relevance)
+            results.append(basic_result)
+
+        return results
+
     def _create_script_action(self, script_name: str, script_info: Dict):
         """Create an action function for executing a script."""
         def action():
             self._execute_script(script_name, script_info)
+        return action
+
+    def _create_script_action_with_args(self, script_name: str, script_info: Dict, args: List[str]):
+        """Create an action function for executing a script with specific arguments."""
+        def action():
+            # Create a modified script_info with the specific arguments
+            modified_script_info = script_info.copy()
+            modified_script_info["args"] = args
+            self._execute_script(script_name, modified_script_info)
         return action
 
     def _execute_script(self, script_name: str, script_info: Dict):
