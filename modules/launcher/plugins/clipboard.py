@@ -279,28 +279,35 @@ class ClipboardPlugin(PluginBase):
             if not clipboard_items:
                 return results
 
-            # Filter items based on query with early termination
+            # Filter items based on query - search through ALL items first
             filtered_items = []
             query_lower = query_string.lower() if query_string else ""
 
             for item in clipboard_items:
-                # Stop if we have enough results
-                if len(filtered_items) >= self.max_results:
-                    break
-
                 parts = item.split("\t", 1)
                 content = parts[1] if len(parts) > 1 else item
+                content_lower = content.lower()
 
-                # Fast filtering
-                if not query_lower or query_lower in content.lower():
-                    filtered_items.append(item)
+                # Fast filtering - search through all items, don't limit here
+                if not query_lower or query_lower in content_lower:
+                    # Calculate relevance score for better sorting
+                    relevance = 1.0
+                    if query_lower:
+                        if content_lower.startswith(query_lower):
+                            relevance = 1.0  # Exact start match
+                        elif query_lower in content_lower:
+                            # Position-based scoring: earlier matches get higher scores
+                            position = content_lower.find(query_lower)
+                            relevance = max(0.5, 1.0 - (position / len(content_lower)) * 0.4)
+
+                    filtered_items.append((item, relevance))
+
+            # Sort by relevance (highest first) and then limit results
+            filtered_items.sort(key=lambda x: x[1], reverse=True)
+            filtered_items = filtered_items[:self.max_results]
 
             # Process items with lazy image loading
-            for i, item in enumerate(filtered_items):
-                # Limit total results
-                if len(results) >= self.max_results:
-                    break
-
+            for i, (item, relevance) in enumerate(filtered_items):
                 parts = item.split("\t", 1)
                 item_id = parts[0] if len(parts) > 1 else str(i)
                 content = parts[1] if len(parts) > 1 else item
@@ -319,7 +326,7 @@ class ClipboardPlugin(PluginBase):
                             subtitle="Click to copy image to clipboard",
                             description="Image content",
                             icon=cached_pixbuf,
-                            relevance=1.0,
+                            relevance=relevance,
                             plugin_name=self.name,
                             action=lambda id=item_id: self._copy_to_clipboard(id),
                             data={"bypass_max_results": True},
@@ -331,7 +338,7 @@ class ClipboardPlugin(PluginBase):
                             subtitle="Loading preview...",
                             description="Image content",
                             icon_name="image-x-generic",
-                            relevance=1.0,
+                            relevance=relevance,
                             plugin_name=self.name,
                             action=lambda id=item_id: self._copy_to_clipboard(id),
                             data={"bypass_max_results": True},
@@ -351,7 +358,7 @@ class ClipboardPlugin(PluginBase):
                     if len(content) <= 100
                     else content[:97] + "...",
                     icon_name="edit-paste",
-                    relevance=1.0,
+                    relevance=relevance,
                     plugin_name=self.name,
                     action=lambda id=item_id: self._copy_to_clipboard(id),
                     data={"bypass_max_results": True},
