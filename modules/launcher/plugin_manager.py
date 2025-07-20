@@ -96,6 +96,7 @@ class PluginManager:
             "password",
             "bookmarks",
             "process",
+            "bash_scripts",
         ]
 
         for plugin_name in default_plugins:
