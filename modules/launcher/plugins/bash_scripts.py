@@ -214,8 +214,8 @@ class BashScriptsPlugin(PluginBase):
         elif query.startswith("add "):
             # Add new script command
             results.extend(self._handle_add_command(query))
-        elif query.startswith("remove ") or query.startswith("delete "):
-            # Remove script command
+        elif query.startswith("remove") or query.startswith("delete"):
+            # Remove script command (handles both "remove" and "remove script_name")
             results.extend(self._handle_remove_command(query))
         elif query.startswith("edit "):
             # Edit script command
@@ -408,27 +408,60 @@ class BashScriptsPlugin(PluginBase):
     def _handle_remove_command(self, query: str) -> List[Result]:
         """Handle remove script command."""
         parts = query.split(" ", 1)
-        if len(parts) < 2:
-            return [Result(
-                title="Remove Script Usage",
-                subtitle="Usage: remove <script_name>",
-                icon_markup=icons.info,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
 
-        script_name = parts[1]
+        if len(parts) < 2 or (len(parts) == 2 and not parts[1].strip()):
+            # Show all removable scripts (custom scripts from cache)
+            results = []
+            custom_scripts = {name: info for name, info in self._scripts_cache.items()
+                            if info.get("type") == "custom"}
+
+            if not custom_scripts:
+                return [Result(
+                    title="No Custom Scripts to Remove",
+                    subtitle="No custom scripts found in collection",
+                    icon_markup=icons.info,
+                    action=lambda: None,
+                    relevance=1.0,
+                    plugin_name=self.display_name
+                )]
+
+            # Show each custom script as removable
+            for script_name, script_info in custom_scripts.items():
+                result = Result(
+                    title=f"Remove: {script_name}",
+                    subtitle=f"Remove custom script: {script_info.get('description', script_name)}",
+                    icon_markup=icons.trash,
+                    action=lambda sn=script_name: self._remove_custom_script(sn),
+                    relevance=0.9,
+                    plugin_name=self.display_name,
+                    data={"script_name": script_name, "type": "remove_action"}
+                )
+                results.append(result)
+
+            return results
+
+        script_name = parts[1].strip()
 
         if script_name in self._scripts_cache:
-            return [Result(
-                title=f"Remove Script: {script_name}",
-                subtitle=f"Remove '{script_name}' from collection",
-                icon_markup=icons.trash,
-                action=lambda: self._remove_custom_script(script_name),
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
+            script_info = self._scripts_cache[script_name]
+            if script_info.get("type") == "custom":
+                return [Result(
+                    title=f"Remove Script: {script_name}",
+                    subtitle=f"Remove custom script '{script_name}' from collection",
+                    icon_markup=icons.trash,
+                    action=lambda: self._remove_custom_script(script_name),
+                    relevance=1.0,
+                    plugin_name=self.display_name
+                )]
+            else:
+                return [Result(
+                    title=f"Cannot Remove: {script_name}",
+                    subtitle="Cannot remove discovered scripts (only custom scripts can be removed)",
+                    icon_markup=icons.alert,
+                    action=lambda: None,
+                    relevance=1.0,
+                    plugin_name=self.display_name
+                )]
         else:
             return [Result(
                 title=f"Script Not Found: {script_name}",
