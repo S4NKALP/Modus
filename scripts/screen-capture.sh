@@ -46,12 +46,16 @@ Commands:
 
   status                 Check if recording is active (exit 0 if recording, 1 if not)
 
-  convert <format>       Convert recordings
+  convert <format> [file] Convert recordings
     Formats:
-      webm               - Convert MKV files to WebM
-      iphone             - Convert MKV files for iPhone
-      youtube            - Convert MKV files for YouTube (high quality)
-      gif                - Convert MKV/MP4 files to GIF
+      webm               - Convert latest MKV to WebM (or specify file)
+      iphone             - Convert latest MKV to iPhone format (or specify file)
+      youtube            - Convert latest video to YouTube format (or specify file)
+      gif                - Convert latest video to GIF (or specify file)
+
+    Optional [file] parameter:
+      - If not provided, converts the latest recorded video
+      - If provided, converts the specified file (full path or filename in Recordings folder)
 
 Examples:
   $SCRIPT_NAME screenshot selection
@@ -60,7 +64,9 @@ Examples:
   $SCRIPT_NAME record-hq eDP-1
   $SCRIPT_NAME record-gif selection
   $SCRIPT_NAME record stop
-  $SCRIPT_NAME convert gif
+  $SCRIPT_NAME convert gif                    # Convert latest video to GIF
+  $SCRIPT_NAME convert youtube               # Convert latest video for YouTube
+  $SCRIPT_NAME convert webm /path/to/video.mkv  # Convert specific file to WebM
 
 EOF
 	exit 1
@@ -220,9 +226,53 @@ record_gif() {
 	fi
 }
 
+# Function to find the latest video file for conversion
+find_latest_video() {
+	local format="$1"
+	local recording_dir="${HOME}/Videos/Recordings"
+
+	case "$format" in
+		"webm"|"iphone")
+			# For webm and iphone, only look for MKV files
+			find "$recording_dir" -name "*.mkv" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-
+			;;
+		"youtube"|"gif")
+			# For youtube and gif, look for both MKV and MP4 files
+			find "$recording_dir" \( -name "*.mkv" -o -name "*.mp4" \) -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-
+			;;
+		*)
+			echo ""
+			;;
+	esac
+}
+
+# Function to resolve video file path
+resolve_video_file() {
+	local format="$1"
+	local file_param="$2"
+	local recording_dir="${HOME}/Videos/Recordings"
+
+	if [ -n "$file_param" ]; then
+		# File parameter provided
+		if [ -f "$file_param" ]; then
+			# Full path provided and exists
+			echo "$file_param"
+		elif [ -f "$recording_dir/$file_param" ]; then
+			# Filename provided, exists in recordings folder
+			echo "$recording_dir/$file_param"
+		else
+			echo ""
+		fi
+	else
+		# No file parameter, find latest
+		find_latest_video "$format"
+	fi
+}
+
 # Parse command
 COMMAND="$1"
 TARGET="$2"
+FILE_PARAM="$3"  # Optional file parameter for convert command
 
 # Set up file paths
 IMG="${HOME}/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%m-%s).png"
@@ -413,35 +463,43 @@ case "$COMMAND" in
 			exit 1
 		fi
 
-		RECORDING_DIR="${HOME}/Videos/Recordings"
-		CONVERTED=0
-		TOTAL=0
+		# Resolve the video file to convert
+		video_file=$(resolve_video_file "webm" "$FILE_PARAM")
 
-		for mkv_file in "${RECORDING_DIR}"/*.mkv; do
-			if [ -f "$mkv_file" ]; then
-				TOTAL=$((TOTAL + 1))
-				webm_file="${mkv_file%.mkv}.webm"
-
-				# Check if webm version doesn't already exist
-				if [ ! -f "$webm_file" ]; then
-					# Simpler ffmpeg command with basic settings
-					ffmpeg -y -i "$mkv_file" -c:v libvpx -b:v 1M -c:a libvorbis "$webm_file" 2>/tmp/ffmpeg_error.log
-
-					if [ $? -eq 0 ]; then
-						CONVERTED=$((CONVERTED + 1))
-						notify-send "Converted to WebM" "$(basename "$mkv_file")"
-					else
-						error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
-						notify-send "Conversion Failed" "Error: $error"
-					fi
-				fi
+		if [ -z "$video_file" ] || [ ! -f "$video_file" ]; then
+			if [ -n "$FILE_PARAM" ]; then
+				notify-send "WebM Conversion Error" "File not found: $FILE_PARAM"
+			else
+				notify-send "WebM Conversion Error" "No MKV files found in Recordings folder"
 			fi
-		done
+			exit 1
+		fi
 
-		if [ $TOTAL -eq 0 ]; then
-			notify-send "WebM Conversion" "No MKV files found in Recordings folder"
+		# Ensure it's an MKV file
+		if [[ "$video_file" != *.mkv ]]; then
+			notify-send "WebM Conversion Error" "Only MKV files can be converted to WebM. Found: $(basename "$video_file")"
+			exit 1
+		fi
+
+		webm_file="${video_file%.mkv}.webm"
+
+		# Check if webm version doesn't already exist
+		if [ -f "$webm_file" ]; then
+			notify-send "WebM Conversion Skipped" "WebM version already exists: $(basename "$webm_file")"
+			exit 0
+		fi
+
+		notify-send "Converting to WebM" "Processing: $(basename "$video_file")"
+
+		# Convert the file
+		ffmpeg -y -i "$video_file" -c:v libvpx -b:v 1M -c:a libvorbis "$webm_file" 2>/tmp/ffmpeg_error.log
+
+		if [ $? -eq 0 ]; then
+			file_size=$(du -h "$webm_file" | cut -f1)
+			notify-send "WebM Conversion Success" "$(basename "$video_file") → $(basename "$webm_file") ($file_size)"
 		else
-			notify-send "WebM Conversion Complete" "Converted $CONVERTED out of $TOTAL MKV files"
+			error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
+			notify-send "WebM Conversion Failed" "Error: $error"
 		fi
 		;;
 
@@ -452,50 +510,51 @@ case "$COMMAND" in
 			exit 1
 		fi
 
-		RECORDING_DIR="${HOME}/Videos/Recordings"
-		CONVERTED=0
-		SKIPPED_IPHONE=0
-		SKIPPED_EXISTING=0
-		TOTAL_FILES=0
+		# Resolve the video file to convert
+		video_file=$(resolve_video_file "iphone" "$FILE_PARAM")
 
-		for mkv_file in "${RECORDING_DIR}"/*.mkv; do
-			if [ -f "$mkv_file" ]; then
-				TOTAL_FILES=$((TOTAL_FILES + 1))
-				base_filename=$(basename "$mkv_file")
-
-				# Skip files with "iphone" in the filename
-				if [[ $base_filename == *"iphone"* ]]; then
-					SKIPPED_IPHONE=$((SKIPPED_IPHONE + 1))
-					continue
-				fi
-
-				iphone_file="${mkv_file%.mkv}-iphone.mp4"
-
-				# Check if iPhone version doesn't already exist
-				if [ ! -f "$iphone_file" ]; then
-					# Simpler ffmpeg command for iPhone compatibility
-					ffmpeg -y -i "$mkv_file" -vcodec h264 -acodec aac "$iphone_file" 2>/tmp/ffmpeg_error.log
-
-					if [ $? -eq 0 ]; then
-						CONVERTED=$((CONVERTED + 1))
-						notify-send "Converted for iPhone" "$(basename "$mkv_file")"
-					else
-						error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
-						notify-send "Conversion Failed" "Error: $error"
-					fi
-				else
-					SKIPPED_EXISTING=$((SKIPPED_EXISTING + 1))
-				fi
+		if [ -z "$video_file" ] || [ ! -f "$video_file" ]; then
+			if [ -n "$FILE_PARAM" ]; then
+				notify-send "iPhone Conversion Error" "File not found: $FILE_PARAM"
+			else
+				notify-send "iPhone Conversion Error" "No MKV files found in Recordings folder"
 			fi
-		done
+			exit 1
+		fi
 
-		if [ $TOTAL_FILES -eq 0 ]; then
-			notify-send "iPhone Conversion" "No MKV files found in Recordings folder"
+		# Ensure it's an MKV file
+		if [[ "$video_file" != *.mkv ]]; then
+			notify-send "iPhone Conversion Error" "Only MKV files can be converted for iPhone. Found: $(basename "$video_file")"
+			exit 1
+		fi
+
+		base_filename=$(basename "$video_file")
+
+		# Skip files with "iphone" in the filename
+		if [[ $base_filename == *"iphone"* ]]; then
+			notify-send "iPhone Conversion Skipped" "File already appears to be iPhone format: $(basename "$video_file")"
+			exit 0
+		fi
+
+		iphone_file="${video_file%.mkv}-iphone.mp4"
+
+		# Check if iPhone version doesn't already exist
+		if [ -f "$iphone_file" ]; then
+			notify-send "iPhone Conversion Skipped" "iPhone version already exists: $(basename "$iphone_file")"
+			exit 0
+		fi
+
+		notify-send "Converting for iPhone" "Processing: $(basename "$video_file")"
+
+		# Convert the file
+		ffmpeg -y -i "$video_file" -vcodec h264 -acodec aac "$iphone_file" 2>/tmp/ffmpeg_error.log
+
+		if [ $? -eq 0 ]; then
+			file_size=$(du -h "$iphone_file" | cut -f1)
+			notify-send "iPhone Conversion Success" "$(basename "$video_file") → $(basename "$iphone_file") ($file_size)"
 		else
-			notify-send "iPhone Conversion Complete" "Converted: $CONVERTED files
-Skipped (already iPhone): $SKIPPED_IPHONE files
-Skipped (has iPhone version): $SKIPPED_EXISTING files
-Total files checked: $TOTAL_FILES"
+			error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
+			notify-send "iPhone Conversion Failed" "Error: $error"
 		fi
 		;;
 
@@ -506,73 +565,64 @@ Total files checked: $TOTAL_FILES"
 			exit 1
 		fi
 
-		RECORDING_DIR="${HOME}/Videos/Recordings"
-		CONVERTED=0
-		SKIPPED_YOUTUBE=0
-		SKIPPED_EXISTING=0
-		TOTAL_FILES=0
+		# Resolve the video file to convert
+		video_file=$(resolve_video_file "youtube" "$FILE_PARAM")
 
-		# Process both MKV and MP4 files
-		for video_file in "${RECORDING_DIR}"/*.{mkv,mp4}; do
-			if [ -f "$video_file" ]; then
-				TOTAL_FILES=$((TOTAL_FILES + 1))
-				base_filename=$(basename "$video_file")
-
-				# Skip files already marked as YouTube uploads
-				if [[ $base_filename == *"youtube"* ]]; then
-					SKIPPED_YOUTUBE=$((SKIPPED_YOUTUBE + 1))
-					continue
-				fi
-
-				# Create YouTube optimized filename
-				youtube_file="${video_file%.*}-youtube.mp4"
-
-				# Check if YouTube version doesn't already exist
-				if [ ! -f "$youtube_file" ]; then
-					notify-send "Converting for YouTube" "Processing: $(basename "$video_file")"
-
-					# YouTube recommended settings:
-					# - H.264 codec with High profile
-					# - 1080p or source resolution
-					# - 60fps or source framerate
-					# - High bitrate for quality (8-12 Mbps for 1080p60)
-					# - AAC audio at 384kbps
-					# - yuv420p pixel format for compatibility
-					# - Keyframe interval of 2 seconds (GOP)
-					# - No filters to preserve original colors
-
-					ffmpeg -y -i "$video_file" \
-						-c:v libx264 \
-						-profile:v high \
-						-preset slow \
-						-crf 18 \
-						-pix_fmt yuv420p \
-						-c:a aac \
-						-b:a 384k \
-						-movflags +faststart \
-						"$youtube_file" 2>/tmp/ffmpeg_error.log
-
-					if [ $? -eq 0 ]; then
-						CONVERTED=$((CONVERTED + 1))
-						file_size=$(du -h "$youtube_file" | cut -f1)
-						notify-send "YouTube Conversion Success" "$(basename "$video_file") → $(basename "$youtube_file") ($file_size)"
-					else
-						error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
-						notify-send "YouTube Conversion Failed" "Error converting $(basename "$video_file"): $error"
-					fi
-				else
-					SKIPPED_EXISTING=$((SKIPPED_EXISTING + 1))
-				fi
+		if [ -z "$video_file" ] || [ ! -f "$video_file" ]; then
+			if [ -n "$FILE_PARAM" ]; then
+				notify-send "YouTube Conversion Error" "File not found: $FILE_PARAM"
+			else
+				notify-send "YouTube Conversion Error" "No video files found in Recordings folder"
 			fi
-		done
+			exit 1
+		fi
 
-		if [ $TOTAL_FILES -eq 0 ]; then
-			notify-send "YouTube Conversion" "No video files found in Recordings folder"
+		base_filename=$(basename "$video_file")
+
+		# Skip files already marked as YouTube uploads
+		if [[ $base_filename == *"youtube"* ]]; then
+			notify-send "YouTube Conversion Skipped" "File already appears to be YouTube format: $(basename "$video_file")"
+			exit 0
+		fi
+
+		# Create YouTube optimized filename
+		youtube_file="${video_file%.*}-youtube.mp4"
+
+		# Check if YouTube version doesn't already exist
+		if [ -f "$youtube_file" ]; then
+			notify-send "YouTube Conversion Skipped" "YouTube version already exists: $(basename "$youtube_file")"
+			exit 0
+		fi
+
+		notify-send "Converting for YouTube" "Processing: $(basename "$video_file")"
+
+		# YouTube recommended settings:
+		# - H.264 codec with High profile
+		# - 1080p or source resolution
+		# - 60fps or source framerate
+		# - High bitrate for quality (8-12 Mbps for 1080p60)
+		# - AAC audio at 384kbps
+		# - yuv420p pixel format for compatibility
+		# - Keyframe interval of 2 seconds (GOP)
+		# - No filters to preserve original colors
+
+		ffmpeg -y -i "$video_file" \
+			-c:v libx264 \
+			-profile:v high \
+			-preset slow \
+			-crf 18 \
+			-pix_fmt yuv420p \
+			-c:a aac \
+			-b:a 384k \
+			-movflags +faststart \
+			"$youtube_file" 2>/tmp/ffmpeg_error.log
+
+		if [ $? -eq 0 ]; then
+			file_size=$(du -h "$youtube_file" | cut -f1)
+			notify-send "YouTube Conversion Success" "$(basename "$video_file") → $(basename "$youtube_file") ($file_size)"
 		else
-			notify-send "YouTube Conversion Complete" "Converted: $CONVERTED files
-Skipped (already YouTube): $SKIPPED_YOUTUBE files
-Skipped (has YouTube version): $SKIPPED_EXISTING files
-Total files checked: $TOTAL_FILES"
+			error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
+			notify-send "YouTube Conversion Failed" "Error converting $(basename "$video_file"): $error"
 		fi
 		;;
 
@@ -583,67 +633,60 @@ Total files checked: $TOTAL_FILES"
 			exit 1
 		fi
 
-		RECORDING_DIR="${HOME}/Videos/Recordings"
-		CONVERTED=0
-		SKIPPED_GIF=0
-		SKIPPED_EXISTING=0
-		TOTAL_FILES=0
+		# Resolve the video file to convert
+		video_file=$(resolve_video_file "gif" "$FILE_PARAM")
 
-		# Process both MKV and MP4 files
-		for video_file in "${RECORDING_DIR}"/*.{mkv,mp4}; do
-			if [ -f "$video_file" ]; then
-				TOTAL_FILES=$((TOTAL_FILES + 1))
-				base_filename=$(basename "$video_file")
-
-				# Skip files already GIFs
-				if [[ $base_filename == *.gif ]]; then
-					SKIPPED_GIF=$((SKIPPED_GIF + 1))
-					continue
-				fi
-
-				# Create GIF filename
-				gif_file="${video_file%.*}.gif"
-
-				# Check if GIF version doesn't already exist
-				if [ ! -f "$gif_file" ]; then
-					notify-send "Converting to GIF" "Processing: $(basename "$video_file")"
-
-					# Get video dimensions for scaling
-					width=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=s=x:p=0 "$video_file")
-
-					# Scale down if wider than 800px to keep file size reasonable
-					if [ "$width" -gt 800 ]; then
-						scale_filter="scale=800:-1:flags=lanczos,"
-					else
-						scale_filter=""
-					fi
-
-					# Create high-quality GIF with optimized palette
-					ffmpeg -i "$video_file" \
-						-vf "${scale_filter}fps=15,split[s0][s1];[s0]palettegen=max_colors=256:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
-						-loop 0 \
-						"$gif_file" 2>/tmp/ffmpeg_error.log
-
-					if [ $? -eq 0 ]; then
-						CONVERTED=$((CONVERTED + 1))
-						send_recording_notification "$gif_file"
-					else
-						error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
-						notify-send "GIF Conversion Failed" "Error converting $(basename "$video_file"): $error"
-					fi
-				else
-					SKIPPED_EXISTING=$((SKIPPED_EXISTING + 1))
-				fi
+		if [ -z "$video_file" ] || [ ! -f "$video_file" ]; then
+			if [ -n "$FILE_PARAM" ]; then
+				notify-send "GIF Conversion Error" "File not found: $FILE_PARAM"
+			else
+				notify-send "GIF Conversion Error" "No video files found in Recordings folder"
 			fi
-		done
+			exit 1
+		fi
 
-		if [ $TOTAL_FILES -eq 0 ]; then
-			notify-send "GIF Conversion" "No video files found in Recordings folder"
+		base_filename=$(basename "$video_file")
+
+		# Skip files already GIFs
+		if [[ $base_filename == *.gif ]]; then
+			notify-send "GIF Conversion Skipped" "File is already a GIF: $(basename "$video_file")"
+			exit 0
+		fi
+
+		# Create GIF filename
+		gif_file="${video_file%.*}.gif"
+
+		# Check if GIF version doesn't already exist
+		if [ -f "$gif_file" ]; then
+			notify-send "GIF Conversion Skipped" "GIF version already exists: $(basename "$gif_file")"
+			exit 0
+		fi
+
+		notify-send "Converting to GIF" "Processing: $(basename "$video_file")"
+
+		# Get video dimensions for scaling
+		width=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=s=x:p=0 "$video_file")
+
+		# Scale down if wider than 800px to keep file size reasonable
+		if [ "$width" -gt 800 ]; then
+			scale_filter="scale=800:-1:flags=lanczos,"
 		else
-			notify-send "GIF Conversion Complete" "Converted: $CONVERTED files
-Skipped (already GIF): $SKIPPED_GIF files
-Skipped (has GIF version): $SKIPPED_EXISTING files
-Total files checked: $TOTAL_FILES"
+			scale_filter=""
+		fi
+
+		# Create high-quality GIF with optimized palette
+		ffmpeg -i "$video_file" \
+			-vf "${scale_filter}fps=15,split[s0][s1];[s0]palettegen=max_colors=256:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
+			-loop 0 \
+			"$gif_file" 2>/tmp/ffmpeg_error.log
+
+		if [ $? -eq 0 ]; then
+			file_size=$(du -h "$gif_file" | cut -f1)
+			notify-send "GIF Conversion Success" "$(basename "$video_file") → $(basename "$gif_file") ($file_size)"
+			send_recording_notification "$gif_file"
+		else
+			error=$(cat /tmp/ffmpeg_error.log | tail -n 5)
+			notify-send "GIF Conversion Failed" "Error converting $(basename "$video_file"): $error"
 		fi
 		;;
 

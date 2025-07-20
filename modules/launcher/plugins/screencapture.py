@@ -69,14 +69,23 @@ class ScreencapturePlugin(PluginBase):
             # Control commands
             "stop": "Stop current recording",
             # Conversion commands
-            "convert-webm": "Convert recordings to WebM format",
-            "conv-webm": "Convert recordings to WebM format",
-            "convert-iphone": "Convert recordings for iPhone compatibility",
-            "conv-iphone": "Convert recordings for iPhone compatibility",
-            "convert-youtube": "Convert recordings for YouTube upload",
-            "conv-youtube": "Convert recordings for YouTube upload",
-            "convert-gif": "Convert recordings to GIF format",
-            "conv-gif": "Convert recordings to GIF format",
+            "convert-webm": "Convert latest MKV recording to WebM format",
+            "conv-webm": "Convert latest MKV recording to WebM format",
+            "convert-iphone": "Convert latest MKV recording for iPhone compatibility",
+            "conv-iphone": "Convert latest MKV recording for iPhone compatibility",
+            "convert-youtube": "Convert latest recording for YouTube upload",
+            "conv-youtube": "Convert latest recording for YouTube upload",
+            "convert-gif": "Convert latest recording to GIF format",
+            "conv-gif": "Convert latest recording to GIF format",
+            # Conversion commands with file input
+            "convert-webm-file": "Convert specific MKV file to WebM format",
+            "conv-webm-file": "Convert specific MKV file to WebM format",
+            "convert-iphone-file": "Convert specific MKV file for iPhone compatibility",
+            "conv-iphone-file": "Convert specific MKV file for iPhone compatibility",
+            "convert-youtube-file": "Convert specific video file for YouTube upload",
+            "conv-youtube-file": "Convert specific video file for YouTube upload",
+            "convert-gif-file": "Convert specific video file to GIF format",
+            "conv-gif-file": "Convert specific video file to GIF format",
         }
 
     def _run_script(self, *args):
@@ -85,6 +94,13 @@ class ScreencapturePlugin(PluginBase):
             subprocess.Popen([self.script_path] + list(args))
         except Exception as e:
             print(f"Error running screen-capture script: {e}")
+
+    def _run_script_with_file(self, format_type: str, file_path: str):
+        """Execute the screen-capture script with file parameter."""
+        try:
+            subprocess.Popen([self.script_path, "convert", format_type, file_path])
+        except Exception as e:
+            print(f"Error running screen-capture script with file: {e}")
 
     def _is_recording(self):
         """Check if recording is currently active."""
@@ -296,74 +312,165 @@ class ScreencapturePlugin(PluginBase):
             ),
             # Conversion commands
             "convert-webm": (
-                "Convert to WebM",
-                "Convert MKV recordings to WebM format",
+                "Convert Latest to WebM",
+                "Convert latest MKV recording to WebM format",
                 screenrecord,
                 lambda: self._run_script("convert", "webm"),
             ),
             "conv-webm": (
-                "Convert to WebM",
-                "Convert MKV recordings to WebM format",
+                "Convert Latest to WebM",
+                "Convert latest MKV recording to WebM format",
                 screenrecord,
                 lambda: self._run_script("convert", "webm"),
             ),
             "convert-iphone": (
-                "Convert for iPhone",
-                "Convert recordings for iPhone compatibility",
+                "Convert Latest for iPhone",
+                "Convert latest MKV recording for iPhone compatibility",
                 screenrecord,
                 lambda: self._run_script("convert", "iphone"),
             ),
             "conv-iphone": (
-                "Convert for iPhone",
-                "Convert recordings for iPhone compatibility",
+                "Convert Latest for iPhone",
+                "Convert latest MKV recording for iPhone compatibility",
                 screenrecord,
                 lambda: self._run_script("convert", "iphone"),
             ),
             "convert-youtube": (
-                "Convert for YouTube",
-                "Convert recordings for YouTube upload",
+                "Convert Latest for YouTube",
+                "Convert latest recording for YouTube upload",
                 screenrecord,
                 lambda: self._run_script("convert", "youtube"),
             ),
             "conv-youtube": (
-                "Convert for YouTube",
-                "Convert recordings for YouTube upload",
+                "Convert Latest for YouTube",
+                "Convert latest recording for YouTube upload",
                 screenrecord,
                 lambda: self._run_script("convert", "youtube"),
             ),
             "convert-gif": (
-                "Convert to GIF",
-                "Convert video recordings to GIF",
+                "Convert Latest to GIF",
+                "Convert latest recording to GIF format",
                 screenrecord,
                 lambda: self._run_script("convert", "gif"),
             ),
             "conv-gif": (
-                "Convert to GIF",
-                "Convert video recordings to GIF",
+                "Convert Latest to GIF",
+                "Convert latest recording to GIF format",
                 screenrecord,
                 lambda: self._run_script("convert", "gif"),
+            ),
+            # File-based conversion commands (these will be handled specially)
+            "convert-webm-file": (
+                "Convert File to WebM",
+                "Type filename after command (e.g., convert-webm-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "conv-webm-file": (
+                "Convert File to WebM",
+                "Type filename after command (e.g., conv-webm-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "convert-iphone-file": (
+                "Convert File for iPhone",
+                "Type filename after command (e.g., convert-iphone-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "conv-iphone-file": (
+                "Convert File for iPhone",
+                "Type filename after command (e.g., conv-iphone-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "convert-youtube-file": (
+                "Convert File for YouTube",
+                "Type filename after command (e.g., convert-youtube-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "conv-youtube-file": (
+                "Convert File for YouTube",
+                "Type filename after command (e.g., conv-youtube-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "convert-gif-file": (
+                "Convert File to GIF",
+                "Type filename after command (e.g., convert-gif-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
+            ),
+            "conv-gif-file": (
+                "Convert File to GIF",
+                "Type filename after command (e.g., conv-gif-file video.mkv)",
+                screenrecord,
+                None,  # Will be handled in query method
             ),
         }
 
         if command in command_info:
             title, subtitle, icon, action = command_info[command]
-            return Result(
-                title=title,
-                subtitle=subtitle,
-                icon_markup=icon,
-                action=action,
-                relevance=1.0,
-                plugin_name=self.display_name,
-            )
+            if action is not None:  # Regular command
+                return Result(
+                    title=title,
+                    subtitle=subtitle,
+                    icon_markup=icon,
+                    action=action,
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                )
+            else:  # File-based command, show instruction
+                return Result(
+                    title=title,
+                    subtitle=subtitle,
+                    icon_markup=icon,
+                    action=lambda: None,  # No action for instruction
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                )
 
         return None
 
     def query(self, query_string: str) -> List[Result]:
         """Search for screencapture actions based on query."""
+        # Import here to avoid circular imports
+        from utils.icons import screenrecord, screenshots, ssfull, ssregion, stop
+
         # Clean the query string
         query = query_string.strip().lower()
 
         results = []
+
+        # Check for file-based conversion commands with parameters
+        file_conversion_commands = {
+            "convert-webm-file": "webm",
+            "conv-webm-file": "webm",
+            "convert-iphone-file": "iphone",
+            "conv-iphone-file": "iphone",
+            "convert-youtube-file": "youtube",
+            "conv-youtube-file": "youtube",
+            "convert-gif-file": "gif",
+            "conv-gif-file": "gif",
+        }
+
+        # Parse query for file-based commands
+        query_parts = query.split()
+        if len(query_parts) >= 2:
+            command = query_parts[0]
+            file_param = " ".join(query_parts[1:])
+
+            if command in file_conversion_commands:
+                format_type = file_conversion_commands[command]
+                return [Result(
+                    title=f"Convert {file_param} to {format_type.upper()}",
+                    subtitle=f"Convert specified file to {format_type} format",
+                    icon_markup=screenrecord,
+                    action=lambda fp=file_param, ft=format_type: self._run_script_with_file(ft, fp),
+                    relevance=1.0,
+                    plugin_name=self.display_name,
+                )]
 
         # Check if query matches a command and return it as a result
         command_result = self._get_command_result(query)
@@ -540,32 +647,32 @@ class ScreencapturePlugin(PluginBase):
         results.extend(
             [
                 Result(
-                    title="Convert to WebM",
-                    subtitle="Convert MKV recordings to WebM format",
+                    title="Convert Latest to WebM",
+                    subtitle="Convert latest MKV recording to WebM format",
                     icon_markup=screenrecord,
                     action=lambda: self._run_script("convert", "webm"),
                     relevance=0.01,
                     plugin_name=self.display_name,
                 ),
                 Result(
-                    title="Convert for iPhone",
-                    subtitle="Convert recordings for iPhone compatibility",
+                    title="Convert Latest for iPhone",
+                    subtitle="Convert latest MKV recording for iPhone compatibility",
                     icon_markup=screenrecord,
                     action=lambda: self._run_script("convert", "iphone"),
                     relevance=0.01,
                     plugin_name=self.display_name,
                 ),
                 Result(
-                    title="Convert for YouTube",
-                    subtitle="Convert recordings for YouTube upload",
+                    title="Convert Latest for YouTube",
+                    subtitle="Convert latest recording for YouTube upload",
                     icon_markup=screenrecord,
                     action=lambda: self._run_script("convert", "youtube"),
                     relevance=0.01,
                     plugin_name=self.display_name,
                 ),
                 Result(
-                    title="Convert to GIF",
-                    subtitle="Convert video recordings to GIF",
+                    title="Convert Latest to GIF",
+                    subtitle="Convert latest recording to GIF format",
                     icon_markup=screenrecord,
                     action=lambda: self._run_script("convert", "gif"),
                     relevance=0.01,
