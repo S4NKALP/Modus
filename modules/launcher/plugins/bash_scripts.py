@@ -65,7 +65,6 @@ class BashScriptsPlugin(PluginBase):
                     cache_data = json.load(f)
                     self._scripts_cache = cache_data.get("scripts", {})
                     self._last_cache_update = cache_data.get("last_update", 0)
-                    print(f"BashScriptsPlugin: Loaded {len(self._scripts_cache)} scripts from cache")
             else:
                 print("BashScriptsPlugin: No cache file found, will build cache in background")
         except Exception as e:
@@ -83,7 +82,6 @@ class BashScriptsPlugin(PluginBase):
             }
             with open(self.scripts_cache_file, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, indent=2)
-            print(f"BashScriptsPlugin: Saved {len(self._scripts_cache)} scripts to cache")
         except Exception as e:
             print(f"BashScriptsPlugin: Error saving scripts cache: {e}")
 
@@ -106,7 +104,7 @@ class BashScriptsPlugin(PluginBase):
     def _build_scripts_cache_background(self):
         """Build scripts cache in background thread."""
         try:
-            print("BashScriptsPlugin: Building scripts cache in background...")
+
             new_cache = {}
 
             # Scan Modus scripts directory for discovered scripts
@@ -122,8 +120,6 @@ class BashScriptsPlugin(PluginBase):
 
             # Save to disk
             self._save_scripts_cache()
-
-            print(f"BashScriptsPlugin: Background cache update completed. Found {len(self._scripts_cache)} scripts")
 
         except Exception as e:
             print(f"BashScriptsPlugin: Error building scripts cache: {e}")
@@ -213,9 +209,6 @@ class BashScriptsPlugin(PluginBase):
         if not query:
             # Show all scripts when no query
             results.extend(self._list_all_scripts())
-        elif query.startswith("edit "):
-            # Edit script command
-            results.extend(self._handle_edit_command(query))
         else:
             # Search for scripts
             results.extend(self._search_scripts(query))
@@ -379,81 +372,15 @@ class BashScriptsPlugin(PluginBase):
             script_args = script_info.get("args", [])
 
             if not os.path.exists(script_path):
-                print(f"BashScriptsPlugin: Script not found: {script_path}")
                 return
 
             if not script_info.get("executable", False):
-                print(f"BashScriptsPlugin: Script is not executable: {script_path}")
                 return
 
             # Build command
             command = [script_path] + script_args
-
-            print(f"BashScriptsPlugin: Executing script: {' '.join(command)}")
             exec_shell_command_async(command)
 
         except Exception as e:
             print(f"BashScriptsPlugin: Error executing script '{script_name}': {e}")
-            import traceback
-            traceback.print_exc()
 
-
-
-
-
-
-
-    def _handle_edit_command(self, query: str) -> List[Result]:
-        """Handle edit script command."""
-        parts = query.split(" ", 1)
-        if len(parts) < 2:
-            return [Result(
-                title="Edit Script Usage",
-                subtitle="Usage: edit <script_name>",
-                icon_markup=icons.info,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
-
-        script_name = parts[1]
-
-        if script_name in self._scripts_cache:
-            script_info = self._scripts_cache[script_name]
-            script_path = script_info.get("path", "")
-            return [Result(
-                title=f"Edit Script: {script_name}",
-                subtitle=f"Edit {script_path}",
-                icon_markup=icons.config,
-                action=lambda: self._edit_script(script_path),
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
-        else:
-            return [Result(
-                title=f"Script Not Found: {script_name}",
-                subtitle="Script not found in collection",
-                icon_markup=icons.alert,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
-
-
-
-
-
-    def _edit_script(self, script_path: str):
-        """Open a script for editing."""
-        try:
-            if not os.path.exists(script_path):
-                print(f"BashScriptsPlugin: Script file does not exist: {script_path}")
-                return
-
-            # Open with default editor
-            editor = os.environ.get('EDITOR', 'nano')
-            exec_shell_command_async([editor, script_path])
-            print(f"BashScriptsPlugin: Opening script {script_path} with {editor}")
-
-        except Exception as e:
-            print(f"BashScriptsPlugin: Error opening script for editing: {e}")
