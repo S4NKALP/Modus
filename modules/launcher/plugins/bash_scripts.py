@@ -109,13 +109,6 @@ class BashScriptsPlugin(PluginBase):
             print("BashScriptsPlugin: Building scripts cache in background...")
             new_cache = {}
 
-            # Preserve existing custom scripts from cache
-            for script_name, script_info in self._scripts_cache.items():
-                if script_info.get("type") == "custom":
-                    script_path = script_info.get("path", "")
-                    if os.path.exists(script_path):
-                        new_cache[script_name] = script_info
-
             # Scan Modus scripts directory for discovered scripts
             if os.path.exists(self.modus_scripts_dir) and os.path.isdir(self.modus_scripts_dir):
                 try:
@@ -220,12 +213,6 @@ class BashScriptsPlugin(PluginBase):
         if not query:
             # Show all scripts when no query
             results.extend(self._list_all_scripts())
-        elif query.startswith("add "):
-            # Add new script command
-            results.extend(self._handle_add_command(query))
-        elif query.startswith("remove") or query.startswith("delete"):
-            # Remove script command (handles both "remove" and "remove script_name")
-            results.extend(self._handle_remove_command(query))
         elif query.startswith("edit "):
             # Edit script command
             results.extend(self._handle_edit_command(query))
@@ -239,9 +226,6 @@ class BashScriptsPlugin(PluginBase):
         """List all available scripts."""
         results = []
         max_results = 20
-
-        # Add management commands at the top
-        results.extend(self._get_management_commands())
 
         # Sort scripts by name for consistent ordering
         sorted_scripts = sorted(self._scripts_cache.items(), key=lambda x: x[1].get("name", ""))
@@ -413,124 +397,11 @@ class BashScriptsPlugin(PluginBase):
             import traceback
             traceback.print_exc()
 
-    def _get_management_commands(self) -> List[Result]:
-        """Get management commands for the plugin."""
-        commands = []
 
-        results = []
-        for cmd in commands:
-            result = Result(
-                title=cmd["title"],
-                subtitle=cmd["subtitle"],
-                icon_markup=cmd["icon"],
-                action=self._create_management_action(cmd["command"]),
-                relevance=cmd.get("relevance", 0.6),
-                plugin_name=self.display_name,
-                data={"command": cmd["command"]}
-            )
-            results.append(result)
 
-        return results
 
-    def _create_management_action(self, command: str):
-        """Create an action function for management commands."""
-        def action():
-            if command == "add":
-                print("BashScriptsPlugin: Use 'add <script_name> <script_path>' to add a script")
-        return action
 
-    def _handle_add_command(self, query: str) -> List[Result]:
-        """Handle add script command."""
-        parts = query.split(" ", 2)
-        if len(parts) < 3:
-            return [Result(
-                title="Add Script Usage",
-                subtitle="Usage: add <script_name> <script_path> [description]",
-                icon_markup=icons.info,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
 
-        script_name = parts[1]
-        script_path = os.path.expanduser(parts[2])
-        description = parts[3] if len(parts) > 3 else f"Custom script: {script_name}"
-
-        return [Result(
-            title=f"Add Script: {script_name}",
-            subtitle=f"Add {script_path} as '{script_name}'",
-            icon_markup=icons.plus,
-            action=lambda: self._add_custom_script(script_name, script_path, description),
-            relevance=1.0,
-            plugin_name=self.display_name
-        )]
-
-    def _handle_remove_command(self, query: str) -> List[Result]:
-        """Handle remove script command."""
-        parts = query.split(" ", 1)
-
-        if len(parts) < 2 or (len(parts) == 2 and not parts[1].strip()):
-            # Show all removable scripts (custom scripts from cache)
-            results = []
-            custom_scripts = {name: info for name, info in self._scripts_cache.items()
-                            if info.get("type") == "custom"}
-
-            if not custom_scripts:
-                return [Result(
-                    title="No Custom Scripts to Remove",
-                    subtitle="No custom scripts found in collection",
-                    icon_markup=icons.info,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name
-                )]
-
-            # Show each custom script as removable
-            for script_name, script_info in custom_scripts.items():
-                result = Result(
-                    title=f"Remove: {script_name}",
-                    subtitle=f"Remove custom script: {script_info.get('description', script_name)}",
-                    icon_markup=icons.trash,
-                    action=lambda sn=script_name: self._remove_custom_script(sn),
-                    relevance=0.9,
-                    plugin_name=self.display_name,
-                    data={"script_name": script_name, "type": "remove_action"}
-                )
-                results.append(result)
-
-            return results
-
-        script_name = parts[1].strip()
-
-        if script_name in self._scripts_cache:
-            script_info = self._scripts_cache[script_name]
-            if script_info.get("type") == "custom":
-                return [Result(
-                    title=f"Remove Script: {script_name}",
-                    subtitle=f"Remove custom script '{script_name}' from collection",
-                    icon_markup=icons.trash,
-                    action=lambda: self._remove_custom_script(script_name),
-                    relevance=1.0,
-                    plugin_name=self.display_name
-                )]
-            else:
-                return [Result(
-                    title=f"Cannot Remove: {script_name}",
-                    subtitle="Cannot remove discovered scripts (only custom scripts can be removed)",
-                    icon_markup=icons.alert,
-                    action=lambda: None,
-                    relevance=1.0,
-                    plugin_name=self.display_name
-                )]
-        else:
-            return [Result(
-                title=f"Script Not Found: {script_name}",
-                subtitle="Script not found in collection",
-                icon_markup=icons.alert,
-                action=lambda: None,
-                relevance=1.0,
-                plugin_name=self.display_name
-            )]
 
     def _handle_edit_command(self, query: str) -> List[Result]:
         """Handle edit script command."""
@@ -570,50 +441,7 @@ class BashScriptsPlugin(PluginBase):
 
 
 
-    def _add_custom_script(self, script_name: str, script_path: str, description: str):
-        """Add a custom script directly to the cache."""
-        try:
-            if not os.path.exists(script_path):
-                print(f"BashScriptsPlugin: Script file does not exist: {script_path}")
-                return
 
-            # Add directly to cache
-            self._scripts_cache[script_name] = {
-                "path": script_path,
-                "name": script_name,
-                "description": description,
-                "type": "custom",
-                "executable": os.access(script_path, os.X_OK),
-                "args": [],
-                "category": "custom"
-            }
-
-            # Save cache to persist the custom script
-            self._save_scripts_cache()
-
-            print(f"BashScriptsPlugin: Added custom script '{script_name}' -> {script_path}")
-
-        except Exception as e:
-            print(f"BashScriptsPlugin: Error adding custom script: {e}")
-
-    def _remove_custom_script(self, script_name: str):
-        """Remove a custom script from the cache."""
-        try:
-            # Remove from cache
-            if script_name in self._scripts_cache:
-                script_info = self._scripts_cache[script_name]
-                if script_info.get("type") == "custom":
-                    del self._scripts_cache[script_name]
-                    # Save cache to persist the removal
-                    self._save_scripts_cache()
-                    print(f"BashScriptsPlugin: Removed custom script '{script_name}'")
-                else:
-                    print(f"BashScriptsPlugin: Cannot remove discovered script '{script_name}' (not a custom script)")
-            else:
-                print(f"BashScriptsPlugin: Script '{script_name}' not found")
-
-        except Exception as e:
-            print(f"BashScriptsPlugin: Error removing custom script: {e}")
 
     def _edit_script(self, script_path: str):
         """Open a script for editing."""
