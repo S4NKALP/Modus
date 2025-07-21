@@ -52,6 +52,9 @@ tooltip > * {
   border-radius: 10px;
 }
 
+
+
+
 #workspaces,
 #workspaces-container,
 #launcher,
@@ -68,3 +71,4 @@ tooltip > * {
 #dock {
   box-shadow: 0 0 3px alpha(black, 0.7);
 }
+

@@ -18,6 +18,8 @@ from PIL import Image
 
 from config.data import APP_NAME, APP_NAME_CAP, NOTIF_POS_DEFAULT, NOTIF_POS_KEY
 from config.settings.utils import backup_and_replace, bind_vars, start_config
+from config.settings.wifi_tab import WiFiTab
+from config.settings.bluetooth_tab import BluetoothTab
 
 gi.require_version("Gtk", "3.0")
 
@@ -37,6 +39,10 @@ class HyprConfGUI(Window):
         self.show_lock_checkbox = show_lock_checkbox
         self.show_idle_checkbox = show_idle_checkbox
 
+        # Initialize WiFi and Bluetooth tabs
+        self.wifi_tab = WiFiTab()
+        self.bluetooth_tab = BluetoothTab()
+
         root_box = Box(orientation="v", spacing=10, style="margin: 10px;")
         self.add(root_box)
 
@@ -49,12 +55,19 @@ class HyprConfGUI(Window):
             v_expand=False,
             h_expand=False,
         )
-
+        self.wifi_tab_content = self.wifi_tab.create_wifi_tab()
+        self.bluetooth_tab_content = self.bluetooth_tab.create_bluetooth_tab()
         self.key_bindings_tab_content = self.create_key_bindings_tab()
         self.appearance_tab_content = self.create_appearance_tab()
         self.system_tab_content = self.create_system_tab()
         self.about_tab_content = self.create_about_tab()
 
+        self.tab_stack.add_titled(
+            self.wifi_tab_content, "Wifi", "Wifi"
+        )
+        self.tab_stack.add_titled(
+            self.bluetooth_tab_content, "Bluetooth", "Bluetooth"
+        )
         self.tab_stack.add_titled(
             self.key_bindings_tab_content, "key_bindings", "Key Bindings"
         )
