@@ -387,12 +387,12 @@ class AppearanceTab:
         notification_pos_label = Label(
             label="Notification Position", h_align="start", v_align="center"
         )
-        layout_grid.attach(notification_pos_label, 0, 7, 1, 1)
+        layout_grid.attach(notification_pos_label, 2, 6, 1, 1)
 
         notification_pos_combo_container = Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
 
         self.notification_pos_combo = Gtk.ComboBoxText()
@@ -417,7 +417,7 @@ class AppearanceTab:
         )
 
         notification_pos_combo_container.add(self.notification_pos_combo)
-        layout_grid.attach(notification_pos_combo_container, 1, 7, 3, 1)
+        layout_grid.attach(notification_pos_combo_container, 3, 6, 1, 1)
 
     def _create_modules_section(self, vbox):
         """Create modules section"""
