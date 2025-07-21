@@ -6,6 +6,7 @@ from fabric.widgets.image import Image as FabricImage
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import Gdk, GdkPixbuf, Gtk
+from fabric.widgets.scale import Scale
 
 from config.data import NOTIF_POS_DEFAULT, NOTIF_POS_KEY
 from config.settings.utils import bind_vars
@@ -322,59 +323,45 @@ class AppearanceTab:
         )
         layout_grid.attach(icon_size_label, 0, 4, 1, 1)
 
-        icon_size_scale_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
-            hexpand=True,
+        self.icon_size_scale = Scale(
+            min_value=20,
+            max_value=30,
+            value=bind_vars.get("dock_icon_size", 20),
+            increments=(2, 4),
+            draw_value=True,
+            value_position="right",
+            digits=0,
+            h_expand=True,
         )
-
-        self.icon_size_scale = Gtk.Scale.new_with_range(
-            Gtk.Orientation.HORIZONTAL, 20, 30, 2
-        )
-        self.icon_size_scale.set_value(bind_vars.get("dock_icon_size", 20))
-        self.icon_size_scale.set_size_request(150, -1)
-        self.icon_size_scale.set_draw_value(True)
-        self.icon_size_scale.set_value_pos(Gtk.PositionType.RIGHT)
         self.icon_size_scale.set_tooltip_text("Adjust the size of dock icons")
+        layout_grid.attach(self.icon_size_scale, 1, 4, 3, 1)  # Span 3 columns
 
-        icon_size_scale_container.add(self.icon_size_scale)
-        layout_grid.attach(icon_size_scale_container, 1, 4, 1, 1)
-
-        # Application switcher items scale
+        # Application switcher items scale (below taskbar icon size)
         application_switcher_label = Label(
             label="Application Switcher Items", h_align="start", v_align="center"
         )
-        layout_grid.attach(application_switcher_label, 2, 4, 1, 1)
+        layout_grid.attach(application_switcher_label, 0, 5, 1, 1)
 
-        application_switcher_scale_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
-            hexpand=True,
+        self.application_switcher_scale = Scale(
+            min_value=5,
+            max_value=20,
+            value=bind_vars.get("window_switcher_items_per_row",13),
+            increments=(2, 4),
+            draw_value=True,
+            value_position="right",
+            digits=0,
+            h_expand=True,
         )
-
-        self.application_switcher_scale = Gtk.Scale.new_with_range(
-            Gtk.Orientation.HORIZONTAL, 5, 20, 1
-        )
-        self.application_switcher_scale.set_value(
-            bind_vars.get("window_switcher_items_per_row", 13)
-        )
-        self.application_switcher_scale.set_size_request(150, -1)
-        self.application_switcher_scale.set_draw_value(True)
-        self.application_switcher_scale.set_value_pos(Gtk.PositionType.RIGHT)
         self.application_switcher_scale.set_tooltip_text(
             "Adjust the number of items per row in the application switcher"
         )
-
-        application_switcher_scale_container.add(self.application_switcher_scale)
-        layout_grid.attach(application_switcher_scale_container, 3, 4, 1, 1)
+        layout_grid.attach(self.application_switcher_scale, 1, 5, 3, 1)  # Span 3 columns
 
         # Hide Special Workspace Apps
         dock_hide_special_apps_label = Label(
             label="Hide Special Workspace Apps", h_align="start", v_align="center"
         )
-        layout_grid.attach(dock_hide_special_apps_label, 2, 5, 1, 1)
+        layout_grid.attach(dock_hide_special_apps_label, 0, 6, 1, 1)
         dock_hide_special_apps_switch_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             halign=Gtk.Align.START,
@@ -388,13 +375,13 @@ class AppearanceTab:
             "Hide applications that are in special workspaces (scratchpad) from the dock"
         )
         dock_hide_special_apps_switch_container.add(self.dock_hide_special_apps_switch)
-        layout_grid.attach(dock_hide_special_apps_switch_container, 3, 5, 1, 1)
+        layout_grid.attach(dock_hide_special_apps_switch_container, 1, 6, 1, 1)
 
         # Notification position
         notification_pos_label = Label(
             label="Notification Position", h_align="start", v_align="center"
         )
-        layout_grid.attach(notification_pos_label, 0, 8, 1, 1)
+        layout_grid.attach(notification_pos_label, 0, 7, 1, 1)
 
         notification_pos_combo_container = Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -424,7 +411,7 @@ class AppearanceTab:
         )
 
         notification_pos_combo_container.add(self.notification_pos_combo)
-        layout_grid.attach(notification_pos_combo_container, 1, 8, 3, 1)
+        layout_grid.attach(notification_pos_combo_container, 1, 7, 3, 1)
 
     def _create_modules_section(self, vbox):
         """Create modules section"""
