@@ -7,23 +7,19 @@ import time
 import gi
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.entry import Entry
-from fabric.widgets.image import Image as FabricImage
-from fabric.widgets.label import Label
-from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
 from fabric.widgets.window import Window
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 from PIL import Image
 
 from config.data import APP_NAME, APP_NAME_CAP
-from config.settings.utils import backup_and_replace, start_config
-from config.settings.wifi_tab import WiFiTab
+from config.settings.about_tab import AboutTab
+from config.settings.appearance_tab import AppearanceTab
 from config.settings.bluetooth_tab import BluetoothTab
 from config.settings.key_bindings_tab import KeyBindingsTab
-from config.settings.appearance_tab import AppearanceTab
 from config.settings.system_tab import SystemTab
-from config.settings.about_tab import AboutTab
+from config.settings.utils import backup_and_replace, start_config
+from config.settings.wifi_tab import WiFiTab
 
 gi.require_version("Gtk", "3.0")
 
@@ -47,8 +43,9 @@ class HyprConfGUI(Window):
         geometry.max_width = 640
         geometry.min_height = 640
         geometry.max_height = 640
-        self.set_geometry_hints(None, geometry,
-                               Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+        self.set_geometry_hints(
+            None, geometry, Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE
+        )
 
         self.themes = ["Pills", "Dense", "Edge"]
         self.selected_face_icon = None
@@ -60,7 +57,9 @@ class HyprConfGUI(Window):
         self.bluetooth_tab = BluetoothTab()
         self.key_bindings_tab = KeyBindingsTab()
         self.appearance_tab = AppearanceTab(self.themes, self)
-        self.system_tab = SystemTab(show_lock_checkbox, show_idle_checkbox, self.enforce_window_size)
+        self.system_tab = SystemTab(
+            show_lock_checkbox, show_idle_checkbox, self.enforce_window_size
+        )
         self.about_tab = AboutTab()
 
         # Pass window size enforcement method to tabs
@@ -72,7 +71,9 @@ class HyprConfGUI(Window):
         root_box.set_size_request(620, 620)
         self.add(root_box)
 
-        main_content_box = Box(orientation="h", spacing=6, v_expand=False, h_expand=False)
+        main_content_box = Box(
+            orientation="h", spacing=6, v_expand=False, h_expand=False
+        )
         # Set fixed size for main content to prevent expansion
         main_content_box.set_size_request(620, 580)
         root_box.add(main_content_box)
@@ -93,12 +94,8 @@ class HyprConfGUI(Window):
         self.system_tab_content = self.system_tab.create_system_tab()
         self.about_tab_content = self.about_tab.create_about_tab()
 
-        self.tab_stack.add_titled(
-            self.wifi_tab_content, "Wifi", "Wifi"
-        )
-        self.tab_stack.add_titled(
-            self.bluetooth_tab_content, "Bluetooth", "Bluetooth"
-        )
+        self.tab_stack.add_titled(self.wifi_tab_content, "Wifi", "Wifi")
+        self.tab_stack.add_titled(self.bluetooth_tab_content, "Bluetooth", "Bluetooth")
         self.tab_stack.add_titled(
             self.key_bindings_tab_content, "key_bindings", "Key Bindings"
         )
@@ -145,15 +142,15 @@ class HyprConfGUI(Window):
         """Public method to enforce window size - can be called by tabs"""
         self._force_window_size(self)
 
-
-
     # Event handlers moved to respective tab classes
 
     def on_accept(self, _widget):
         current_bind_vars_snapshot = {}
 
         # Get values from key bindings tab
-        current_bind_vars_snapshot.update(self.key_bindings_tab.get_key_binding_values())
+        current_bind_vars_snapshot.update(
+            self.key_bindings_tab.get_key_binding_values()
+        )
 
         # Get values from appearance tab
         current_bind_vars_snapshot.update(self.appearance_tab.get_appearance_values())

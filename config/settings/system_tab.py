@@ -15,11 +15,16 @@ gi.require_version("Gtk", "3.0")
 class SystemTab:
     """System settings and metrics management tab for settings"""
 
-    def __init__(self, show_lock_checkbox=False, show_idle_checkbox=False, window_size_enforcer=None):
+    def __init__(
+        self,
+        show_lock_checkbox=False,
+        show_idle_checkbox=False,
+        window_size_enforcer=None,
+    ):
         self.show_lock_checkbox = show_lock_checkbox
         self.show_idle_checkbox = show_idle_checkbox
         self.window_size_enforcer = window_size_enforcer
-        
+
         # Widget references
         self.terminal_entry = None
         self.lock_switch = None
@@ -60,9 +65,7 @@ class SystemTab:
     def _create_terminal_hyprland_section(self, vbox):
         """Create terminal and Hyprland integration section"""
         system_grid = Grid(
-            column_spacing=20,
-            row_spacing=10,
-            style="margin-bottom: 15px;"
+            column_spacing=20, row_spacing=10, style="margin-bottom: 15px;"
         )
         vbox.add(system_grid)
 
@@ -94,9 +97,7 @@ class SystemTab:
             )
             system_grid.attach(lock_label, 2, row, 1, 1)
             lock_switch_container = Box(
-                orientation="horizontal",
-                h_align="start",
-                v_align="center"
+                orientation="horizontal", h_align="start", v_align="center"
             )
             self.lock_switch = Gtk.Switch(
                 tooltip_text="Replace Hyprlock configuration with Modus's custom config"
@@ -111,9 +112,7 @@ class SystemTab:
             )
             system_grid.attach(idle_label, 2, row, 1, 1)
             idle_switch_container = Box(
-                orientation="horizontal",
-                h_align="start",
-                v_align="center"
+                orientation="horizontal", h_align="start", v_align="center"
             )
             self.idle_switch = Gtk.Switch(
                 tooltip_text="Replace Hypridle configuration with Modus's custom config"
@@ -138,7 +137,7 @@ class SystemTab:
         notif_grid = Grid(
             column_spacing=20,
             row_spacing=10,
-            style="margin-left: 10px; margin-top: 5px; margin-bottom: 15px;"
+            style="margin-left: 10px; margin-top: 5px; margin-bottom: 15px;",
         )
         vbox.add(notif_grid)
 
@@ -191,7 +190,7 @@ class SystemTab:
         metrics_grid = Grid(
             column_spacing=15,
             row_spacing=8,
-            style="margin-left: 10px; margin-top: 5px;"
+            style="margin-left: 10px; margin-top: 5px;",
         )
         vbox.add(metrics_grid)
 
@@ -251,17 +250,15 @@ class SystemTab:
         self.disk_entries.set_size_request(530, -1)
         disk_entries_scrolled.add(self.disk_entries)
 
-        self._create_disk_edit_entry_func = lambda path: self._add_disk_entry_widget(path)
+        self._create_disk_edit_entry_func = lambda path: self._add_disk_entry_widget(
+            path
+        )
 
         for p in bind_vars.get("metrics_disks", ["/"]):
             self._create_disk_edit_entry_func(p)
         vbox.add(disk_entries_scrolled)
 
-        add_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
-        )
+        add_container = Box(orientation="horizontal", h_align="start", v_align="center")
         add_btn = Button(
             label="Add new disk",
             on_clicked=lambda _: self._create_disk_edit_entry_func("/"),
@@ -279,7 +276,9 @@ class SystemTab:
         x_btn = Button(label="X")
         x_btn.connect(
             "clicked",
-            lambda _, current_bar_to_remove=bar: self._remove_disk_entry(current_bar_to_remove),
+            lambda _, current_bar_to_remove=bar: self._remove_disk_entry(
+                current_bar_to_remove
+            ),
         )
         bar.add(x_btn)
         self.disk_entries.add(bar)
@@ -341,7 +340,7 @@ class SystemTab:
         """Get the state of Hyprland integration switches"""
         return {
             "replace_lock": self.lock_switch and self.lock_switch.get_active(),
-            "replace_idle": self.idle_switch and self.idle_switch.get_active()
+            "replace_idle": self.idle_switch and self.idle_switch.get_active(),
         }
 
     def reset_to_defaults(self, defaults):
@@ -356,9 +355,7 @@ class SystemTab:
             enabled_switches = [s for s in switch_dict.values() if s.get_active()]
             can_disable = len(enabled_switches) > 1
             for s in switch_dict.values():
-                s.set_sensitive(
-                    True if can_disable or not s.get_active() else False
-                )
+                s.set_sensitive(True if can_disable or not s.get_active() else False)
 
         enforce_minimum_metrics(self.metrics_switches)
 

@@ -1,3 +1,5 @@
+import subprocess
+
 import gi
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -8,7 +10,6 @@ from gi.repository import GLib, Gtk
 
 from services.network import NetworkClient
 from utils import icons
-import subprocess
 
 gi.require_version("Gtk", "3.0")
 
@@ -64,11 +65,7 @@ class WiFiTab:
 
     def create_wifi_tab(self):
         """Create the WiFi tab content"""
-        main_vbox = Box(
-            orientation="v",
-            spacing=0,
-            style="padding: 0; margin: 15px;"
-        )
+        main_vbox = Box(orientation="v", spacing=0, style="padding: 0; margin: 15px;")
 
         # Set fixed size for the main container to match tab stack dimensions
         main_vbox.set_size_request(580, 580)
@@ -84,15 +81,13 @@ class WiFiTab:
 
         # WiFi title
         wifi_title = Label(
-            markup="<span size='large'><b>Wi-Fi</b></span>",
-            h_align="start"
+            markup="<span size='large'><b>Wi-Fi</b></span>", h_align="start"
         )
         wifi_section.add(wifi_title)
 
         # WiFi subtitle
         self.wifi_subtitle = Label(
-            markup="<span>Find and connect to Wi-Fi networks</span>",
-            h_align="start"
+            markup="<span>Find and connect to Wi-Fi networks</span>", h_align="start"
         )
         wifi_section.add(self.wifi_subtitle)
 
@@ -114,7 +109,9 @@ class WiFiTab:
 
         # Refresh button
         self.refresh_button = Button()
-        self.refresh_icon = Label(name="wifi-tab-icon", markup=icons.reload, style="font-size: 18px;")
+        self.refresh_icon = Label(
+            name="wifi-tab-icon", markup=icons.reload, style="font-size: 18px;"
+        )
         self.refresh_button.add(self.refresh_icon)
         self.refresh_button.set_size_request(40, 40)
         self.refresh_button.set_tooltip_text("Refresh networks")
@@ -164,8 +161,10 @@ class WiFiTab:
         self._update_wifi_status()
 
         # Show available networks if WiFi is enabled
-        if (self.network_client.wifi_device and
-            self.network_client.wifi_device.wireless_enabled):
+        if (
+            self.network_client.wifi_device
+            and self.network_client.wifi_device.wireless_enabled
+        ):
             self._populate_networks()
 
         self.networks_container.show_all()
@@ -177,9 +176,7 @@ class WiFiTab:
     def _update_wifi_status(self):
         """Update WiFi status display"""
         if not self.network_client.wifi_device:
-            self.wifi_subtitle.set_markup(
-                "<span>No WiFi device available</span>"
-            )
+            self.wifi_subtitle.set_markup("<span>No WiFi device available</span>")
             self.wifi_switch.set_sensitive(False)
             return
 
@@ -191,9 +188,7 @@ class WiFiTab:
             self.refresh_button.set_sensitive(True)
         else:
             self.wifi_switch.set_active(False)
-            self.wifi_subtitle.set_markup(
-                "<span>Wi-Fi is turned off</span>"
-            )
+            self.wifi_subtitle.set_markup("<span>Wi-Fi is turned off</span>")
             self.refresh_button.set_sensitive(False)
 
     def _populate_networks(self):
@@ -205,15 +200,13 @@ class WiFiTab:
         access_points = self.network_client.wifi_device.access_points
         if not access_points:
             self._show_status_message(
-                "No networks found\nClick 'Scan for Networks' to refresh",
-                "info"
+                "No networks found\nClick 'Scan for Networks' to refresh", "info"
             )
             return
 
         # Sort access points by signal strength (connected first, then by strength)
         sorted_aps = sorted(
-            access_points,
-            key=lambda ap: (not ap.is_active, -ap.strength)
+            access_points, key=lambda ap: (not ap.is_active, -ap.strength)
         )
 
         for ap in sorted_aps:
@@ -221,11 +214,7 @@ class WiFiTab:
 
     def _show_status_message(self, message, message_type="info"):
         """Show a status message in the networks container"""
-        status_box = Box(
-            orientation="v",
-            spacing=16,
-            style="padding: 60px;"
-        )
+        status_box = Box(orientation="v", spacing=16, style="padding: 60px;")
         status_box.set_halign(Gtk.Align.CENTER)
         status_box.set_valign(Gtk.Align.CENTER)
 
@@ -235,24 +224,26 @@ class WiFiTab:
             message_label = Label(
                 markup=f"<span size='medium'>{message}</span>",
                 h_align="center",
-                style="color: var(--error);"
+                style="color: var(--error);",
             )
         elif message_type == "scanning":
             icon_markup = icons.loader
             message_label = Label(
                 markup=f"<span size='medium'>{message}</span>",
                 h_align="center",
-                style="color: var(--blue);"
+                style="color: var(--blue);",
             )
         else:  # info
             icon_markup = icons.wifi_off
             message_label = Label(
                 markup=f"<span size='medium'>{message}</span>",
                 h_align="center",
-                style="color: var(--outline);"
+                style="color: var(--outline);",
             )
 
-        icon_label = Label(name="wifi-tab-icon", markup=icon_markup, style="font-size: 18px;")
+        icon_label = Label(
+            name="wifi-tab-icon", markup=icon_markup, style="font-size: 18px;"
+        )
         icon_label.set_halign(Gtk.Align.CENTER)
         status_box.add(icon_label)
         message_label.set_line_wrap(True)
@@ -271,7 +262,10 @@ class WiFiTab:
         network_button = Button(
             style="background-color: transparent; border: none; padding: 0; margin: 0;"
         )
-        network_button.connect("clicked", lambda btn, access_point=ap: self._on_network_clicked(access_point))
+        network_button.connect(
+            "clicked",
+            lambda btn, access_point=ap: self._on_network_clicked(access_point),
+        )
 
         # Network info row
         info_box = Box(orientation="h", spacing=12)
@@ -291,7 +285,9 @@ class WiFiTab:
         else:
             icon_markup = icons.wifi_0
 
-        signal_label = Label(name="wifi-tab-icon", markup=icon_markup, style="font-size: 24px;")
+        signal_label = Label(
+            name="wifi-tab-icon", markup=icon_markup, style="font-size: 24px;"
+        )
         signal_label.set_size_request(30, -1)
         info_box.add(signal_label)
 
@@ -299,10 +295,18 @@ class WiFiTab:
         network_name = ap.ssid
         if ap.is_active:
             network_markup = f"<b>{network_name}</b>\nConnected"
-            network_label = Label(markup=network_markup, h_align="start", style="color: var(--foreground);")
+            network_label = Label(
+                markup=network_markup,
+                h_align="start",
+                style="color: var(--foreground);",
+            )
         else:
             network_markup = f"{network_name}"
-            network_label = Label(markup=network_markup, h_align="start", style="color: var(--foreground);")
+            network_label = Label(
+                markup=network_markup,
+                h_align="start",
+                style="color: var(--foreground);",
+            )
         network_label.set_line_wrap(True)
         info_box.add(network_label)
 
@@ -313,7 +317,9 @@ class WiFiTab:
 
         # Lock icon for secured networks
         if ap.requires_password:
-            lock_label = Label(name="wifi-tab-icon", markup=icons.lock, style="font-size: 22px;")
+            lock_label = Label(
+                name="wifi-tab-icon", markup=icons.lock, style="font-size: 22px;"
+            )
             info_box.add(lock_label)
 
         network_button.add(info_box)
@@ -321,11 +327,11 @@ class WiFiTab:
 
         # Store reference
         self.access_point_widgets[ap.ssid] = {
-            'container': network_container,
-            'button': network_button,
-            'info_box': info_box,
-            'network_label': network_label,
-            'ap': ap
+            "container": network_container,
+            "button": network_button,
+            "info_box": info_box,
+            "network_label": network_label,
+            "ap": ap,
         }
 
         self.networks_container.add(network_container)
@@ -353,7 +359,10 @@ class WiFiTab:
 
     def _on_refresh_clicked(self, button):
         """Handle refresh button click"""
-        if self.network_client.wifi_device and self.network_client.wifi_device.wireless_enabled:
+        if (
+            self.network_client.wifi_device
+            and self.network_client.wifi_device.wireless_enabled
+        ):
             self.refresh_icon.set_markup(icons.loader)
             button.set_sensitive(False)
 
@@ -366,11 +375,14 @@ class WiFiTab:
             self.network_client.wifi_device.scan()
 
             # Re-enable button after scan
-            GLib.timeout_add(3000, lambda: [
-                self.refresh_icon.set_markup(icons.reload),
-                button.set_sensitive(True),
-                self._refresh_networks()
-            ])
+            GLib.timeout_add(
+                3000,
+                lambda: [
+                    self.refresh_icon.set_markup(icons.reload),
+                    button.set_sensitive(True),
+                    self._refresh_networks(),
+                ],
+            )
 
     def _connect_network(self, ap):
         """Connect to a network"""
@@ -380,7 +392,7 @@ class WiFiTab:
             if ap.ssid in self.password_entries:
                 # Get password from stored entry widget
                 password_widget = self.password_entries[ap.ssid]
-                if hasattr(password_widget, 'get_text'):
+                if hasattr(password_widget, "get_text"):
                     password = password_widget.get_text()
                 else:
                     password = str(password_widget)  # If it's stored as string
@@ -397,7 +409,7 @@ class WiFiTab:
 
         # Update network widget to show connecting state
         if ap.ssid in self.access_point_widgets:
-            network_label = self.access_point_widgets[ap.ssid]['network_label']
+            network_label = self.access_point_widgets[ap.ssid]["network_label"]
             network_label.set_markup(f"{ap.ssid}\nConnecting...")
             network_label.set_style("color: var(--blue);")
 
@@ -416,24 +428,25 @@ class WiFiTab:
             self._reset_connection_state(ap.ssid)
 
     def _show_connection_error(self, ssid, error_message):
-
         try:
-            
-            subprocess.run([
-                "notify-send",
-                "WiFi Connection Failed",
-                f"Failed to connect to {ssid}\n{error_message}",
-                "--icon=network-wireless-offline",
-                "--urgency=normal",
-                "--app-name=WiFi"
-            ], check=False)
+            subprocess.run(
+                [
+                    "notify-send",
+                    "WiFi Connection Failed",
+                    f"Failed to connect to {ssid}\n{error_message}",
+                    "--icon=network-wireless-offline",
+                    "--urgency=normal",
+                    "--app-name=WiFi",
+                ],
+                check=False,
+            )
         except Exception as e:
             print(f"Failed to send connection error notification: {e}")
 
     def _show_password_entry(self, ap):
         """Show password entry for a network"""
         if ap.ssid in self.access_point_widgets:
-            container = self.access_point_widgets[ap.ssid]['container']
+            container = self.access_point_widgets[ap.ssid]["container"]
 
             # Check if password entry is already shown
             if len(container.get_children()) > 1:
@@ -443,42 +456,60 @@ class WiFiTab:
             password_box = Box(
                 orientation="h",
                 spacing=8,
-                style="padding: 8px; margin: 4px 16px 8px 16px; border-radius: 8px;"
+                style="padding: 8px; margin: 4px 16px 8px 16px; border-radius: 8px;",
             )
 
             password_entry = Entry(
                 placeholder_text="Enter network password",
-                style="background-color: var(--surface-bright); border: 1px solid var(--outline); border-radius: 8px;"
+                style="background-color: var(--surface-bright); border: 1px solid var(--outline); border-radius: 8px;",
             )
             password_entry.set_visibility(False)  # Hide password characters
             password_entry.set_hexpand(True)
-            password_entry.connect("activate", lambda entry, access_point=ap: self._on_password_entered(access_point, entry))
+            password_entry.connect(
+                "activate",
+                lambda entry, access_point=ap: self._on_password_entered(
+                    access_point, entry
+                ),
+            )
             password_box.add(password_entry)
 
             # Show/Hide password toggle
-            show_password_btn = Button(
-                style="border-radius: 8px;"
+            show_password_btn = Button(style="border-radius: 8px;")
+            self.show_password_icon = Label(
+                name="wifi-tab-icon", markup=icons.spy, style="font-size: 18px;"
             )
-            self.show_password_icon = Label(name="wifi-tab-icon", markup=icons.spy,style="font-size: 18px;")
             show_password_btn.add(self.show_password_icon)
             show_password_btn.set_tooltip_text("Show/Hide password")
-            show_password_btn.connect("clicked", lambda btn, entry=password_entry: self._toggle_password_visibility(entry, btn))
+            show_password_btn.connect(
+                "clicked",
+                lambda btn, entry=password_entry: self._toggle_password_visibility(
+                    entry, btn
+                ),
+            )
             password_box.add(show_password_btn)
 
-            connect_btn = Button(
-                style="border-radius: 8px;"
+            connect_btn = Button(style="border-radius: 8px;")
+            connect_icon = Label(
+                name="wifi-tab-icon", markup=icons.connect, style="font-size: 18px;"
             )
-            connect_icon = Label(name="wifi-tab-icon", markup=icons.connect,style="font-size: 18px;")
             connect_btn.add(connect_icon)
-            connect_btn.connect("clicked", lambda btn, access_point=ap, entry=password_entry: self._on_password_entered(access_point, entry))
+            connect_btn.connect(
+                "clicked",
+                lambda btn,
+                access_point=ap,
+                entry=password_entry: self._on_password_entered(access_point, entry),
+            )
             password_box.add(connect_btn)
 
-            cancel_btn = Button(
-                style="border-radius: 8px;"
+            cancel_btn = Button(style="border-radius: 8px;")
+            cancel_icon = Label(
+                name="wifi-tab-icon", markup=icons.cancel, style="font-size: 18px;"
             )
-            cancel_icon = Label(name="wifi-tab-icon", markup=icons.cancel,style="font-size: 18px;")
             cancel_btn.add(cancel_icon)
-            cancel_btn.connect("clicked", lambda btn, access_point=ap: self._hide_password_entry(access_point))
+            cancel_btn.connect(
+                "clicked",
+                lambda btn, access_point=ap: self._hide_password_entry(access_point),
+            )
             password_box.add(cancel_btn)
 
             container.add(password_box)
@@ -493,7 +524,9 @@ class WiFiTab:
         current_visibility = entry.get_visibility()
         entry.set_visibility(not current_visibility)
         # Use spy icon for hidden, key icon for visible
-        self.show_password_icon.set_markup(icons.key if not current_visibility else icons.spy)
+        self.show_password_icon.set_markup(
+            icons.key if not current_visibility else icons.spy
+        )
 
     def _on_password_entered(self, ap, entry):
         """Handle password entry"""
@@ -505,7 +538,7 @@ class WiFiTab:
     def _hide_password_entry(self, ap):
         """Hide password entry for a network"""
         if ap.ssid in self.access_point_widgets:
-            container = self.access_point_widgets[ap.ssid]['container']
+            container = self.access_point_widgets[ap.ssid]["container"]
             children = container.get_children()
             if len(children) > 1:  # Remove password entry box
                 container.remove(children[-1])
@@ -520,8 +553,8 @@ class WiFiTab:
         """Reset connection state for a network"""
         if ssid in self.access_point_widgets:
             # Reset the network label to normal state
-            ap = self.access_point_widgets[ssid]['ap']
-            network_label = self.access_point_widgets[ssid]['network_label']
+            ap = self.access_point_widgets[ssid]["ap"]
+            network_label = self.access_point_widgets[ssid]["network_label"]
             if ap.is_active:
                 network_markup = f"<b>{ap.ssid}</b>\nConnected"
                 network_label.set_style("color: var(--foreground);")

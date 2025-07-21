@@ -1,12 +1,13 @@
 import os
+
 import gi
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.grid import Grid
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.scale import Scale
+from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GdkPixbuf, Gtk
 
 from config.data import NOTIF_POS_DEFAULT, NOTIF_POS_KEY
@@ -22,7 +23,7 @@ class AppearanceTab:
         self.themes = themes
         self.parent_window = parent_window
         self.selected_face_icon = None
-        
+
         # Widget references
         self.wall_dir_chooser = None
         self.face_image = None
@@ -60,7 +61,7 @@ class AppearanceTab:
 
         # Create wallpaper and profile icon section
         self._create_wallpaper_profile_section(vbox)
-        
+
         # Add separator
         separator1 = Box(
             style="min-height: 1px; background-color: alpha(@fg_color, 0.2); margin: 5px 0px;",
@@ -85,11 +86,7 @@ class AppearanceTab:
 
     def _create_wallpaper_profile_section(self, vbox):
         """Create wallpaper and profile icon section"""
-        top_grid = Grid(
-            column_spacing=20,
-            row_spacing=5,
-            style="margin-bottom: 10px;"
-        )
+        top_grid = Grid(column_spacing=20, row_spacing=5, style="margin-bottom: 10px;")
         vbox.add(top_grid)
 
         # Wallpaper section
@@ -99,9 +96,7 @@ class AppearanceTab:
         top_grid.attach(wall_label, 0, 1, 1, 1)
 
         chooser_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.wall_dir_chooser = Gtk.FileChooserButton(
             title="Select a folder", action=Gtk.FileChooserAction.SELECT_FOLDER
@@ -135,9 +130,7 @@ class AppearanceTab:
         top_grid.attach(face_image_container, 2, 1, 1, 1)
 
         browse_btn_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         face_btn = Button(
             label="Browse...",
@@ -156,7 +149,7 @@ class AppearanceTab:
         layout_grid = Grid(
             column_spacing=20,
             row_spacing=10,
-            style="margin-left: 10px; margin-top: 5px;"
+            style="margin-left: 10px; margin-top: 5px;",
         )
         vbox.add(layout_grid)
 
@@ -165,9 +158,7 @@ class AppearanceTab:
         layout_grid.attach(ws_mode_label, 0, 0, 1, 1)
 
         ws_mode_combo_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.ws_mode_combo = Gtk.ComboBoxText()
         self.ws_mode_combo.set_tooltip_text("Select how workspaces are displayed")
@@ -200,9 +191,7 @@ class AppearanceTab:
         )
         layout_grid.attach(ws_chinese_label, 2, 0, 1, 1)
         ws_chinese_switch_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.ws_chinese_switch = Gtk.Switch(
             active=bind_vars.get("workspace_use_chinese_numerals", False),
@@ -218,9 +207,7 @@ class AppearanceTab:
         position_label = Label(label="Dock Position", h_align="start", v_align="center")
         layout_grid.attach(position_label, 0, 1, 1, 1)
         position_combo_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.position_combo = Gtk.ComboBoxText()
         self.position_combo.set_tooltip_text("Select the position of the dock")
@@ -240,9 +227,7 @@ class AppearanceTab:
         dock_theme_label = Label(label="Dock Theme", h_align="start", v_align="center")
         layout_grid.attach(dock_theme_label, 2, 1, 1, 1)
         dock_theme_combo_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.dock_theme_combo = Gtk.ComboBoxText()
         self.dock_theme_combo.set_tooltip_text("Select the visual theme for the dock")
@@ -260,9 +245,7 @@ class AppearanceTab:
         dock_label = Label(label="Show Dock", h_align="start", v_align="center")
         layout_grid.attach(dock_label, 0, 2, 1, 1)
         dock_switch_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.dock_switch = Gtk.Switch(active=bind_vars.get("dock_enabled", True))
         self.dock_switch.connect("notify::active", self.on_dock_enabled_changed)
@@ -275,9 +258,7 @@ class AppearanceTab:
         )
         layout_grid.attach(dock_hover_label, 2, 2, 1, 1)
         dock_hover_switch_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.dock_hover_switch = Gtk.Switch(
             active=bind_vars.get("dock_always_occluded", False),
@@ -292,9 +273,7 @@ class AppearanceTab:
         )
         layout_grid.attach(dock_auto_hide_label, 0, 3, 1, 1)
         dock_auto_hide_switch_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.dock_auto_hide_switch = Gtk.Switch(
             active=bind_vars.get("dock_auto_hide", False),
@@ -309,9 +288,7 @@ class AppearanceTab:
         )
         layout_grid.attach(dock_hide_special_label, 2, 3, 1, 1)
         dock_hide_special_switch_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.dock_hide_special_switch = Gtk.Switch(
             active=bind_vars.get("dock_hide_special_workspace", True),
@@ -351,7 +328,7 @@ class AppearanceTab:
         self.application_switcher_scale = Scale(
             min_value=5,
             max_value=20,
-            value=bind_vars.get("window_switcher_items_per_row",13),
+            value=bind_vars.get("window_switcher_items_per_row", 13),
             increments=(2, 4),
             draw_value=True,
             value_position="right",
@@ -361,7 +338,9 @@ class AppearanceTab:
         self.application_switcher_scale.set_tooltip_text(
             "Adjust the number of items per row in the application switcher"
         )
-        layout_grid.attach(self.application_switcher_scale, 1, 5, 3, 1)  # Span 3 columns
+        layout_grid.attach(
+            self.application_switcher_scale, 1, 5, 3, 1
+        )  # Span 3 columns
 
         # Hide Special Workspace Apps
         dock_hide_special_apps_label = Label(
@@ -369,9 +348,7 @@ class AppearanceTab:
         )
         layout_grid.attach(dock_hide_special_apps_label, 0, 6, 1, 1)
         dock_hide_special_apps_switch_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         self.dock_hide_special_apps_switch = Gtk.Switch(
             active=bind_vars.get("dock_hide_special_workspace_apps", True),
@@ -390,9 +367,7 @@ class AppearanceTab:
         layout_grid.attach(notification_pos_label, 2, 6, 1, 1)
 
         notification_pos_combo_container = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
 
         self.notification_pos_combo = Gtk.ComboBoxText()
@@ -426,7 +401,7 @@ class AppearanceTab:
         components_grid = Grid(
             column_spacing=15,
             row_spacing=8,
-            style="margin-left: 10px; margin-top: 5px;"
+            style="margin-left: 10px; margin-top: 5px;",
         )
         vbox.add(components_grid)
 
@@ -452,9 +427,7 @@ class AppearanceTab:
         )
         components_grid.attach(corners_label, 0, 0, 1, 1)
         switch_container_corners = Box(
-            orientation="horizontal",
-            h_align="start",
-            v_align="center"
+            orientation="horizontal", h_align="start", v_align="center"
         )
         switch_container_corners.add(self.corners_switch)
         components_grid.attach(switch_container_corners, 1, 0, 1, 1)
@@ -472,9 +445,7 @@ class AppearanceTab:
             components_grid.attach(component_label, col, row, 1, 1)
 
             switch_container = Box(
-                orientation="horizontal",
-                h_align="start",
-                v_align="center"
+                orientation="horizontal", h_align="start", v_align="center"
             )
             component_switch = Gtk.Switch(
                 active=bind_vars.get(f"dock_{name}_visible", True)
@@ -568,10 +539,16 @@ class AppearanceTab:
         values["dock_enabled"] = self.dock_switch.get_active()
         values["dock_auto_hide"] = self.dock_auto_hide_switch.get_active()
         values["dock_always_occluded"] = self.dock_hover_switch.get_active()
-        values["dock_hide_special_workspace"] = self.dock_hide_special_switch.get_active()
-        values["dock_hide_special_workspace_apps"] = self.dock_hide_special_apps_switch.get_active()
+        values["dock_hide_special_workspace"] = (
+            self.dock_hide_special_switch.get_active()
+        )
+        values["dock_hide_special_workspace_apps"] = (
+            self.dock_hide_special_apps_switch.get_active()
+        )
         values["dock_icon_size"] = int(self.icon_size_scale.get_value())
-        values["window_switcher_items_per_row"] = int(self.application_switcher_scale.get_value())
+        values["window_switcher_items_per_row"] = int(
+            self.application_switcher_scale.get_value()
+        )
         values["corners_visible"] = self.corners_switch.get_active()
         values["dock_theme"] = self.dock_theme_combo.get_active_text()
 
@@ -615,8 +592,12 @@ class AppearanceTab:
         self.dock_switch.set_active(defaults.get("dock_enabled", True))
         self.dock_auto_hide_switch.set_active(defaults.get("dock_auto_hide", False))
         self.dock_hover_switch.set_active(defaults.get("dock_always_occluded", False))
-        self.dock_hide_special_switch.set_active(defaults.get("dock_hide_special_workspace", True))
-        self.dock_hide_special_apps_switch.set_active(defaults.get("dock_hide_special_workspace_apps", True))
+        self.dock_hide_special_switch.set_active(
+            defaults.get("dock_hide_special_workspace", True)
+        )
+        self.dock_hide_special_apps_switch.set_active(
+            defaults.get("dock_hide_special_workspace_apps", True)
+        )
 
         # Update sensitivity based on dock enabled state
         dock_enabled = self.dock_switch.get_active()
@@ -659,7 +640,9 @@ class AppearanceTab:
         except ValueError:
             self.ws_mode_combo.set_active(0)
 
-        self.ws_chinese_switch.set_active(defaults.get("workspace_use_chinese_numerals", False))
+        self.ws_chinese_switch.set_active(
+            defaults.get("workspace_use_chinese_numerals", False)
+        )
         self.ws_chinese_switch.set_sensitive(default_nums)
         self.corners_switch.set_active(defaults.get("corners_visible", True))
 
@@ -679,4 +662,6 @@ class AppearanceTab:
 
         # Reset scales
         self.icon_size_scale.set_value(defaults.get("dock_icon_size", 20))
-        self.application_switcher_scale.set_value(defaults.get("window_switcher_items_per_row", 13))
+        self.application_switcher_scale.set_value(
+            defaults.get("window_switcher_items_per_row", 13)
+        )

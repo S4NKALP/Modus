@@ -1,3 +1,5 @@
+import subprocess
+
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -6,7 +8,6 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GLib, Gtk
-import subprocess
 
 import utils.icons as icons
 
@@ -20,18 +21,20 @@ class BluetoothDeviceSlot(CenterBox):
             "notify::closed", lambda *_: self.device.closed and self.destroy()
         )
 
-        self.connection_label = Label(markup=icons.bluetooth_disconnected, style="font-size: 22px;")
+        self.connection_label = Label(
+            markup=icons.bluetooth_disconnected, style="font-size: 22px;"
+        )
         self.connect_button = Button(
             label="Connect",
             on_clicked=lambda *_: self._handle_device_action(),
         )
-        
+
         # Create device name label that we can update
         self.device_name_label = Label(
             label=device.alias or device.name,
             h_expand=True,
             h_align="start",
-            ellipsization="end"
+            ellipsization="end",
         )
 
         self.start_children = [
@@ -49,8 +52,6 @@ class BluetoothDeviceSlot(CenterBox):
         self.end_children = self.connect_button
 
         self.device.emit("changed")
-
-
 
     def _handle_device_action(self):
         """Handle connect/disconnect button click"""
@@ -71,23 +72,31 @@ class BluetoothDeviceSlot(CenterBox):
             device_address = self.device.address
 
             # Show pairing notification
-            subprocess.run([
-                "notify-send",
-                "Bluetooth Pairing",
-                f"Attempting to pair with {device_name}...",
-                "--icon=bluetooth",
-                "--urgency=normal",
-                "--app-name=Bluetooth"
-            ], check=False)
+            subprocess.run(
+                [
+                    "notify-send",
+                    "Bluetooth Pairing",
+                    f"Attempting to pair with {device_name}...",
+                    "--icon=bluetooth",
+                    "--urgency=normal",
+                    "--app-name=Bluetooth",
+                ],
+                check=False,
+            )
 
             # Use bluetoothctl to pair the device
             # This will trigger the system's pairing agent which should show the pairing dialog
-            pairing_process = subprocess.Popen([
-                "bluetoothctl", "pair", device_address
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            pairing_process = subprocess.Popen(
+                ["bluetoothctl", "pair", device_address],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
 
             # Monitor the pairing process in a separate thread
-            GLib.timeout_add(100, self._monitor_pairing_process, pairing_process, device_name)
+            GLib.timeout_add(
+                100, self._monitor_pairing_process, pairing_process, device_name
+            )
 
         except Exception as e:
             print(f"Failed to start pairing process: {e}")
@@ -121,7 +130,7 @@ class BluetoothDeviceSlot(CenterBox):
             subprocess.run(["bluetoothctl", "trust", device_address], check=False)
 
             # Connect to the device
-            GLib.timeout_add(1000, lambda: setattr(self.device, 'connected', True))
+            GLib.timeout_add(1000, lambda: setattr(self.device, "connected", True))
 
         except Exception as e:
             print(f"Failed to trust/connect device: {e}")
@@ -130,14 +139,17 @@ class BluetoothDeviceSlot(CenterBox):
         """Show notification when pairing succeeds"""
         try:
             device_name = self.device.alias or self.device.name
-            subprocess.run([
-                "notify-send",
-                "Bluetooth Paired",
-                f"Successfully paired with {device_name}",
-                "--icon=bluetooth",
-                "--urgency=normal",
-                "--app-name=Bluetooth"
-            ], check=False)
+            subprocess.run(
+                [
+                    "notify-send",
+                    "Bluetooth Paired",
+                    f"Successfully paired with {device_name}",
+                    "--icon=bluetooth",
+                    "--urgency=normal",
+                    "--app-name=Bluetooth",
+                ],
+                check=False,
+            )
         except Exception as e:
             print(f"Failed to send pairing success notification: {e}")
 
@@ -145,28 +157,33 @@ class BluetoothDeviceSlot(CenterBox):
         """Show notification when pairing fails"""
         try:
             device_name = self.device.alias or self.device.name
-            subprocess.run([
-                "notify-send",
-                "Bluetooth Pairing Failed",
-                f"Failed to pair with {device_name}",
-                "--icon=bluetooth-disabled",
-                "--urgency=normal",
-                "--app-name=Bluetooth"
-            ], check=False)
+            subprocess.run(
+                [
+                    "notify-send",
+                    "Bluetooth Pairing Failed",
+                    f"Failed to pair with {device_name}",
+                    "--icon=bluetooth-disabled",
+                    "--urgency=normal",
+                    "--app-name=Bluetooth",
+                ],
+                check=False,
+            )
         except Exception as e:
             print(f"Failed to send pairing failed notification: {e}")
 
     def on_changed(self, *_):
         # Update connection icon
         self.connection_label.set_markup(
-            icons.bluetooth_connected if self.device.connected else icons.bluetooth_disconnected
+            icons.bluetooth_connected
+            if self.device.connected
+            else icons.bluetooth_disconnected
         )
 
         # Check for pairing state changes and show notifications
         base_name = self.device.alias or self.device.name
 
         # Track pairing success/failure
-        if hasattr(self, '_was_pairing') and self._was_pairing:
+        if hasattr(self, "_was_pairing") and self._was_pairing:
             if self.device.paired and not self.device.connecting:
                 # Pairing succeeded
                 self._show_pairing_success_notification()
@@ -201,7 +218,6 @@ class BluetoothDeviceSlot(CenterBox):
         self.device_name_label.set_label(status_text)
 
 
-
 class BluetoothTab:
     """Bluetooth device management tab for settings"""
 
@@ -219,32 +235,27 @@ class BluetoothTab:
         """Set the window size enforcer function from the main GUI"""
         self.window_size_enforcer = enforcer_func
 
-
-
     def create_bluetooth_tab(self):
         """Create the Bluetooth tab content"""
-        main_vbox = Box(
-            orientation="v",
-            spacing=0,
-            style="padding: 0; margin: 15px;"
-        )
+        main_vbox = Box(orientation="v", spacing=0, style="padding: 0; margin: 15px;")
 
         # Set fixed size for the main container to match tab stack dimensions
         main_vbox.set_size_request(580, 580)
 
         # Create widgets first
         self.bluetooth_subtitle = Label(
-            markup="<span>Find and connect to Bluetooth devices</span>",
-            h_align="start"
+            markup="<span>Find and connect to Bluetooth devices</span>", h_align="start"
         )
         self.bluetooth_switch = Gtk.Switch()
-        self.scan_icon = Label(name="bluetooth-tab-icon", markup=icons.radar, style="font-size: 18px;")
+        self.scan_icon = Label(
+            name="bluetooth-tab-icon", markup=icons.radar, style="font-size: 18px;"
+        )
         self.scan_button = Button(
             name="bluetooth-scan",
             child=self.scan_icon,
             tooltip_text="Scan for devices",
             on_clicked=lambda *_: self.bluetooth_client.toggle_scan(),
-            style="margin:10px;"
+            style="margin:10px;",
         )
 
         # Header section with title and controls
@@ -258,10 +269,10 @@ class BluetoothTab:
                     children=[
                         Label(
                             markup="<span size='large'><b>Bluetooth</b></span>",
-                            h_align="start"
+                            h_align="start",
                         ),
                         self.bluetooth_subtitle,
-                    ]
+                    ],
                 )
             ],
             end_children=[
@@ -271,14 +282,16 @@ class BluetoothTab:
                     children=[
                         self.bluetooth_switch,
                         self.scan_button,
-                    ]
+                    ],
                 )
-            ]
+            ],
         )
 
         # Set up switch
         self.bluetooth_switch.set_valign(Gtk.Align.CENTER)
-        self.bluetooth_switch.connect("notify::active", self._on_bluetooth_switch_toggled)
+        self.bluetooth_switch.connect(
+            "notify::active", self._on_bluetooth_switch_toggled
+        )
 
         main_vbox.add(header_box)
 
@@ -292,11 +305,19 @@ class BluetoothTab:
             spacing=8,
             orientation="v",
             children=[
-                Label(name="bluetooth-section", markup="<b>Paired Devices</b>", h_align="start"),
+                Label(
+                    name="bluetooth-section",
+                    markup="<b>Paired Devices</b>",
+                    h_align="start",
+                ),
                 self.paired_box,
-                Label(name="bluetooth-section", markup="<b>Available Devices</b>", h_align="start"),
+                Label(
+                    name="bluetooth-section",
+                    markup="<b>Available Devices</b>",
+                    h_align="start",
+                ),
                 self.available_box,
-            ]
+            ],
         )
         # Set size constraints for content box
         content_box.set_size_request(560, -1)
@@ -335,9 +356,7 @@ class BluetoothTab:
             self.scan_button.set_sensitive(True)
         else:
             self.bluetooth_switch.set_active(False)
-            self.bluetooth_subtitle.set_markup(
-                "<span>Bluetooth is turned off</span>"
-            )
+            self.bluetooth_subtitle.set_markup("<span>Bluetooth is turned off</span>")
             self.scan_button.set_sensitive(False)
 
     def _on_bluetooth_changed(self, *args):
@@ -362,9 +381,8 @@ class BluetoothTab:
         """Populate existing devices when tab is created"""
         if not self.bluetooth_client or not self.bluetooth_client.enabled:
             return
-        
+
         devices = self.bluetooth_client.devices
-    
 
         for device in devices:
             self.on_device_added(self.bluetooth_client, device.address)
@@ -430,7 +448,3 @@ class BluetoothTab:
         """Clear and repopulate all devices"""
         self._clear_all_devices()
         self._populate_existing_devices()
-
-
-
-

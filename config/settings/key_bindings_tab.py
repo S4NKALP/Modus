@@ -8,7 +8,6 @@ from config.data import APP_NAME_CAP
 from config.settings.utils import bind_vars
 
 
-
 class KeyBindingsTab:
     """Key bindings management tab for settings"""
 
@@ -31,11 +30,7 @@ class KeyBindingsTab:
         main_vbox = Box(orientation="v", spacing=10, style="margin: 15px;")
         scrolled_window.add(main_vbox)
 
-        keybind_grid = Grid(
-            column_spacing=10,
-            row_spacing=8,
-            style="margin: 5px;"
-        )
+        keybind_grid = Grid(column_spacing=10, row_spacing=8, style="margin: 5px;")
 
         action_label = Label(
             markup="<b>Action</b>", h_align="start", style="margin-bottom: 5px;"
