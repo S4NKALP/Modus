@@ -55,14 +55,6 @@
       "icon": "timer_on",
       "description": "Reminders - Set time-based reminders with notifications"
     },
-    "net": {
-      "icon": "wifi_3",
-      "description": "Network - Quick access to network management"
-    },
-    "bt": {
-      "icon": "bluetooth",
-      "description": "Bluetooth - Manage Bluetooth devices and connections"
-    },
     "otp": {
       "icon": "auth",
       "description": "Manage TOTP codes and 2FA authentication"
@@ -81,12 +73,7 @@
     },
     "script": {
       "icon": "terminal",
-      "description": "Bash Scripts - Manage and execute bash scripts",
-      "examples": [
-        "script backup",
-        "script add my_script ~/scripts/backup.sh",
-        "script config"
-      ]
+      "description": "Bash Scripts - Manage and execute bash scripts"
     },
     "bash": {
       "icon": "terminal",

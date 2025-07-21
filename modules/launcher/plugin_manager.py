@@ -90,8 +90,6 @@ class PluginManager:
             "kanban",
             "calendar",
             "reminders",
-            "network",
-            "bluetooth",
             "otp",
             "password",
             "bookmarks",
