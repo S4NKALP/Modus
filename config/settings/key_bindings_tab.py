@@ -1,9 +1,9 @@
 import gi
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
+from fabric.widgets.grid import Grid
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gtk
 
 from config.data import APP_NAME_CAP
 from config.settings.utils import bind_vars
@@ -33,13 +33,11 @@ class KeyBindingsTab:
         main_vbox = Box(orientation="v", spacing=10, style="margin: 15px;")
         scrolled_window.add(main_vbox)
 
-        keybind_grid = Gtk.Grid()
-        keybind_grid.set_column_spacing(10)
-        keybind_grid.set_row_spacing(8)
-        keybind_grid.set_margin_start(5)
-        keybind_grid.set_margin_end(5)
-        keybind_grid.set_margin_top(5)
-        keybind_grid.set_margin_bottom(5)
+        keybind_grid = Grid(
+            column_spacing=10,
+            row_spacing=8,
+            style="margin: 5px;"
+        )
 
         action_label = Label(
             markup="<b>Action</b>", h_align="start", style="margin-bottom: 5px;"

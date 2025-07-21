@@ -2,11 +2,12 @@ import os
 import gi
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.image import Image as FabricImage
+from fabric.widgets.grid import Grid
+from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gdk, GdkPixbuf, Gtk
 from fabric.widgets.scale import Scale
+from gi.repository import GdkPixbuf, Gtk
 
 from config.data import NOTIF_POS_DEFAULT, NOTIF_POS_KEY
 from config.settings.utils import bind_vars
@@ -84,10 +85,11 @@ class AppearanceTab:
 
     def _create_wallpaper_profile_section(self, vbox):
         """Create wallpaper and profile icon section"""
-        top_grid = Gtk.Grid()
-        top_grid.set_column_spacing(20)
-        top_grid.set_row_spacing(5)
-        top_grid.set_margin_bottom(10)
+        top_grid = Grid(
+            column_spacing=20,
+            row_spacing=5,
+            style="margin-bottom: 10px;"
+        )
         vbox.add(top_grid)
 
         # Wallpaper section
@@ -96,9 +98,11 @@ class AppearanceTab:
         wall_label = Label(label="Directory:", h_align="start", v_align="center")
         top_grid.attach(wall_label, 0, 1, 1, 1)
 
-        chooser_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        chooser_container.set_halign(Gtk.Align.START)
-        chooser_container.set_valign(Gtk.Align.CENTER)
+        chooser_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
+        )
         self.wall_dir_chooser = Gtk.FileChooserButton(
             title="Select a folder", action=Gtk.FileChooserAction.SELECT_FOLDER
         )
@@ -117,7 +121,7 @@ class AppearanceTab:
         face_image_container = Box(
             style_classes=["image-frame"], h_align="center", v_align="center"
         )
-        self.face_image = FabricImage(size=64)
+        self.face_image = Image(size=64)
         try:
             if os.path.exists(current_face):
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(current_face, 64, 64)
@@ -130,9 +134,11 @@ class AppearanceTab:
         face_image_container.add(self.face_image)
         top_grid.attach(face_image_container, 2, 1, 1, 1)
 
-        browse_btn_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        browse_btn_container.set_halign(Gtk.Align.START)
-        browse_btn_container.set_valign(Gtk.Align.CENTER)
+        browse_btn_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
+        )
         face_btn = Button(
             label="Browse...",
             tooltip_text="Select a square image for your profile icon",
@@ -147,21 +153,21 @@ class AppearanceTab:
         """Create layout options section"""
         layout_header = Label(markup="<b>Layout Options</b>", h_align="start")
         vbox.add(layout_header)
-        layout_grid = Gtk.Grid()
-        layout_grid.set_column_spacing(20)
-        layout_grid.set_row_spacing(10)
-        layout_grid.set_margin_start(10)
-        layout_grid.set_margin_top(5)
+        layout_grid = Grid(
+            column_spacing=20,
+            row_spacing=10,
+            style="margin-left: 10px; margin-top: 5px;"
+        )
         vbox.add(layout_grid)
 
         # Workspace mode
         ws_mode_label = Label(label="Workspace Mode", h_align="start", v_align="center")
         layout_grid.attach(ws_mode_label, 0, 0, 1, 1)
 
-        ws_mode_combo_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        ws_mode_combo_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.ws_mode_combo = Gtk.ComboBoxText()
         self.ws_mode_combo.set_tooltip_text("Select how workspaces are displayed")
@@ -193,10 +199,10 @@ class AppearanceTab:
             label="Use Chinese Numerals", h_align="start", v_align="center"
         )
         layout_grid.attach(ws_chinese_label, 2, 0, 1, 1)
-        ws_chinese_switch_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        ws_chinese_switch_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.ws_chinese_switch = Gtk.Switch(
             active=bind_vars.get("workspace_use_chinese_numerals", False),
@@ -211,10 +217,10 @@ class AppearanceTab:
         # Dock position
         position_label = Label(label="Dock Position", h_align="start", v_align="center")
         layout_grid.attach(position_label, 0, 1, 1, 1)
-        position_combo_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        position_combo_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.position_combo = Gtk.ComboBoxText()
         self.position_combo.set_tooltip_text("Select the position of the dock")
@@ -233,10 +239,10 @@ class AppearanceTab:
         # Dock theme
         dock_theme_label = Label(label="Dock Theme", h_align="start", v_align="center")
         layout_grid.attach(dock_theme_label, 2, 1, 1, 1)
-        dock_theme_combo_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        dock_theme_combo_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.dock_theme_combo = Gtk.ComboBoxText()
         self.dock_theme_combo.set_tooltip_text("Select the visual theme for the dock")
@@ -253,10 +259,10 @@ class AppearanceTab:
         # Show Dock switch
         dock_label = Label(label="Show Dock", h_align="start", v_align="center")
         layout_grid.attach(dock_label, 0, 2, 1, 1)
-        dock_switch_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        dock_switch_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.dock_switch = Gtk.Switch(active=bind_vars.get("dock_enabled", True))
         self.dock_switch.connect("notify::active", self.on_dock_enabled_changed)
@@ -268,10 +274,10 @@ class AppearanceTab:
             label="Show Dock Only on Hover", h_align="start", v_align="center"
         )
         layout_grid.attach(dock_hover_label, 2, 2, 1, 1)
-        dock_hover_switch_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        dock_hover_switch_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.dock_hover_switch = Gtk.Switch(
             active=bind_vars.get("dock_always_occluded", False),
@@ -285,10 +291,10 @@ class AppearanceTab:
             label="Auto-hide Dock", h_align="start", v_align="center"
         )
         layout_grid.attach(dock_auto_hide_label, 0, 3, 1, 1)
-        dock_auto_hide_switch_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        dock_auto_hide_switch_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.dock_auto_hide_switch = Gtk.Switch(
             active=bind_vars.get("dock_auto_hide", False),
@@ -302,10 +308,10 @@ class AppearanceTab:
             label="Hide Special Workspace", h_align="start", v_align="center"
         )
         layout_grid.attach(dock_hide_special_label, 2, 3, 1, 1)
-        dock_hide_special_switch_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        dock_hide_special_switch_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.dock_hide_special_switch = Gtk.Switch(
             active=bind_vars.get("dock_hide_special_workspace", True),
@@ -362,10 +368,10 @@ class AppearanceTab:
             label="Hide Special Workspace Apps", h_align="start", v_align="center"
         )
         layout_grid.attach(dock_hide_special_apps_label, 0, 6, 1, 1)
-        dock_hide_special_apps_switch_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        dock_hide_special_apps_switch_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         self.dock_hide_special_apps_switch = Gtk.Switch(
             active=bind_vars.get("dock_hide_special_workspace_apps", True),
@@ -417,11 +423,11 @@ class AppearanceTab:
         """Create modules section"""
         components_header = Label(markup="<b>Modules</b>", h_align="start")
         vbox.add(components_header)
-        components_grid = Gtk.Grid()
-        components_grid.set_column_spacing(15)
-        components_grid.set_row_spacing(8)
-        components_grid.set_margin_start(10)
-        components_grid.set_margin_top(5)
+        components_grid = Grid(
+            column_spacing=15,
+            row_spacing=8,
+            style="margin-left: 10px; margin-top: 5px;"
+        )
         vbox.add(components_grid)
 
         self.component_switches = {}
@@ -445,10 +451,10 @@ class AppearanceTab:
             label="Rounded Corners", h_align="start", v_align="center"
         )
         components_grid.attach(corners_label, 0, 0, 1, 1)
-        switch_container_corners = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        switch_container_corners = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         switch_container_corners.add(self.corners_switch)
         components_grid.attach(switch_container_corners, 1, 0, 1, 1)
@@ -465,10 +471,10 @@ class AppearanceTab:
             component_label = Label(label=display, h_align="start", v_align="center")
             components_grid.attach(component_label, col, row, 1, 1)
 
-            switch_container = Gtk.Box(
-                orientation=Gtk.Orientation.HORIZONTAL,
-                halign=Gtk.Align.START,
-                valign=Gtk.Align.CENTER,
+            switch_container = Box(
+                orientation="horizontal",
+                h_align="start",
+                v_align="center"
             )
             component_switch = Gtk.Switch(
                 active=bind_vars.get(f"dock_{name}_visible", True)

@@ -2,6 +2,7 @@ import gi
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
+from fabric.widgets.grid import Grid
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GLib, Gtk
@@ -58,10 +59,11 @@ class SystemTab:
 
     def _create_terminal_hyprland_section(self, vbox):
         """Create terminal and Hyprland integration section"""
-        system_grid = Gtk.Grid()
-        system_grid.set_column_spacing(20)
-        system_grid.set_row_spacing(10)
-        system_grid.set_margin_bottom(15)
+        system_grid = Grid(
+            column_spacing=20,
+            row_spacing=10,
+            style="margin-bottom: 15px;"
+        )
         vbox.add(system_grid)
 
         # Terminal settings
@@ -91,10 +93,10 @@ class SystemTab:
                 label="Replace Hyprlock config", h_align="start", v_align="center"
             )
             system_grid.attach(lock_label, 2, row, 1, 1)
-            lock_switch_container = Gtk.Box(
-                orientation=Gtk.Orientation.HORIZONTAL,
-                halign=Gtk.Align.START,
-                valign=Gtk.Align.CENTER,
+            lock_switch_container = Box(
+                orientation="horizontal",
+                h_align="start",
+                v_align="center"
             )
             self.lock_switch = Gtk.Switch(
                 tooltip_text="Replace Hyprlock configuration with Modus's custom config"
@@ -108,10 +110,10 @@ class SystemTab:
                 label="Replace Hypridle config", h_align="start", v_align="center"
             )
             system_grid.attach(idle_label, 2, row, 1, 1)
-            idle_switch_container = Gtk.Box(
-                orientation=Gtk.Orientation.HORIZONTAL,
-                halign=Gtk.Align.START,
-                valign=Gtk.Align.CENTER,
+            idle_switch_container = Box(
+                orientation="horizontal",
+                h_align="start",
+                v_align="center"
             )
             self.idle_switch = Gtk.Switch(
                 tooltip_text="Replace Hypridle configuration with Modus's custom config"
@@ -133,12 +135,11 @@ class SystemTab:
         )
         vbox.add(notifications_header)
 
-        notif_grid = Gtk.Grid()
-        notif_grid.set_column_spacing(20)
-        notif_grid.set_row_spacing(10)
-        notif_grid.set_margin_start(10)
-        notif_grid.set_margin_top(5)
-        notif_grid.set_margin_bottom(15)
+        notif_grid = Grid(
+            column_spacing=20,
+            row_spacing=10,
+            style="margin-left: 10px; margin-top: 5px; margin-bottom: 15px;"
+        )
         vbox.add(notif_grid)
 
         # Limited Apps History
@@ -187,8 +188,10 @@ class SystemTab:
         """Create system metrics section"""
         metrics_header = Label(markup="<b>System Metrics Options</b>", h_align="start")
         vbox.add(metrics_header)
-        metrics_grid = Gtk.Grid(
-            column_spacing=15, row_spacing=8, margin_start=10, margin_top=5
+        metrics_grid = Grid(
+            column_spacing=15,
+            row_spacing=8,
+            style="margin-left: 10px; margin-top: 5px;"
         )
         vbox.add(metrics_grid)
 
@@ -254,10 +257,10 @@ class SystemTab:
             self._create_disk_edit_entry_func(p)
         vbox.add(disk_entries_scrolled)
 
-        add_container = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            halign=Gtk.Align.START,
-            valign=Gtk.Align.CENTER,
+        add_container = Box(
+            orientation="horizontal",
+            h_align="start",
+            v_align="center"
         )
         add_btn = Button(
             label="Add new disk",
@@ -304,7 +307,7 @@ class SystemTab:
         values["metrics_disks"] = [
             child.get_children()[0].get_text()
             for child in self.disk_entries.get_children()
-            if isinstance(child, Gtk.Box)
+            if isinstance(child, Box)
             and child.get_children()
             and isinstance(child.get_children()[0], Entry)
         ]
