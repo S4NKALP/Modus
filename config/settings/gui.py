@@ -147,14 +147,6 @@ class HyprConfGUI(Window):
 
 
 
-    # Removed create_appearance_tab - now using AppearanceTab class
-
-    # on_notification_position_changed moved to AppearanceTab class
-
-    # Removed create_system_tab - now using SystemTab class
-    # Removed create_about_tab - now using AboutTab class
-
-
     # Event handlers moved to respective tab classes
 
     def on_accept(self, _widget):

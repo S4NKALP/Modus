@@ -1,4 +1,3 @@
-import gi
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
 from fabric.widgets.grid import Grid
@@ -8,7 +7,6 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 from config.data import APP_NAME_CAP
 from config.settings.utils import bind_vars
 
-gi.require_version("Gtk", "3.0")
 
 
 class KeyBindingsTab:
