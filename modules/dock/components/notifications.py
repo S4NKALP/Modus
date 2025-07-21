@@ -5,7 +5,6 @@ from datetime import datetime
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
@@ -32,7 +31,7 @@ from utils.wayland import WaylandWindow as Window
 
 
 class NotificationHistoryPopup(Window):
-    """Popup window that shows notification history with hover-based reveal"""
+    """Popup window that shows notification history with click-based reveal"""
 
     def __init__(self, dock_component=None, **kwargs):
         # Get dock position for proper anchoring
@@ -147,26 +146,28 @@ class NotificationHistoryPopup(Window):
         return False
 
     def on_button_press(self, widget, event):
-        """Handle button press events"""
+        """Handle button press events - close popup when clicking outside"""
+        # Close popup when clicking outside
+        if self.dock_component:
+            self.dock_component.popup_visible = False
+        self.hide_popup()
         return False
 
     def on_enter_notify(self, widget, event):
         """Handle mouse entering popup"""
-        # Cancel any pending hide from dock component
-        if self.dock_component and hasattr(self.dock_component, '_hover_timeout'):
-            if self.dock_component._hover_timeout:
-                GLib.source_remove(self.dock_component._hover_timeout)
-                self.dock_component._hover_timeout = None
+        # No action needed for click-based popup
         return False
 
     def on_leave_notify(self, widget, event):
         """Handle mouse leaving popup"""
-        # Hide popup when mouse leaves
-        self.hide_popup()
+        # No action needed for click-based popup
         return False
 
     def show_popup(self):
         """Show the notification history popup"""
+        # Ensure notification history is loaded before showing
+        self.notification_history._ensure_history_loaded()
+
         self.set_visible(True)
         self.show_all()
         # Use GLib.idle_add to ensure the window is shown before revealing
@@ -185,7 +186,7 @@ class NotificationHistoryPopup(Window):
         GLib.timeout_add(350, lambda: self.set_visible(False))
 
 
-class NotificationIndicator(EventBox):
+class NotificationIndicator(Box):
     def __init__(self, **kwargs):
         self.notification_icon = Label(
             name="notification-icon", markup=icons.notifications
@@ -195,76 +196,88 @@ class NotificationIndicator(EventBox):
         self.icon_button = Button(
             name="button-bar-notifications",
             child=self.notification_icon,
+            on_clicked=self.on_button_clicked,
         )
 
         super().__init__(
             name="notification-indicator",
-            child=self.icon_button,
+            children=[self.icon_button],
             **kwargs
         )
 
-        # Set up event box for proper event handling
-        self.set_visible_window(False)
-        self.set_above_child(True)
-
-        # Connect hover events
-        self.connect("enter-notify-event", self.on_enter_notify)
-        self.connect("leave-notify-event", self.on_leave_notify)
-        self.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
-
-        # Pre-create popup for immediate display on hover
-        self.popup = NotificationHistoryPopup(dock_component=self)
-        self._hover_timeout = None
+        # Initialize popup as None, will be created in background
+        self.popup = None
+        self.popup_visible = False
+        self.popup_creating = False
 
         self._connect_to_dnd_state()
 
         # Connect to destroy signal for cleanup
         self.connect("destroy", self.on_destroy)
 
-    def on_destroy(self, widget):
-        """Clean up popup when component is destroyed"""
-        try:
-            # Remove hover timeout
-            if hasattr(self, "_hover_timeout") and self._hover_timeout:
-                GLib.source_remove(self._hover_timeout)
-                self._hover_timeout = None
+        # Start background creation of popup after a short delay
+        GLib.timeout_add(100, self._create_popup_in_background)
 
-            # Clean up popup (popup is always created now)
-            if self.popup:
+    def on_destroy(self, widget):
+        """Hide popup when component is destroyed"""
+        try:
+            # Hide popup instead of destroying it (only if it was created)
+            if self.popup is not None:
                 try:
-                    self.popup.destroy()
-                    self.popup = None
+                    self.popup.hide_popup()
+                    self.popup_visible = False
                 except Exception:
                     pass
 
         except Exception:
             pass
 
-    def on_enter_notify(self, widget, event):
-        """Handle mouse entering the notification component"""
-        print("Notification hover detected!")  # Debug print
-        # Cancel any pending hover timeout
-        if self._hover_timeout:
-            GLib.source_remove(self._hover_timeout)
-            self._hover_timeout = None
+    def _create_popup_in_background(self):
+        """Create popup in background for instant access"""
+        if self.popup is None and not self.popup_creating:
+            print("Creating notification popup in background...")  # Debug print
+            self.popup_creating = True
 
-        # Show popup immediately on hover (popup is pre-created)
-        if not self.popup.get_visible():
-            self.popup.show_popup()
-        return False
+            # Use idle_add to create popup without blocking UI
+            GLib.idle_add(self._do_background_creation)
 
-    def on_leave_notify(self, widget, event):
-        """Handle mouse leaving the notification component"""
-        # Hide popup with a small delay to prevent flickering
-        self._hover_timeout = GLib.timeout_add(100, self._hide_popup_delayed)
-        return False
-
-    def _hide_popup_delayed(self):
-        """Hide popup after delay"""
-        if self.popup and self.popup.get_visible():
-            self.popup.hide_popup()
-        self._hover_timeout = None
         return False  # Don't repeat timeout
+
+    def _do_background_creation(self):
+        """Actually create the popup in background"""
+        try:
+            self.popup = NotificationHistoryPopup(dock_component=self)
+            print("Notification popup created in background!")  # Debug print
+        except Exception as e:
+            print(f"Error creating popup in background: {e}")
+        finally:
+            self.popup_creating = False
+
+        return False  # Don't repeat
+
+    def on_button_clicked(self, button):
+        """Handle button click to toggle notification popup"""
+        print("Notification button clicked!")  # Debug print
+
+        # If popup is still being created, create it synchronously
+        if self.popup is None:
+            if self.popup_creating:
+                print("Popup still creating, waiting...")  # Debug print
+                # Force synchronous creation if user clicked while background creation is happening
+                self.popup = NotificationHistoryPopup(dock_component=self)
+                self.popup_creating = False
+            else:
+                print("Creating notification popup immediately...")  # Debug print
+                self.popup = NotificationHistoryPopup(dock_component=self)
+
+        if self.popup_visible:
+            # Hide popup if currently visible
+            self.popup.hide_popup()
+            self.popup_visible = False
+        else:
+            # Show popup if currently hidden
+            self.popup.show_popup()
+            self.popup_visible = True
 
     def _connect_to_dnd_state(self):
         try:
@@ -365,13 +378,19 @@ class NotificationHistory(Box):
         self.persistent_notifications = []
         self.add(self.history_header)
         self.add(self.scrolled_window)
-        self._load_persistent_history()
-        cleanup_orphan_cached_images(self.persistent_notifications)
+
+        # Initialize history loading state
+        self.history_loaded = False
+        self.history_loading = False
+
         self.schedule_midnight_update()
 
         self._connect_to_shared_history()
 
         self._load_and_sync_dnd_state()
+
+        # Start background loading of history after a short delay
+        GLib.timeout_add(200, self._load_history_in_background)
 
     def _connect_to_shared_history(self):
         try:
@@ -421,6 +440,48 @@ class NotificationHistory(Box):
 
         except Exception as e:
             print(f"Could not sync DND state: {e}")
+
+    def _load_history_in_background(self):
+        """Start loading notification history in background"""
+        if not self.history_loaded and not self.history_loading:
+            print("Starting background loading of notification history...")  # Debug print
+            self.history_loading = True
+
+            # Use idle_add to load history without blocking UI
+            GLib.idle_add(self._do_background_history_loading)
+
+        return False  # Don't repeat timeout
+
+    def _do_background_history_loading(self):
+        """Actually load the history in background"""
+        try:
+            print("Loading notification history in background...")  # Debug print
+            self._load_persistent_history()
+            cleanup_orphan_cached_images(self.persistent_notifications)
+            self.history_loaded = True
+            print("Notification history loaded in background!")  # Debug print
+        except Exception as e:
+            print(f"Error loading history in background: {e}")
+        finally:
+            self.history_loading = False
+
+        return False  # Don't repeat
+
+    def _ensure_history_loaded(self):
+        """Ensure notification history is loaded (force if needed)"""
+        if not self.history_loaded:
+            if self.history_loading:
+                print("History still loading in background, forcing synchronous load...")  # Debug print
+                # Force synchronous loading if user opened popup while background loading
+                self._load_persistent_history()
+                cleanup_orphan_cached_images(self.persistent_notifications)
+                self.history_loaded = True
+                self.history_loading = False
+            else:
+                print("Loading notification history synchronously...")  # Debug print
+                self._load_persistent_history()
+                cleanup_orphan_cached_images(self.persistent_notifications)
+                self.history_loaded = True
 
     def schedule_midnight_update(self):
         schedule_midnight_update(self.on_midnight)
