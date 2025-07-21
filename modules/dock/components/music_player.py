@@ -3,7 +3,7 @@ import time
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
-from fabric.widgets.eventbox import EventBox
+
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
@@ -64,8 +64,6 @@ class MusicPlayerPopup(Window):
         # Connect to escape key to close
         self.connect("key-press-event", self.on_key_press)
         self.connect("button-press-event", self.on_button_press)
-        self.connect("enter-notify-event", self.on_enter_notify)
-        self.connect("leave-notify-event", self.on_leave_notify)
         self.set_can_focus(True)
 
     def on_active_player_changed(self, container, player):
@@ -76,6 +74,8 @@ class MusicPlayerPopup(Window):
     def on_key_press(self, widget, event):
         """Handle key press events"""
         if event.keyval == Gdk.KEY_Escape:
+            if self.dock_component:
+                self.dock_component._popup_visible = False
             self.hide_popup()
             return True
         return False
@@ -124,29 +124,24 @@ class MusicPlayerPopup(Window):
         return transition_map.get(dock_position, "slide-up")
 
     def on_button_press(self, widget, event):
-        """Handle button press events"""
-        return False
-
-    def on_enter_notify(self, widget, event):
-        """Handle mouse entering popup"""
-        # Cancel any pending hide from dock component
-        if self.dock_component and hasattr(self.dock_component, '_hover_timeout'):
-            if self.dock_component._hover_timeout:
-                GLib.source_remove(self.dock_component._hover_timeout)
-                self.dock_component._hover_timeout = None
-        return False
-
-    def on_leave_notify(self, widget, event):
-        """Handle mouse leaving popup"""
-        # Hide popup when mouse leaves
+        """Handle button press events - close popup when clicking outside"""
+        if self.dock_component:
+            self.dock_component._popup_visible = False
         self.hide_popup()
         return False
 
     def hide_popup(self):
         """Hide the music player popup"""
         self.revealer.set_reveal_child(False)
-        # Hide window after transition completes
-        GLib.timeout_add(350, lambda: self.set_visible(False))
+        # Hide window after transition completes and notify dock component
+        GLib.timeout_add(350, self._complete_hide)
+
+    def _complete_hide(self):
+        """Complete the hide process"""
+        self.set_visible(False)
+        if self.dock_component:
+            self.dock_component._popup_visible = False
+        return False
 
 
 class MusicPlayer(Box):
@@ -188,29 +183,24 @@ class MusicPlayer(Box):
         # Create music icon label - always use generic music icon
         self.music_label = Label(name="music-label", markup=icons.music)
 
-        # Create button for the music icon
+        # Create button for the music icon with click handler
         self.music_button = Button(child=self.music_label)
+        self.music_button.connect("clicked", self.on_music_button_clicked)
 
-        # Create event box for scroll events and hover detection
-        self.event_box = EventBox(
-            events=["scroll", "smooth-scroll", "enter-notify", "leave-notify"],
-            child=Overlay(child=self.progress_bar, overlays=self.music_button),
-        )
+        # Create overlay without EventBox to fix click issues
+        self.overlay = Overlay(child=self.progress_bar, overlays=self.music_button)
 
-        # Connect scroll events for seeking
-        self.event_box.connect("scroll-event", self.on_scroll)
-        # Connect hover events
-        self.event_box.connect("enter-notify-event", self.on_enter_notify)
-        self.event_box.connect("leave-notify-event", self.on_leave_notify)
-        self.add_events(Gdk.EventMask.SCROLL_MASK | Gdk.EventMask.SMOOTH_SCROLL_MASK | Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+        # Add scroll events directly to the overlay for seeking
+        self.overlay.add_events(Gdk.EventMask.SCROLL_MASK | Gdk.EventMask.SMOOTH_SCROLL_MASK)
+        self.overlay.connect("scroll-event", self.on_scroll)
 
-        self.add(self.event_box)
+        self.add(self.overlay)
 
-        # Pre-create popup for immediate display on hover
+        # Pre-create popup for immediate display on click
         self.popup = MusicPlayerPopup(dock_component=self)
 
-        # Hover timeout for debouncing
-        self._hover_timeout = None
+        # Track popup visibility state
+        self._popup_visible = False
 
         # Initialize players with delayed visibility check
         GLib.timeout_add(500, self._delayed_init)
@@ -238,10 +228,7 @@ class MusicPlayer(Box):
             if hasattr(self, "active_player_check_timeout"):
                 GLib.source_remove(self.active_player_check_timeout)
 
-            # Remove hover timeout
-            if hasattr(self, "_hover_timeout") and self._hover_timeout:
-                GLib.source_remove(self._hover_timeout)
-                self._hover_timeout = None
+            # No hover timeout to clean up anymore
 
             # Remove visibility timeout
             if hasattr(self, "_visibility_timeout") and self._visibility_timeout:
@@ -690,30 +677,17 @@ class MusicPlayer(Box):
         else:
             self.on_pause(None)
 
-    def on_enter_notify(self, widget, event):
-        """Handle mouse entering the music player component"""
-        # Cancel any pending hover timeout
-        if self._hover_timeout:
-            GLib.source_remove(self._hover_timeout)
-            self._hover_timeout = None
-
-        # Show popup immediately on hover (popup is pre-created)
-        if not self.popup.get_visible():
-            self.popup.show_popup()
-        return False
-
-    def on_leave_notify(self, widget, event):
-        """Handle mouse leaving the music player component"""
-        # Hide popup with a small delay to prevent flickering
-        self._hover_timeout = GLib.timeout_add(100, self._hide_popup_delayed)
-        return False
-
-    def _hide_popup_delayed(self):
-        """Hide popup after delay"""
-        if self.popup and self.popup.get_visible():
+    def on_music_button_clicked(self, button):
+        """Handle music button click to toggle popup"""
+        if self._popup_visible:
+            # Hide popup if currently visible
             self.popup.hide_popup()
-        self._hover_timeout = None
-        return False  # Don't repeat timeout
+            self._popup_visible = False
+        else:
+            # Show popup if currently hidden
+            self.popup.show_popup()
+            self._popup_visible = True
+        return True
 
     def on_scroll(self, widget, event):
         """Handle scroll events for seeking"""
