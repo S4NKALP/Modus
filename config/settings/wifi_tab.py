@@ -21,13 +21,18 @@ class WiFiTab:
         self.access_point_widgets = {}
         self.password_entries = {}
         self.connecting_to = None
-        
+        self.window_size_enforcer = None
+
         # Connect to network client signals
         self.network_client.connect("ready", self._on_network_ready)
         self.network_client.connect("changed", self._on_network_changed)
-        
+
         if self.network_client.is_ready:
             self._setup_network_signals()
+
+    def set_window_size_enforcer(self, enforcer_func):
+        """Set the window size enforcer function from the main GUI"""
+        self.window_size_enforcer = enforcer_func
 
     def _on_network_ready(self, *args):
         """Called when network client is ready"""
@@ -65,8 +70,8 @@ class WiFiTab:
             style="padding: 0; margin: 15px;"
         )
 
-        # Set fixed size for the main container to match GUI window
-        main_vbox.set_size_request(620, 580)  # Match GUI window content area
+        # Set fixed size for the main container to match tab stack dimensions
+        main_vbox.set_size_request(580, 580)
 
         # Header section with title and controls
         header_box = Box(
@@ -124,19 +129,21 @@ class WiFiTab:
         self.networks_scrolled = ScrolledWindow(
             h_scrollbar_policy="never",
             v_scrollbar_policy="automatic",
-            h_expand=True,
-            v_expand=True,
+            h_expand=False,
+            v_expand=False,
             propagate_width=False,
             propagate_height=False,
         )
 
-        # Set size to match available space (580 - header space ≈ 500)
-        self.networks_scrolled.set_size_request(-1, 500)
+        # Set fixed size to prevent dynamic resizing (580 - header space ≈ 500)
+        self.networks_scrolled.set_size_request(580, 500)
 
         self.networks_container = Box(
             orientation="v",
             spacing=0,
         )
+        # Set size constraints for networks container
+        self.networks_container.set_size_request(560, -1)
         self.networks_scrolled.add(self.networks_container)
         main_vbox.add(self.networks_scrolled)
 
@@ -162,6 +169,9 @@ class WiFiTab:
             self._populate_networks()
 
         self.networks_container.show_all()
+        # Enforce window size after content changes
+        if self.window_size_enforcer:
+            GLib.idle_add(self.window_size_enforcer)
         return False
 
     def _update_wifi_status(self):

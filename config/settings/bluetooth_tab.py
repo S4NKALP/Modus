@@ -208,11 +208,16 @@ class BluetoothTab:
     def __init__(self):
         self.bluetooth_client = BluetoothClient(on_device_added=self.on_device_added)
         self.device_widgets = {}
+        self.window_size_enforcer = None
 
         # Connect to bluetooth client signals
         self.bluetooth_client.connect("notify::enabled", self._on_bluetooth_changed)
         self.bluetooth_client.connect("notify::scanning", self._update_scan_button)
         self.bluetooth_client.connect("device-removed", self.on_device_removed)
+
+    def set_window_size_enforcer(self, enforcer_func):
+        """Set the window size enforcer function from the main GUI"""
+        self.window_size_enforcer = enforcer_func
 
 
 
@@ -224,8 +229,8 @@ class BluetoothTab:
             style="padding: 0; margin: 15px;"
         )
 
-        # Set fixed size for the main container to match GUI window
-        main_vbox.set_size_request(620, 580)
+        # Set fixed size for the main container to match tab stack dimensions
+        main_vbox.set_size_request(580, 580)
 
         # Create widgets first
         self.bluetooth_subtitle = Label(
@@ -277,9 +282,11 @@ class BluetoothTab:
 
         main_vbox.add(header_box)
 
-        # Device containers
+        # Device containers with size constraints
         self.paired_box = Box(spacing=20, orientation="v")
-        self.available_box = Box(spacing=20, orientation="v", )
+        self.paired_box.set_size_request(560, -1)
+        self.available_box = Box(spacing=20, orientation="v")
+        self.available_box.set_size_request(560, -1)
 
         content_box = Box(
             spacing=8,
@@ -291,20 +298,23 @@ class BluetoothTab:
                 self.available_box,
             ]
         )
+        # Set size constraints for content box
+        content_box.set_size_request(560, -1)
 
         # Devices list in scrolled window
         devices_scrolled = ScrolledWindow(
             name="bluetooth-devices",
             h_scrollbar_policy="never",
             v_scrollbar_policy="automatic",
-            h_expand=True,
-            v_expand=True,
+            h_expand=False,
+            v_expand=False,
             propagate_width=False,
             propagate_height=False,
             child=content_box,
         )
 
-        devices_scrolled.set_size_request(-1, 500)
+        # Set fixed size to prevent dynamic resizing
+        devices_scrolled.set_size_request(580, 500)
         main_vbox.add(devices_scrolled)
 
         # Initialize bluetooth status and populate existing devices
@@ -374,9 +384,13 @@ class BluetoothTab:
         self.device_widgets[address] = slot
 
         if device.paired or device.trusted:
-            return self.paired_box.add(slot)
+            self.paired_box.add(slot)
         else:
-            return self.available_box.add(slot)
+            self.available_box.add(slot)
+
+        # Enforce window size after adding device
+        if self.window_size_enforcer:
+            GLib.idle_add(self.window_size_enforcer)
 
     def on_device_removed(self, client: BluetoothClient, address: str):
         """Handle device removed"""
@@ -388,6 +402,10 @@ class BluetoothTab:
                 parent.remove(slot)
             # Remove from tracking
             del self.device_widgets[address]
+
+            # Enforce window size after removing device
+            if self.window_size_enforcer:
+                GLib.idle_add(self.window_size_enforcer)
 
     def _on_bluetooth_switch_toggled(self, switch, gparam):
         """Handle Bluetooth switch toggle"""

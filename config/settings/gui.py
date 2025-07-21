@@ -13,7 +13,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
 from fabric.widgets.window import Window
-from gi.repository import GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 from PIL import Image
 
 from config.data import APP_NAME, APP_NAME_CAP, NOTIF_POS_DEFAULT, NOTIF_POS_KEY
@@ -34,6 +34,18 @@ class HyprConfGUI(Window):
         )
 
         self.set_resizable(False)
+        # Set strict size constraints to prevent dynamic resizing
+        self.set_size_request(640, 640)
+        self.set_default_size(640, 640)
+        # Set geometry hints to enforce fixed size
+        geometry = Gdk.Geometry()
+        geometry.min_width = 640
+        geometry.max_width = 640
+        geometry.min_height = 640
+        geometry.max_height = 640
+        self.set_geometry_hints(None, geometry,
+                               Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+
         self.themes = ["Pills", "Dense", "Edge"]
         self.selected_face_icon = None
         self.show_lock_checkbox = show_lock_checkbox
@@ -43,10 +55,18 @@ class HyprConfGUI(Window):
         self.wifi_tab = WiFiTab()
         self.bluetooth_tab = BluetoothTab()
 
+        # Pass window size enforcement method to tabs
+        self.wifi_tab.set_window_size_enforcer(self.enforce_window_size)
+        self.bluetooth_tab.set_window_size_enforcer(self.enforce_window_size)
+
         root_box = Box(orientation="v", spacing=10, style="margin: 10px;")
+        # Set fixed size for root container
+        root_box.set_size_request(620, 620)
         self.add(root_box)
 
         main_content_box = Box(orientation="h", spacing=6, v_expand=False, h_expand=False)
+        # Set fixed size for main content to prevent expansion
+        main_content_box.set_size_request(620, 580)
         root_box.add(main_content_box)
 
         self.tab_stack = Stack(
@@ -55,6 +75,9 @@ class HyprConfGUI(Window):
             v_expand=False,
             h_expand=False,
         )
+        # Set fixed size for tab stack
+        self.tab_stack.set_size_request(580, 580)
+
         self.wifi_tab_content = self.wifi_tab.create_wifi_tab()
         self.bluetooth_tab_content = self.bluetooth_tab.create_bluetooth_tab()
         self.key_bindings_tab_content = self.create_key_bindings_tab()
@@ -80,10 +103,14 @@ class HyprConfGUI(Window):
         tab_switcher = Gtk.StackSwitcher()
         tab_switcher.set_stack(self.tab_stack)
         tab_switcher.set_orientation(Gtk.Orientation.VERTICAL)
+        # Set fixed width for tab switcher
+        tab_switcher.set_size_request(40, -1)
         main_content_box.add(tab_switcher)
         main_content_box.add(self.tab_stack)
 
         button_box = Box(orientation="h", spacing=10, h_align="end")
+        # Set fixed height for button box
+        button_box.set_size_request(-1, 40)
         reset_btn = Button(label="Reset to Defaults", on_clicked=self.on_reset)
         button_box.add(reset_btn)
         close_btn = Button(label="Close", on_clicked=self.on_close)
@@ -92,13 +119,23 @@ class HyprConfGUI(Window):
         button_box.add(accept_btn)
         root_box.add(button_box)
 
-        # Force window size after all content is added
+        # Force window size after all content is added and on any size changes
         self.connect("realize", self._force_window_size)
+        self.connect("size-allocate", self._on_size_allocate)
 
     def _force_window_size(self, widget):
         """Force the window to respect the declared size"""
         self.resize(640, 640)
         self.set_size_request(640, 640)
+
+    def _on_size_allocate(self, widget, allocation):
+        """Prevent window from changing size during allocation"""
+        if allocation.width != 640 or allocation.height != 640:
+            GLib.idle_add(lambda: self.resize(640, 640))
+
+    def enforce_window_size(self):
+        """Public method to enforce window size - can be called by tabs"""
+        self._force_window_size(self)
 
     def create_key_bindings_tab(self):
         scrolled_window = ScrolledWindow(
@@ -106,10 +143,11 @@ class HyprConfGUI(Window):
             v_scrollbar_policy="automatic",
             h_expand=False,
             v_expand=False,
-            propagate_width=True,
-            propagate_height=True,
+            propagate_width=False,
+            propagate_height=False,
         )
-        scrolled_window.set_size_request(620, 580)  # Set explicit size for content area
+        # Set fixed size to match tab stack dimensions
+        scrolled_window.set_size_request(580, 580)
 
         main_vbox = Box(orientation="v", spacing=10, style="margin: 15px;")
         scrolled_window.add(main_vbox)
@@ -185,11 +223,13 @@ class HyprConfGUI(Window):
         scrolled_window = ScrolledWindow(
             h_scrollbar_policy="never",
             v_scrollbar_policy="automatic",
-            h_expand=True,
-            v_expand=True,
+            h_expand=False,
+            v_expand=False,
             propagate_width=False,
             propagate_height=False,
         )
+        # Set fixed size to match tab stack dimensions
+        scrolled_window.set_size_request(580, 580)
 
         vbox = Box(orientation="v", spacing=15, style="margin: 15px;")
         scrolled_window.add(vbox)
@@ -620,11 +660,13 @@ class HyprConfGUI(Window):
         scrolled_window = ScrolledWindow(
             h_scrollbar_policy="never",
             v_scrollbar_policy="automatic",
-            h_expand=True,
-            v_expand=True,
+            h_expand=False,
+            v_expand=False,
             propagate_width=False,
             propagate_height=False,
         )
+        # Set fixed size to match tab stack dimensions
+        scrolled_window.set_size_request(580, 580)
 
         vbox = Box(orientation="v", spacing=15, style="margin: 15px;")
         scrolled_window.add(vbox)
@@ -796,7 +838,23 @@ class HyprConfGUI(Window):
             label="Disk directories for Metrics", h_align="start", v_align="center"
         )
         vbox.add(disks_label)
+
+        # Create a scrolled container for disk entries to prevent overflow
+        disk_entries_scrolled = ScrolledWindow(
+            h_scrollbar_policy="never",
+            v_scrollbar_policy="automatic",
+            h_expand=False,
+            v_expand=False,
+            propagate_width=False,
+            propagate_height=False,
+        )
+        # Set fixed size for disk entries container
+        disk_entries_scrolled.set_size_request(550, 120)
+
         self.disk_entries = Box(orientation="v", spacing=8, h_align="start")
+        # Set size constraints for the disk entries box
+        self.disk_entries.set_size_request(530, -1)
+        disk_entries_scrolled.add(self.disk_entries)
 
         self._create_disk_edit_entry_func = lambda path: self._add_disk_entry_widget(
             path
@@ -804,7 +862,7 @@ class HyprConfGUI(Window):
 
         for p in bind_vars.get("metrics_disks", ["/"]):
             self._create_disk_edit_entry_func(p)
-        vbox.add(self.disk_entries)
+        vbox.add(disk_entries_scrolled)
 
         add_container = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -823,18 +881,26 @@ class HyprConfGUI(Window):
     def _add_disk_entry_widget(self, path):
         """Helper to add a disk entry row to the disk_entries Box."""
         bar = Box(orientation="h", spacing=10, h_align="start")
+        # Set fixed height for disk entry rows
+        bar.set_size_request(-1, 30)
         entry = Entry(text=path, h_expand=True)
         bar.add(entry)
         x_btn = Button(label="X")
         x_btn.connect(
             "clicked",
-            lambda _, current_bar_to_remove=bar: self.disk_entries.remove(
-                current_bar_to_remove
-            ),
+            lambda _, current_bar_to_remove=bar: self._remove_disk_entry(current_bar_to_remove),
         )
         bar.add(x_btn)
         self.disk_entries.add(bar)
         self.disk_entries.show_all()
+        # Enforce window size after adding content
+        GLib.idle_add(self.enforce_window_size)
+
+    def _remove_disk_entry(self, bar_to_remove):
+        """Helper to remove a disk entry and enforce window size"""
+        self.disk_entries.remove(bar_to_remove)
+        # Enforce window size after removing content
+        GLib.idle_add(self.enforce_window_size)
 
     def create_about_tab(self):
         vbox = Box(orientation="v", spacing=18, style="margin: 30px;")
