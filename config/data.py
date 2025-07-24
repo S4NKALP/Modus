@@ -70,7 +70,9 @@ if os.path.exists(CONFIG_FILE):
     WORKSPACE_DOTS = config.get("workspace_dots", False)
     WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 13)
     DOCK_HIDE_SPECIAL_WORKSPACE = config.get("dock_hide_special_workspace", True)
-    DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get("dock_hide_special_workspace_apps", True)
+    DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get(
+        "dock_hide_special_workspace_apps", True
+    )
 
     NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
@@ -81,7 +83,6 @@ if os.path.exists(CONFIG_FILE):
         "date_time": config.get("dock_date_time_visible", True),
         "controls": config.get("dock_controls_visible", True),
         "indicators": config.get("dock_indicators_visible", True),
-        "music_player": config.get("dock_music_player_visible", True),
         "notifications": config.get("dock_notifications_visible", True),
         "systray": config.get("dock_tray_visible", True),
         "applications": config.get("dock_applications_visible", True),
@@ -115,7 +116,6 @@ else:
         "date_time": True,
         "controls": True,
         "indicators": True,
-        "music_player": True,
         "notifications": True,
         "systray": True,
         "applications": True,

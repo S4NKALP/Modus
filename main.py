@@ -12,6 +12,7 @@ from modules.launcher import Launcher
 from modules.notification_popup import NotificationPopup
 from modules.osd import OSD
 from modules.switcher import ApplicationSwitcher
+from modules.dashboard.main import DashboardWindow
 
 
 for log in [
@@ -48,6 +49,7 @@ if __name__ == "__main__":
     osd = OSD()
     launcher = Launcher()
     nc = NotificationPopup()
+    dashboard = DashboardWindow()
 
     # Set corners visibility based on config
     corners_visible = config.get("corners_visible", True)
@@ -61,7 +63,7 @@ if __name__ == "__main__":
     _ = color_css_file.connect("changed", lambda *_: set_css())
 
     app = Application(
-        f"{APP_NAME}", dock, corners, switcher, osd, launcher, nc
+        f"{APP_NAME}", dock, corners, switcher, osd, launcher, nc, dashboard
     )  # Make sure corners is added to the app
 
     def set_css():

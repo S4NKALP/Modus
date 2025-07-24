@@ -20,7 +20,6 @@ from .battery import Battery
 from .controls import Controls
 from .indicators import Indicators
 from .metrics import Metrics
-from .music_player import MusicPlayer
 from .workspaces import workspace
 from .systemtray import SystemTray
 
@@ -66,7 +65,6 @@ class DockComponents(Box):
         )
         self.controls = Controls()
         self.indicators = Indicators()
-        self.music_player = MusicPlayer()
         self.systray = SystemTray()
 
         # Create list of components to add
@@ -74,7 +72,6 @@ class DockComponents(Box):
             self.workspaces,
             self.metrics,
             self.controls,
-            self.music_player,
             self.applications,
             self.indicators,
             self.battery,
@@ -109,7 +106,6 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
             "language": self.language,
@@ -130,11 +126,6 @@ class DockComponents(Box):
                     # Battery component manages its own visibility based on config and battery presence
                     # Don't override its visibility here, let it handle it internally
                     pass
-                # Special handling for music player - let it manage its own visibility based on media content
-                elif component_name == "music_player":
-                    # Music player component manages its own visibility based on config and media presence
-                    # Don't override its visibility here, let it handle it internally
-                    pass
                 else:
                     widget.set_visible(visibility)
 
@@ -146,7 +137,6 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            "music_player": self.music_player,
             "systray": self.systray,
             "applications": self.applications,
             "language": self.language,

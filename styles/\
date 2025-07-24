@@ -34,7 +34,7 @@
 }
 
 #song {
-  color: whitesmoke;
+  color: var(--surface);
   font-size: 16px;
   margin-top: 5px;
   font-weight: 900;

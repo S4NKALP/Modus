@@ -39,8 +39,6 @@ class Battery(Box):
             child=self.circle,
         )
 
-
-
         # Create percentage label
         self.level = Label(
             name="battery-level",
@@ -75,8 +73,6 @@ class Battery(Box):
 
         # Initial update
         GLib.idle_add(self.update_battery)
-
-
 
     def on_query_tooltip(self, _widget, _x, _y, _keyboard_mode, tooltip):
         """Handle tooltip query"""
@@ -160,7 +156,6 @@ class Battery(Box):
             self.level.set_visible(True)
         else:
             self.level.set_visible(False)
-
 
         # Apply alert styling if battery is low AND not charging
         if percentage <= 15 and not charging:
