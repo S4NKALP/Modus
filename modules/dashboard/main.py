@@ -88,8 +88,8 @@ class Dashboard(Box):
 
 
 class DashboardWindow(Window):
-
     visible = Property(bool, flags="read-write", default_value=False)
+
     def __init__(self, **kwargs):
         super().__init__(
             name="dashboard-window",
@@ -107,7 +107,6 @@ class DashboardWindow(Window):
         self.add_keybinding("Escape", lambda *_: self.close_dashboard())
         self.hide()
 
-
     def show_dashboard(self):
         self.show_all()
         self.visible = True
@@ -121,5 +120,3 @@ class DashboardWindow(Window):
             self.close_dashboard()
         else:
             self.show_dashboard()
-
-
