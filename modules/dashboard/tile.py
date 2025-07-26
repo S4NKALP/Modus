@@ -25,7 +25,15 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.stack import Stack
 from fabric.widgets.revealer import Revealer
+from gi.repository import Gdk
 import utils.icons as icons
+
+
+def add_hover_cursor(widget):
+    """Add hover cursor functionality to a widget."""
+    widget.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+    widget.connect("enter-notify-event", lambda w, e: w.get_window().set_cursor(Gdk.Cursor.new_from_name(w.get_display(), "pointer")) if w.get_window() else None)
+    widget.connect("leave-notify-event", lambda w, e: w.get_window().set_cursor(None) if w.get_window() else None)
 
 
 class Tile(Box):
@@ -96,6 +104,8 @@ class Tile(Box):
                 child=Label(style_classes="tile-icon", markup=icons.arrow_head),
                 on_clicked=self.handle_click,
             )
+            # Add hover cursor to menu button
+            add_hover_cursor(self.menu_button)
             content_children = [self.type_box, self.menu_button]
         else:
             content_children = [self.type_box]

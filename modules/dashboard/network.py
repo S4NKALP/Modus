@@ -5,17 +5,11 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, GLib
 
-from modules.dashboard.tile import Tile
+from modules.dashboard.tile import Tile, add_hover_cursor
 from services.network import NetworkClient
 import utils.icons as icons
-
-
-def add_hover_cursor(widget):
-    widget.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
-    widget.connect("enter-notify-event", lambda w, e: w.get_window().set_cursor(Gdk.Cursor.new_from_name(w.get_display(), "pointer")) if w.get_window() else None)
-    widget.connect("leave-notify-event", lambda w, e: w.get_window().set_cursor(None) if w.get_window() else None)
 
 
 class WifiAccessPointSlot(CenterBox):
