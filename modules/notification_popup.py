@@ -96,19 +96,23 @@ class NotificationBox(Box):
         if self.timeout_ms > 0:
             self.start_timeout()
 
-        if self.notification.image_pixbuf:
-            cache_path = cache_notification_pixbuf(self)
-            if cache_path:
-                self.cached_image_path = cache_path
-
+        # Try to access image_pixbuf with error handling
+        try:
+            if self.notification.image_pixbuf:
+                cache_path = cache_notification_pixbuf(self)
+                if cache_path:
+                    self.cached_image_path = cache_path
+                else:
+                    logger.warning(
+                        f"NotificationBox {
+                            self.uuid
+                        }: Caching failed, cached_image_path not set."
+                    )
             else:
-                logger.warning(
-                    f"NotificationBox {
-                        self.uuid
-                    }: Caching failed, cached_image_path not set."
-                )
-        else:
-            logger.debug(f"NotificationBox {self.uuid}: No image to cache.")
+                logger.debug(f"NotificationBox {self.uuid}: No image to cache.")
+        except Exception as e:
+            logger.debug(f"NotificationBox {self.uuid}: Error accessing image_pixbuf: {e}")
+            # Continue without image - this is not a critical error
 
         content = self.create_content()
         action_buttons = self.create_action_buttons()
@@ -439,8 +443,11 @@ class NotificationContainer(Box):
         if notification_history_instance.do_not_disturb_enabled:
             notification = fabric_notif.get_notification_from_id(id)
             new_box = NotificationBox(notification)
-            if notification.image_pixbuf:
-                cache_notification_pixbuf(new_box)
+            try:
+                if notification.image_pixbuf:
+                    cache_notification_pixbuf(new_box)
+            except Exception as e:
+                logger.debug(f"Error accessing image_pixbuf for notification {id}: {e}")
             new_box.set_is_history(True)
             notification_history_instance.add_notification(new_box)
             return

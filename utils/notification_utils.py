@@ -45,28 +45,32 @@ class HistoricalNotification:
 def cache_notification_pixbuf(notification_box):
     """Cache notification image to disk and return cache file path"""
     notification = notification_box.notification
-    if notification.image_pixbuf:
-        os.makedirs(PERSISTENT_DIR, exist_ok=True)
-        cache_file = os.path.join(
-            PERSISTENT_DIR,
-            f"{NOTIFICATION_IMAGE_PREFIX}{notification_box.uuid}{
-                NOTIFICATION_IMAGE_SUFFIX
-            }",
-        )
-
-        try:
-            scaled = notification.image_pixbuf.scale_simple(
-                DEFAULT_NOTIFICATION_IMAGE_SIZE,
-                DEFAULT_NOTIFICATION_IMAGE_SIZE,
-                GdkPixbuf.InterpType.BILINEAR,
+    try:
+        if notification.image_pixbuf:
+            os.makedirs(PERSISTENT_DIR, exist_ok=True)
+            cache_file = os.path.join(
+                PERSISTENT_DIR,
+                f"{NOTIFICATION_IMAGE_PREFIX}{notification_box.uuid}{
+                    NOTIFICATION_IMAGE_SUFFIX
+                }",
             )
-            scaled.savev(cache_file, "png", [], [])
-            return cache_file
-        except Exception as e:
-            logger.error(f"Error caching image for notification {notification.id}: {e}")
+
+            try:
+                scaled = notification.image_pixbuf.scale_simple(
+                    DEFAULT_NOTIFICATION_IMAGE_SIZE,
+                    DEFAULT_NOTIFICATION_IMAGE_SIZE,
+                    GdkPixbuf.InterpType.BILINEAR,
+                )
+                scaled.savev(cache_file, "png", [], [])
+                return cache_file
+            except Exception as e:
+                logger.error(f"Error caching image for notification {notification.id}: {e}")
+                return None
+        else:
+            logger.debug(f"Notification {notification.id} has no image_pixbuf to cache.")
             return None
-    else:
-        logger.debug(f"Notification {notification.id} has no image_pixbuf to cache.")
+    except Exception as e:
+        logger.debug(f"Error accessing image_pixbuf for notification {notification.id}: {e}")
         return None
 
 
@@ -109,11 +113,14 @@ def load_scaled_pixbuf(notification_box, width, height):
             )
 
     # Fall back to notification image_pixbuf
-    if notification.image_pixbuf:
-        pixbuf = notification.image_pixbuf.scale_simple(
-            width, height, GdkPixbuf.InterpType.BILINEAR
-        )
-        return pixbuf
+    try:
+        if notification.image_pixbuf:
+            pixbuf = notification.image_pixbuf.scale_simple(
+                width, height, GdkPixbuf.InterpType.BILINEAR
+            )
+            return pixbuf
+    except Exception as e:
+        logger.debug(f"Error accessing image_pixbuf for notification {notification.id}: {e}")
 
     # Fall back to app icon
     return get_app_icon_pixbuf(notification.app_icon, width, height)
