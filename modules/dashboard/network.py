@@ -106,6 +106,9 @@ class Network(Tile):
         if self.network_client.wifi_device:
             self._setup_wifi_device()
 
+        # Override the type_box button behavior to toggle WiFi
+        self._setup_content_button()
+
     def handle_connection_change(self, *_):
         """Handle network connection state changes."""
         self._update_tile_state()
@@ -213,6 +216,20 @@ class Network(Tile):
                 self._stop_animation()
                 self.icon.set_markup(icons.wifi_off)
 
+    def _setup_content_button(self):
+        """Setup the content button to toggle WiFi instead of showing menu."""
+        if hasattr(self, 'type_box'):
+            # Disconnect the existing click handler
+            self.type_box.disconnect_by_func(self.handle_click)
+            # Connect to WiFi toggle handler
+            self.type_box.connect("clicked", self._on_wifi_toggle)
+
+    def _on_wifi_toggle(self, *_):
+        """Handle WiFi toggle when clicking on the main content area."""
+        wifi = self.network_client.wifi_device
+        if wifi:
+            # Toggle WiFi state
+            wifi.wireless_enabled = not wifi.wireless_enabled
 
     def create_content(self):
         """Create the detailed network content for the dashboard."""

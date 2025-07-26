@@ -104,6 +104,9 @@ class Bluetooth(Tile):
         # Initialize state
         self._update_tile_state()
 
+        # Override the type_box button behavior to toggle Bluetooth
+        self._setup_content_button()
+
     def _update_tile_state(self):
         """Update tile visual state based on Bluetooth status."""
         self.state = self.bluetooth_client.enabled
@@ -118,6 +121,19 @@ class Bluetooth(Tile):
 
         # Update tile icon based on Bluetooth state
         self._update_tile_icon()
+
+    def _setup_content_button(self):
+        """Setup the content button to toggle Bluetooth instead of showing menu."""
+        if hasattr(self, 'type_box'):
+            # Disconnect the existing click handler
+            self.type_box.disconnect_by_func(self.handle_click)
+            # Connect to Bluetooth toggle handler
+            self.type_box.connect("clicked", self._on_bluetooth_toggle)
+
+    def _on_bluetooth_toggle(self, *_):
+        """Handle Bluetooth toggle when clicking on the main content area."""
+        # Toggle Bluetooth state
+        self.bluetooth_client.enabled = not self.bluetooth_client.enabled
 
     def _update_tile_icon(self):
         """Update the tile icon based on Bluetooth status and connected devices."""

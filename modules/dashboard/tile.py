@@ -85,7 +85,7 @@ class Tile(Box):
         )
 
         # Container for label and properties
-        self.type_box = Box(
+        content_box = Box(
             style_classes="tile-type",
             orientation="v",
             v_expand=True,
@@ -93,6 +93,17 @@ class Tile(Box):
             v_align="center",
             children=[self.tile_label, self.props],
         )
+
+        # Make the type_box clickable using a button
+        self.type_box = Button(
+            style_classes="tile-content-button",
+            h_expand=True,
+            v_expand=True,
+            child=content_box,
+            on_clicked=self.handle_click,
+        )
+        # Add hover cursor to the content area
+        add_hover_cursor(self.type_box)
 
     def _create_tile_layout(self, has_menu: bool):
         """Create the tile's layout structure."""
