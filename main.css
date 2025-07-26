@@ -143,60 +143,6 @@ tooltip > * {
   transition: margin 0.25s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
-.wavy-circle {
-  color: var(--primary);
-  background-color: var(--surface);
-  border-color: var(--primary);
-}
-
-#matugen-switcher,
-#bluetooth-switch,
-#wifi-switch,
-#dnd-switch {
-  min-width: 40px;
-  min-height: 20px;
-  background-color: var(--surface);
-  border-radius: 15px;
-  padding: 2px;
-  transition: background-color 0.3s ease;
-}
-
-/* Style the switch's slider */
-#matugen-switcher slider,
-#bluetooth-switch slider,
-#wifi-switch slider,
-#dnd-switch slider {
-  background-color: var(--primary);
-  border-radius: 16px;
-  min-width: 16px;
-  min-height: 8px;
-  transition:
-    background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
-    transform 0.25s cubic-bezier(0.5, 0.25, 0, 1.25);
-}
-
-/* When the switch is active (checked) */
-#matugen-switcher:checked,
-#bluetooth-switch:checked,
-#wifi-switch:checked,
-#dnd-switch:checked {
-  background-color: var(--primary);
-}
-
-/* Optional: additional styling for the slider when active */
-#matugen-switcher:checked slider,
-#bluetooth-switch:checked slider,
-#wifi-switch:checked slider,
-#dnd-switch:checked slider {
-  background-color: var(--shadow);
-}
-
-#matugen-switcher:checked image,
-#bluetooth-switch:checked image,
-#wifi-switch:checked image,
-#dnd-switch:checked image {
-  color: var(--shadow);
-}
 
 
 #bluetooth-header,

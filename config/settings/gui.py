@@ -15,11 +15,9 @@ from PIL import Image
 from config.data import APP_NAME, APP_NAME_CAP
 from config.settings.about_tab import AboutTab
 from config.settings.appearance_tab import AppearanceTab
-from config.settings.bluetooth_tab import BluetoothTab
 from config.settings.key_bindings_tab import KeyBindingsTab
 from config.settings.system_tab import SystemTab
 from config.settings.utils import backup_and_replace, start_config
-from config.settings.wifi_tab import WiFiTab
 
 gi.require_version("Gtk", "3.0")
 
@@ -53,18 +51,12 @@ class HyprConfGUI(Window):
         self.show_idle_checkbox = show_idle_checkbox
 
         # Initialize all tabs
-        self.wifi_tab = WiFiTab()
-        self.bluetooth_tab = BluetoothTab()
         self.key_bindings_tab = KeyBindingsTab()
         self.appearance_tab = AppearanceTab(self.themes, self)
         self.system_tab = SystemTab(
             show_lock_checkbox, show_idle_checkbox, self.enforce_window_size
         )
         self.about_tab = AboutTab()
-
-        # Pass window size enforcement method to tabs
-        self.wifi_tab.set_window_size_enforcer(self.enforce_window_size)
-        self.bluetooth_tab.set_window_size_enforcer(self.enforce_window_size)
 
         root_box = Box(orientation="v", spacing=10, style="margin: 10px;")
         # Set fixed size for root container
@@ -87,15 +79,11 @@ class HyprConfGUI(Window):
         # Set fixed size for tab stack
         self.tab_stack.set_size_request(580, 580)
 
-        self.wifi_tab_content = self.wifi_tab.create_wifi_tab()
-        self.bluetooth_tab_content = self.bluetooth_tab.create_bluetooth_tab()
         self.key_bindings_tab_content = self.key_bindings_tab.create_key_bindings_tab()
         self.appearance_tab_content = self.appearance_tab.create_appearance_tab()
         self.system_tab_content = self.system_tab.create_system_tab()
         self.about_tab_content = self.about_tab.create_about_tab()
 
-        self.tab_stack.add_titled(self.wifi_tab_content, "Wifi", "Wifi")
-        self.tab_stack.add_titled(self.bluetooth_tab_content, "Bluetooth", "Bluetooth")
         self.tab_stack.add_titled(
             self.key_bindings_tab_content, "key_bindings", "Key Bindings"
         )

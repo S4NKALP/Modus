@@ -89,7 +89,6 @@ coffee: str = "&#xef0e;"
 notifications: str = "&#xea35;"
 notifications_dots: str = "&#xede3;"
 
-blur: str = chr(0xF00B5)
 arrow_head: str = "&#xea61;"
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"
