@@ -28,6 +28,10 @@ class Dashboard(Box):
             props=self.mini_player, mini_props=self.mini_player.get_mini_view()
         )
 
+        # Set dashboard instance reference for tiles that need it
+        self.wifi.dashboard_instance = self
+        self.bluetooth.dashboard_instance = self
+
         # Create real notifications component
         self.dashboard_notifications = DashboardNotifications()
 

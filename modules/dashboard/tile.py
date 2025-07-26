@@ -5,7 +5,6 @@ from fabric.widgets.stack import Stack
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.centerbox import CenterBox
 import utils.icons as icons
-from fabric.utils.helpers import exec_shell_command_async
 
 
 class Tile(Box):
@@ -20,6 +19,7 @@ class Tile(Box):
             style_classes="tile-label", label=label, h_align="start"
         )
         self.toggle = False
+        self.dashboard_instance = None  # Will be set by the dashboard
 
         self.type_box = Box(
             style_classes="tile-type",
@@ -86,12 +86,10 @@ class Tile(Box):
             self.menu.add_style_class("expand")
             self.menu.remove_style_class("contract")
         print(self.toggle, self.get_name())
-        name = self.get_name()
-        exec_shell_command_async(
-            f"fabric-cli exec bar-example \"notch.dashboard.handle_tile_menu_expand('{
-                name
-            }', {self.toggle})\""
-        )
+
+        # Call dashboard method directly instead of using fabric-cli
+        if self.dashboard_instance:
+            self.dashboard_instance.handle_tile_menu_expand(self.get_name(), self.toggle)
 
     def mini_view(self):
         self.content_button.set_reveal_child(False)
