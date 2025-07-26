@@ -1,6 +1,5 @@
 from fabric.widgets.box import Box
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.core.service import Property
 
 from modules.dashboard.bluetooth import Bluetooth
@@ -32,22 +31,6 @@ class Dashboard(Box):
         # Create real notifications component
         self.dashboard_notifications = DashboardNotifications()
 
-        # Create scrolled window for notifications (matching dock notifications style)
-        self.notifications_scrolled = ScrolledWindow(
-            name="notification-history-scrolled-window",
-            child=self.dashboard_notifications,
-            h_scrollbar_policy="never",
-            v_scrollbar_policy="automatic",
-            min_content_size=(400, 200),
-            max_content_size=(450, 300),
-            h_expand=True,
-            v_expand=True,
-            h_align="fill",
-            v_align="fill",
-            propagate_width=False,
-            propagate_height=False,
-        )
-
         self.tiles = Box(
             children=[
                 self.wifi,
@@ -66,7 +49,7 @@ class Dashboard(Box):
                 spacing=8,
                 h_expand=True,
                 v_expand=True,
-                children=[self.notifications_scrolled],
+                children=[self.dashboard_notifications],
                 style_classes=["notification-history-popup"],
             ),
             child_revealed=True,

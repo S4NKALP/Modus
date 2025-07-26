@@ -7,6 +7,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GLib, Gtk
 import os
 import json
@@ -238,10 +239,26 @@ class DashboardNotifications(Box):
             children=[self.no_notifications_label],
         )
         
-        # Add components to main container
+        # Create scrolled window for notifications list only
+        self.notifications_scrolled = ScrolledWindow(
+            name="notification-history-scrolled-window",
+            child=self.notifications_list,
+            h_scrollbar_policy="never",
+            v_scrollbar_policy="automatic",
+            min_content_size=(400, 200),
+            max_content_size=(450, 300),
+            h_expand=True,
+            v_expand=True,
+            h_align="fill",
+            v_align="fill",
+            propagate_width=False,
+            propagate_height=False,
+        )
+
+        # Add components to main container - header outside, scrolled list inside
         self.add(self.history_header)
-        self.add(self.notifications_list)
-        
+        self.add(self.notifications_scrolled)
+
         # Add the no notifications box initially to the notifications list
         self.notifications_list.add(self.no_notifications_box)
         
