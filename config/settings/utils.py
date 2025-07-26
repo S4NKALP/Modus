@@ -283,7 +283,7 @@ bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix
 # Settings
 bind = {bind_vars.get("prefix_settings", "SUPER")}, {bind_vars.get("suffix_settings", "I")}, exec, uwsm-app $(python {home}/.config/{APP_NAME_CAP}/config/config.py) # Settings
 # Dashboard
-bind = {bind_vars.get("prefix_dashboard", "SUPER")}, {bind_vars.get("suffix_dashboard", "G")}, exec, $fabricSend "dashboard.toggle_dashboard()"
+bind = {bind_vars.get("prefix_dashboard", "SUPER")}, {bind_vars.get("suffix_dashboard", "Z")}, exec, $fabricSend "dashboard.toggle_dashboard()"
 # Restart Modus
 bind = {bind_vars.get("prefix_restart_inspector", "SUPER CTRL ALT")}, {bind_vars.get("suffix_restart_inspector", "B")}, exec, killall {APP_NAME}; uwsm-app $(GTK_DEBUG=interactive python {home}/.config/{APP_NAME_CAP}/main.py) # Restart with inspector
 

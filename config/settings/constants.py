@@ -38,7 +38,7 @@ DEFAULTS = {
     "prefix_settings": "SUPER",
     "suffix_settings": "I",
     "prefix_dashboard": "SUPER",
-    "suffix_dashboard": "G",
+    "suffix_dashboard": "Z",
     "wallpapers_dir": "/home/sankalp/Pictures/wallpapers",
     "vertical": True,
     "dock_enabled": True,
