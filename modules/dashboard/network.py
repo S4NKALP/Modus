@@ -1,7 +1,7 @@
 from fabric.widgets.label import Label
 
 from modules.dashboard.tile import Tile
-from services.nett import NetworkService
+from services.network import NetworkClient
 
 import utils.icons as icons
 
@@ -22,13 +22,21 @@ class Network(Tile):
             menu=True,
             **kwargs,
         )
-        self.nm = NetworkService()
-        self.nm.connect("connection-change", self.handle_connection_change)
-        self.nm.init_props()
+        self.nm = NetworkClient()
+        self.nm.connect("changed", self.handle_connection_change)
+        self.nm.connect("ready", self.handle_connection_change)
 
-    def handle_connection_change(
-        self, source, con_label: str, connected: bool, status: str
-    ):
+    def handle_connection_change(self, *args):
+        # Get current network state from NetworkClient properties
+        connected = False
+        con_label = "Disconnected"
+
+        if self.nm.wifi_device and self.nm.wifi_device.active_access_point:
+            connected = True
+            con_label = self.nm.wifi_device.active_access_point.ssid
+        elif not self.nm.wireless_enabled:
+            con_label = "Off"
+
         if self.state != connected:
             self.state = connected
             if self.state:
@@ -39,14 +47,4 @@ class Network(Tile):
                 self.add_style_class("off")
             print("State change:", connected)
 
-        if not connected:
-            if status == "Wi-Fi Off":
-                self.label.set_label("Off")
-            elif status == "Wi-Fi On (No Connection)":
-                self.label.set_label("Disconnected")
-            elif status == "Connecting…":
-                self.label.set_label("Connecting…")
-            else:
-                self.label.set_label("Unknown")
-        else:
-            self.label.set_label(con_label or "Connected")
+        self.label.set_label(con_label)

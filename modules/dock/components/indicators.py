@@ -12,7 +12,6 @@ from gi.repository import GLib
 
 import config.data as data
 import utils.icons as icons
-from .notifications import Notifications
 from services.network import NetworkClient
 
 
@@ -188,16 +187,14 @@ class RecordingIndicator(Button):
         if data.VERTICAL:
             # Vertical dock: show only icon
             self.recording_box = Box(
-                orientation="v",
-                spacing=2,
-                children=[self.recording_label]
+                orientation="v", spacing=2, children=[self.recording_label]
             )
         else:
             # Horizontal dock: place icon and time side by side
             self.recording_box = Box(
                 orientation="h",
                 spacing=4,
-                children=[self.recording_label, self.time_label]
+                children=[self.recording_label, self.time_label],
             )
         self.add(self.recording_box)
 
@@ -232,7 +229,10 @@ class RecordingIndicator(Button):
                     if not data.VERTICAL:
                         time_text = f"{minutes:02d}:{seconds:02d}"
                         self.time_label.set_markup(time_text)
-                    self.set_tooltip_text(f"Recording in progress ({minutes:02d}:{seconds:02d}) - Click to stop")
+                    self.set_tooltip_text(
+                        f"Recording in progress ({minutes:02d}:{
+                            seconds:02d}) - Click to stop"
+                    )
                 else:
                     self.set_tooltip_text("Recording in progress - Click to stop")
             else:
@@ -279,7 +279,6 @@ class RecordingIndicator(Button):
 class Indicators(Box):
     def __init__(self, **kwargs):
         self.recording_indicator = RecordingIndicator()
-        self.notifications = Notifications()
 
         super().__init__(
             name="indicator",
@@ -288,7 +287,6 @@ class Indicators(Box):
             children=[
                 WifiIndicator(),
                 BluetoothIndicator(),
-                self.notifications,
                 self.recording_indicator,
             ],
             **kwargs,
