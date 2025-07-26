@@ -85,7 +85,7 @@ class Network(Tile):
         super().__init__(
             label="Wi-Fi",
             props=self.label,
-            markup=icons.wifi,
+            markup=icons.wifi_3,
             menu=True,
             **kwargs,
         )

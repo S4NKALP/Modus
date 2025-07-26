@@ -76,7 +76,6 @@ bat_full: str = "&#xea38;"
 # Applets
 
 # Applets
-wifi: str = "&#xeb52;"
 wifi_0: str = "&#xeba3;"
 wifi_1: str = "&#xeba4;"
 wifi_2: str = "&#xeba5;"
@@ -89,7 +88,6 @@ coffee: str = "&#xef0e;"
 notifications: str = "&#xea35;"
 notifications_dots: str = "&#xede3;"
 
-arrow_head: str = "&#xea61;"
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"
 night_off: str = "&#xf162;"

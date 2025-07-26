@@ -101,7 +101,7 @@ class Tile(Box):
             self.menu_button = Button(
                 style_classes="tile-button",
                 h_expand=True,
-                child=Label(style_classes="tile-icon", markup=icons.arrow_head),
+                child=Label(style_classes="tile-icon", markup=icons.chevron_right),
                 on_clicked=self.handle_click,
             )
             # Add hover cursor to menu button
