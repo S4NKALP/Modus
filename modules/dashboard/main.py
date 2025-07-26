@@ -1,5 +1,5 @@
 from fabric.widgets.box import Box
-from fabric.widgets.revealer import Revealer
+from fabric.widgets.stack import Stack
 from fabric.core.service import Property
 
 from modules.dashboard.bluetooth import Bluetooth
@@ -21,8 +21,8 @@ class Dashboard(Box):
             all_visible=True,
             **kwargs,
         )
-        self.wifi = Network()
-        self.bluetooth = Bluetooth()
+        self.wifi = Network(name="wifi-tile")
+        self.bluetooth = Bluetooth(name="bluetooth-tile")
         self.mini_player = PlayerContainerMini()
         self.mini_player_tile = TileSpecial(
             props=self.mini_player, mini_props=self.mini_player.get_mini_view()
@@ -35,6 +35,9 @@ class Dashboard(Box):
         # Create real notifications component
         self.dashboard_notifications = DashboardNotifications()
 
+        # Track currently active tile
+        self.active_tile = None
+
         self.tiles = Box(
             children=[
                 self.wifi,
@@ -43,61 +46,103 @@ class Dashboard(Box):
             ],
         )
 
-        self.notification_container = Revealer(
-            transition_duration=250,
-            transition_type="slide-down",
+        # Create content containers for each tile
+        self.wifi_content = self.wifi.create_content()
+        self.bluetooth_content = self.bluetooth.create_content()
+
+        # Default content (notifications)
+        self.default_content = Box(
+            name="notification-history-popup-content",
+            orientation="v",
+            spacing=8,
             h_expand=True,
-            child=Box(
-                name="notification-history-popup-content",
-                orientation="v",
-                spacing=8,
-                h_expand=True,
-                v_expand=True,
-                children=[self.dashboard_notifications],
-                style_classes=["notification-history-popup"],
-            ),
-            child_revealed=True,
+            v_expand=True,
+            children=[self.dashboard_notifications],
+            style_classes=["notification-history-popup"],
         )
+
+        # Content stack to switch between different tile contents
+        self.content_stack = Stack(
+            transition_type="crossfade",
+            transition_duration=200,
+            h_expand=True,
+            v_expand=True,
+            h_align="fill",
+            children=[
+                self.default_content,
+                self.wifi_content,
+                self.bluetooth_content,
+            ],
+        )
+
+        # Set default visible child
+        self.content_stack.set_visible_child(self.default_content)
+
         self.children = [
             Box(name="inner", children=self.tiles),
             Box(
                 children=[
-                    self.notification_container,
+                    self.content_stack,
                 ]
             ),
         ]
 
     def handle_tile_menu_expand(self, tile: str, toggle: bool):
+        print(f"Tile menu expand: {tile}, toggle: {toggle}, active_tile: {self.active_tile}")
+
+        # If clicking the same tile that's already active, deactivate it
+        if self.active_tile == tile and toggle:
+            toggle = False
+            # Update the tile's toggle state
+            for i in self.tiles:
+                if i.get_name() == tile:
+                    i.toggle = False
+                    break
+
         if toggle:
-            self.notification_container.set_reveal_child(False)
+            # Show the specific tile's content in the content area
+            self.active_tile = tile
+            if tile == "wifi-tile":
+                self.content_stack.set_visible_child(self.wifi_content)
+                print("Showing WiFi content")
+            elif tile == "bluetooth-tile":
+                self.content_stack.set_visible_child(self.bluetooth_content)
+                print("Showing Bluetooth content")
         else:
-            self.notification_container.set_reveal_child(True)
-        for i in self.tiles:
-            if i.get_name() == tile:
-                print("found")
-            else:
-                if toggle:
-                    i.mini_view()
-                    i.icon.add_style_class("mini")
-                    i.icon.remove_style_class("maxi")
-                else:
-                    i.maxi_view()
-                    i.icon.add_style_class("maxi")
-                    i.icon.remove_style_class("mini")
-        print("search complete")
+            # Show default content (notifications)
+            self.active_tile = None
+            self.content_stack.set_visible_child(self.default_content)
+            print("Showing default content")
+
+        # Don't change tile visual states - keep all tiles unchanged
+        print("Tile handling complete")
+
+    def reset_to_default(self):
+        """Reset dashboard to default state (notifications visible, no active tile)"""
+        print("Resetting dashboard to default state")
+        self.active_tile = None
+        self.content_stack.set_visible_child(self.default_content)
+
+        # Reset all tile toggle states
+        for tile in self.tiles:
+            if hasattr(tile, 'toggle'):
+                tile.toggle = False
 
 
 class DashboardWindow(Window):
     visible = Property(bool, flags="read-write", default_value=False)
 
     def __init__(self, **kwargs):
+        # Create dashboard instance and store reference
+        self.dashboard = Dashboard()
+
         super().__init__(
             name="dashboard-window",
             layer="top",
             anchor="bottom",
             exclusivity="none",
             keyboard_mode="on-demand",
-            child=Dashboard(),
+            child=self.dashboard,
             visible=False,
             all_visible=False,
             **kwargs,
@@ -112,6 +157,8 @@ class DashboardWindow(Window):
         self.visible = True
 
     def close_dashboard(self):
+        # Reset dashboard to default state when closing
+        self.dashboard.reset_to_default()
         self.hide()
         self.visible = False
 

@@ -76,21 +76,21 @@ bat_full: str = "&#xea38;"
 # Applets
 
 # Applets
-wifi: str = chr(0xF1EB)
+wifi: str = "&#xeb52;"
 wifi_0: str = "&#xeba3;"
 wifi_1: str = "&#xeba4;"
 wifi_2: str = "&#xeba5;"
 wifi_3: str = "&#xeb52;"
 world: str = "&#xeb54;"
 world_off: str = "&#xf1ca;"
-bluetooth: str = chr(0xF294)
+bluetooth: str = "&#xea37;"
 night: str = "&#xeaf8;"
 coffee: str = "&#xef0e;"
 notifications: str = "&#xea35;"
 notifications_dots: str = "&#xede3;"
 
 blur: str = chr(0xF00B5)
-arrow_head: str = chr(0xE285)
+arrow_head: str = "&#xea61;"
 wifi_off: str = "&#xecfa;"
 bluetooth_off: str = "&#xeceb;"
 night_off: str = "&#xf162;"
