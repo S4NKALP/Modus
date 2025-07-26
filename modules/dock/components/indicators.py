@@ -175,7 +175,7 @@ class BluetoothIndicator(Button):
 
 class RecordingIndicator(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="button-bar-recording", **kwargs)
+        super().__init__(name="button-bar-recording", visible=False, **kwargs)
 
         self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
         self.recording_start_time = None
@@ -203,7 +203,7 @@ class RecordingIndicator(Button):
         self.hide()
 
         # Delay initial check to prevent showing during dock initialization
-        GLib.timeout_add(1000, self._delayed_init)
+        GLib.timeout_add(1, self._delayed_init)
 
     def check_recording_status(self):
         try:
@@ -263,17 +263,12 @@ class RecordingIndicator(Button):
             print(f"Error stopping recording: {e}")
 
     def _delayed_init(self):
-        """Initialize recording status check after a delay to prevent showing during dock startup"""
         try:
             self.check_recording_status()
             self.timeout_id = GLib.timeout_add(1000, self.check_recording_status)
         except Exception as e:
             print(f"[DEBUG] Error in delayed recording indicator init: {e}")
         return False  # Don't repeat this timeout
-
-    def cleanup(self):
-        if hasattr(self, "timeout_id"):
-            GLib.source_remove(self.timeout_id)
 
 
 class Indicators(Box):
@@ -292,7 +287,3 @@ class Indicators(Box):
             **kwargs,
         )
         self.show_all()
-
-    def cleanup(self):
-        if hasattr(self, "recording_indicator"):
-            self.recording_indicator.cleanup()
