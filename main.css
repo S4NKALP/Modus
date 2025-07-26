@@ -144,7 +144,6 @@ tooltip > * {
 }
 
 
-
 #bluetooth-header,
 #network-header {
   border: 2px solid var(--surface);
