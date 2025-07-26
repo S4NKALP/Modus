@@ -68,6 +68,7 @@ class KeyBindingsTab:
             ("Kanban", "prefix_kanban", "suffix_kanban"),
             ("Power Menu", "prefix_power", "suffix_power"),
             ("Toggle Caffeine", "prefix_caffeine", "suffix_caffeine"),
+            ("Dashboard", "prefix_dashboard", "suffix_dashboard"),
             ("Settings", "prefix_settings", "suffix_settings"),
             (
                 "Restart with inspector",

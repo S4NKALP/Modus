@@ -37,6 +37,8 @@ DEFAULTS = {
     "suffix_restart_inspector": "B",
     "prefix_settings": "SUPER",
     "suffix_settings": "I",
+    "prefix_dashboard": "SUPER",
+    "suffix_dashboard": "G",
     "wallpapers_dir": "/home/sankalp/Pictures/wallpapers",
     "vertical": True,
     "dock_enabled": True,
