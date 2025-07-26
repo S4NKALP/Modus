@@ -5,10 +5,16 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gtk
+from gi.repository import Gdk
 
 from modules.dashboard.tile import Tile
 import utils.icons as icons
+
+
+def add_hover_cursor(widget):
+    widget.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+    widget.connect("enter-notify-event", lambda w, e: w.get_window().set_cursor(Gdk.Cursor.new_from_name(w.get_display(), "pointer")) if w.get_window() else None)
+    widget.connect("leave-notify-event", lambda w, e: w.get_window().set_cursor(None) if w.get_window() else None)
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -99,6 +105,8 @@ class Bluetooth(Tile):
         self.bluetooth_client = BluetoothClient(on_device_added=self.on_device_added)
         self.bluetooth_client.connect("notify::enabled", self._on_bluetooth_state_changed)
         self.bluetooth_client.connect("notify::scanning", self._update_scan_label)
+        self.bluetooth_client.connect("device-added", self._on_device_connection_changed)
+        self.bluetooth_client.connect("device-removed", self._on_device_connection_changed)
 
         # Initialize state
         self._update_tile_state()
@@ -115,20 +123,44 @@ class Bluetooth(Tile):
             self.add_style_class("off")
             self.label.set_label("Off")
 
+        # Update tile icon based on Bluetooth state
+        self._update_tile_icon()
+
+    def _update_tile_icon(self):
+        """Update the tile icon based on Bluetooth status and connected devices."""
+        if not self.bluetooth_client.enabled:
+            # Bluetooth is disabled
+            self.icon.set_markup(icons.bluetooth_off)
+            return
+
+        # Bluetooth is enabled - check for connected devices
+        connected_devices = self.bluetooth_client.connected_devices
+        if connected_devices:
+            # Has connected devices
+            self.icon.set_markup(icons.bluetooth_connected)
+        else:
+            # Enabled but no connected devices
+            if self.bluetooth_client.scanning:
+                # Currently scanning - could add animation here if desired
+                self.icon.set_markup(icons.bluetooth)
+            else:
+                # Idle state
+                self.icon.set_markup(icons.bluetooth)
+
     def create_content(self):
         """Create the detailed bluetooth content for the dashboard."""
-        # Create Bluetooth toggle switch (like notifications DND switch)
-        self.bluetooth_switch = Gtk.Switch(name="bluetooth-switch")
-        self.bluetooth_switch.set_vexpand(False)
-        self.bluetooth_switch.set_valign(Gtk.Align.CENTER)
-        self.bluetooth_switch.set_active(self.bluetooth_client.enabled)
-        self.bluetooth_switch.connect("notify::active", self._on_bluetooth_toggle)
-
-        # Create Bluetooth status icon
-        self.bluetooth_status_icon = Label(
-            name="bluetooth-status-icon",
-            markup=icons.bluetooth if self.bluetooth_client.enabled else icons.bluetooth_off
+        # Create back button with chevron left icon
+        self.back_button_icon = Label(
+            name="bluetooth-back-label",
+            markup=icons.chevron_left
         )
+        self.back_button = Button(
+            name="bluetooth-back",
+            child=self.back_button_icon,
+            tooltip_text="Back to notifications",
+            on_clicked=self._on_back_clicked
+        )
+        add_hover_cursor(self.back_button)
 
         # Create scan button with icon
         self.scan_label = Label(name="bluetooth-scan-label", markup=icons.radar)
@@ -138,6 +170,7 @@ class Bluetooth(Tile):
             tooltip_text="Scan for Bluetooth devices",
             on_clicked=lambda *_: self.bluetooth_client.toggle_scan(),
         )
+        add_hover_cursor(self.scan_button)
 
         # Create device containers
         self.paired_box = Box(spacing=2, orientation="v")
@@ -149,6 +182,14 @@ class Bluetooth(Tile):
         content_box.add(Label(name="bluetooth-section", label="Available"))
         content_box.add(self.available_box)
 
+        # Create header
+        header_box = CenterBox(
+            name="bluetooth-header",
+            start_children=[self.back_button],
+            center_children=[Label(name="bluetooth-title", label="Bluetooth Devices")],
+            end_children=[self.scan_button]
+        )
+
         # Main container
         main_container = Box(
             name="bluetooth-content",
@@ -159,12 +200,7 @@ class Bluetooth(Tile):
             h_align="fill",
             style_classes=["tile-content"],
             children=[
-                CenterBox(
-                    name="bluetooth-header",
-                    start_children=[self.bluetooth_switch, self.bluetooth_status_icon],
-                    center_children=Label(name="bluetooth-text", label="Bluetooth Devices"),
-                    end_children=self.scan_button,
-                ),
+                header_box,
                 ScrolledWindow(
                     name="bluetooth-devices",
                     min_content_size=(-1, -1),
@@ -186,6 +222,10 @@ class Bluetooth(Tile):
         """Handle new device discovery."""
         if not (device := client.get_device(address)):
             return
+
+        # Connect to device changes to update tile icon when connection state changes
+        device.connect("changed", self._on_device_connection_changed)
+
         slot = BluetoothDeviceSlot(device)
 
         if device.paired:
@@ -203,25 +243,20 @@ class Bluetooth(Tile):
             self.scan_button.remove_style_class("scanning")
             self.scan_button.set_tooltip_text("Scan for Bluetooth devices")
 
-    def _on_bluetooth_toggle(self, switch, *_):
-        """Handle Bluetooth toggle switch."""
-        enabled = switch.get_active()
-        self.bluetooth_client.enabled = enabled
-        self._update_content_state()
+        # Update tile icon when scanning state changes
+        self._update_tile_icon()
+
+    def _on_back_clicked(self, *_):
+        """Handle back button click - return to default (notifications) view."""
+        if self.dashboard_instance:
+            self.dashboard_instance.reset_to_default()
 
     def _on_bluetooth_state_changed(self, *_):
         """Handle bluetooth state change."""
         self._update_tile_state()
-        self._update_content_state()
 
-    def _update_content_state(self):
-        """Update content area based on Bluetooth state."""
-        if hasattr(self, 'bluetooth_switch'):
-            self.bluetooth_switch.set_active(self.bluetooth_client.enabled)
-
-        if hasattr(self, 'bluetooth_status_icon'):
-            self.bluetooth_status_icon.set_markup(
-                icons.bluetooth if self.bluetooth_client.enabled else icons.bluetooth_off
-            )
+    def _on_device_connection_changed(self, *_):
+        """Handle device connection/disconnection changes."""
+        self._update_tile_icon()
 
 

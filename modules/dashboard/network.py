@@ -5,11 +5,17 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk, GLib
 
 from modules.dashboard.tile import Tile
 from services.network import NetworkClient
 import utils.icons as icons
+
+
+def add_hover_cursor(widget):
+    widget.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+    widget.connect("enter-notify-event", lambda w, e: w.get_window().set_cursor(Gdk.Cursor.new_from_name(w.get_display(), "pointer")) if w.get_window() else None)
+    widget.connect("leave-notify-event", lambda w, e: w.get_window().set_cursor(None) if w.get_window() else None)
 
 
 class WifiAccessPointSlot(CenterBox):
@@ -37,10 +43,11 @@ class WifiAccessPointSlot(CenterBox):
         self.connect_button = Button(
             name="wifi-connect-button",
             label="Connected" if self.is_active else "Connect",
-            sensitive=not self.is_active,
+            sensitive=True,  # Always clickable - can connect or disconnect
             on_clicked=self._on_connect_clicked,
             style_classes=["connected"] if self.is_active else None,
         )
+        add_hover_cursor(self.connect_button)
 
         self.set_start_children([
             Box(spacing=8, h_expand=True, h_align="fill", children=[
@@ -52,10 +59,16 @@ class WifiAccessPointSlot(CenterBox):
 
     def _on_connect_clicked(self, *_):
         """Handle connect button click."""
-        if not self.is_active and self.access_point.bssid:
+        if self.is_active:
+            # Disconnect from current network
+            self.connect_button.set_label("Disconnecting...")
+            self.connect_button.set_sensitive(False)
+            self.wifi_service.disconnect_wifi()
+        elif self.access_point.bssid:
+            # Connect to this network
             self.connect_button.set_label("Connecting...")
             self.connect_button.set_sensitive(False)
-            self.network_service.connect_wifi_bssid(self.access_point.bssid)
+            self.wifi_service.connect_to_wifi(self.access_point)
 
 
 class Network(Tile):
@@ -69,6 +82,11 @@ class Network(Tile):
             h_align="start",
         )
         self.state = False
+
+        # Animation properties
+        self._animation_timeout_id = None
+        self._animation_step = 0
+        self._animation_direction = 1
 
         super().__init__(
             label="Wi-Fi",
@@ -98,15 +116,46 @@ class Network(Tile):
         """Handle network connection state changes."""
         self._update_tile_state()
 
+    def _animate_searching(self):
+        """Animate wifi icon when searching for networks"""
+        wifi_icons = [icons.wifi_0, icons.wifi_1, icons.wifi_2, icons.wifi_3, icons.wifi_2, icons.wifi_1]
+
+        wifi = self.network_client.wifi_device
+        if not self.icon or not wifi or not wifi.wireless_enabled:
+            self._stop_animation()
+            return False
+
+        if wifi.active_access_point:
+            self._stop_animation()
+            return False
+
+        GLib.idle_add(self.icon.set_markup, wifi_icons[self._animation_step])
+
+        self._animation_step = (self._animation_step + 1) % len(wifi_icons)
+
+        return True
+
+    def _start_animation(self):
+        if self._animation_timeout_id is None:
+            self._animation_step = 0
+            self._animation_direction = 1
+            self._animation_timeout_id = GLib.timeout_add(500, self._animate_searching)
+
+    def _stop_animation(self):
+        if self._animation_timeout_id is not None:
+            GLib.source_remove(self._animation_timeout_id)
+            self._animation_timeout_id = None
+
     def _update_tile_state(self):
         """Update tile visual state based on WiFi status."""
         connected = False
         con_label = "Disconnected"
+        wifi = self.network_client.wifi_device
 
-        if self.network_client.wifi_device and self.network_client.wifi_device.active_access_point:
+        if wifi and wifi.active_access_point:
             connected = True
-            con_label = self.network_client.wifi_device.active_access_point.ssid
-        elif self.network_client.wifi_device and not self.network_client.wifi_device.wireless_enabled:
+            con_label = wifi.active_access_point.ssid
+        elif wifi and not wifi.wireless_enabled:
             con_label = "Off"
 
         if self.state != connected:
@@ -120,6 +169,55 @@ class Network(Tile):
             print("WiFi state change:", connected)
 
         self.label.set_label(con_label)
+
+        # Update tile icon based on WiFi state
+        self._update_tile_icon()
+
+    def _update_tile_icon(self):
+        """Update the tile icon based on network status"""
+        wifi = self.network_client.wifi_device
+        ethernet = self.network_client.ethernet_device
+
+        if wifi and not wifi.wireless_enabled:
+            self._stop_animation()
+            self.icon.set_markup(icons.wifi_off)
+            return
+
+        if wifi and wifi.wireless_enabled:
+            if wifi.active_access_point:
+                self._stop_animation()
+                # Show signal strength icon
+                if wifi.active_access_point.strength > 0:
+                    strength = wifi.active_access_point.strength
+                    if strength < 25:
+                        self.icon.set_markup(icons.wifi_0)
+                    elif strength < 50:
+                        self.icon.set_markup(icons.wifi_1)
+                    elif strength < 75:
+                        self.icon.set_markup(icons.wifi_2)
+                    else:
+                        self.icon.set_markup(icons.wifi_3)
+                else:
+                    self.icon.set_markup(icons.wifi_1)
+            else:
+                # WiFi is enabled but not connected - start animation
+                self._start_animation()
+
+        try:
+            primary_device = self.network_client.primary_device
+        except AttributeError:
+            primary_device = "wireless"
+
+        if primary_device == "wired":
+            self._stop_animation()
+            if ethernet and ethernet.internet == "activated":
+                self.icon.set_markup(icons.world)
+            else:
+                self.icon.set_markup(icons.world_off)
+        else:
+            if not wifi:
+                self._stop_animation()
+                self.icon.set_markup(icons.wifi_off)
 
 
     def create_content(self):
@@ -143,6 +241,7 @@ class Network(Tile):
             tooltip_text="Scan for Wi-Fi networks",
             on_clicked=self._refresh_access_points
         )
+        add_hover_cursor(self.refresh_button)
 
         # Create back button with chevron left icon
         self.back_button_icon = Label(
@@ -155,6 +254,7 @@ class Network(Tile):
             tooltip_text="Back to notifications",
             on_clicked=self._on_back_clicked
         )
+        add_hover_cursor(self.back_button)
 
         # Create header
         header_box = CenterBox(
@@ -212,10 +312,14 @@ class Network(Tile):
         if self.network_client.wifi_device:
             self.network_client.wifi_device.connect("changed", self._load_access_points)
             self.network_client.wifi_device.connect("notify::wireless-enabled", self._update_wifi_status_ui)
+            self.network_client.wifi_device.connect("notify::active-access-point", self._update_tile_state)
 
             # Only update UI if content has been created
             if self._content_created and hasattr(self, 'refresh_button'):
                 self._update_wifi_status_ui()
+
+            # Update tile icon immediately
+            self._update_tile_icon()
         else:
             # Only show error if content has been created
             if self._content_created and hasattr(self, 'status_label'):
