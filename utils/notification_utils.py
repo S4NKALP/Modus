@@ -394,6 +394,25 @@ class NotificationHistory(Box):
         except Exception as e:
             print(f"Error clearing history for app {app_name}: {e}")
 
+    def clear_history(self):
+        """Clear all notification history"""
+        try:
+            # Clear cached images for all notifications
+            for notif in self.persistent_notifications:
+                cached_image_path = notif.get("cached_image_path")
+                if cached_image_path:
+                    delete_cached_image(cached_image_path)
+
+            # Clear the persistent notifications list
+            self.persistent_notifications.clear()
+
+            # Save the empty history
+            self._save_persistent_history()
+
+            logger.info("Cleared all notification history")
+        except Exception as e:
+            print(f"Error clearing notification history: {e}")
+
 
 def get_shared_notification_history():
     """Get or create the shared notification history instance"""
