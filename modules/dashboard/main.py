@@ -183,4 +183,4 @@ class DashboardWindow(Window):
             all_visible=True,
         )
 
-        self.hide()
+        # self.hide()
