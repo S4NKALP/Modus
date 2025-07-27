@@ -32,8 +32,18 @@ import utils.icons as icons
 def add_hover_cursor(widget):
     """Add hover cursor functionality to a widget."""
     widget.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
-    widget.connect("enter-notify-event", lambda w, e: w.get_window().set_cursor(Gdk.Cursor.new_from_name(w.get_display(), "pointer")) if w.get_window() else None)
-    widget.connect("leave-notify-event", lambda w, e: w.get_window().set_cursor(None) if w.get_window() else None)
+    widget.connect(
+        "enter-notify-event",
+        lambda w, e: w.get_window().set_cursor(
+            Gdk.Cursor.new_from_name(w.get_display(), "pointer")
+        )
+        if w.get_window()
+        else None,
+    )
+    widget.connect(
+        "leave-notify-event",
+        lambda w, e: w.get_window().set_cursor(None) if w.get_window() else None,
+    )
 
 
 class Tile(Box):
@@ -71,17 +81,12 @@ class Tile(Box):
 
     def _create_tile_icon(self, markup: str):
         """Create the tile's icon label."""
-        self.icon = Label(
-            style_classes="tile-icon",
-            markup=markup
-        )
+        self.icon = Label(style_classes="tile-icon", markup=markup)
 
     def _create_tile_content(self, label: str):
         """Create the tile's text content area."""
         self.tile_label = Label(
-            style_classes="tile-label",
-            label=label,
-            h_align="start"
+            style_classes="tile-label", label=label, h_align="start"
         )
 
         # Container for label and properties
@@ -136,7 +141,9 @@ class Tile(Box):
         # Create placeholder menu (content is shown in dashboard content area)
         self.menu = Box(
             style_classes="tile-menu",
-            children=[Label(label="Tile content will be shown in dashboard content area")],
+            children=[
+                Label(label="Tile content will be shown in dashboard content area")
+            ],
         )
 
         # Stack to switch between normal and menu views
@@ -161,31 +168,9 @@ class Tile(Box):
 
         # Notify dashboard to handle content switching
         if self.dashboard_instance:
-            self.dashboard_instance.handle_tile_menu_expand(self.get_name(), self.toggle)
-
-    def mini_view(self):
-        """
-        Switch tile to mini (compact) view.
-
-        In mini view, the tile content is hidden and only the icon is shown.
-        This is used when other tiles are active.
-        """
-        self.content_button.set_reveal_child(False)
-        self.icon.set_h_expand(True)
-        self.content_button.set_h_expand(False)
-        self.add_style_class("mini")
-
-    def maxi_view(self):
-        """
-        Switch tile to maxi (full) view.
-
-        In maxi view, the tile shows its full content including label and properties.
-        This is the default state when no tiles are active.
-        """
-        self.content_button.set_reveal_child(True)
-        self.icon.set_h_expand(False)
-        self.content_button.set_h_expand(True)
-        self.remove_style_class("mini")
+            self.dashboard_instance.handle_tile_menu_expand(
+                self.get_name(), self.toggle
+            )
 
 
 class TileSpecial(Box):
@@ -228,25 +213,3 @@ class TileSpecial(Box):
             children=[self.normal_view, self.collapsed_view],
         )
         self.children = self.stack
-
-    def mini_view(self):
-        """
-        Switch to mini (collapsed) view.
-
-        Hides the normal view and shows the compact mini view.
-        Uses negative margins to hide the normal view completely.
-        """
-        self.normal_view.set_style("margin:-999px")
-        self.collapsed_view.set_style("margin:0px;")
-        self.stack.set_visible_child(self.collapsed_view)
-
-    def maxi_view(self):
-        """
-        Switch to maxi (normal) view.
-
-        Hides the mini view and shows the full normal view.
-        Uses negative margins to hide the collapsed view completely.
-        """
-        self.collapsed_view.set_style("margin:-999px")
-        self.normal_view.set_style("margin:0px;")
-        self.stack.set_visible_child(self.normal_view)

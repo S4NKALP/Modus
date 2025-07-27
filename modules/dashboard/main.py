@@ -88,7 +88,11 @@ class Dashboard(Box):
         ]
 
     def handle_tile_menu_expand(self, tile: str, toggle: bool):
-        print(f"Tile menu expand: {tile}, toggle: {toggle}, active_tile: {self.active_tile}")
+        print(
+            f"Tile menu expand: {tile}, toggle: {toggle}, active_tile: {
+                self.active_tile
+            }"
+        )
 
         # If clicking the same tile that's already active, deactivate it
         if self.active_tile == tile and toggle:
@@ -125,7 +129,7 @@ class Dashboard(Box):
 
         # Reset all tile toggle states
         for tile in self.tiles:
-            if hasattr(tile, 'toggle'):
+            if hasattr(tile, "toggle"):
                 tile.toggle = False
 
 
