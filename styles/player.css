@@ -1,160 +1,7 @@
-.player {
-  /* background-color: aqua; */
-  min-height: 100px;
-  min-width: 400px;
-  box-shadow:
-    inset 0 100px 100px black,
-    inset 10px 0px 10px rgba(0, 0, 0, 0.5),
-    inset -10px 0px 10px rgba(0, 0, 0, 0.5);
-  border-bottom-right-radius: 20px;
-  border-bottom-left-radius: 20px;
-  padding: 20px;
-  background-position: center;
-  background-size: cover;
-  margin: 4px;
-}
-
-.player.vertical {
-  box-shadow:
-    inset 100px 0px 150px black,
-    inset 0px 10px 10px rgba(0, 0, 0, 0.5),
-    inset 0px -10px 10px rgba(0, 0, 0, 0.5);
-  border-top-right-radius: 20px;
-  border-bottom-right-radius: 20px;
-  min-width: 400px;
-  min-height: 150px;
-  margin: 10px;
-}
-
-.player-icon {
-  font-size: 24px;
-}
-#artist {
-  color: var(--primary);
-}
-
-#song {
-  color: whitesmoke;
-  font-size: 16px;
-  margin-top: 5px;
-  font-weight: 900;
-}
-
-#wiggle-bar {
-  color: var(--primary);
-}
-
-#source {
-  /* background-color: antiquewhite; */
-  margin-top: -10px;
-}
-
-#controls {
-  margin-bottom: -10px;
-}
-
-#play-next,
-#play-previous {
-  font-size: 24px;
-}
-
-#progress {
-  /* min-height: 1px; */
-  background-color: antiquewhite;
-}
-
-#pause-button {
-  background-color: var(--surface);
-  border-radius: 20px;
-  padding: 8px;
-}
-
-#pause-button.pause-track {
-  border-radius: 100%;
-}
-
-#pause-label,
-#play-label {
-  color: var(--primary);
-  font-size: 20px;
-  padding: 2px;
-  border-radius: 999px;
-  min-width: 25px;
-}
-
-#shuffle-button,
-#next-button,
-#prev-button {
-  border: none;
-  padding: 0px;
-  padding-left: 11px;
-  padding-right: 11px;
-}
-
-#shuffle-button:hover,
-#next-button:hover,
-#prev-button:hover {
-  background-color: var(--surface-bright);
-}
-
-#shuffle {
-  font-size: 17px;
-}
-
-.player-button {
-  border-radius: 5px;
-  /* background-color: var(--secondary); */
-  background-color: white;
-  opacity: 0.5;
-  min-width: 10px;
-  min-height: 10px;
-  padding: 0px;
-  margin: 0px;
-  border: none;
-  margin-left: 5px;
-}
-
-.player-button.active {
-  opacity: 1;
-}
-
-#player-switch-container.vertical-player {
-  margin-top: -23px;
-  padding-bottom: 13px;
-}
-
-#player-switch-container {
-  margin-top: -18px;
-  padding-bottom: 13px;
-}
-
-#controls.vertical {
-  padding-bottom: 10px;
-  margin-bottom: 0px;
-}
-
-#disable-shuffle {
-  font-size: 27px;
-}
-
-#progress-slider {
-  margin-left: -3px;
-  margin-right: -2px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-  border-radius: 2px;
-}
-
-#progress-other-end {
-  min-width: 50px;
-}
-
 .player-mini {
   min-height: 60px;
-  min-width: 220px;
+  min-width: 200px;
   padding-right: 20px;
-  /* box-shadow: inset 0 0 100px rgb(148, 148, 148),
-             inset 60px 0px 10px rgba(255, 255, 255, 1); */
 
   box-shadow:
     inset 0 0 100px rgba(148, 148, 148, 0.3),
@@ -177,34 +24,9 @@
 
 .album-image {
   min-width: 65px;
-  min-height: 60px;
   background-position: center;
   background-size: cover;
-  /* border-top-left-radius: 15px;
-    border-bottom-left-radius: 15px; */
   border-radius: 15px;
-  /* margin: 2px; */
-}
-
-.hide-player {
-  margin: -350px;
-  transition: margin 0.25s cubic-bezier(0.5, 0.25, 0, 1);
-  /* animation: hidePlayer 0.5s ease; */
-}
-
-@keyframes hidePlayer {
-  0% {
-    margin: 0px;
-  }
-  100% {
-    margin: -999px;
-  }
-}
-
-.reveal-player {
-  margin: 0px;
-  transition: margin 0.25s cubic-bezier(0.5, 0.25, 0, 1);
-  /* animation: revealPlayer 0.5s ease; */
 }
 
 #artist {
@@ -223,7 +45,7 @@
 }
 
 #source {
-  /* background-color: antiquewhite; */
+  background-color: antiquewhite;
   margin-top: -10px;
 }
 #source.mini {
@@ -233,11 +55,7 @@
 #controls {
   margin-bottom: -10px;
 }
-#play-next,
-#play-previous {
-  text-shadow: none;
-  font-size: 30px;
-}
+
 #play-next.mini,
 #play-previous.mini {
   text-shadow: none;
@@ -249,13 +67,7 @@
   text-shadow: none;
 }
 
-#progress {
-  /* min-height: 1px; */
-  background-color: antiquewhite;
-}
-
 #pause-button {
-  /* background-color: var(--surface); */
   background-color: whitesmoke;
   border-radius: 16px;
   padding: 10px;
@@ -312,7 +124,7 @@
 .player-button {
   border-radius: 5px;
   /* background-color: var(--secondary); */
-  background-color: white;
+  /* background-color: white; */
   opacity: 0.5;
   min-width: 10px;
   min-height: 10px;
@@ -324,7 +136,7 @@
 
 .player-button.mini {
   border-radius: 5px;
-  background-color: var(--surface);
+  background-color: var(--shadow);
   /* background-color: white; */
   opacity: 0.5;
   min-width: 10px;
@@ -353,17 +165,13 @@
 
 #player-switch-container.mini {
   margin-top: 0px;
-  margin-left: -20px;
+  margin-left: -18px;
   padding-right: 10px;
 }
 
 #controls.vertical {
   padding-bottom: 10px;
   margin-bottom: 0px;
-}
-
-.player-icon {
-  font-size: 20px;
 }
 
 .player-icon.mini {

@@ -163,7 +163,12 @@ class Network(Tile):
 
         if wifi and wifi.active_access_point:
             connected = True
-            con_label = wifi.active_access_point.ssid
+            # Hacky truncation: limit to 8 characters and add ellipsis
+            ssid = wifi.active_access_point.ssid
+            if len(ssid) > 8:
+                con_label = ssid[:8] + "..."
+            else:
+                con_label = ssid
         elif wifi and not wifi.wireless_enabled:
             con_label = "Off"
 

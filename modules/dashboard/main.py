@@ -13,7 +13,7 @@ from utils.wayland import WaylandWindow as Window
 class Dashboard(Box):
     def __init__(self, **kwargs):
         super().__init__(
-            name="dashboard",
+            name="dashboard-box",
             visible=True,
             orientation="v",
             spacing=8,
@@ -31,10 +31,7 @@ class Dashboard(Box):
         self.wifi.dashboard_instance = self
         self.bluetooth.dashboard_instance = self
 
-        # Create real notifications component
         self.dashboard_notifications = DashboardNotifications()
-
-        # Track currently active tile
         self.active_tile = None
 
         self.tiles = Box(
@@ -117,9 +114,6 @@ class Dashboard(Box):
             self.content_stack.set_visible_child(self.default_content)
             print("Showing default content")
 
-        # Don't change tile visual states - keep all tiles unchanged
-        print("Tile handling complete")
-
     def reset_to_default(self):
         """Reset dashboard to default state (notifications visible, no active tile)"""
         print("Resetting dashboard to default state")
@@ -140,7 +134,7 @@ class DashboardWindow(Window):
         self.dashboard = Dashboard()
 
         super().__init__(
-            name="dashboard-window",
+            name="dashboard",
             layer="top",
             anchor="bottom",
             exclusivity="none",
