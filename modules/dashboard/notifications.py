@@ -3,49 +3,49 @@ Dashboard notification components for Modus.
 Provides notification display functionality for the dashboard.
 """
 
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GLib, Gtk
-import os
 import json
+import os
 from datetime import datetime
 
-from utils.notification_utils import (
-    get_shared_notification_history,
-    PERSISTENT_HISTORY_FILE,
-    create_historical_notification_from_data,
-    compute_time_label,
-)
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
+from fabric.widgets.scrolledwindow import ScrolledWindow
+from gi.repository import GLib, Gtk
 
 import utils.icons as icons
+from utils.notification_utils import (
+    PERSISTENT_HISTORY_FILE,
+    compute_time_label,
+    create_historical_notification_from_data,
+    get_shared_notification_history,
+)
 
 
 class DashboardNotificationItem(Box):
     """Individual notification item for dashboard"""
-    
+
     def __init__(self, notification_data, **kwargs):
         super().__init__(
             name="notification-container",
             orientation="v",
             h_align="fill",
             h_expand=True,
-            **kwargs
+            **kwargs,
         )
-        
+
         self.notification_data = notification_data
-        
+
         # Create historical notification from data
         hist_notif = create_historical_notification_from_data(notification_data)
-        
+
         # Create timestamp
         try:
             arrival_time = datetime.fromisoformat(hist_notif.timestamp)
         except Exception:
             arrival_time = datetime.now()
-        
+
         # Create time label
         self.time_label = Label(
             name="notification-timestamp",
@@ -53,7 +53,7 @@ class DashboardNotificationItem(Box):
             h_align="start",
             ellipsization="end",
         )
-        
+
         # Create notification image box
         # For dashboard, we'll use a simple icon instead of trying to load cached images
         self.notif_image_box = Box(
@@ -64,7 +64,7 @@ class DashboardNotificationItem(Box):
                 Box(v_expand=True),
             ],
         )
-        
+
         # Create summary label
         self.notif_summary_label = Label(
             name="notification-summary",
@@ -72,7 +72,7 @@ class DashboardNotificationItem(Box):
             h_align="start",
             ellipsization="end",
         )
-        
+
         # Create app name label
         self.notif_app_name_label = Label(
             name="notification-app-name",
@@ -80,7 +80,7 @@ class DashboardNotificationItem(Box):
             h_align="start",
             ellipsization="end",
         )
-        
+
         # Create body label
         self.notif_body_label = (
             Label(
@@ -95,7 +95,7 @@ class DashboardNotificationItem(Box):
         )
         if hist_notif.body:
             self.notif_body_label.set_single_line_mode(True)
-        
+
         # Create summary box with separators
         self.notif_summary_box = Box(
             name="notification-summary-box",
@@ -120,7 +120,7 @@ class DashboardNotificationItem(Box):
                 self.time_label,
             ],
         )
-        
+
         # Create text box
         self.notif_text_box = Box(
             name="notification-text",
@@ -132,14 +132,14 @@ class DashboardNotificationItem(Box):
                 self.notif_body_label,
             ],
         )
-        
+
         # Create close button
         self.notif_close_button = Button(
             name="notif-close-button",
             child=Label(name="notif-close-label", markup=icons.cancel),
             on_clicked=lambda *_: self.remove_notification(),
         )
-        
+
         self.notif_close_button_box = Box(
             orientation="v",
             children=[
@@ -147,7 +147,7 @@ class DashboardNotificationItem(Box):
                 Box(v_expand=True),
             ],
         )
-        
+
         # Create main content box
         content_box = Box(
             name="notification-box-hist",
@@ -158,9 +158,9 @@ class DashboardNotificationItem(Box):
                 self.notif_close_button_box,
             ],
         )
-        
+
         self.add(content_box)
-        
+
     def remove_notification(self):
         """Remove this notification from the dashboard"""
         if self.get_parent():
@@ -170,17 +170,13 @@ class DashboardNotificationItem(Box):
 
 class DashboardNotifications(Box):
     """Dashboard notifications container that shows real notifications"""
-    
+
     def __init__(self, **kwargs):
-        super().__init__(
-            name="notification-history",
-            orientation="v",
-            **kwargs
-        )
-        
+        super().__init__(name="notification-history", orientation="v", **kwargs)
+
         self.notification_items = []
         self.max_notifications = 5  # Limit to 5 notifications in dashboard
-        
+
         # Create header components (matching dock notifications)
         self.header_label = Label(
             name="nhh",
@@ -208,7 +204,7 @@ class DashboardNotifications(Box):
             center_children=[self.header_label],
             end_children=[self.header_clean],
         )
-        
+
         # Create notifications list
         self.notifications_list = Box(
             name="notifications-list",
@@ -219,7 +215,7 @@ class DashboardNotifications(Box):
             h_align="fill",
             v_align="fill",
         )
-        
+
         # Create "no notifications" label
         self.no_notifications_label = Label(
             name="no-notif",
@@ -238,7 +234,7 @@ class DashboardNotifications(Box):
             h_expand=True,
             children=[self.no_notifications_label],
         )
-        
+
         # Create scrolled window for notifications list only
         self.notifications_scrolled = ScrolledWindow(
             name="notification-history-scrolled-window",
@@ -261,51 +257,55 @@ class DashboardNotifications(Box):
 
         # Add the no notifications box initially to the notifications list
         self.notifications_list.add(self.no_notifications_box)
-        
+
         # Connect to shared notification history
         self._connect_to_notifications()
-        
+
         # Load and sync DND state
         self._load_and_sync_dnd_state()
-        
+
         # Load initial notifications
         self._load_recent_notifications()
-        
+
     def _connect_to_notifications(self):
         """Connect to the shared notification history for real-time updates"""
         try:
             self.shared_history = get_shared_notification_history()
-            self.shared_history.connect("notification-added", self._on_notification_added)
+            self.shared_history.connect(
+                "notification-added", self._on_notification_added
+            )
             self.shared_history.connect("dnd-state-changed", self._on_dnd_state_changed)
         except Exception as e:
             print(f"Could not connect to notification history: {e}")
-            
+
     def _on_notification_added(self, shared_history):
         """Handle new notification added"""
         GLib.idle_add(self._refresh_notifications)
-        
+
     def _on_dnd_state_changed(self, notification_history, dnd_enabled):
         """Handle DND state change"""
         self.do_not_disturb_enabled = dnd_enabled
         self.header_switch.set_active(dnd_enabled)
-        
+
     def _load_and_sync_dnd_state(self):
         """Load and sync DND state from shared history"""
         try:
-            if hasattr(self, 'shared_history'):
+            if hasattr(self, "shared_history"):
                 dnd_enabled = self.shared_history.do_not_disturb_enabled
                 self.header_switch.set_active(dnd_enabled)
                 self.do_not_disturb_enabled = dnd_enabled
         except Exception as e:
             print(f"Could not sync DND state: {e}")
-            
+
     def on_do_not_disturb_changed(self, switch, pspec):
         """Handle DND switch toggle"""
         self.do_not_disturb_enabled = switch.get_active()
-        
+
         try:
-            if hasattr(self, 'shared_history'):
-                self.shared_history.set_do_not_disturb_enabled(self.do_not_disturb_enabled)
+            if hasattr(self, "shared_history"):
+                self.shared_history.set_do_not_disturb_enabled(
+                    self.do_not_disturb_enabled
+                )
         except Exception as e:
             print(f"Could not update shared DND state: {e}")
 
@@ -319,7 +319,7 @@ class DashboardNotifications(Box):
 
         # Clear persistent history
         try:
-            if hasattr(self, 'shared_history'):
+            if hasattr(self, "shared_history"):
                 self.shared_history.clear_history()
         except Exception as e:
             print(f"Could not clear shared history: {e}")
@@ -335,7 +335,7 @@ class DashboardNotifications(Box):
                     notifications = json.load(f)
 
                 # Get the most recent notifications (up to max_notifications)
-                recent_notifications = notifications[-self.max_notifications:]
+                recent_notifications = notifications[-self.max_notifications :]
 
                 for notif_data in reversed(recent_notifications):
                     self._add_notification_item(notif_data)

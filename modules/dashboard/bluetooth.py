@@ -6,8 +6,8 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 
-from modules.dashboard.tile import Tile, add_hover_cursor
 import utils.icons as icons
+from modules.dashboard.tile import Tile, add_hover_cursor
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -22,8 +22,7 @@ class BluetoothDeviceSlot(CenterBox):
         )
 
         self.connection_label = Label(
-            name="bluetooth-connection",
-            markup=icons.bluetooth_disconnected
+            name="bluetooth-connection", markup=icons.bluetooth_disconnected
         )
         self.connect_button = Button(
             name="bluetooth-connect",
@@ -96,10 +95,16 @@ class Bluetooth(Tile):
 
         # Initialize bluetooth client with device handling
         self.bluetooth_client = BluetoothClient(on_device_added=self.on_device_added)
-        self.bluetooth_client.connect("notify::enabled", self._on_bluetooth_state_changed)
+        self.bluetooth_client.connect(
+            "notify::enabled", self._on_bluetooth_state_changed
+        )
         self.bluetooth_client.connect("notify::scanning", self._update_scan_label)
-        self.bluetooth_client.connect("device-added", self._on_device_connection_changed)
-        self.bluetooth_client.connect("device-removed", self._on_device_connection_changed)
+        self.bluetooth_client.connect(
+            "device-added", self._on_device_connection_changed
+        )
+        self.bluetooth_client.connect(
+            "device-removed", self._on_device_connection_changed
+        )
 
         # Initialize state
         self._update_tile_state()
@@ -124,7 +129,7 @@ class Bluetooth(Tile):
 
     def _setup_content_button(self):
         """Setup the content button to toggle Bluetooth instead of showing menu."""
-        if hasattr(self, 'type_box'):
+        if hasattr(self, "type_box"):
             # Disconnect the existing click handler
             self.type_box.disconnect_by_func(self.handle_click)
             # Connect to Bluetooth toggle handler
@@ -160,14 +165,13 @@ class Bluetooth(Tile):
         """Create the detailed bluetooth content for the dashboard."""
         # Create back button with chevron left icon
         self.back_button_icon = Label(
-            name="bluetooth-back-label",
-            markup=icons.chevron_left
+            name="bluetooth-back-label", markup=icons.chevron_left
         )
         self.back_button = Button(
             name="bluetooth-back",
             child=self.back_button_icon,
             tooltip_text="Back to notifications",
-            on_clicked=self._on_back_clicked
+            on_clicked=self._on_back_clicked,
         )
         add_hover_cursor(self.back_button)
 
@@ -196,7 +200,7 @@ class Bluetooth(Tile):
             name="bluetooth-header",
             start_children=[self.back_button],
             center_children=[Label(name="bluetooth-title", label="Bluetooth Devices")],
-            end_children=[self.scan_button]
+            end_children=[self.scan_button],
         )
 
         # Main container
@@ -218,7 +222,7 @@ class Bluetooth(Tile):
                     propagate_width=False,
                     propagate_height=False,
                 ),
-            ]
+            ],
         )
 
         # Initialize notifications
@@ -267,5 +271,3 @@ class Bluetooth(Tile):
     def _on_device_connection_changed(self, *_):
         """Handle device connection/disconnection changes."""
         self._update_tile_icon()
-
-

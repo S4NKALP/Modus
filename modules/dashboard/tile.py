@@ -23,9 +23,10 @@ Usage:
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-from fabric.widgets.stack import Stack
 from fabric.widgets.revealer import Revealer
+from fabric.widgets.stack import Stack
 from gi.repository import Gdk
+
 import utils.icons as icons
 
 

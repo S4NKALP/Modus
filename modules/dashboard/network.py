@@ -1,21 +1,22 @@
-from fabric.utils import bulk_connect
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gtk, GLib
+from gi.repository import GLib
 
+import utils.icons as icons
 from modules.dashboard.tile import Tile, add_hover_cursor
 from services.network import NetworkClient
-import utils.icons as icons
 
 
 class WifiAccessPointSlot(CenterBox):
     """A widget representing a single WiFi access point in the dashboard."""
 
-    def __init__(self, access_point, network_service: NetworkClient, wifi_service, **kwargs):
+    def __init__(
+        self, access_point, network_service: NetworkClient, wifi_service, **kwargs
+    ):
         super().__init__(name="wifi-ap-slot", **kwargs)
         self.access_point = access_point
         self.network_service = network_service
@@ -28,10 +29,7 @@ class WifiAccessPointSlot(CenterBox):
 
         self.ap_icon = Image(icon_name=icon_name, size=24)
         self.ap_label = Label(
-            label=ssid,
-            h_expand=True,
-            h_align="start",
-            ellipsization="end"
+            label=ssid, h_expand=True, h_align="start", ellipsization="end"
         )
 
         self.connect_button = Button(
@@ -43,12 +41,19 @@ class WifiAccessPointSlot(CenterBox):
         )
         add_hover_cursor(self.connect_button)
 
-        self.set_start_children([
-            Box(spacing=8, h_expand=True, h_align="fill", children=[
-                self.ap_icon,
-                self.ap_label,
-            ])
-        ])
+        self.set_start_children(
+            [
+                Box(
+                    spacing=8,
+                    h_expand=True,
+                    h_align="fill",
+                    children=[
+                        self.ap_icon,
+                        self.ap_label,
+                    ],
+                )
+            ]
+        )
         self.set_end_children([self.connect_button])
 
     def _on_connect_clicked(self, *_):
@@ -115,7 +120,14 @@ class Network(Tile):
 
     def _animate_searching(self):
         """Animate wifi icon when searching for networks"""
-        wifi_icons = [icons.wifi_0, icons.wifi_1, icons.wifi_2, icons.wifi_3, icons.wifi_2, icons.wifi_1]
+        wifi_icons = [
+            icons.wifi_0,
+            icons.wifi_1,
+            icons.wifi_2,
+            icons.wifi_3,
+            icons.wifi_2,
+            icons.wifi_1,
+        ]
 
         wifi = self.network_client.wifi_device
         if not self.icon or not wifi or not wifi.wireless_enabled:
@@ -218,7 +230,7 @@ class Network(Tile):
 
     def _setup_content_button(self):
         """Setup the content button to toggle WiFi instead of showing menu."""
-        if hasattr(self, 'type_box'):
+        if hasattr(self, "type_box"):
             # Disconnect the existing click handler
             self.type_box.disconnect_by_func(self.handle_click)
             # Connect to WiFi toggle handler
@@ -235,35 +247,30 @@ class Network(Tile):
         """Create the detailed network content for the dashboard."""
         # Create status label
         self.status_label = Label(
-            label="Initializing ",
-            h_expand=True,
-            visible=False,
-            h_align="center"
+            label="Initializing ", h_expand=True, visible=False, h_align="center"
         )
 
         # Create refresh button with icon
         self.refresh_button_icon = Label(
-            name="network-refresh-label",
-            markup=icons.reload
+            name="network-refresh-label", markup=icons.reload
         )
         self.refresh_button = Button(
             name="network-refresh",
             child=self.refresh_button_icon,
             tooltip_text="Scan for Wi-Fi networks",
-            on_clicked=self._refresh_access_points
+            on_clicked=self._refresh_access_points,
         )
         add_hover_cursor(self.refresh_button)
 
         # Create back button with chevron left icon
         self.back_button_icon = Label(
-            name="network-back-label",
-            markup=icons.chevron_left
+            name="network-back-label", markup=icons.chevron_left
         )
         self.back_button = Button(
             name="network-back",
             child=self.back_button_icon,
             tooltip_text="Back to notifications",
-            on_clicked=self._on_back_clicked
+            on_clicked=self._on_back_clicked,
         )
         add_hover_cursor(self.back_button)
 
@@ -272,7 +279,7 @@ class Network(Tile):
             name="network-header",
             start_children=[self.back_button],
             center_children=[Label(name="network-title", label="Wi-Fi Networks")],
-            end_children=[self.refresh_button]
+            end_children=[self.refresh_button],
         )
 
         # Create access points list
@@ -299,7 +306,7 @@ class Network(Tile):
                 header_box,
                 self.status_label,
                 scrolled_window,
-            ]
+            ],
         )
 
         # Initialize button states
@@ -322,26 +329,30 @@ class Network(Tile):
         """Setup WiFi device connections and initial state."""
         if self.network_client.wifi_device:
             self.network_client.wifi_device.connect("changed", self._load_access_points)
-            self.network_client.wifi_device.connect("notify::wireless-enabled", self._update_wifi_status_ui)
-            self.network_client.wifi_device.connect("notify::active-access-point", self._update_tile_state)
+            self.network_client.wifi_device.connect(
+                "notify::wireless-enabled", self._update_wifi_status_ui
+            )
+            self.network_client.wifi_device.connect(
+                "notify::active-access-point", self._update_tile_state
+            )
 
             # Only update UI if content has been created
-            if self._content_created and hasattr(self, 'refresh_button'):
+            if self._content_created and hasattr(self, "refresh_button"):
                 self._update_wifi_status_ui()
 
             # Update tile icon immediately
             self._update_tile_icon()
         else:
             # Only show error if content has been created
-            if self._content_created and hasattr(self, 'status_label'):
+            if self._content_created and hasattr(self, "status_label"):
                 self.status_label.set_label("Wi-Fi device not available.")
                 self.status_label.set_visible(True)
-            if hasattr(self, 'refresh_button'):
+            if hasattr(self, "refresh_button"):
                 self.refresh_button.set_sensitive(False)
 
     def _update_wifi_status_ui(self, *_):
         """Update WiFi status UI elements."""
-        if not hasattr(self, 'refresh_button') or not self._content_created:
+        if not hasattr(self, "refresh_button") or not self._content_created:
             return  # Content not created yet
 
         if self.network_client.wifi_device:
@@ -362,7 +373,10 @@ class Network(Tile):
 
     def _refresh_access_points(self, *_):
         """Refresh access points list."""
-        if self.network_client.wifi_device and self.network_client.wifi_device.wireless_enabled:
+        if (
+            self.network_client.wifi_device
+            and self.network_client.wifi_device.wireless_enabled
+        ):
             self.status_label.set_label("Scanning for Wi-Fi networks...")
             self.status_label.set_visible(True)
             self._clear_ap_list()
@@ -376,10 +390,13 @@ class Network(Tile):
 
     def _load_access_points(self, *_):
         """Load and display access points."""
-        if not hasattr(self, 'ap_list_box'):
+        if not hasattr(self, "ap_list_box"):
             return  # Content not created yet
 
-        if not self.network_client.wifi_device or not self.network_client.wifi_device.wireless_enabled:
+        if (
+            not self.network_client.wifi_device
+            or not self.network_client.wifi_device.wireless_enabled
+        ):
             self._clear_ap_list()
             self.status_label.set_label("Wi-Fi disabled.")
             self.status_label.set_visible(True)
@@ -395,12 +412,12 @@ class Network(Tile):
         else:
             self.status_label.set_visible(False)
             # Sort access points by connection status (connected first) then by signal strength
-            sorted_aps = sorted(access_points, key=lambda x: (not x.is_active, -x.strength))
+            sorted_aps = sorted(
+                access_points, key=lambda x: (not x.is_active, -x.strength)
+            )
             for access_point in sorted_aps:
                 slot = WifiAccessPointSlot(
                     access_point, self.network_client, self.network_client.wifi_device
                 )
                 self.ap_list_box.add(slot)
         self.ap_list_box.show_all()
-
-

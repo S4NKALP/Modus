@@ -1,13 +1,12 @@
+from fabric.core.service import Property
 from fabric.widgets.box import Box
 from fabric.widgets.stack import Stack
-from fabric.core.service import Property
 
 from modules.dashboard.bluetooth import Bluetooth
 from modules.dashboard.network import Network
-from modules.dashboard.tile import TileSpecial
-from modules.dashboard.player_mini import PlayerContainerMini
 from modules.dashboard.notifications import DashboardNotifications
-
+from modules.dashboard.player_mini import PlayerContainerMini
+from modules.dashboard.tile import TileSpecial
 from utils.wayland import WaylandWindow as Window
 
 

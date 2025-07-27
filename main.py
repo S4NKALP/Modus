@@ -12,7 +12,7 @@ from modules.launcher import Launcher
 from modules.notification_popup import NotificationPopup
 from modules.osd import OSD
 from modules.switcher import ApplicationSwitcher
-from modules.dashboard import DashboardWindow
+from modules.dashboard.main import DashboardWindow
 
 
 for log in [

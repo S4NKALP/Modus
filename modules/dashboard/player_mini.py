@@ -1,20 +1,16 @@
-from gi.repository import Gdk
+import gi
 from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
-from fabric.widgets.stack import Stack
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
-
-from services.mpris import PlayerManager, PlayerService
-from utils.wiggle_bar import WigglyWidget
-
-import utils.icons as icons
-import config.data as data
-
+from fabric.widgets.label import Label
+from fabric.widgets.stack import Stack
 from loguru import logger
 
-import gi
+import config.data as data
+import utils.icons as icons
+from services.mpris import PlayerManager, PlayerService
+from utils.wiggle_bar import WigglyWidget
 
 gi.require_version("Gtk", "3.0")
 
