@@ -2,7 +2,7 @@ import json
 import subprocess
 
 from fabric.hyprland.service import Hyprland
-from fabric.hyprland.widgets import WorkspaceButton, Workspaces
+from fabric.hyprland.widgets import WorkspaceButton, HyprlandWorkspaces
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 
@@ -83,7 +83,7 @@ class Workspace(Button):
         self.set_label(str(self.activeWorkspace))
 
 
-workspaces = Workspaces(
+workspaces = HyprlandWorkspaces(
     name="workspaces",
     invert_scroll=True,
     empty_scroll=True,
@@ -104,10 +104,10 @@ workspaces = Workspaces(
     ],
     buttons_factory=None
     if data.DOCK_HIDE_SPECIAL_WORKSPACE
-    else Workspaces.default_buttons_factory,
+    else HyprlandWorkspaces.default_buttons_factory,
 )
 
-workspaces_num = Workspaces(
+workspaces_num = HyprlandWorkspaces(
     name="workspaces-num",
     invert_scroll=True,
     empty_scroll=True,
@@ -129,7 +129,7 @@ workspaces_num = Workspaces(
     ],
     buttons_factory=None
     if data.DOCK_HIDE_SPECIAL_WORKSPACE
-    else Workspaces.default_buttons_factory,
+    else HyprlandWorkspaces.default_buttons_factory,
 )
 
 

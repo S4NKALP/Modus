@@ -5,7 +5,7 @@ import os
 
 import gi
 from fabric.hyprland.service import HyprlandEvent
-from fabric.hyprland.widgets import Language, get_hyprland_connection
+from fabric.hyprland.widgets import HyprlandLanguage, get_hyprland_connection
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -174,7 +174,7 @@ class DockComponents(Box):
         lang_data = (
             event.data[1]
             if event and event.data and len(event.data) > 1
-            else Language().get_label()
+            else HyprlandLanguage().get_label()
         )
         self.language.set_tooltip_text(lang_data)
         if not data.VERTICAL:
