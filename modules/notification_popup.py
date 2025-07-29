@@ -12,7 +12,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.wayland import WaylandWindow as Window
+from utils.wayland import WaylandWindow as Window
 from utils import CustomImage
 import utils.icons as icons
 from services import notification_service
@@ -291,7 +291,7 @@ class NotificationPopup(Window):
         notification: Notification = fabric_notif.get_notification_from_id(id)
         # Always cache the notification regardless of DND status
         self.cache_notification_service.cache_notification(notification)
-        
+
         # Only show popup if DND is not enabled
         if not self.cache_notification_service.dont_disturb:
             new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))
@@ -299,4 +299,8 @@ class NotificationPopup(Window):
             new_box.set_reveal_child(True)
             logger.info(f"[Notification] New notification from {notification.app_name}")
         else:
-            logger.info(f"[Notification] DND enabled, notification from {notification.app_name} not shown")
+            logger.info(
+                f"[Notification] DND enabled, notification from {
+                    notification.app_name
+                } not shown"
+            )

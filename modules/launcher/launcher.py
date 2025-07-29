@@ -1,6 +1,6 @@
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.stack import Stack
-from fabric.widgets.wayland import WaylandWindow as Window
+from utils.wayland import WaylandWindow as Window
 from fabric.widgets.box import Box
 from modules.launcher.components import (
     AppLauncher,

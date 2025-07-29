@@ -4,7 +4,7 @@ from typing import ClassVar
 from fabric.audio import Audio
 from fabric.widgets.box import Box
 from fabric.widgets.scale import Scale, ScaleMark
-from fabric.widgets.wayland import WaylandWindow as Window
+from utils.wayland import WaylandWindow as Window
 from fabric.utils import invoke_repeater
 from gi.repository import GObject
 from services.brightness import Brightness
