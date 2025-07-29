@@ -19,6 +19,7 @@ else:
         name="workspace-name",
     )
 
+
 def on_workspace(obj, signal):
     global activeWorkspace
     activeWorkspace = json.loads(signal.data[0])
@@ -26,5 +27,6 @@ def on_workspace(obj, signal):
         workspace.set_label(f"Workspace {activeWorkspace}")
     else:
         workspace.set_label(f"W\no\nr\nk\ns\np\na\nc\ne\n\n{activeWorkspace}")
+
 
 connection.connect("event::workspace", on_workspace)

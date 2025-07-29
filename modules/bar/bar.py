@@ -1,4 +1,4 @@
-from fabric.hyprland.widgets import Language, get_hyprland_connection
+from fabric.hyprland.widgets import HyprlandLanguage, get_hyprland_connection
 from fabric.hyprland.service import HyprlandEvent
 from fabric.system_tray.widgets import SystemTray
 from fabric.widgets.shapes import Corner
@@ -262,7 +262,7 @@ class Bar(Window):
         self.launcher.open("calendar")
 
     def on_language_switch(self, _=None, event: HyprlandEvent = None):
-        lang = event.data[1] if event else Language().get_label()
+        lang = event.data[1] if event else HyprlandLanguage().get_label()
         self.language.set_tooltip_text(lang)
         if not data.VERTICAL:
             self.lang_label.set_label(lang[:2].lower())
