@@ -7,7 +7,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.eventbox import EventBox
-from fabric.widgets.wayland import WaylandWindow as Window
+from utils.wayland import WaylandWindow as Window
 from fabric.hyprland.widgets import get_hyprland_connection
 from fabric.utils import (
     exec_shell_command,

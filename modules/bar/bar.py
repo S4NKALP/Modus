@@ -7,7 +7,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.label import Label
-from fabric.widgets.wayland import WaylandWindow as Window
+from utils.wayland import WaylandWindow as Window
 from modules.bar.components import Metrics, workspace, SystemIndicators, UpdatesWidget
 import config.data as data
 from gi.repository import Gdk, GLib
