@@ -58,7 +58,7 @@ curl -fsSL https://raw.githubusercontent.com/S4NKALP/Modus/main/install.sh | bas
 1. Dependencies:
 
 ```sh
-fabric fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblast power-profile-daemon adw-gtk-theme brightnessctl swww hypridle hyprlock imagemagick libnotify swappy libadwaita wlinhibit
+python-fabric-git fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblast power-profile-daemon adw-gtk-theme brightnessctl swww hypridle hyprlock imagemagick libnotify swappy libadwaita wlinhibit
 ```
 
 ```sh
