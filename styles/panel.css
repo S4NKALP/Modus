@@ -1,5 +1,5 @@
 #panel {
-  background-color: alpha(var(--surface), 0.6);
+  background-color: alpha(var(--shadow), 0.6);
 }
 
 #panel-icon {

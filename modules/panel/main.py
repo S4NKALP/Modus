@@ -9,11 +9,10 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.svg import Svg
 from utils.wayland import WaylandWindow as Window
 
-from modules.panel.components.enhanced_system_tray import (
-    apply_enhanced_system_tray,
-)  # ignore
+from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from modules.panel.components.indicators import Indicators
 from modules.panel.components.menubar import MenuBar
+from modules.panel.components.recording_indicator import RecordingIndicator
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
@@ -89,6 +88,7 @@ class Panel(Window):
                 ),
             ),
         )
+        self.recording_indicator = RecordingIndicator()
 
         self.children = CenterBox(
             name="panel",
@@ -108,6 +108,7 @@ class Panel(Window):
                 spacing=4,
                 orientation="h",
                 children=[
+                    self.recording_indicator,
                     self.tray_revealer,
                     self.chevron_button,
                     self.indicators,
