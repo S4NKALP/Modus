@@ -130,8 +130,8 @@ class Battery(Service):
                 self._psutil_battery = psutil.sensors_battery()
                 if self._psutil_battery is None:
                     return  # No battery found
-                # Start periodic updates for psutil fallback
-                GLib.timeout_add_seconds(5, self._update_psutil_battery)
+                # Start periodic updates for psutil fallback - increased interval
+                GLib.timeout_add_seconds(10, self._update_psutil_battery)
             except Exception:
                 return  # psutil battery not available either
 

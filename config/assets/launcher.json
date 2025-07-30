@@ -43,14 +43,6 @@
       "description": "Quick Web Search - Fast web search with question mark",
       "examples": ["? cats", "? google cats", "? youtube music"]
     },
-    "kanban": {
-      "icon": "kanban",
-      "description": "Kanban - Task management with kanban-style columns"
-    },
-    "cal": {
-      "icon": "calendar",
-      "description": "Calendar - View calendar, navigate dates, and get date/time info"
-    },
     "remind": {
       "icon": "timer_on",
       "description": "Reminders - Set time-based reminders with notifications"
@@ -66,10 +58,6 @@
     "bm": {
       "icon": "bookmark",
       "description": "Bookmarks - Search and manage bookmarks"
-    },
-    "ps": {
-      "icon": "process",
-      "description": "Process Manager - View and manage running processes"
     },
     "script": {
       "icon": "terminal",

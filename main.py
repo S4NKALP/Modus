@@ -46,9 +46,6 @@ if __name__ == "__main__":
     css_file = monitor_file(get_relative_path("styles"))
     _ = css_file.connect("changed", lambda *_: set_css())
 
-    color_css_main_file = monitor_file(get_relative_path("main.css"))
-    _ = color_css_main_file.connect("changed", lambda *_: set_css())
-
     color_css_file = monitor_file(get_relative_path("./styles/colors.css"))
     _ = color_css_file.connect("changed", lambda *_: set_css())
 
