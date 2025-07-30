@@ -1,0 +1,27 @@
+{
+    "pinned_apps": [
+        {
+            "name": "kitty",
+            "display_name": "kitty",
+            "executable": "kitty",
+            "command_line": "kitty",
+            "icon_name": "kitty"
+        },
+        {
+            "name": "Zen Browser",
+            "display_name": "Zen Browser",
+            "window_class": "zen",
+            "executable": "/opt/zen-browser-bin/zen-bin",
+            "command_line": "/opt/zen-browser-bin/zen-bin %u",
+            "icon_name": "zen-browser"
+        },
+        {
+            "name": "Visual Studio Code",
+            "display_name": "Visual Studio Code",
+            "window_class": "Code",
+            "executable": "/usr/bin/code",
+            "command_line": "/usr/bin/code %F",
+            "icon_name": "visual-studio-code"
+        }
+    ]
+}

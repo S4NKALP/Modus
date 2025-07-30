@@ -1,0 +1,67 @@
+@import url("./styles/colors.css");
+@import url("./styles/panel.css");
+@import url("./styles/menubar.css");
+@import url("./styles/dock.css");
+@import url("./styles/switcher.css");
+@import url("./styles/launcher.css");
+
+* {
+  all: unset;
+  color: var(--foreground);
+  font-size: 12px;
+  font-family: unset;
+}
+
+#corner {
+  background-color: var(--shadow);
+  border-radius: 0;
+}
+
+#corner-container {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+tooltip {
+  border: solid 1px;
+  border-radius: 16px;
+  border-color: var(--surface);
+  background-color: var(--shadow);
+  animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1);
+}
+
+@keyframes tooltipShow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+tooltip > * {
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+menu {
+  border: solid 1px;
+  border-radius: 16px;
+  border-color: var(--surface);
+  background-color: var(--shadow);
+  padding: 6px;
+}
+
+menu > menuitem {
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+menu > menuitem:hover {
+  background-color: var(--primary);
+}
+
+menu > menuitem:hover > label {
+  color: var(--shadow);
+}

@@ -1,0 +1,97 @@
+{
+  "launcher_config": {
+    "em": {
+      "icon": "emoji",
+      "description": "Emoji - Search and copy emojis"
+    },
+    "clip": {
+      "icon": "clipboard",
+      "description": "Clipboard - Search and manage clipboard history"
+    },
+    "=": {
+      "examples": ["= 10*5", "= 2^8", "= sin(30)"],
+      "icon": "calculator",
+      "description": "Quick Math - Fast mathematical expressions"
+    },
+    "app": {
+      "icon": "apps",
+      "description": "Applications - Launch installed applications"
+    },
+    "bin": {
+      "icon": "terminal",
+      "description": "Bins - Search and run executable binaries"
+    },
+    "power": {
+      "icon": "shutdown",
+      "description": "Power - System power management and session control"
+    },
+    "caffeine": {
+      "examples": ["caffeine 30m", "caffeine 1h", "caffeine 2h", "caffeine on"],
+      "icon": "coffee",
+      "description": "Caffeine - Prevent system from going idle"
+    },
+    "sc": {
+      "icon": "toolbox",
+      "description": "Screencapture - Record screen and audio"
+    },
+    "wall": {
+      "icon": "wallpapers",
+      "description": "Wallpapers - Set wallpapers, and tons of features"
+    },
+    "?": {
+      "icon": "world",
+      "description": "Quick Web Search - Fast web search with question mark",
+      "examples": ["? cats", "? google cats", "? youtube music"]
+    },
+    "kanban": {
+      "icon": "kanban",
+      "description": "Kanban - Task management with kanban-style columns"
+    },
+    "cal": {
+      "icon": "calendar",
+      "description": "Calendar - View calendar, navigate dates, and get date/time info"
+    },
+    "remind": {
+      "icon": "timer_on",
+      "description": "Reminders - Set time-based reminders with notifications"
+    },
+    "otp": {
+      "icon": "auth",
+      "description": "Manage TOTP codes and 2FA authentication"
+    },
+    "pass": {
+      "icon": "key",
+      "description": "Password Manager - Search and manage passwords"
+    },
+    "bm": {
+      "icon": "bookmark",
+      "description": "Bookmarks - Search and manage bookmarks"
+    },
+    "ps": {
+      "icon": "process",
+      "description": "Process Manager - View and manage running processes"
+    },
+    "script": {
+      "icon": "terminal",
+      "description": "Bash Scripts - Manage and execute bash scripts"
+    },
+    "bash": {
+      "icon": "terminal",
+      "description": "Bash Scripts - Manage and execute bash scripts"
+    },
+    "sh": {
+      "icon": "terminal",
+      "description": "Bash Scripts - Manage and execute bash scripts"
+    },
+    "tmux": {
+      "icon": "terminal",
+      "description": "Tmux Manager - Create, attach, rename, and kill tmux sessions"
+    }
+  },
+  "settings": {
+    "max_examples_shown": 2,
+    "default_icon": "apps",
+    "fallback_example_template": "{trigger} <search>",
+    "config_version": "1.0"
+  }
+}

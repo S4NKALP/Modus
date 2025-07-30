@@ -1,0 +1,73 @@
+#panel {
+  background-color: alpha(var(--surface), 0.6);
+}
+
+#panel-icon {
+  font-size: 18px;
+}
+
+#panel-button {
+  border-radius: 8px;
+  margin: 0 4px 0 6px;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+#panel-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#tray-button {
+  border-radius: 8px;
+  margin: 0 4px 0 0px;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+#tray-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#date-time {
+  margin-right: 6px;
+}
+
+#modules-left,
+#modules-right {
+  margin: 0 5px;
+  padding: 3px 0;
+}
+
+#notch-spot {
+  background-color: var(--surface);
+}
+
+#indicators-icon {
+  font-size: 20px;
+}
+
+#bt-icon {
+  font-size: 18px;
+}
+
+#indicators {
+  margin: 0 8px;
+}
+
+#indicators-icon.alert {
+  color: var(--red-dim);
+}
+
+#menubar-button {
+  margin: 0 2px;
+  border-radius: 4px;
+  padding: 0 6px;
+}
+
+#menubar-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#activewindow-label {
+  font-weight: bold;
+}
