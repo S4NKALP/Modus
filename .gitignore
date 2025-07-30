@@ -10,4 +10,5 @@ config/assets/bookmarks.json
 config/assets/screentime.json
 config/hypr/modus.conf
 config/hypr/colors.conf
+fabric/
 # styles/colors.css
