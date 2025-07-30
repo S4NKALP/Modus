@@ -12,6 +12,7 @@ from fabric.notifications import (
     Notification,
     NotificationImagePixmap,
 )
+import os
 from fabric.utils import invoke_repeater, get_relative_path
 
 from utils.roam import modus_service
@@ -26,6 +27,26 @@ NOTIFICATION_IMAGE_SIZE = 48
 NOTIFICATION_TIMEOUT = 10 * 1000
 
 
+def get_notification_image_pixbuf(
+    notification: Notification,
+) -> GdkPixbuf.Pixbuf | None:
+    width = NOTIFICATION_IMAGE_SIZE
+    height = NOTIFICATION_IMAGE_SIZE
+
+    try:
+        if notification.image_file and os.path.exists(notification.image_file):
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(notification.image_file)
+            return pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+        elif notification.image_pixbuf:
+            return notification.image_pixbuf.scale_simple(
+                width, height, GdkPixbuf.InterpType.BILINEAR
+            )
+    except Exception as e:
+        print("Failed to load image:", e)
+
+    return None
+
+
 class NotificationWidget(Box):
     def __init__(self, notification: Notification, **kwargs):
         super().__init__(
@@ -38,18 +59,41 @@ class NotificationWidget(Box):
 
         self._notification = notification
 
-        self.image = notification.image_pixbuf
+        self.image = notification.app_icon
         body_container = Box(spacing=4, orientation="h")
 
-        if self._notification.image_pixbuf:
+        # Load and show image (from app_icon, image_file, or pixbuf)
+        pixbuf = get_notification_image_pixbuf(notification)
+        image_file = None
+
+        if notification.app_icon:
+            if notification.app_icon.startswith("file://"):
+                image_file = notification.app_icon[7:]
+            elif os.path.exists(notification.app_icon):
+                image_file = notification.app_icon
+
+        if image_file:
             body_container.add(
                 CustomImage(
                     name="noti-image",
-                    pixbuf=self.image.scale_simple(  # type: ignore
-                        NOTIFICATION_IMAGE_SIZE,
-                        NOTIFICATION_IMAGE_SIZE,
-                        GdkPixbuf.InterpType.BILINEAR,
-                    ),
+                    image_file=image_file,
+                    size=NOTIFICATION_IMAGE_SIZE,
+                )
+            )
+        elif pixbuf:
+            body_container.add(
+                CustomImage(
+                    name="noti-image",
+                    image_pixbuf=pixbuf,
+                    size=NOTIFICATION_IMAGE_SIZE,
+                )
+            )
+        else:
+            body_container.add(
+                CustomImage(
+                    name="noti-image",
+                    icon_name="dialog-information-symbolic",
+                    icon_size=NOTIFICATION_IMAGE_SIZE,
                 )
             )
 
