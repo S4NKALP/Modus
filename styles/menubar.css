@@ -3,7 +3,7 @@
 }
 
 #dropdown-content {
-  background-color: var(--shadow);
+  background-color: alpha(var(--shadow), 0.6);
   border-radius: 8px;
 }
 

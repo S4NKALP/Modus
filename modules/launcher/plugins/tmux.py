@@ -24,16 +24,18 @@ class TmuxPlugin(PluginBase):
         # Cache for sessions to avoid repeated subprocess calls
         self._sessions_cache = []
         self._last_cache_update = 0
-        self._cache_ttl = 2  # Cache sessions for 2 seconds
+        self._cache_ttl = 10  # Cache sessions for 10 seconds (increased from 2)
 
-        # Threading for auto-refresh
+        # Threading for auto-refresh - only when actively used
         self.refresh_thread = None
         self.stop_refresh = threading.Event()
+        self._last_query_time = 0
+        self._active_refresh_timeout = 30  # Stop refreshing after 30 seconds of inactivity
 
     def initialize(self):
         """Initialize the tmux plugin."""
         self.set_triggers(["tmux"])
-        self._start_refresh_thread()
+        # Don't start refresh thread immediately - start it when first used
 
     def cleanup(self):
         """Cleanup the tmux plugin."""
@@ -51,19 +53,24 @@ class TmuxPlugin(PluginBase):
             self.refresh_thread.start()
 
     def _refresh_sessions_background(self):
-        """Background thread to refresh sessions cache."""
+        """Background thread to refresh sessions cache only when actively used."""
         while not self.stop_refresh.is_set():
             try:
                 current_time = time.time()
+
+                # Stop refreshing if plugin hasn't been used recently
+                if current_time - self._last_query_time > self._active_refresh_timeout:
+                    print("TmuxPlugin: Stopping background refresh due to inactivity")
+                    break
+
                 if current_time - self._last_cache_update > self._cache_ttl:
                     self._sessions_cache = self._get_tmux_sessions()
                     self._last_cache_update = current_time
 
-                # Sleep for a short interval
-                self.stop_refresh.wait(1)
+                self.stop_refresh.wait(5) 
             except Exception as e:
                 print(f"TmuxPlugin: Error in refresh thread: {e}")
-                self.stop_refresh.wait(5)  # Wait longer on error
+                self.stop_refresh.wait(10)  # Wait longer on error
 
     def _get_tmux_sessions(self):
         """Get list of tmux sessions."""
@@ -92,8 +99,15 @@ class TmuxPlugin(PluginBase):
         query = query_string.strip().lower()
         results = []
 
-        # Get current sessions (use cache if recent)
+        # Track usage and start refresh thread if needed
         current_time = time.time()
+        self._last_query_time = current_time
+
+        # Start refresh thread if not running and plugin is being used
+        if not self.refresh_thread or not self.refresh_thread.is_alive():
+            self._start_refresh_thread()
+
+        # Get current sessions (use cache if recent)
         if current_time - self._last_cache_update > self._cache_ttl:
             self._sessions_cache = self._get_tmux_sessions()
             self._last_cache_update = current_time

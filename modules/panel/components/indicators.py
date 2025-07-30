@@ -1,14 +1,13 @@
-from fabric.bluetooth import BluetoothClient
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.label import Label
-from fabric.utils import get_relative_path
-from fabric.widgets.svg import Svg
+from gi.repository import GLib
 
 import utils.icons as icons
-from services.network import NetworkClient
-from gi.repository import GLib
+from fabric.bluetooth import BluetoothClient
+from fabric.utils import get_relative_path
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.svg import Svg
 from services.battery import Battery as BatteryService
+from services.network import NetworkClient
 
 
 class WifiIndicator(Button):
