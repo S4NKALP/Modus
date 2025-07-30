@@ -1,6 +1,6 @@
 from gi.repository import Gtk
 
-# from fabric.system_tray.widgets import SystemTrayItem
+from fabric.system_tray.widgets import SystemTrayItem
 import json
 import os
 
@@ -22,7 +22,7 @@ from .controls import Controls
 from .indicators import Indicators
 from .metrics import Metrics
 from .workspaces import workspace
-# from .systemtray import SystemTray
+from .systemtray import SystemTray
 
 gi.require_version("Gtk", "3.0")
 # Monkey patch SystemTray to use GTK theme icons
@@ -66,7 +66,7 @@ class DockComponents(Box):
         )
         self.controls = Controls()
         self.indicators = Indicators()
-        # self.systray = SystemTray()
+        self.systray = SystemTray()
 
         # Create list of components to add
         self.themed_children = [
@@ -78,7 +78,7 @@ class DockComponents(Box):
             self.battery,
             self.date_time,
             self.language,
-            # self.systray,
+            self.systray,
         ]
 
         # Add each child individually
@@ -107,7 +107,7 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            # "systray": self.systray,
+            "systray": self.systray,
             "applications": self.applications,
             "language": self.language,
         }
@@ -138,7 +138,7 @@ class DockComponents(Box):
             "date_time": self.date_time,
             "controls": self.controls,
             "indicators": self.indicators,
-            # "systray": self.systray,
+            "systray": self.systray,
             "applications": self.applications,
             "language": self.language,
         }
