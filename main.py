@@ -8,6 +8,7 @@ from modules.dock import Dock
 from modules.launcher.main import Launcher
 from modules.osd import OSD
 from modules.about import About
+from modules.notification import ModusNoti
 
 # from modules.corners import Corners
 from modules.panel.main import Panel
@@ -29,12 +30,13 @@ if __name__ == "__main__":
     # Load configuration
     from config.data import load_config
 
-    About().toggle(None)
+    # About().toggle(None)
     config = load_config()
 
     panel = Panel()
     # corners = Corners()
     dock = Dock()
+    envnoti = ModusNoti()
     switcher = ApplicationSwitcher()
     launcher = Launcher()
     panel.launcher = launcher
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     _ = css_file.connect("changed", lambda *_: set_css())
 
     # Make sure corners is added to the app
-    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher, osd)
+    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher, envnoti, osd)
 
     def set_css():
         app.set_stylesheet_from_file(

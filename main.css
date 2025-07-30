@@ -6,6 +6,7 @@
 @import url("./styles/launcher.css");
 @import url("./styles/osd.css");
 @import url("./styles/about.css");
+@import url("./styles/notification.css");
 
 * {
   all: unset;
