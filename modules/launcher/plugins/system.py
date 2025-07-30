@@ -57,7 +57,9 @@ class SystemPlugin(PluginBase):
                     self._bin_cache = set(cache_data.get("binaries", []))
                     self._last_bin_update = cache_data.get("last_update", 0)
             else:
-                print("SystemPlugin: No cache file found, will build cache in background")
+                print(
+                    "SystemPlugin: No cache file found, will build cache in background"
+                )
         except Exception as e:
             print(f"SystemPlugin: Error loading binary cache: {e}")
             self._bin_cache = set()
@@ -72,7 +74,7 @@ class SystemPlugin(PluginBase):
             cache_data = {
                 "binaries": sorted(list(self._bin_cache)),
                 "last_update": self._last_bin_update,
-                "cache_version": "1.0"
+                "cache_version": "1.0",
             }
 
             with open(self.bin_cache_file, "w", encoding="utf-8") as f:
@@ -85,14 +87,15 @@ class SystemPlugin(PluginBase):
         current_time = time.time()
 
         # Check if cache needs updating
-        if (current_time - self._last_bin_update > self._bin_update_interval or
-            not self._bin_cache):
+        if (
+            current_time - self._last_bin_update > self._bin_update_interval
+            or not self._bin_cache
+        ):
 
             if not self._cache_building:
                 self._cache_building = True
                 self._cache_thread = threading.Thread(
-                    target=self._build_bin_cache_background,
-                    daemon=True
+                    target=self._build_bin_cache_background, daemon=True
                 )
                 self._cache_thread.start()
 
@@ -113,8 +116,9 @@ class SystemPlugin(PluginBase):
                         # Use os.scandir for better performance than os.listdir
                         with os.scandir(path) as entries:
                             for entry in entries:
-                                if (entry.is_file(follow_symlinks=False) and
-                                    os.access(entry.path, os.X_OK)):
+                                if entry.is_file(follow_symlinks=False) and os.access(
+                                    entry.path, os.X_OK
+                                ):
                                     new_cache.add(entry.name)
                     except (PermissionError, FileNotFoundError, OSError):
                         continue
@@ -125,7 +129,6 @@ class SystemPlugin(PluginBase):
 
             # Save to disk
             self._save_bin_cache()
-
 
         except Exception as e:
             print(f"SystemPlugin: Error building binary cache: {e}")
@@ -151,7 +154,9 @@ class SystemPlugin(PluginBase):
 
         # Check system binaries
         # Start background update if needed (non-blocking) - but only if cache is empty or very old
-        if not self._bin_cache or (time.time() - self._last_bin_update > self._bin_update_interval):
+        if not self._bin_cache or (
+            time.time() - self._last_bin_update > self._bin_update_interval
+        ):
             self._start_background_cache_update()
 
         # Optimize search with early termination and result limiting
@@ -174,19 +179,25 @@ class SystemPlugin(PluginBase):
                 display_command = full_command
                 command_to_execute = full_command
                 relevance = 1.0
-                exact_matches.append((binary, display_command, command_to_execute, relevance))
+                exact_matches.append(
+                    (binary, display_command, command_to_execute, relevance)
+                )
             elif binary_lower.startswith(binary_query):
                 # Prefix match - high priority
                 display_command = binary
                 command_to_execute = binary
                 relevance = 0.9
-                prefix_matches.append((binary, display_command, command_to_execute, relevance))
+                prefix_matches.append(
+                    (binary, display_command, command_to_execute, relevance)
+                )
             else:
                 # Partial match - lower priority
                 display_command = binary
                 command_to_execute = binary
                 relevance = 0.7
-                partial_matches.append((binary, display_command, command_to_execute, relevance))
+                partial_matches.append(
+                    (binary, display_command, command_to_execute, relevance)
+                )
 
             # Early termination if we have enough good matches
             if len(exact_matches) + len(prefix_matches) >= max_results:
@@ -196,7 +207,9 @@ class SystemPlugin(PluginBase):
         all_matches = exact_matches + prefix_matches + partial_matches
 
         # Convert to Result objects (limit to max_results)
-        for binary, display_command, command_to_execute, relevance in all_matches[:max_results]:
+        for binary, display_command, command_to_execute, relevance in all_matches[
+            :max_results
+        ]:
             result = Result(
                 title=display_command,
                 subtitle=f"Execute: {display_command}",
@@ -209,8 +222,6 @@ class SystemPlugin(PluginBase):
             results.append(result)
 
         return results  # Already sorted by priority
-
-
 
     def _create_action(self, command: Union[str, List[str]]):
         """Create an action function for the given command."""

@@ -2,6 +2,7 @@ import json
 import logging
 
 import cairo
+import config.data as data
 from fabric.hyprland.widgets import get_hyprland_connection
 from fabric.utils import (
     exec_shell_command,
@@ -17,12 +18,11 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk
-
-import config.data as data
-from modules.corners import MyCorner
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from utils.wayland import WaylandWindow as Window
+
+from modules.corners import MyCorner
 
 
 def read_config():

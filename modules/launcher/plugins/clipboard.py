@@ -380,9 +380,9 @@ class ClipboardPlugin(PluginBase):
                 result = Result(
                     title=display_text,
                     subtitle="Text from clipboard",
-                    description=content
-                    if len(content) <= 100
-                    else content[:97] + "...",
+                    description=(
+                        content if len(content) <= 100 else content[:97] + "..."
+                    ),
                     icon_name="edit-paste",
                     relevance=relevance,
                     plugin_name=self.name,

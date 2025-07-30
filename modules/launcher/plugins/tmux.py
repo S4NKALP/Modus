@@ -46,8 +46,7 @@ class TmuxPlugin(PluginBase):
         """Start background thread to refresh session cache."""
         if not self.refresh_thread or not self.refresh_thread.is_alive():
             self.refresh_thread = threading.Thread(
-                target=self._refresh_sessions_background,
-                daemon=True
+                target=self._refresh_sessions_background, daemon=True
             )
             self.refresh_thread.start()
 
@@ -59,7 +58,7 @@ class TmuxPlugin(PluginBase):
                 if current_time - self._last_cache_update > self._cache_ttl:
                     self._sessions_cache = self._get_tmux_sessions()
                     self._last_cache_update = current_time
-                
+
                 # Sleep for a short interval
                 self.stop_refresh.wait(1)
             except Exception as e:
@@ -73,12 +72,18 @@ class TmuxPlugin(PluginBase):
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
-                return [s.strip() for s in result.stdout.strip().split('\n') if s.strip()]
+                return [
+                    s.strip() for s in result.stdout.strip().split("\n") if s.strip()
+                ]
             return []
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError) as e:
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+        ) as e:
             print(f"TmuxPlugin: Error getting tmux sessions: {e}")
             return []
 
@@ -92,28 +97,32 @@ class TmuxPlugin(PluginBase):
         if current_time - self._last_cache_update > self._cache_ttl:
             self._sessions_cache = self._get_tmux_sessions()
             self._last_cache_update = current_time
-        
+
         sessions = self._sessions_cache
 
         # Handle specific commands
         if query.startswith("new ") or query.startswith("create "):
             session_name = query.split(" ", 1)[1].strip() if " " in query else ""
             results.append(self._create_new_session_result(session_name))
-        
+
         elif query.startswith("kill ") or query.startswith("delete "):
             session_name = query.split(" ", 1)[1].strip() if " " in query else ""
             if session_name:
-                matching_sessions = [s for s in sessions if session_name.lower() in s.lower()]
+                matching_sessions = [
+                    s for s in sessions if session_name.lower() in s.lower()
+                ]
                 for session in matching_sessions:
                     results.append(self._create_kill_session_result(session))
-        
+
         elif query.startswith("rename "):
             parts = query.split(" ", 2)
             if len(parts) >= 3:
                 old_name, new_name = parts[1], parts[2]
                 if old_name in sessions:
-                    results.append(self._create_rename_session_result(old_name, new_name))
-        
+                    results.append(
+                        self._create_rename_session_result(old_name, new_name)
+                    )
+
         else:
             # Show existing sessions for attachment
             if sessions:
@@ -122,13 +131,19 @@ class TmuxPlugin(PluginBase):
                     filtered_sessions = [s for s in sessions if query in s.lower()]
                 else:
                     filtered_sessions = sessions
-                
+
                 for session in filtered_sessions:
                     results.append(self._create_attach_session_result(session))
-            
+
             # Always show option to create new session
             if not query or "new" in query or "create" in query:
-                results.append(self._create_new_session_result(query if query and not any(cmd in query for cmd in ["new", "create"]) else ""))
+                results.append(
+                    self._create_new_session_result(
+                        query
+                        if query and not any(cmd in query for cmd in ["new", "create"])
+                        else ""
+                    )
+                )
 
         return results
 
@@ -140,7 +155,7 @@ class TmuxPlugin(PluginBase):
             icon_markup=icons.terminal,
             action=lambda: self._attach_to_session(session_name),
             relevance=0.9,
-            data={"type": "attach", "session": session_name}
+            data={"type": "attach", "session": session_name},
         )
 
     def _create_new_session_result(self, session_name: str = "") -> Result:
@@ -152,7 +167,7 @@ class TmuxPlugin(PluginBase):
             icon_markup=icons.plus,
             action=lambda: self._create_session(session_name),
             relevance=0.8,
-            data={"type": "create", "session": session_name}
+            data={"type": "create", "session": session_name},
         )
 
     def _create_kill_session_result(self, session_name: str) -> Result:
@@ -163,7 +178,7 @@ class TmuxPlugin(PluginBase):
             icon_markup=icons.trash,
             action=lambda: self._kill_session(session_name),
             relevance=0.7,
-            data={"type": "kill", "session": session_name}
+            data={"type": "kill", "session": session_name},
         )
 
     def _create_rename_session_result(self, old_name: str, new_name: str) -> Result:
@@ -174,14 +189,15 @@ class TmuxPlugin(PluginBase):
             icon_markup=icons.config,
             action=lambda: self._rename_session(old_name, new_name),
             relevance=0.6,
-            data={"type": "rename", "old_session": old_name, "new_session": new_name}
+            data={"type": "rename", "old_session": old_name, "new_session": new_name},
         )
-
 
     def _attach_to_session(self, session_name: str):
         """Attach to an existing tmux session."""
         try:
-            terminal_cmd = self._get_terminal_command(f"tmux attach-session -t '{session_name}'")
+            terminal_cmd = self._get_terminal_command(
+                f"tmux attach-session -t '{session_name}'"
+            )
             exec_shell_command_async(terminal_cmd)
             print(f"TmuxPlugin: Attaching to session '{session_name}'")
         except Exception as e:
@@ -197,25 +213,25 @@ class TmuxPlugin(PluginBase):
                 while str(counter) in existing_sessions:
                     counter += 1
                 session_name = str(counter)
-            
+
             # Clean the session name
             clean_name = session_name.strip().replace(" ", "_")
-            
+
             # Create session
             subprocess.run(
-                ["tmux", "new-session", "-d", "-s", clean_name],
-                check=True,
-                timeout=10
+                ["tmux", "new-session", "-d", "-s", clean_name], check=True, timeout=10
             )
-            
+
             # Launch terminal and attach
-            terminal_cmd = self._get_terminal_command(f"tmux attach-session -t '{clean_name}'")
+            terminal_cmd = self._get_terminal_command(
+                f"tmux attach-session -t '{clean_name}'"
+            )
             exec_shell_command_async(terminal_cmd)
-            
+
             # Refresh cache
             self._sessions_cache = self._get_tmux_sessions()
             self._last_cache_update = time.time()
-            
+
             print(f"TmuxPlugin: Created and attached to session '{clean_name}'")
         except Exception as e:
             print(f"TmuxPlugin: Error creating session '{session_name}': {e}")
@@ -224,15 +240,13 @@ class TmuxPlugin(PluginBase):
         """Kill a tmux session."""
         try:
             subprocess.run(
-                ["tmux", "kill-session", "-t", session_name],
-                check=True,
-                timeout=10
+                ["tmux", "kill-session", "-t", session_name], check=True, timeout=10
             )
-            
+
             # Refresh cache
             self._sessions_cache = self._get_tmux_sessions()
             self._last_cache_update = time.time()
-            
+
             print(f"TmuxPlugin: Killed session '{session_name}'")
         except Exception as e:
             print(f"TmuxPlugin: Error killing session '{session_name}': {e}")
@@ -244,32 +258,39 @@ class TmuxPlugin(PluginBase):
             subprocess.run(
                 ["tmux", "rename-session", "-t", old_name, clean_name],
                 check=True,
-                timeout=10
+                timeout=10,
             )
-            
+
             # Refresh cache
             self._sessions_cache = self._get_tmux_sessions()
             self._last_cache_update = time.time()
-            
+
             print(f"TmuxPlugin: Renamed session '{old_name}' to '{clean_name}'")
         except Exception as e:
-            print(f"TmuxPlugin: Error renaming session '{old_name}' to '{new_name}': {e}")
+            print(
+                f"TmuxPlugin: Error renaming session '{old_name}' to '{new_name}': {e}"
+            )
 
     def _get_terminal_command(self, cmd: str) -> str:
         """Get terminal command based on configured terminal or available terminals."""
         # First try to use the configured terminal command
-        if hasattr(data, 'TERMINAL_COMMAND') and data.TERMINAL_COMMAND:
+        if hasattr(data, "TERMINAL_COMMAND") and data.TERMINAL_COMMAND:
             parts = data.TERMINAL_COMMAND.split()
             terminal = parts[0]
-            
+
             try:
                 # Check if the configured terminal is available
-                subprocess.run(["which", terminal], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(
+                    ["which", terminal],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
                 return f"{data.TERMINAL_COMMAND} {cmd}"
             except subprocess.CalledProcessError:
                 # If configured terminal is not available, fall back to defaults
                 pass
-                
+
         # Fallback to checking available terminals
         terminals = [
             ("kitty", f"kitty -e {cmd}"),
@@ -279,14 +300,19 @@ class TmuxPlugin(PluginBase):
             ("konsole", f"konsole -e {cmd}"),
             ("xfce4-terminal", f"xfce4-terminal -e '{cmd}'"),
         ]
-        
+
         for term, term_cmd in terminals:
             try:
                 # Check if terminal is available
-                subprocess.run(["which", term], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(
+                    ["which", term],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
                 return term_cmd
             except subprocess.CalledProcessError:
                 continue
-                
+
         # Default fallback
         return f"kitty -e {cmd}"

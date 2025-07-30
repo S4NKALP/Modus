@@ -510,9 +510,11 @@ class Wifi(Service):
                         device,
                         None,
                         None,
-                        lambda c, r: logger.info(f"Connected to '{ssid}'")
-                        if c
-                        else logger.error(f"Failed to connect to '{ssid}'"),
+                        lambda c, r: (
+                            logger.info(f"Connected to '{ssid}'")
+                            if c
+                            else logger.error(f"Failed to connect to '{ssid}'")
+                        ),
                     )
                 except Exception as e:
                     logger.error(f"Failed to add connection: {e}")

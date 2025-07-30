@@ -25,7 +25,9 @@ class ResultItem(EventBox):
         """Emitted when result is hovered."""
         pass
 
-    def __init__(self, result: Result, selected: bool = False, index: int = 0, **kwargs):
+    def __init__(
+        self, result: Result, selected: bool = False, index: int = 0, **kwargs
+    ):
         super().__init__(name="launcher-result-item", **kwargs)
 
         self.result = result

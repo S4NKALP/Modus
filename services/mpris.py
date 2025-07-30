@@ -55,7 +55,11 @@ class PlayerService(Service):
             return self._player.get_position()
         except Exception:
             # Player is no longer available, stop the fabricator
-            if hasattr(self, 'pos_fabricator') and self.pos_fabricator and self._fabricator_running:
+            if (
+                hasattr(self, "pos_fabricator")
+                and self.pos_fabricator
+                and self._fabricator_running
+            ):
                 try:
                     self.pos_fabricator.stop()
                     self._fabricator_running = False
@@ -69,7 +73,7 @@ class PlayerService(Service):
             return  # Already cleaned up
 
         try:
-            if hasattr(self, 'pos_fabricator') and self.pos_fabricator:
+            if hasattr(self, "pos_fabricator") and self.pos_fabricator:
                 if self._fabricator_running:
                     self.pos_fabricator.stop()
                     self._fabricator_running = False
@@ -79,9 +83,11 @@ class PlayerService(Service):
             print(f"[DEBUG] Error during PlayerService cleanup: {e}")
 
     def on_seeked(self, player, position):
-        if (not self._cleanup_done and
-            self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING" and
-            not self._fabricator_running):
+        if (
+            not self._cleanup_done
+            and self.status.value_name == "PLAYERCTL_PLAYBACK_STATUS_PLAYING"
+            and not self._fabricator_running
+        ):
             try:
                 self.pos_fabricator.start()
                 self._fabricator_running = True
@@ -128,7 +134,7 @@ class PlayerService(Service):
                 return
 
             # Validate player object
-            if not self._player or not hasattr(self._player, 'get_position'):
+            if not self._player or not hasattr(self._player, "get_position"):
                 return
 
             # Get position safely
@@ -147,9 +153,11 @@ class PlayerService(Service):
             # Get duration safely from multiple sources
             dur = 0.0  # Default to 0
 
-            if (hasattr(self._player, 'props') and
-                hasattr(self._player.props, 'metadata') and
-                self._player.props.metadata):
+            if (
+                hasattr(self._player, "props")
+                and hasattr(self._player.props, "metadata")
+                and self._player.props.metadata
+            ):
 
                 metadata = self._player.props.metadata
 
@@ -173,7 +181,7 @@ class PlayerService(Service):
                 # Try to get duration from player directly (some players support this)
                 if dur <= 0:
                     try:
-                        if hasattr(self._player, 'get_metadata'):
+                        if hasattr(self._player, "get_metadata"):
                             player_metadata = self._player.get_metadata()
                             if player_metadata:
                                 raw_dur = player_metadata["mpris:length"]

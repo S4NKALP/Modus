@@ -82,6 +82,7 @@ class BashScriptsPlugin(PluginBase):
         """Get reference to the battery service."""
         try:
             from services.battery import Battery
+
             self._battery_service = Battery()
         except Exception as e:
             print(f"BashScriptsPlugin: Error getting battery service: {e}")
@@ -95,7 +96,10 @@ class BashScriptsPlugin(PluginBase):
 
         try:
             # Check if profile proxy is available
-            if not hasattr(self._battery_service, '_profile_proxy') or not self._battery_service._profile_proxy:
+            if (
+                not hasattr(self._battery_service, "_profile_proxy")
+                or not self._battery_service._profile_proxy
+            ):
                 print("BashScriptsPlugin: Power profile proxy not available")
                 return False
 
@@ -114,7 +118,7 @@ class BashScriptsPlugin(PluginBase):
             profile_mapping = {
                 "power-saver": ["power-saver", "powersave", "power_saver"],
                 "balanced": ["balanced", "balance"],
-                "performance": ["performance", "performance-mode"]
+                "performance": ["performance", "performance-mode"],
             }
 
             # Find the actual profile name
@@ -129,17 +133,19 @@ class BashScriptsPlugin(PluginBase):
 
             if actual_profile:
                 self._battery_service._profile_proxy.ActiveProfile = actual_profile
-                print(f"BashScriptsPlugin: Successfully set power profile to {actual_profile}")
+                print(
+                    f"BashScriptsPlugin: Successfully set power profile to {actual_profile}"
+                )
                 return True
             else:
-                print(f"BashScriptsPlugin: No matching profile found for '{profile}' in available profiles: {available_profiles}")
+                print(
+                    f"BashScriptsPlugin: No matching profile found for '{profile}' in available profiles: {available_profiles}"
+                )
                 return False
 
         except Exception as e:
             print(f"BashScriptsPlugin: Error setting power profile: {e}")
             return False
-
-
 
     def _load_scripts_cache(self):
         """Load scripts cache from JSON file."""
@@ -150,7 +156,9 @@ class BashScriptsPlugin(PluginBase):
                     self._scripts_cache = cache_data.get("scripts", {})
                     self._last_cache_update = cache_data.get("last_update", 0)
             else:
-                print("BashScriptsPlugin: No cache file found, will build cache in background")
+                print(
+                    "BashScriptsPlugin: No cache file found, will build cache in background"
+                )
         except Exception as e:
             print(f"BashScriptsPlugin: Error loading scripts cache: {e}")
             self._scripts_cache = {}
@@ -172,16 +180,17 @@ class BashScriptsPlugin(PluginBase):
     def _start_background_cache_update(self):
         """Start background thread to update scripts cache."""
         current_time = time.time()
-        
+
         # Check if cache needs updating
-        if (current_time - self._last_cache_update > self._cache_update_interval or
-            not self._scripts_cache):
-            
+        if (
+            current_time - self._last_cache_update > self._cache_update_interval
+            or not self._scripts_cache
+        ):
+
             if not self._cache_building:
                 self._cache_building = True
                 self._cache_thread = threading.Thread(
-                    target=self._build_scripts_cache_background,
-                    daemon=True
+                    target=self._build_scripts_cache_background, daemon=True
                 )
                 self._cache_thread.start()
 
@@ -192,11 +201,15 @@ class BashScriptsPlugin(PluginBase):
             new_cache = {}
 
             # Scan Modus scripts directory for discovered scripts
-            if os.path.exists(self.modus_scripts_dir) and os.path.isdir(self.modus_scripts_dir):
+            if os.path.exists(self.modus_scripts_dir) and os.path.isdir(
+                self.modus_scripts_dir
+            ):
                 try:
                     self._scan_directory_for_scripts(self.modus_scripts_dir, new_cache)
                 except (PermissionError, FileNotFoundError, OSError) as e:
-                    print(f"BashScriptsPlugin: Error scanning Modus scripts directory: {e}")
+                    print(
+                        f"BashScriptsPlugin: Error scanning Modus scripts directory: {e}"
+                    )
 
             # Update cache atomically
             self._scripts_cache = new_cache
@@ -228,11 +241,13 @@ class BashScriptsPlugin(PluginBase):
                             cache[script_name] = {
                                 "path": script_path,
                                 "name": script_name,
-                                "description": self._get_script_description(script_path),
+                                "description": self._get_script_description(
+                                    script_path
+                                ),
                                 "type": "discovered",
                                 "executable": os.access(script_path, os.X_OK),
                                 "args": [],
-                                "category": os.path.basename(directory)
+                                "category": os.path.basename(directory),
                             }
 
         except (PermissionError, FileNotFoundError, OSError) as e:
@@ -244,14 +259,16 @@ class BashScriptsPlugin(PluginBase):
         """Check if a file is a bash script."""
         try:
             # Check file extension first (most common case)
-            if file_path.endswith(('.sh', '.bash')):
+            if file_path.endswith((".sh", ".bash")):
                 return True
 
             # For files without extension, check shebang
             try:
-                with open(file_path, 'rb') as f:
-                    first_line = f.readline(100).decode('utf-8', errors='ignore')
-                    if first_line.startswith('#!') and ('bash' in first_line or 'sh' in first_line):
+                with open(file_path, "rb") as f:
+                    first_line = f.readline(100).decode("utf-8", errors="ignore")
+                    if first_line.startswith("#!") and (
+                        "bash" in first_line or "sh" in first_line
+                    ):
                         return True
             except (PermissionError, FileNotFoundError, UnicodeDecodeError):
                 pass
@@ -263,13 +280,13 @@ class BashScriptsPlugin(PluginBase):
     def _get_script_description(self, script_path: str) -> str:
         """Extract description from script comments."""
         try:
-            with open(script_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(script_path, "r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
 
                 # Look for description in first few comment lines
                 for line in lines[:10]:
                     line = line.strip()
-                    if line.startswith('#') and not line.startswith('#!'):
+                    if line.startswith("#") and not line.startswith("#!"):
                         # Remove leading # and whitespace
                         desc = line[1:].strip()
                         if desc and len(desc) > 5:  # Meaningful description
@@ -284,7 +301,9 @@ class BashScriptsPlugin(PluginBase):
         query = query_string.strip()
 
         # Start background update if needed (non-blocking)
-        if not self._scripts_cache or (time.time() - self._last_cache_update > self._cache_update_interval):
+        if not self._scripts_cache or (
+            time.time() - self._last_cache_update > self._cache_update_interval
+        ):
             self._start_background_cache_update()
 
         results = []
@@ -313,11 +332,15 @@ class BashScriptsPlugin(PluginBase):
         max_results = 20
 
         # Sort scripts by name for consistent ordering
-        sorted_scripts = sorted(self._scripts_cache.items(), key=lambda x: x[1].get("name", ""))
+        sorted_scripts = sorted(
+            self._scripts_cache.items(), key=lambda x: x[1].get("name", "")
+        )
 
         # Add scripts (limit to max_results)
         for script_name, script_info in sorted_scripts:
-            script_results = self._create_script_results_with_args(script_name, script_info, 0.8)
+            script_results = self._create_script_results_with_args(
+                script_name, script_info, 0.8
+            )
             for script_result in script_results:
                 if len(results) < max_results:
                     results.append(script_result)
@@ -345,7 +368,10 @@ class BashScriptsPlugin(PluginBase):
             description_lower = script_info.get("description", "").lower()
 
             # Skip if no match at all
-            if query_lower not in script_name_lower and query_lower not in description_lower:
+            if (
+                query_lower not in script_name_lower
+                and query_lower not in description_lower
+            ):
                 continue
 
             # Categorize matches
@@ -359,11 +385,15 @@ class BashScriptsPlugin(PluginBase):
                 description_matches.append((script_name, script_info, 0.5))
 
         # Combine results in priority order
-        all_matches = exact_matches + prefix_matches + partial_matches + description_matches
+        all_matches = (
+            exact_matches + prefix_matches + partial_matches + description_matches
+        )
 
         # Convert to Result objects
         for script_name, script_info, relevance in all_matches:
-            script_results = self._create_script_results_with_args(script_name, script_info, relevance)
+            script_results = self._create_script_results_with_args(
+                script_name, script_info, relevance
+            )
             for script_result in script_results:
                 if len(results) < max_results:
                     results.append(script_result)
@@ -387,10 +417,12 @@ class BashScriptsPlugin(PluginBase):
             description_lower = info["description"].lower()
 
             # Check for exact match or partial match
-            if (query_lower == cmd_lower or
-                cmd_lower.startswith(query_lower) or
-                query_lower in cmd_lower or
-                query_lower in description_lower):
+            if (
+                query_lower == cmd_lower
+                or cmd_lower.startswith(query_lower)
+                or query_lower in cmd_lower
+                or query_lower in description_lower
+            ):
 
                 relevance = 1.0 if query_lower == cmd_lower else 0.9
 
@@ -401,7 +433,11 @@ class BashScriptsPlugin(PluginBase):
                     action=self._create_power_action(info["profile"]),
                     relevance=relevance,
                     plugin_name=self.display_name,
-                    data={"command": cmd, "profile": info["profile"], "type": "power_manager"}
+                    data={
+                        "command": cmd,
+                        "profile": info["profile"],
+                        "type": "power_manager",
+                    },
                 )
                 results.append(result)
 
@@ -419,7 +455,11 @@ class BashScriptsPlugin(PluginBase):
                 action=self._create_power_action(info["profile"]),
                 relevance=0.8,
                 plugin_name=self.display_name,
-                data={"command": cmd, "profile": info["profile"], "type": "power_manager"}
+                data={
+                    "command": cmd,
+                    "profile": info["profile"],
+                    "type": "power_manager",
+                },
             )
             results.append(result)
 
@@ -427,6 +467,7 @@ class BashScriptsPlugin(PluginBase):
 
     def _create_power_action(self, profile: str):
         """Create an action function for setting power profile."""
+
         def action():
             success = self._set_power_profile(profile)
             if success:
@@ -439,16 +480,21 @@ class BashScriptsPlugin(PluginBase):
                     if app and hasattr(app, "launcher"):
                         launcher = app.launcher
                         if launcher and hasattr(launcher, "search_entry"):
+
                             def clear_search():
                                 launcher.search_entry.set_text("")
                                 return False
+
                             # Use a small delay to ensure the action completes first
                             GLib.timeout_add(50, clear_search)
                 except Exception as e:
                     print(f"BashScriptsPlugin: Could not clear search query: {e}")
+
         return action
 
-    def _create_script_result(self, script_name: str, script_info: Dict, relevance: float) -> Result:
+    def _create_script_result(
+        self, script_name: str, script_info: Dict, relevance: float
+    ) -> Result:
         """Create a Result object for a script."""
         script_path = script_info.get("path", "")
         description = script_info.get("description", "")
@@ -465,7 +511,9 @@ class BashScriptsPlugin(PluginBase):
         if not executable:
             subtitle_parts.append("(not executable)")
 
-        subtitle = " | ".join(subtitle_parts) if subtitle_parts else f"Execute: {script_name}"
+        subtitle = (
+            " | ".join(subtitle_parts) if subtitle_parts else f"Execute: {script_name}"
+        )
 
         # Choose icon based on script type and status
         if not executable:
@@ -482,10 +530,16 @@ class BashScriptsPlugin(PluginBase):
             action=self._create_script_action(script_name, script_info),
             relevance=relevance,
             plugin_name=self.display_name,
-            data={"script_name": script_name, "script_path": script_path, "type": script_type}
+            data={
+                "script_name": script_name,
+                "script_path": script_path,
+                "type": script_type,
+            },
         )
 
-    def _create_script_results_with_args(self, script_name: str, script_info: Dict, relevance: float) -> List[Result]:
+    def _create_script_results_with_args(
+        self, script_name: str, script_info: Dict, relevance: float
+    ) -> List[Result]:
         """Create multiple Result objects for scripts that support arguments."""
         results = []
 
@@ -495,7 +549,7 @@ class BashScriptsPlugin(PluginBase):
             variants = [
                 ("-rgb", "Pick RGB color"),
                 ("-hex", "Pick HEX color"),
-                ("-hsv", "Pick HSV color")
+                ("-hsv", "Pick HSV color"),
             ]
 
             for arg, desc in variants:
@@ -503,32 +557,48 @@ class BashScriptsPlugin(PluginBase):
                     title=f"{script_name} {arg}",
                     subtitle=f"{desc} | [scripts]",
                     icon_markup=icons.terminal,
-                    action=self._create_script_action_with_args(script_name, script_info, [arg]),
-                    relevance=relevance + 0.1,  # Slightly higher relevance for specific variants
+                    action=self._create_script_action_with_args(
+                        script_name, script_info, [arg]
+                    ),
+                    relevance=relevance
+                    + 0.1,  # Slightly higher relevance for specific variants
                     plugin_name=self.display_name,
-                    data={"script_name": script_name, "script_path": script_info.get("path", ""), "type": script_info.get("type", "discovered"), "args": [arg]}
+                    data={
+                        "script_name": script_name,
+                        "script_path": script_info.get("path", ""),
+                        "type": script_info.get("type", "discovered"),
+                        "args": [arg],
+                    },
                 )
                 results.append(variant_result)
         else:
             # For other scripts, create the basic result
-            basic_result = self._create_script_result(script_name, script_info, relevance)
+            basic_result = self._create_script_result(
+                script_name, script_info, relevance
+            )
             results.append(basic_result)
 
         return results
 
     def _create_script_action(self, script_name: str, script_info: Dict):
         """Create an action function for executing a script."""
+
         def action():
             self._execute_script(script_name, script_info)
+
         return action
 
-    def _create_script_action_with_args(self, script_name: str, script_info: Dict, args: List[str]):
+    def _create_script_action_with_args(
+        self, script_name: str, script_info: Dict, args: List[str]
+    ):
         """Create an action function for executing a script with specific arguments."""
+
         def action():
             # Create a modified script_info with the specific arguments
             modified_script_info = script_info.copy()
             modified_script_info["args"] = args
             self._execute_script(script_name, modified_script_info)
+
         return action
 
     def _execute_script(self, script_name: str, script_info: Dict):
@@ -549,4 +619,3 @@ class BashScriptsPlugin(PluginBase):
 
         except Exception as e:
             print(f"BashScriptsPlugin: Error executing script '{script_name}': {e}")
-

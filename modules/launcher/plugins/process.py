@@ -342,7 +342,6 @@ class ProcessPlugin(PluginBase):
                     if self._kill_process(pid, silent=True):
                         killed_count += 1
 
-
         except Exception as e:
             print(f"✗ Error killing process group: {e}")
 
