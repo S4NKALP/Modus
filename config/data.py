@@ -12,8 +12,6 @@ APP_NAME_CAP = "Modus"
 
 ALLOWED_PLAYERS = ["vlc", "cmus", "firefox", "spotify", "chromium", "vivaldi", "brave"]
 
-NOTIF_POS_KEY = "notif_pos"
-NOTIF_POS_DEFAULT = "Top"
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
 
@@ -28,9 +26,7 @@ CURRENT_WIDTH = screen.get_width()
 CURRENT_HEIGHT = screen.get_height()
 
 
-# WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example")
-WALLPAPERS_DIR_DEFAULT = os.path.join(HOME_DIR, "Pictures", "wallpapers")
-
+WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example")
 CONFIG_FILE = get_relative_path("../config/assets/config.json")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
@@ -66,7 +62,7 @@ if os.path.exists(CONFIG_FILE):
     DOCK_AUTO_HIDE = config.get("dock_auto_hide", True)
     DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", False)
     DOCK_THEME = config.get("dock_theme", "Pills")
-    DOCK_ICON_SIZE = config.get("dock_icon_size", 20)
+    DOCK_ICON_SIZE = config.get("dock_icon_size", 28)
     WORKSPACE_NUMS = config.get("workspace_nums", False)
     WORKSPACE_USE_CHINESE_NUMERAL = config.get("workspace_use_chinese_numerals", False)
     WORKSPACE_DOTS = config.get("workspace_dots", False)
@@ -75,8 +71,6 @@ if os.path.exists(CONFIG_FILE):
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get(
         "dock_hide_special_workspace_apps", True
     )
-
-    NOTIF_POS = config.get(NOTIF_POS_KEY, NOTIF_POS_DEFAULT)
 
     DOCK_COMPONENTS_VISIBILITY = {
         "workspace": config.get("dock_workspace_visible", True),
@@ -105,9 +99,8 @@ else:
     DOCK_AUTO_HIDE = True
     TERMINAL_COMMAND = "kitty -e"
     DOCK_THEME = "Pills"
-    DOCK_ICON_SIZE = 20
+    DOCK_ICON_SIZE = 30
     WINDOW_SWITCHER_ITEMS_PER_ROW = 13
-    NOTIF_POS = NOTIF_POS_DEFAULT
     DOCK_HIDE_SPECIAL_WORKSPACE = True
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = True
 
