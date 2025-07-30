@@ -2,7 +2,7 @@
       background-color: alpha(var(--surface), 0.6);
   padding: 12px 20px;
   margin: 70px;
-    min-height: 180px;
+    min-height: 200px;
   border-radius: 16px;
 }
 
