@@ -13,8 +13,6 @@ from modules.panel.components.enhanced_system_tray import apply_enhanced_system_
 from modules.panel.components.indicators import Indicators
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
-from utils.roam import modus_service
-from modules.notification import EnvNoti
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
@@ -50,8 +48,6 @@ class Panel(Window):
         )
 
         self.tray = SystemTray(name="system-tray", spacing=4, icon_size=20)
-
-        # modus_service.connect("show-notificationcenter-changed", envnoticenter.toggle_mousecapture)
 
         self.tray_revealer = Revealer(
             name="tray-revealer",
