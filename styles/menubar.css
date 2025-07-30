@@ -1,0 +1,21 @@
+#menu-separator {
+  color: red;
+}
+
+#dropdown-content {
+  background-color: var(--shadow);
+  border-radius: 8px;
+}
+
+#dropdown-label {
+  margin-left: 10px;
+  padding: 4px;
+}
+
+#dropdown-item {
+  border-radius: 4px;
+}
+
+#dropdown-item:hover {
+  background-color: var(--surface-bright);
+}

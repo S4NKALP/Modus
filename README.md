@@ -1,7 +1,3 @@
-<div align="center">
-  <h1>It may not work on your machine</h1>
-</div>
-
 <p align="center">
   <img src="assets/modus.png" height="200" alt="Logo">
 </p>
@@ -33,93 +29,14 @@
 </figure>
 <br>
 
-> [!WARNING]
-> This configuration is tailored to my preferences with little regard for others. It's not designed to be "good"—just comfortable for me.
-
-<h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Package.png" alt="Package" width="25" height="25" /></sub> Installation</h2>
-
-> [!NOTE]
-> You need a functioning Hyprland installation.
-
-### Arch Linux
-
-> [!NOTE]
-> You need to clone it into the Home directory.
-
-> [!TIP]
-> This command also works for updating an existing installation!
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/S4NKALP/Modus/main/install.sh | bash
-```
-
-### Manual Installation
-
-1. Dependencies:
-
-```sh
-python-fabric-git fabric-cli gnome-bluetooth-3.0 wf-recorder cliphist wl-clipboard grimblast power-profile-daemon adw-gtk-theme brightnessctl swww hypridle hyprlock imagemagick libnotify swappy libadwaita wlinhibit
-```
-
-```sh
-python-materialyoucolor-git python-pillow python-toml python-ijson python-setproctitle python-requests python-numpy python-pywayland python-pyxdg
-```
-
-```sh
-ttf-font-awesome otf-font-awesome ttf-material-symbols-variable-git ttf-google-sans ttf-opensans ttf-robot
-```
-
-- Icon:
-
-```sh
-git clone https://github.com/vinceliuice/Tela-icon-theme
-cd Tela-icon-theme
-./install.sh nord
-```
-
-<h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Camera%20with%20Flash.png" alt="Camera with Flash" width="25" height="25" /></sub> Screenshots</h2>
-
-<table align="center">
-
-  <tr>
-    <td colspan="1"><img src="assets/screenshots/bluetooth.png"></td>
-    <td colspan="1"><img src="assets/screenshots/cliphist.png"></td>
-    <td colspan="1"><img src="assets/screenshots/wallpaper.png"></td>
-  </tr>
-<tr>
-    <td colspan="1"><img src="assets/screenshots/todo.png"></td>
-    <td colspan="1"><img src="assets/screenshots/shrunner.png"></td>
-    <td colspan="1"><img src="assets/screenshots/osd.png"></td>
-</tr>
-<tr>
-    <td colspan="1"><img src="assets/screenshots/powermenu.png"></td>
-    <td colspan="1"><img src="assets/screenshots/notification.png"></td>
-    <td colspan="1"><img src="assets/screenshots/emoji.png"></td>
-</tr>
-
-</table>
-
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
-- [x] App Launcher
-- [x] Power Menu
-- [x] Wallpaper Picker
-- [x] Todo
-- [x] Bluetooth Manager
-- [x] Clipboard Manager
-- [x] OSD
-- [x] Sh Runner
-- [x] Emoji Picker
-- [x] Update Screenshot
-- [x] Installation script
-- [x] Network Manager
-- [x] Calendar
-- [x] Power Manager
+- [x] Launcher
 - [x] Dock
-- [x] Web search in Launcher
-- [ ] Notification Panel
-- [ ] Improve CSS Styling
-- [ ] Update Screenshot
+- [ ] Application Switcher
+- [ ] Notification
+- [ ] Control Center
+- [ ] Panel Widget
 
 ## Special Thanks
 
@@ -128,6 +45,5 @@ A big thank you to the following people for their incredible help with code and 
 - [darsh](https://github.com/its-darsh): for creating Fabric, which made everything possible.
 - [gummy bear album](https://github.com/muhchaudhary): for sharing fantastic code snippets that saved me time and effort.
 - [axenide](https://github.com/Axenide): for the amazing config that not only inspired parts of mine but also provided some gems I couldn’t resist borrowing.
-- [koeqaife](https://github.com/koeqaife): thanks for material-colors scripts
 
 I truly appreciate your support
