@@ -10,14 +10,14 @@ from modules.panel.main import Panel
 from modules.dock import Dock
 from modules.switcher import ApplicationSwitcher
 from modules.launcher.main import Launcher
-
+from modules.osd import OSD
 
 for log in [
     "fabric.hyprland.widgets",
     "fabric.audio.service",
     "fabric.bluetooth.service",
     "services.network",
-    "utils.wayland"
+    "utils.wayland",
 ]:
     logger.disable(log)
 
@@ -36,6 +36,7 @@ if __name__ == "__main__":
     switcher = ApplicationSwitcher()
     launcher = Launcher()
     panel.launcher = launcher
+    osd = OSD()
 
     # Set corners visibility based on config
     # corners_visible = config.get("corners_visible", True)
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     _ = color_css_file.connect("changed", lambda *_: set_css())
 
     # Make sure corners is added to the app
-    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher)
+    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher, osd)
 
     def set_css():
         app.set_stylesheet_from_file(

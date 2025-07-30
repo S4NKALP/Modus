@@ -1,0 +1,51 @@
+#osd {
+  background: var(--shadow);
+  padding: 12px 20px;
+  margin: 70px;
+  border-radius: 16px;
+}
+
+#osd scale {
+  min-width: 150px;
+}
+
+#osd trough {
+  background: var(--surface);
+  min-height: 10px;
+  margin-right: 4px;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 16px;
+}
+
+#osd trough highlight {
+  border-radius: 100px 0px 0px 100px;
+  background: var(--primary);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#osd.muted trough highlight,
+#osd.muted slider,
+#osd scale.muted trough highlight,
+#osd scale.muted slider {
+  background-color: var(--surface-bright);
+}
+
+#osd slider {
+  background-color: var(--primary);
+  background-size: 20px 20px;
+  min-width: 4px;
+  min-height: 8px;
+  border-radius: 2px;
+  padding: 0px;
+  margin: -14px 0;
+  box-shadow:
+    -4px 0 0px 2px var(--shadow),
+    4px 0 0px 2px var(--shadow);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#brighntess-icons.muted,
+#vol-icon.muted,
+#mic-icon.muted {
+  color: var(--outline);
+}

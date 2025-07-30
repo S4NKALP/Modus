@@ -1,54 +1,19 @@
-from fabric.system_tray.widgets import SystemTray, SystemTrayItem
-from fabric.utils import exec_shell_command, get_relative_path
+from fabric.system_tray.widgets import SystemTray
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
-from gi.repository import Gtk
 from fabric.widgets.svg import Svg
 from modules.panel.components.indicators import Indicators
 from modules.panel.components.menubar import MenuBar
+from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from utils.wayland import WaylandWindow as Window
 
-original_do_update_properties = SystemTrayItem.do_update_properties
-
-
-def patched_do_update_properties(self, *_):
-    # Try default GTK theme first
-    icon_name = self._item.icon_name
-    attention_icon_name = self._item.attention_icon_name
-
-    if self._item.status == "NeedsAttention" and attention_icon_name:
-        preferred_icon_name = attention_icon_name
-    else:
-        preferred_icon_name = icon_name
-
-    # Try to load from default GTK theme
-    if preferred_icon_name:
-        try:
-            default_theme = Gtk.IconTheme.get_default()
-            if default_theme.has_icon(preferred_icon_name):
-                pixbuf = default_theme.load_icon(
-                    preferred_icon_name, self._icon_size, Gtk.IconLookupFlags.FORCE_SIZE
-                )
-                if pixbuf:
-                    self._image.set_from_pixbuf(pixbuf)
-                    # Set tooltip
-                    tooltip = self._item.tooltip
-                    self.set_tooltip_markup(
-                        tooltip.description or tooltip.title or self._item.title.title()
-                        if self._item.title
-                        else "Unknown"
-                    )
-                    return
-        except:
-            pass
-    original_do_update_properties(self, *_)
-
-
-SystemTrayItem.do_update_properties = patched_do_update_properties
+# Apply enhanced system tray icon handling
+apply_enhanced_system_tray()
 
 
 class Panel(Window):
