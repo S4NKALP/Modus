@@ -39,7 +39,7 @@ class AnimatedScale(Scale):
 
 class BrightnessOSDContainer(Box):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, orientation="v", spacing=12, name="osd")
+        super().__init__(**kwargs, orientation="v", spacing=3, name="osd")
         self.brightness_service = Brightness.get_initial()
         self.scale = AnimatedScale(
             marks=(ScaleMark(value=i) for i in range(0, 101, 10)),
@@ -51,7 +51,7 @@ class BrightnessOSDContainer(Box):
         )
         self.osd_window_image = Svg(
             get_relative_path("../config/assets/icons/brightness.svg"),
-            size=(64, 150),
+            size=(84, 150),
             name="osd-image",
             h_align="center",
             v_align="center",
@@ -72,8 +72,17 @@ class BrightnessOSDContainer(Box):
         if current_brightness != 0:
             self.scale.animate_value(normalized_brightness)
 
+    def get_svg(self, value):
+        b_level = 0 if value == 0 else min(int(math.ceil(value / 33)), 3)
+        return b_level
+
     def on_brightness_changed(self, _sender: any, value: float, *_args) -> None:
         normalized_brightness = self._normalize_brightness(value)
+        self.osd_window_image.set_from_file(
+            get_relative_path(
+                f"../config/assets/icons/brightness/brightness-{self.get_svg(normalized_brightness)}.svg"
+            )
+        )
         self.scale.animate_value(normalized_brightness)
 
     def _normalize_brightness(self, brightness: float) -> float:
