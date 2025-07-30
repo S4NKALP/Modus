@@ -267,7 +267,7 @@ class BookmarksPlugin(PluginBase):
             return [
                 Result(
                     title="No Bookmarks Found",
-                    subtitle="Use 'add <title> <url>' to add your first bookmark",
+                    subtitle="Use 'add <title> <url>' to add first bookmark",
                     icon_markup=icons.info,
                     action=lambda: None,
                     relevance=1.0,
@@ -297,7 +297,7 @@ class BookmarksPlugin(PluginBase):
             return [
                 Result(
                     title="No Bookmarks Yet",
-                    subtitle="Use 'add <title> <url>' to add your first bookmark",
+                    subtitle="Use 'add <title> <url>' to add first bookmark",
                     icon_markup=icons.info,
                     action=lambda: None,
                     relevance=1.0,
@@ -378,10 +378,15 @@ class BookmarksPlugin(PluginBase):
         )
 
         if already_exists:
+            # Truncate URL for display to prevent launcher resize
+            display_url = normalized_url
+            if len(display_url) > 35:
+                display_url = display_url[:32] + "..."
+
             return [
                 Result(
                     title="Bookmark Already Exists",
-                    subtitle=f"A bookmark with URL '{normalized_url}' already exists",
+                    subtitle=f"URL '{display_url}' already exists",
                     icon_markup=icons.alert,
                     action=lambda: None,
                     relevance=1.0,
@@ -392,13 +397,27 @@ class BookmarksPlugin(PluginBase):
 
         # Show add action - will execute on Enter
         domain = self.bookmark_manager._extract_domain(normalized_url)
-        subtitle = f"Click to add bookmark: {domain}"
+
+        # Truncate domain if too long
+        if len(domain) > 25:
+            domain = domain[:22] + "..."
+
+        subtitle = f"Click to add: {domain}"
         if description:
+            # Truncate description to prevent launcher resize
+            max_desc_len = 35 - len(domain)  # Account for domain + separator
+            if len(description) > max_desc_len:
+                description = description[:max_desc_len-3] + "..."
             subtitle += f" • {description}"
+
+        # Truncate title for display
+        display_title = title
+        if len(display_title) > 25:
+            display_title = display_title[:22] + "..."
 
         return [
             Result(
-                title=f"Add bookmark for '{title}'",
+                title=f"Add bookmark '{display_title}'",
                 subtitle=subtitle,
                 icon_markup=icons.plus,
                 action=lambda: self._add_bookmark_action(title, url, description),
@@ -445,10 +464,19 @@ class BookmarksPlugin(PluginBase):
         title = bookmark.get("title", "Untitled")
         domain = self.bookmark_manager._extract_domain(bookmark.get("url", ""))
 
+        # Truncate title and domain for display
+        display_title = title
+        if len(display_title) > 25:
+            display_title = display_title[:22] + "..."
+
+        display_domain = domain
+        if len(display_domain) > 30:
+            display_domain = display_domain[:27] + "..."
+
         return [
             Result(
-                title=f"Remove bookmark '{title}'?",
-                subtitle=f"Click to confirm deletion: {domain}",
+                title=f"Remove '{display_title}'?",
+                subtitle=f"Click to confirm: {display_domain}",
                 icon_markup=icons.trash,
                 action=lambda: self._remove_bookmark_action(identifier),
                 relevance=1.0,
@@ -490,10 +518,20 @@ class BookmarksPlugin(PluginBase):
             for bookmark in bookmarks[:3]:
                 title = bookmark.get("title", "Untitled")
                 domain = self._extract_domain(bookmark.get("url", ""))
+
+                # Truncate title and domain for consistent display
+                display_title = title
+                if len(display_title) > 20:
+                    display_title = display_title[:17] + "..."
+
+                display_domain = domain
+                if len(display_domain) > 20:
+                    display_domain = display_domain[:17] + "..."
+
                 results.append(
                     Result(
-                        title=f"remove {title}",
-                        subtitle=f"Click to remove: {title} ({domain})",
+                        title=f"remove {display_title}",
+                        subtitle=f"Click to remove: {display_title} ({display_domain})",
                         icon_markup=icons.trash,
                         action=lambda t=title: self._remove_bookmark_action(t),
                         relevance=0.8,
@@ -592,16 +630,29 @@ class BookmarksPlugin(PluginBase):
             url = bookmark.get("url", "")
             description = bookmark.get("description", "")
 
-            # Truncate long titles
-            if len(title) > 60:
-                title = title[:57] + "..."
+            # Truncate long titles to prevent launcher resize
+            if len(title) > 45:
+                title = title[:42] + "..."
 
             # Create subtitle with domain and description
             domain = self._extract_domain(url)
+
+            # Truncate domain if too long
+            if len(domain) > 30:
+                domain = domain[:27] + "..."
+
             if description:
+                # Truncate description to prevent launcher resize
+                max_desc_len = 50 - len(domain)  # Account for domain + separator
+                if len(description) > max_desc_len:
+                    description = description[:max_desc_len-3] + "..."
                 subtitle = f"{domain} • {description}"
             else:
                 subtitle = domain
+
+            # Final subtitle length check to ensure consistent launcher size
+            if len(subtitle) > 60:
+                subtitle = subtitle[:57] + "..."
 
             return Result(
                 title=title,

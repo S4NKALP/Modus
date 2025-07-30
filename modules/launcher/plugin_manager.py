@@ -91,7 +91,6 @@ class PluginManager:
             "otp",
             "password",
             "bookmarks",
-            "process",
             "bash_scripts",
             "tmux",
         ]

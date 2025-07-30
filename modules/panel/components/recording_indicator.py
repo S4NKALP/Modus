@@ -1,10 +1,12 @@
+import subprocess
+import time
+
+from gi.repository import GLib
+
+from fabric.utils import get_relative_path
+from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-import time
-import subprocess
-from fabric.widgets.box import Box
-from gi.repository import GLib
-from fabric.utils import get_relative_path
 from fabric.widgets.svg import Svg
 
 
@@ -20,12 +22,18 @@ class RecordingIndicator(Button):
             size=24,
             svg_file=get_relative_path("../../../config/assets/icons/media-record.svg"),
         )
-        self.time_label = Label(name="recording-time-label", markup="00:00")
+        self.time_label = Label(
+            name="recording-time-label",
+            markup="00:00",
+            max_width_chars=5,
+            ellipsize="none"
+        )
 
         self.recording_box = Box(
             orientation="h",
             spacing=2,
-            children=self.recording_icon,
+            children=[self.recording_icon, self.time_label],
+            size=(80, -1), 
         )
 
         self.add(self.recording_box)
@@ -75,3 +83,25 @@ class RecordingIndicator(Button):
                 self.recording_start_time = None
 
         return True  # Continue the timeout
+
+    def get_recording_start_time(self):
+        """Get the recording start time from the file"""
+        try:
+            with open("/tmp/recording_start_time.txt", "r") as f:
+                return float(f.read().strip())
+        except Exception:
+            return None
+
+    def on_stop_recording(self, *args):
+        try:
+            subprocess.Popen([self.script_path, "record", "stop"])
+        except Exception as e:
+            print(f"Error stopping recording: {e}")
+
+    def _delayed_init(self):
+        try:
+            self.check_recording_status()
+            self.timeout_id = GLib.timeout_add(5000, self.check_recording_status)
+        except Exception as e:
+            print(f"[DEBUG] Error in delayed recording indicator init: {e}")
+        return False  # Don't repeat this timeout

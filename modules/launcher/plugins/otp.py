@@ -82,10 +82,11 @@ class OTPPlugin(PluginBase):
         """Start background thread for auto-refreshing tokens."""
 
         def refresh_loop():
-            while not self.stop_refresh.wait(1):
+            while not self.stop_refresh.wait(5):
                 current_time = time.time()
-                if current_time - self.last_update >= 1:
+                if current_time - self.last_update >= 5:
                     self.last_update = current_time
+                    # Only refresh if we have secrets and launcher is likely active
                     if self.secrets:
                         try:
                             self._selective_force_refresh()
