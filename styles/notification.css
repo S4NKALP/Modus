@@ -43,7 +43,7 @@
 }
 
 #noti-image image{
-    border-radius: 16px;
+    border-radius: 25px;
 }
 #notification-action:hover {
     background-color: #007aff;         /* macOS-style blue */
