@@ -1,17 +1,18 @@
 #osd {
-  background: var(--shadow);
+      background-color: alpha(var(--surface), 0.6);
   padding: 12px 20px;
   margin: 70px;
+    min-height: 180px;
   border-radius: 16px;
 }
 
 #osd scale {
-  min-width: 150px;
+  min-width: 180px;
 }
 
 #osd trough {
   background: var(--surface);
-  min-height: 10px;
+  min-height: 30px;
   margin-right: 4px;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   border-radius: 16px;
@@ -28,20 +29,6 @@
 #osd scale.muted trough highlight,
 #osd scale.muted slider {
   background-color: var(--surface-bright);
-}
-
-#osd slider {
-  background-color: var(--primary);
-  background-size: 20px 20px;
-  min-width: 4px;
-  min-height: 8px;
-  border-radius: 2px;
-  padding: 0px;
-  margin: -14px 0;
-  box-shadow:
-    -4px 0 0px 2px var(--shadow),
-    4px 0 0px 2px var(--shadow);
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #brighntess-icons.muted,
