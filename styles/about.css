@@ -1,0 +1,70 @@
+#about-menu {
+	background-color: alpha(#111, 0.1);
+	box-shadow: inset 0 -0.5px 0 .5px alpha(#555, 0.7), inset 0 0.5px 0 .5px alpha(#777, 0.7);
+	border: 1px solid alpha(#111, 0.3);
+	border-top: none;
+	border-radius: 1.25rem;
+	padding: 2rem;
+}
+
+#about-options {
+	background-color: alpha(#333, 0.9);
+	border-radius: 15px;
+	padding: 2rem;
+}
+
+#about-logo-box {
+	margin-top: 2rem;
+	margin-bottom: 2rem;
+}
+
+#about-button-box {
+	padding: 1rem;
+}
+
+#about-info-title-box {
+	padding-left: 4rem;
+}
+
+#about-name-label {
+	font-size: 24px;
+	margin: 0px;
+	font-weight: 600;
+}
+
+#about-date-label {
+	font-size: 11px;
+	margin: 0px;
+	color: #ddd;
+	font-weight: 400;
+	margin-bottom: 2rem;
+}
+
+#about-chip-title-label,
+#about-so-title-label,
+#about-mem-title-label {
+	font-size: 12px;
+	margin: 0px;
+	margin-right: 10px;
+	font-weight: 500;
+}
+
+#more-info-button {
+	background-color: #2369ff;
+	border-radius: 5px;
+	padding: 0px 10px;
+	margin: 1px 2px;
+	transition: all 200ms ease-in-out;
+}
+
+#more-info-button:hover {
+	background-color: rgb(72, 130, 255);
+}
+
+#more-info-button label {
+	font-size: 12px;
+	margin: 0px;
+	font-weight: 400;
+	color: #ddd;
+}
+
