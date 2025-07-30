@@ -7,7 +7,10 @@ from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scale import Scale, ScaleMark
+from fabric.widgets.svg import Svg
+from fabric.utils.helpers import get_relative_path
 from gi.repository import GLib, GObject
+import math
 from services.brightness import Brightness
 from utils.animator import Animator
 from utils.wayland import WaylandWindow as Window
@@ -36,9 +39,8 @@ class AnimatedScale(Scale):
 
 class BrightnessOSDContainer(Box):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, orientation="h", spacing=12, name="osd")
+        super().__init__(**kwargs, orientation="v", spacing=12, name="osd")
         self.brightness_service = Brightness.get_initial()
-        self.icon = Label(markup=icons.brightness, name="brighntess-icons")
         self.scale = AnimatedScale(
             marks=(ScaleMark(value=i) for i in range(0, 101, 10)),
             value=70,
@@ -47,8 +49,17 @@ class BrightnessOSDContainer(Box):
             increments=(1, 1),
             orientation="h",
         )
+        self.osd_window_image = Svg(
+            get_relative_path("../config/assets/icons/brightness.svg"),
+            size=(64, 150),
+            name="osd-image",
+            h_align="center",
+            v_align="center",
+            h_expand=True,
+            v_expand=True,
+        )
 
-        self.add(self.icon)
+        self.add(self.osd_window_image)
         self.add(self.scale)
         self.update_brightness()
 
@@ -60,27 +71,13 @@ class BrightnessOSDContainer(Box):
         normalized_brightness = self._normalize_brightness(current_brightness)
         if current_brightness != 0:
             self.scale.animate_value(normalized_brightness)
-        self.update_icon(normalized_brightness)
-
-    def update_icon(self, brightness_percentage: float) -> None:
-        icon_name = self.get_brightness_icon(brightness_percentage)
-        self.icon.set_label(icon_name)
 
     def on_brightness_changed(self, _sender: any, value: float, *_args) -> None:
         normalized_brightness = self._normalize_brightness(value)
         self.scale.animate_value(normalized_brightness)
-        self.update_icon(normalized_brightness)
 
     def _normalize_brightness(self, brightness: float) -> float:
         return (brightness / self.brightness_service.max_screen) * 100
-
-    def get_brightness_icon(self, brightness_percentage: float) -> str:
-        if brightness_percentage >= 67:
-            return icons.brightness_high
-        elif brightness_percentage >= 34:
-            return icons.brightness_medium
-        else:
-            return icons.brightness_low
 
 
 class AudioOSDContainer(Box):
@@ -89,22 +86,34 @@ class AudioOSDContainer(Box):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, orientation="h", spacing=13, name="osd")
+        super().__init__(
+            **kwargs,
+            orientation="v",
+            name="osd",
+        )
         self.audio = Audio()
-        self.icon = Label(markup=icons.vol_high, name="vol-icon")
         self.scale = AnimatedScale(
-            marks=(ScaleMark(value=i) for i in range(1, 100, 10)),
             value=70,
+            marks=(ScaleMark(value=i) for i in range(1, 100, 10)),
             min_value=0,
             max_value=100,
             increments=(1, 1),
             orientation="h",
         )
+        self.osd_window_image = Svg(
+            get_relative_path("../config/assets/icons/audio-volume.svg"),
+            size=(64, 150),
+            name="osd-image",
+            h_align="center",
+            v_align="center",
+            h_expand=True,
+            v_expand=True,
+        )
 
         self.previous_volume = None
         self.previous_muted = None
 
-        self.add(self.icon)
+        self.add(self.osd_window_image)
         self.add(self.scale)
         self.sync_with_audio()
 
@@ -121,11 +130,15 @@ class AudioOSDContainer(Box):
             )
             self.audio.speaker.connect("notify::muted", self.on_mute_changed)
 
+    def get_svg(self, value):
+        audio_level = 0 if value == 0 else min(int(math.ceil(value / 33)), 3)
+        return audio_level
+
     def sync_with_audio(self):
         if self.audio.speaker:
             volume = round(self.audio.speaker.volume)
             self.scale.set_value(volume)
-            self.update_icon(volume)
+            # self.update_icon(volume)
             self.previous_volume = volume
             self.previous_muted = self.audio.speaker.muted
 
@@ -134,14 +147,25 @@ class AudioOSDContainer(Box):
             volume = self.scale.value
             if 0 <= volume <= 100:
                 self.audio.speaker.set_volume(volume)
-                self.update_icon(volume)
 
                 if volume == 0 or (self.audio.speaker and self.audio.speaker.muted):
                     self.scale.add_style_class("muted")
-                    self.icon.add_style_class("muted")
+                    volume = 0
+                    self.osd_window_image.set_from_file(
+                        get_relative_path(
+                            f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                        )
+                    )
+
                 else:
+                    self.on_volume_property_changed()
                     self.scale.remove_style_class("muted")
-                    self.icon.remove_style_class("muted")
+                    self.osd_window_image.set_from_file(
+                        get_relative_path(
+                            f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                        )
+                    )
+                    # self.icon.remove_style_class("muted")
 
                 self.emit("volume-changed")
 
@@ -155,7 +179,6 @@ class AudioOSDContainer(Box):
 
     def on_speaker_changed(self, *_):
         self.update_volume()
-        self.update_icon(round(self.audio.speaker.volume))
 
     def on_volume_property_changed(self, *_):
         if self.audio.speaker:
@@ -163,76 +186,34 @@ class AudioOSDContainer(Box):
             if self.previous_volume is None or current_volume != self.previous_volume:
                 self.previous_volume = current_volume
                 self.update_volume()
-                self.update_icon(current_volume)
                 self.emit("volume-changed")
 
     def update_volume(self, *_):
         if self.audio.speaker and not self.is_hovered():
             volume = round(self.audio.speaker.volume)
             self.scale.set_value(volume)
-            self.update_icon(volume)
-
             if volume == 0 or (self.audio.speaker and self.audio.speaker.muted):
                 self.scale.add_style_class("muted")
-                self.icon.add_style_class("muted")
+                volume = 0
+                self.osd_window_image.set_from_file(
+                    get_relative_path(
+                        f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                    )
+                )
             else:
                 self.scale.remove_style_class("muted")
-                self.icon.remove_style_class("muted")
-
-    def update_icon(self, volume):
-        if not self.audio.speaker:
-            return
-
-        vol_high_icon = icons.vol_high
-        vol_medium_icon = icons.vol_medium
-        vol_mute_icon = icons.vol_off
-        vol_off_icon = icons.vol_mute
-
-        if self.audio.speaker and "bluetooth" in self.audio.speaker.icon_name:
-            vol_high_icon = icons.bluetooth_connected
-            vol_medium_icon = icons.bluetooth
-            vol_mute_icon = icons.bluetooth_off
-            vol_off_icon = icons.bluetooth_disconnected
-
-        if self.audio.speaker.muted:
-            self.icon.set_label(vol_mute_icon)
-            self.scale.add_style_class("muted")
-            self.icon.add_style_class("muted")
-        else:
-            if volume == 0:
-                self.scale.add_style_class("muted")
-                self.icon.add_style_class("muted")
-            else:
-                self.scale.remove_style_class("muted")
-                self.icon.remove_style_class("muted")
-
-            if volume >= 67:
-                self.icon.set_label(vol_high_icon)
-            elif volume >= 34:
-                self.icon.set_label(vol_medium_icon)
-            elif volume >= 1:
-                # Use medium for low volumes too
-                self.icon.set_label(vol_medium_icon)
-            else:
-                self.icon.set_label(vol_off_icon)
-
-    def _get_audio_icon_name(self, volume: int) -> str:
-        if volume >= 67:
-            return icons.vol_high
-        elif volume >= 34:
-            return icons.vol_medium
-        elif volume >= 1:
-            return icons.vol_mute
-        else:
-            return icons.vol_off
+                self.osd_window_image.set_from_file(
+                    get_relative_path(
+                        f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                    )
+                )
 
     def on_mute_changed(self, *_):
         if self.audio.speaker:
             current_muted = self.audio.speaker.muted
             if self.previous_muted is None or current_muted != self.previous_muted:
                 self.previous_muted = current_muted
-                self.update_icon(round(self.audio.speaker.volume))
-                GLib.idle_add(lambda: self.emit("volume-changed"))
+                self.emit("volume-changed")
 
 
 class MicrophoneOSDContainer(Box):
@@ -241,9 +222,8 @@ class MicrophoneOSDContainer(Box):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, orientation="h", spacing=13, name="osd")
+        super().__init__(**kwargs, orientation="v", spacing=13, name="osd")
         self.audio = Audio()
-        self.icon = Label(markup=icons.mic, name="mic-icon")
         self.scale = AnimatedScale(
             marks=(ScaleMark(value=i) for i in range(1, 100, 10)),
             value=70,
@@ -253,10 +233,19 @@ class MicrophoneOSDContainer(Box):
             orientation="h",
         )
 
+        self.osd_window_image = Svg(
+            get_relative_path("../config/assets/icons/microphone.svg"),
+            size=(64, 150),
+            name="osd-image",
+            h_align="center",
+            v_align="center",
+            h_expand=True,
+            v_expand=True,
+        )
         self.previous_volume = None
         self.previous_muted = None
 
-        self.add(self.icon)
+        self.add(self.osd_window_image)
         self.add(self.scale)
         self.sync_with_audio()
 
@@ -272,11 +261,14 @@ class MicrophoneOSDContainer(Box):
             )
             self.audio.microphone.connect("notify::muted", self.on_mute_changed)
 
+    def get_svg(self, value):
+        audio_level = 0 if value == 0 else min(int(math.ceil(value / 33)), 3)
+        return audio_level
+
     def sync_with_audio(self):
         if self.audio.microphone:
             volume = round(self.audio.microphone.volume)
             self.scale.set_value(volume)
-            self.update_icon(volume)
             self.previous_volume = volume
             self.previous_muted = self.audio.microphone.muted
 
@@ -285,16 +277,29 @@ class MicrophoneOSDContainer(Box):
             volume = self.scale.value
             if 0 <= volume <= 100:
                 self.audio.microphone.set_volume(volume)
-                self.update_icon(volume)
+                self.osd_window_image.set_from_file(
+                    get_relative_path(
+                        f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                    )
+                )
 
                 if volume == 0 or (
                     self.audio.microphone and self.audio.microphone.muted
                 ):
-                    self.scale.add_style_class("muted")
-                    self.icon.add_style_class("muted")
+                    volume = 0
+                    self.osd_window_image.set_from_file(
+                        get_relative_path(
+                            f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                        )
+                    )
+
                 else:
+                    self.osd_window_image.set_from_file(
+                        get_relative_path(
+                            f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                        )
+                    )
                     self.scale.remove_style_class("muted")
-                    self.icon.remove_style_class("muted")
 
                 self.emit("mic-changed")
 
@@ -308,61 +313,46 @@ class MicrophoneOSDContainer(Box):
 
     def on_microphone_changed(self, *_):
         self.update_volume()
-        self.update_icon(round(self.audio.microphone.volume))
 
     def on_volume_property_changed(self, *_):
         if self.audio.microphone:
             current_volume = round(self.audio.microphone.volume)
             if self.previous_volume is None or current_volume != self.previous_volume:
                 self.previous_volume = current_volume
+                self.osd_window_image.set_from_file(
+                    get_relative_path(
+                        f"../config/assets/icons/mic/microphone-{self.get_svg(current_volume)}.svg"
+                    )
+                )
                 self.update_volume()
-                self.update_icon(current_volume)
                 self.emit("mic-changed")
 
     def update_volume(self, *_):
         if self.audio.microphone and not self.is_hovered():
             volume = round(self.audio.microphone.volume)
             self.scale.set_value(volume)
-            self.update_icon(volume)
 
             if volume == 0 or (self.audio.microphone and self.audio.microphone.muted):
                 self.scale.add_style_class("muted")
-                self.icon.add_style_class("muted")
+                volume = 0
+                self.osd_window_image.set_from_file(
+                    get_relative_path(
+                        f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                    )
+                )
             else:
+                self.osd_window_image.set_from_file(
+                    get_relative_path(
+                        f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                    )
+                )
                 self.scale.remove_style_class("muted")
-                self.icon.remove_style_class("muted")
-
-    def update_icon(self, volume):
-        if not self.audio.microphone:
-            return
-
-        if self.audio.microphone.muted:
-            self.icon.set_label(icons.mic_mute)
-            self.scale.add_style_class("muted")
-            self.icon.add_style_class("muted")
-        else:
-            if volume == 0:
-                self.scale.add_style_class("muted")
-                self.icon.add_style_class("muted")
-            else:
-                self.scale.remove_style_class("muted")
-                self.icon.remove_style_class("muted")
-
-            if volume >= 67:
-                self.icon.set_label(icons.mic)
-            elif volume >= 34:
-                self.icon.set_label(icons.mic)
-            elif volume >= 1:
-                self.icon.set_label(icons.mic)
-            else:
-                self.icon.set_label(icons.mic_mute)
 
     def on_mute_changed(self, *_):
         if self.audio.microphone:
             current_muted = self.audio.microphone.muted
             if self.previous_muted is None or current_muted != self.previous_muted:
                 self.previous_muted = current_muted
-                self.update_icon(round(self.audio.microphone.volume))
                 GLib.idle_add(lambda: self.emit("mic-changed"))
 
 
@@ -382,7 +372,7 @@ class OSD(Window):
 
         self.main_box = Box(
             orientation="v",
-            spacing=13,
+            h_expand=True,
             children=[self.revealer],
         )
 
