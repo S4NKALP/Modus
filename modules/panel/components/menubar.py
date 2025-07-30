@@ -13,13 +13,13 @@ class DropdownWindow(WaylandWindow):
         super().__init__(
             name="dropdown-window",
             title="Menu Dropdown",
-            layer="overlay",  
-            anchor="top left",  
-            exclusivity="none",  
-            margin=f"{y}px 0px 0px {x}px",  
-            visible=False,  
-            all_visible=True,  
-            **kwargs
+            layer="overlay",
+            anchor="top left",
+            exclusivity="none",
+            margin=f"{y}px 0px 0px {x}px",
+            visible=False,
+            all_visible=True,
+            **kwargs,
         )
 
         # Store reference to parent menubar for closing dropdown
@@ -51,14 +51,16 @@ class DropdownWindow(WaylandWindow):
         if event.detail != 2:  # 2 = Gdk.NotifyType.INFERIOR (child widget)
             # Start auto-close timer when mouse leaves
             if not self.auto_close_timer:
-                self.auto_close_timer = GLib.timeout_add(300, self.auto_close_callback)  # 300ms delay
+                self.auto_close_timer = GLib.timeout_add(
+                    300, self.auto_close_callback
+                )  # 300ms delay
         return False
 
     def auto_close_callback(self):
         if self.parent_menubar:
             self.parent_menubar.hide_dropdown()
         self.auto_close_timer = None
-        return False  
+        return False
 
 
 class MenuBar(Box):
@@ -82,38 +84,32 @@ class MenuBar(Box):
         self.action_handler = MenuActionHandler()
 
         # Menu items in macOS style order (excluding the first item which will be dynamic)
-        self.static_menu_items = [
-            "File",
-            "Edit",
-            "View",
-            "Go",
-            "Window",
-            "Help"
-        ]
+        self.static_menu_items = ["File", "Edit", "View", "Go", "Window", "Help"]
 
         self.menu_contents = get_default_menu_contents()
 
         self.app_button = Button(
             name="menubar-button",
-            child=Label(
-                name="activewindow-label",
-                label="Hyprland"
-            ),
+            child=Label(name="activewindow-label", label="Hyprland"),
         )
-        self.app_button.connect("clicked", lambda widget: self.toggle_dropdown("Hyprland", widget))
+        self.app_button.connect(
+            "clicked", lambda widget: self.toggle_dropdown("Hyprland", widget)
+        )
         self.add(self.app_button)
 
         self.menu_buttons = []
         for item in self.static_menu_items:
             button = Button(
                 name="menubar-button",
-                child=Label(
-                    name="menubar-label",
-                    label=item
-                ),
+                child=Label(name="menubar-label", label=item),
             )
 
-            button.connect("clicked", lambda widget, menu_item=item: self.on_menu_button_clicked(menu_item, widget))
+            button.connect(
+                "clicked",
+                lambda widget, menu_item=item: self.on_menu_button_clicked(
+                    menu_item, widget
+                ),
+            )
             self.menu_buttons.append(button)
             self.add(button)
 
@@ -145,9 +141,9 @@ class MenuBar(Box):
         if menu_item in context_dependent_menus:
             # Only allow if there's an active window (not just showing "Hyprland")
             has_active_window = (
-                self.current_window_title and
-                self.current_window_title.strip() and
-                self.app_button.get_child().get_label() != "Hyprland"
+                self.current_window_title
+                and self.current_window_title.strip()
+                and self.app_button.get_child().get_label() != "Hyprland"
             )
             return has_active_window
 
@@ -171,9 +167,11 @@ class MenuBar(Box):
 
     def toggle_dropdown(self, menu_item, button):
         # If same menu is clicked and dropdown is visible, hide it
-        if (self.current_dropdown == menu_item and
-            self.dropdown_window and
-            self.dropdown_window.get_visible()):
+        if (
+            self.current_dropdown == menu_item
+            and self.dropdown_window
+            and self.dropdown_window.get_visible()
+        ):
             self.hide_dropdown()
             return
 
@@ -209,7 +207,7 @@ class MenuBar(Box):
                 separator = Box(
                     name="menu-separator",
                     size=(150, 1),
-                    style="background-color: #444; margin: 2px 0;"
+                    style="background-color: #444; margin: 2px 0;",
                 )
                 self.dropdown_window.content_box.add(separator)
             else:
@@ -219,9 +217,9 @@ class MenuBar(Box):
                     child=Label(
                         name="dropdown-label",
                         label=item,
-                        h_align="start"  # Align text to the left
+                        h_align="start",  # Align text to the left
                     ),
-                    on_clicked=lambda *_, action=item: self.on_menu_action(action)
+                    on_clicked=lambda *_, action=item: self.on_menu_action(action),
                 )
                 self.dropdown_window.content_box.add(menu_button)
 
@@ -236,7 +234,9 @@ class MenuBar(Box):
         # Get button allocation
         allocation = button.get_allocation()
 
-        print(f"Button allocation: x={allocation.x}, y={allocation.y}, width={allocation.width}, height={allocation.height}")
+        print(
+            f"Button allocation: x={allocation.x}, y={allocation.y}, width={allocation.width}, height={allocation.height}"
+        )
 
         # Use the exact button position for perfect alignment
         dropdown_x = allocation.x
@@ -291,9 +291,11 @@ class MenuBar(Box):
 
     def show_system_dropdown(self, button):
         # If same system dropdown is open, hide it (toggle behavior)
-        if (self.current_dropdown == "System" and
-            self.dropdown_window and
-            self.dropdown_window.get_visible()):
+        if (
+            self.current_dropdown == "System"
+            and self.dropdown_window
+            and self.dropdown_window.get_visible()
+        ):
             self.hide_dropdown()
             return
 
@@ -324,7 +326,7 @@ class MenuBar(Box):
             "Shutdown",
             "Restart",
             "Sleep",
-            "Lock"
+            "Lock",
         ]
 
         # Add menu items to dropdown
@@ -334,7 +336,7 @@ class MenuBar(Box):
                 separator = Box(
                     name="menu-separator",
                     size=(150, 1),
-                    style="background-color: #444; margin: 2px 0;"
+                    style="background-color: #444; margin: 2px 0;",
                 )
                 self.dropdown_window.content_box.add(separator)
             else:
@@ -344,9 +346,9 @@ class MenuBar(Box):
                     child=Label(
                         name="dropdown-label",
                         label=item,
-                        h_align="start"  # Align text to the left
+                        h_align="start",  # Align text to the left
                     ),
-                    on_clicked=lambda *_, action=item: self.on_menu_action(action)
+                    on_clicked=lambda *_, action=item: self.on_menu_action(action),
                 )
                 self.dropdown_window.content_box.add(menu_button)
 

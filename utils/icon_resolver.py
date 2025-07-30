@@ -16,7 +16,9 @@ if not os.path.exists(data.CACHE_DIR):
 
 
 class IconResolver:
-    def __init__(self, default_applicaiton_icon: str = "application-x-executable-symbolic"):
+    def __init__(
+        self, default_applicaiton_icon: str = "application-x-executable-symbolic"
+    ):
         if os.path.exists(ICON_CACHE_FILE):
             with open(ICON_CACHE_FILE) as f:
                 try:
@@ -79,7 +81,9 @@ class IconResolver:
             data_dir = os.path.join(data_dir, "applications")
             if os.path.exists(data_dir):
                 files = os.listdir(data_dir)
-                matching = [s for s in files if "".join(app_id.lower().split()) in s.lower()]
+                matching = [
+                    s for s in files if "".join(app_id.lower().split()) in s.lower()
+                ]
                 if matching:
                     return os.path.join(data_dir, matching[0])
                 for word in list(filter(None, re.split(r"-|\.|_|\s", app_id))):

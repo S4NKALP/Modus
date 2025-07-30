@@ -556,9 +556,10 @@ class Conversion:
             to_type = self.clean_type(to_type)
 
             if from_type1 == from_type2:
-                return self.convert(
-                    value1 + value2, from_type1, to_type
-                ), to_type + addition
+                return (
+                    self.convert(value1 + value2, from_type1, to_type),
+                    to_type + addition,
+                )
             else:
                 res = 0
                 res += self.convert(value1, from_type1, to_type)

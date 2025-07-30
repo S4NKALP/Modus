@@ -95,8 +95,6 @@ class CalculatorPlugin(PluginBase):
                     self._conversion_cache[cache_key] = result
                     subtitle = f"{value} {from_unit} = {result:.6g} {to_unit}"
 
-    
-
                 return [
                     Result(
                         title=f"{result:.6g} {to_unit}",

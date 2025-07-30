@@ -132,6 +132,7 @@ class WallpaperPlugin(PluginBase):
             if app and hasattr(app, "launcher"):
                 launcher = app.launcher
                 if launcher and hasattr(launcher, "search_entry"):
+
                     def clear_and_refresh():
                         # Clear the search entry to just the trigger
                         launcher.search_entry.set_text("wall ")
@@ -150,11 +151,9 @@ class WallpaperPlugin(PluginBase):
             import gc
 
             for obj in gc.get_objects():
-                if (
-                    hasattr(obj, "__class__")
-                    and obj.__class__.__name__ == "Launcher"
-                ):
+                if hasattr(obj, "__class__") and obj.__class__.__name__ == "Launcher":
                     if hasattr(obj, "search_entry") and hasattr(obj, "_perform_search"):
+
                         def clear_and_refresh():
                             obj.search_entry.set_text("wall ")
                             obj.search_entry.set_position(-1)
@@ -554,8 +553,9 @@ class WallpaperPlugin(PluginBase):
                                         status_text
                                     }",
                                     icon_markup=icons.palette,
-                                    action=lambda c=hex_color,
-                                    s=scheme: self._apply_hex_color_direct(c, s),
+                                    action=lambda c=hex_color, s=scheme: self._apply_hex_color_direct(
+                                        c, s
+                                    ),
                                     relevance=1.0,
                                     plugin_name=self.display_name,
                                     data={
@@ -595,10 +595,11 @@ class WallpaperPlugin(PluginBase):
                                     status_text
                                 }",
                                 icon_markup=icons.palette,
-                                action=lambda c=hex_color,
-                                s=scheme: self._apply_hex_color_direct(c, s)
-                                if not matugen_enabled
-                                else None,
+                                action=lambda c=hex_color, s=scheme: (
+                                    self._apply_hex_color_direct(c, s)
+                                    if not matugen_enabled
+                                    else None
+                                ),
                                 relevance=0.9,
                                 plugin_name=self.display_name,
                                 data={
@@ -683,11 +684,13 @@ class WallpaperPlugin(PluginBase):
                             title=f"Random Hex Color{indicator_text}",
                             subtitle=f"Generate and apply random color • {status_text}",
                             icon_markup=icons.palette,
-                            action=lambda s=scheme: self._apply_hex_color_direct(
-                                self._generate_random_hex_color(), s
-                            )
-                            if not matugen_enabled
-                            else None,
+                            action=lambda s=scheme: (
+                                self._apply_hex_color_direct(
+                                    self._generate_random_hex_color(), s
+                                )
+                                if not matugen_enabled
+                                else None
+                            ),
                             relevance=0.8,
                             plugin_name=self.display_name,
                             data={

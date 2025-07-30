@@ -1,16 +1,16 @@
 import setproctitle
-from fabric import Application
-from fabric.utils import get_relative_path, monitor_file
 from loguru import logger
 
 from config.data import APP_NAME
+from fabric import Application
+from fabric.utils import get_relative_path, monitor_file
+from modules.dock import Dock
+from modules.launcher.main import Launcher
+from modules.osd import OSD
 
 # from modules.corners import Corners
 from modules.panel.main import Panel
-from modules.dock import Dock
 from modules.switcher import ApplicationSwitcher
-from modules.launcher.main import Launcher
-from modules.osd import OSD
 
 for log in [
     "fabric.hyprland.widgets",

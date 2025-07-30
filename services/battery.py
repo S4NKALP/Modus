@@ -48,7 +48,7 @@ class Battery(Service):
     @Property(str, "readable")
     def time_to_empty(self):
         if self._use_psutil_fallback:
-            if self._psutil_battery and hasattr(self._psutil_battery, 'secsleft'):
+            if self._psutil_battery and hasattr(self._psutil_battery, "secsleft"):
                 return self.seconds_to_hours_minutes(self._psutil_battery.secsleft)
             return "N/A"
         return self.seconds_to_hours_minutes(getattr(self._battery, "TimeToEmpty", 0))

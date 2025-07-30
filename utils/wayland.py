@@ -132,13 +132,15 @@ class WaylandWindow(Window):
     @keyboard_mode.setter
     def keyboard_mode(
         self,
-        value: Literal[
-            "none",
-            "exclusive",
-            "on-demand",
-            "entry-number",
-        ]
-        | KeyboardMode,
+        value: (
+            Literal[
+                "none",
+                "exclusive",
+                "on-demand",
+                "entry-number",
+            ]
+            | KeyboardMode
+        ),
     ):
         self._keyboard_mode = get_enum_member(
             KeyboardMode, value, default=KeyboardMode.NONE
@@ -226,10 +228,12 @@ class WaylandWindow(Window):
         layer: Literal["background", "bottom", "top", "overlay"] | Layer = Layer.TOP,
         anchor: str = "",
         margin: str | Iterable[int] = "0px 0px 0px 0px",
-        exclusivity: Literal["auto", "normal", "none"]
-        | WaylandWindowExclusivity = WaylandWindowExclusivity.NONE,
-        keyboard_mode: Literal["none", "exclusive", "on-demand"]
-        | KeyboardMode = KeyboardMode.NONE,
+        exclusivity: (
+            Literal["auto", "normal", "none"] | WaylandWindowExclusivity
+        ) = WaylandWindowExclusivity.NONE,
+        keyboard_mode: (
+            Literal["none", "exclusive", "on-demand"] | KeyboardMode
+        ) = KeyboardMode.NONE,
         pass_through: bool = False,
         monitor: int | Gdk.Monitor | None = None,
         title: str = "fabric",
@@ -242,12 +246,12 @@ class WaylandWindow(Window):
         style_classes: Iterable[str] | str | None = None,
         tooltip_text: str | None = None,
         tooltip_markup: str | None = None,
-        h_align: Literal["fill", "start", "end", "center", "baseline"]
-        | Gtk.Align
-        | None = None,
-        v_align: Literal["fill", "start", "end", "center", "baseline"]
-        | Gtk.Align
-        | None = None,
+        h_align: (
+            Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None
+        ) = None,
+        v_align: (
+            Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None
+        ) = None,
         h_expand: bool = False,
         v_expand: bool = False,
         size: Iterable[int] | int | None = None,
@@ -292,7 +296,11 @@ class WaylandWindow(Window):
         self.keyboard_mode = keyboard_mode
         self.exclusivity = exclusivity
         self.pass_through = pass_through
-        self.show_all() if all_visible is True else self.show() if visible is True else None
+        (
+            self.show_all()
+            if all_visible is True
+            else self.show() if visible is True else None
+        )
 
     def steal_input(self) -> None:
         return GtkLayerShell.set_keyboard_interactivity(self, True)
@@ -347,9 +355,11 @@ class WaylandWindow(Window):
         margins = (
             extract_css_values(input.lower())
             if isinstance(input, str)
-            else input
-            if isinstance(input, (tuple, list)) and len(input) == 4
-            else (0, 0, 0, 0)
+            else (
+                input
+                if isinstance(input, (tuple, list)) and len(input) == 4
+                else (0, 0, 0, 0)
+            )
         )
         return {
             Edge.TOP: margins[0],

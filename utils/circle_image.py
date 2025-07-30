@@ -32,8 +32,12 @@ class CircleImage(Gtk.DrawingArea, Widget):
         style: str | None = None,
         tooltip_text: str | None = None,
         tooltip_markup: str | None = None,
-        h_align: Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None = None,
-        v_align: Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None = None,
+        h_align: (
+            Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None
+        ) = None,
+        v_align: (
+            Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None
+        ) = None,
         h_expand: bool = False,
         v_expand: bool = False,
         size: int | None = None,
@@ -57,7 +61,9 @@ class CircleImage(Gtk.DrawingArea, Widget):
         )
         self.size = size if size is not None else 100  # Default size if not provided
         self._angle = 0
-        self._orig_image: GdkPixbuf.Pixbuf | None = None  # Original image for reprocessing
+        self._orig_image: GdkPixbuf.Pixbuf | None = (
+            None  # Original image for reprocessing
+        )
         self._image: GdkPixbuf.Pixbuf | None = None
         if image_file:
             pix = GdkPixbuf.Pixbuf.new_from_file(image_file)
@@ -79,7 +85,9 @@ class CircleImage(Gtk.DrawingArea, Widget):
         else:
             square_size = width
         if square_size != self.size:
-            pixbuf = pixbuf.scale_simple(self.size, self.size, GdkPixbuf.InterpType.BILINEAR)
+            pixbuf = pixbuf.scale_simple(
+                self.size, self.size, GdkPixbuf.InterpType.BILINEAR
+            )
         return pixbuf
 
     def on_draw(self, widget: "CircleImage", ctx: cairo.Context):

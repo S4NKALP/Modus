@@ -1,14 +1,13 @@
 import time
 from typing import ClassVar, Literal
 
+import utils.icons as icons
 from fabric.audio import Audio
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scale import Scale, ScaleMark
 from gi.repository import GLib, GObject
-
-import utils.icons as icons
 from services.brightness import Brightness
 from utils.animator import Animator
 from utils.wayland import WaylandWindow as Window

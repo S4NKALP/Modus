@@ -8,10 +8,10 @@ from fabric.utils import exec_shell_command
 
 
 class MenuActionHandler:
-    
+
     def __init__(self):
         pass
-    
+
     def execute_action(self, action):
         try:
             # Window menu actions
@@ -34,16 +34,13 @@ class MenuActionHandler:
             elif action == "Quit":
                 Hyprland.send_command("dispatch killactive")
 
-
             # Go menu actions
             elif action == "Back":
                 Hyprland.send_command("dispatch workspace e-1")
             elif action == "Forward":
                 Hyprland.send_command("dispatch workspace e+1")
 
-
             # Edit menu actions
-            
 
             # View menu actions
             elif action == "Full Screen":
@@ -63,7 +60,7 @@ class MenuActionHandler:
             elif action == "Report a Bug...":
                 exec_shell_command("xdg-open https://github.com/S4NKALP/Modus/issues")
 
-            # System menu actions 
+            # System menu actions
             elif action == "About This PC":
                 exec_shell_command("gnome-system-monitor")
             elif action == "Force Quit":
@@ -77,13 +74,14 @@ class MenuActionHandler:
             elif action == "Lock":
                 exec_shell_command("hyprlock")
 
-
             # App menu actions (for hiding apps)
             elif action.startswith("Hide ") and not action == "Hide Others":
                 action.replace("Hide ", "")
                 Hyprland.send_command("dispatch movetoworkspacesilent special:hidden")
             elif action == "Hide Others":
-                Hyprland.send_command("dispatch movetoworkspacesilent special:hidden,^(activewindow)")
+                Hyprland.send_command(
+                    "dispatch movetoworkspacesilent special:hidden,^(activewindow)"
+                )
             elif action == "Show All":
                 Hyprland.send_command("dispatch movetoworkspace e+0,special:hidden")
             elif action.startswith("Quit "):

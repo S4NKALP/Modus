@@ -1197,8 +1197,6 @@ class Launcher(Window):
             self.focus_mode = "search"
             self._focus_search_entry_without_selection()
 
-
-
     def _focus_search_entry_without_selection(self):
         """Focus search entry and position cursor at end without selecting text."""
         # First grab focus
@@ -1244,8 +1242,6 @@ class Launcher(Window):
         GLib.idle_add(clear_selection)
         # Also try with a small delay as backup
         GLib.timeout_add(CURSOR_POSITION_DELAY_MS, clear_selection)
-
-
 
     def _navigate_results_forward(self):
         """Navigate to next result or wrap around to first result."""

@@ -1,0 +1,77 @@
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+import time
+import subprocess
+from fabric.widgets.box import Box
+from gi.repository import GLib
+from fabric.utils import get_relative_path
+from fabric.widgets.svg import Svg
+
+
+class RecordingIndicator(Button):
+    def __init__(self, **kwargs):
+        super().__init__(name="panel-button", visible=False, **kwargs)
+
+        self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
+        self.recording_start_time = None
+
+        self.recording_icon = Svg(
+            name="indicators-icon",
+            size=24,
+            svg_file=get_relative_path("../../../config/assets/icons/media-record.svg"),
+        )
+        self.time_label = Label(name="recording-time-label", markup="00:00")
+
+        self.recording_box = Box(
+            orientation="h",
+            spacing=2,
+            children=self.recording_icon,
+        )
+
+        self.add(self.recording_box)
+
+        self.connect("clicked", self.on_stop_recording)
+        self.hide()
+
+        GLib.timeout_add(1, self._delayed_init)
+
+    def check_recording_status(self):
+        try:
+            result = subprocess.run(
+                [self.script_path, "status"], capture_output=True, text=True, timeout=2
+            )
+            is_recording = result.stdout.strip() == "true"
+
+            if is_recording:
+                if not self.get_visible():
+                    self.show()
+
+                # Get the recording start time if we don't have it
+                if self.recording_start_time is None:
+                    self.recording_start_time = self.get_recording_start_time()
+
+                # Update the recording time display
+                if self.recording_start_time:
+                    elapsed_seconds = int(time.time() - self.recording_start_time)
+                    minutes = elapsed_seconds // 60
+                    seconds = elapsed_seconds % 60
+                    time_text = f"{minutes:02d}:{seconds:02d}"
+                    self.time_label.set_markup(time_text)
+                    self.set_tooltip_text(
+                        f"Recording in progress ({minutes:02d}:{
+                            seconds:02d}) - Click to stop"
+                    )
+                else:
+                    self.set_tooltip_text("Recording in progress - Click to stop")
+            else:
+                if self.get_visible():
+                    self.hide()
+                    self.recording_start_time = None
+
+        except Exception:
+            # If we can't check status, hide the indicator
+            if self.get_visible():
+                self.hide()
+                self.recording_start_time = None
+
+        return True  # Continue the timeout

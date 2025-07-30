@@ -54,26 +54,36 @@ class WifiIndicator(Button):
             self.network.ethernet_device
             and self.network.ethernet_device.state == "activated"
         ):
-            self.wifi_icon.set_from_file(get_relative_path("../../../config/assets/icons/wifi.svg"))
+            self.wifi_icon.set_from_file(
+                get_relative_path("../../../config/assets/icons/wifi.svg")
+            )
             tooltip = f"Connected to Ethernet ({self.network.ethernet_device.speed})"
             self.set_tooltip_text(tooltip)
             return
 
         if not self.network.wifi_device:
-            self.wifi_icon.set_from_file(get_relative_path("../../../config/assets/icons/wifi-off.svg"))
+            self.wifi_icon.set_from_file(
+                get_relative_path("../../../config/assets/icons/wifi-off.svg")
+            )
             tooltip = "No WiFi device found"
         elif not self.network.wifi_device.wireless_enabled:
-            self.wifi_icon.set_from_file(get_relative_path("../../../config/assets/icons/wifi-off.svg"))
+            self.wifi_icon.set_from_file(
+                get_relative_path("../../../config/assets/icons/wifi-off.svg")
+            )
             tooltip = "WiFi disabled"
         else:
             active_ap = self.network.wifi_device.active_access_point
             if active_ap:
                 strength = active_ap.strength
                 # Use wifi.svg for all connected states since we don't have signal strength icons
-                self.wifi_icon.set_from_file(get_relative_path("../../../config/assets/icons/wifi.svg"))
+                self.wifi_icon.set_from_file(
+                    get_relative_path("../../../config/assets/icons/wifi.svg")
+                )
                 tooltip = f"Connected to {active_ap.ssid} ({strength}%)"
             else:
-                self.wifi_icon.set_from_file(get_relative_path("../../../config/assets/icons/wifi-off.svg"))
+                self.wifi_icon.set_from_file(
+                    get_relative_path("../../../config/assets/icons/wifi-off.svg")
+                )
                 tooltip = "Not connected"
 
         self.set_tooltip_text(tooltip)
@@ -127,12 +137,16 @@ class BluetoothIndicator(Button):
 
     def update_state(self):
         if not self.bluetooth.enabled:
-            self.bt_icon.set_from_file(get_relative_path("../../../config/assets/icons/bluetooth-off.svg"))
+            self.bt_icon.set_from_file(
+                get_relative_path("../../../config/assets/icons/bluetooth-off.svg")
+            )
             tooltip = "Bluetooth disabled"
         else:
             connected_devices = self.bluetooth.connected_devices
             if connected_devices:
-                self.bt_icon.set_from_file(get_relative_path("../../../config/assets/icons/bluetooth.svg"))
+                self.bt_icon.set_from_file(
+                    get_relative_path("../../../config/assets/icons/bluetooth.svg")
+                )
                 if len(connected_devices) == 1:
                     device = connected_devices[0]
                     tooltip = f"Connected to {device.alias}"
@@ -141,7 +155,9 @@ class BluetoothIndicator(Button):
                 else:
                     tooltip = f"Connected to {len(connected_devices)} devices"
             else:
-                self.bt_icon.set_from_file(get_relative_path("../../../config/assets/icons/bluetooth.svg"))
+                self.bt_icon.set_from_file(
+                    get_relative_path("../../../config/assets/icons/bluetooth.svg")
+                )
                 tooltip = "No devices connected"
 
         self.set_tooltip_text(tooltip)
@@ -155,11 +171,10 @@ class BluetoothIndicator(Button):
     def on_device_removed(self, _, address):
         self.update_state()
 
+
 class Battery(Box):
     def __init__(self, **kwargs):
-        super().__init__(
-            orientation="v", visible=True, **kwargs
-        )
+        super().__init__(orientation="v", visible=True, **kwargs)
 
         self._battery = BatteryService()
         self._battery.changed.connect(self.update_battery)
@@ -167,7 +182,9 @@ class Battery(Box):
         self.icon = Svg(
             name="indicators-icon",
             size=24,
-            svg_file=get_relative_path("../../../config/assets/icons/battery/battery-100.svg"),
+            svg_file=get_relative_path(
+                "../../../config/assets/icons/battery/battery-100.svg"
+            ),
         )
         self.battery_button = Button(
             child=self.icon,
@@ -259,21 +276,29 @@ class Battery(Box):
             self.icon.remove_style_class("alert")
 
         if state == "FULLY_CHARGED" or (percentage >= 100 and state == "CHARGING"):
-            self.icon.set_from_file(get_relative_path("../../../config/assets/icons/battery/battery-100-charging.svg"))
+            self.icon.set_from_file(
+                get_relative_path(
+                    "../../../config/assets/icons/battery/battery-100-charging.svg"
+                )
+            )
         elif state == "CHARGING":
             # Calculate battery level and use corresponding charging icon
             level = min(100, max(0, int(percentage // 10) * 10))
             if level == 0 and percentage > 0:
                 level = 10
             icon_name = f"battery-{level:03d}-charging.svg"
-            self.icon.set_from_file(get_relative_path(f"../../../config/assets/icons/battery/{icon_name}"))
+            self.icon.set_from_file(
+                get_relative_path(f"../../../config/assets/icons/battery/{icon_name}")
+            )
         else:
             # Calculate battery level and use corresponding icon
             level = min(100, max(0, int(percentage // 10) * 10))
             if level == 0 and percentage > 0:
                 level = 10
             icon_name = f"battery-{level:03d}.svg"
-            self.icon.set_from_file(get_relative_path(f"../../../config/assets/icons/battery/{icon_name}"))
+            self.icon.set_from_file(
+                get_relative_path(f"../../../config/assets/icons/battery/{icon_name}")
+            )
 
         self.set_visible(True)
         return True
