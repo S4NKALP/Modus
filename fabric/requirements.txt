@@ -1,0 +1,6 @@
+click
+loguru
+psutil
+pycairo
+PyGObject==3.50.0
+pygobject-stubs
