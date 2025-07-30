@@ -60,7 +60,7 @@ class NotificationWidget(Box):
         self._notification = notification
 
         self.image = notification.app_icon
-        body_container = Box(spacing=4, orientation="h")
+        body_container = Box(name="noti-image", spacing=4, orientation="h")
 
         # Load and show image (from app_icon, image_file, or pixbuf)
         pixbuf = get_notification_image_pixbuf(notification)
@@ -172,7 +172,7 @@ class NotificationWidget(Box):
         self.destroy()
 
 
-class EnvNoti(Window):
+class ModusNoti(Window):
     def __init__(self, **kwargs):
         super().__init__(
             margin="8px 8px 8px 8px",
