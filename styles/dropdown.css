@@ -1,0 +1,61 @@
+#dropdown-menu {
+  background-color: transparent;
+  border-radius: 0.75rem;
+  margin: 0;
+}
+
+#dropdown-options {
+  background-color: alpha(#000, 0.3);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+}
+
+#dropdown-option {
+  background-color: transparent;
+  border-radius: 5px;
+  padding: 0px 10px;
+  margin: 1px 2px;
+  transition: all 0ms ease-in-out;
+}
+
+#dropdown-option:hover {
+  transition: all 20ms ease-in-out;
+  color: #222;
+  background-color: alpha(#2369ff, 1);
+}
+
+#dropdown-option-label {
+  font-size: 12px;
+  margin: 0px;
+  color: #fff;
+  font-weight: 400;
+}
+
+#dropdown-option-label:first-child {
+  padding-right: 5rem;
+}
+
+#dropdown-option:hover #dropdown-option-keybind {
+  color: #fff;
+}
+
+#dropdown-option-keybind {
+  font-family: "Fira Code Nerd Font";
+  font-weight: 500;
+  color: #aaa;
+}
+
+/* Divider */
+
+#dropdown-divider-box {
+  background-color: transparent;
+  border-radius: 5px;
+  padding: 0px 10px;
+  margin: 2px;
+}
+#dropdown-divider {
+  border-bottom: 1px solid alpha(#aaa, 0.3);
+  margin: 2px 0;
+}

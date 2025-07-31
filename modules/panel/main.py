@@ -7,12 +7,22 @@ from fabric.widgets.datetime import DateTime
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.svg import Svg
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 
 from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
-from modules.panel.components.indicators import Indicators
+from modules.panel.components.indicators import (
+    BluetoothIndicator,
+    NetworkIndicator,
+    BatteryIndicator,
+)
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
+<<<<<<< HEAD
+=======
+
+from modules.controlcenter.main import ModusControlCenter
+from widgets.mousecapture import MouseCapture
+>>>>>>> 9d83d960ef466f38bc3bc426eb89534c26b0fe04
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
@@ -22,6 +32,7 @@ class Panel(Window):
     def __init__(self, **kwargs):
         super().__init__(
             name="bar",
+            title="modus",
             layer="top",
             anchor="left top right",
             exclusivity="auto",
@@ -29,7 +40,7 @@ class Panel(Window):
         )
 
         self.launcher = kwargs.get("launcher", None)
-        self.menubar = MenuBar()
+        self.menubar = MenuBar(parent_window=self)
 
         self.imac = Button(
             name="panel-button",
@@ -38,13 +49,6 @@ class Panel(Window):
                 svg_file=get_relative_path("../../config/assets/icons/logo.svg"),
             ),
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
-        )
-        self.notch_spot = Box(
-            name="notch-spot",
-            size=(200, 24),
-            h_expand=True,
-            v_expand=True,
-            children=Label(label="notch"),
         )
 
         self.tray = SystemTray(name="system-tray", spacing=4, icon_size=20)
@@ -68,26 +72,42 @@ class Panel(Window):
             on_clicked=self.toggle_tray,
         )
 
-        self.indicators = Indicators()
+        self.indicators = Box(
+            name="indicators",
+            orientation="h",
+            spacing=4,
+            children=[
+                BatteryIndicator(),
+                NetworkIndicator(),
+                BluetoothIndicator(),
+            ],
+        )
 
         self.search = Button(
             name="panel-button",
             on_clicked=lambda *_: self.search_apps(),
             child=Svg(
-                size=20,
+                size=22,
                 svg_file=get_relative_path("../../config/assets/icons/search.svg"),
             ),
         )
 
-        self.controlcenter = Button(
-            name="panel-button",
+        self.control_center = MouseCapture(
+            layer="top", child_window=ModusControlCenter()
+        )
+
+        self.control_center_button = Button(
+            name="control-center-button",
+            style_classes="button",
+            on_clicked=self.control_center.toggle_mousecapture,
             child=Svg(
-                size=24,
+                size=25,
                 svg_file=get_relative_path(
                     "../../config/assets/icons/control-center.svg"
                 ),
             ),
         )
+
         self.recording_indicator = RecordingIndicator()
 
         self.children = CenterBox(
@@ -99,21 +119,20 @@ class Panel(Window):
                     self.menubar,
                 ],
             ),
-            # center_children=Box(
-            #     name="modules-center",
-            #     children=self.notch_spot,
-            # ),
+            center_children=Box(
+                name="modules-center",
+                children=self.recording_indicator,
+            ),
             end_children=Box(
                 name="modules-right",
                 spacing=4,
                 orientation="h",
                 children=[
-                    self.recording_indicator,
                     self.tray_revealer,
                     self.chevron_button,
                     self.indicators,
                     self.search,
-                    self.controlcenter,
+                    self.control_center_button,
                     DateTime(name="date-time", formatters=["%a %b %d %I:%M"]),
                 ],
             ),
