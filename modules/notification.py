@@ -5,11 +5,13 @@ from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.button import Button
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
+from fabric.widgets.revealer import Revealer
 from fabric.notifications import (
     NotificationAction,
     Notifications,
     Notification,
+    NotificationCloseReason,
     NotificationImagePixmap,
 )
 import os
@@ -25,6 +27,9 @@ from gi.repository import GdkPixbuf  # type: ignore
 NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
 NOTIFICATION_TIMEOUT = 10 * 1000
+
+
+# TODO: make the revealer animation smoother and the on every new notification the revealer work as it work for initial notification (rapid notification issue)
 
 
 def get_notification_image_pixbuf(
@@ -168,36 +173,66 @@ class NotificationWidget(Box):
         self.destroy()
 
     def destroy_noti(self, *_):
-        parent.remove(self) if (parent := self.get_parent()) else None,  # type: ignore
+        (parent.remove(self) if (parent := self.get_parent()) else None,)  # type: ignore
         self.destroy()
 
 
-class ModusNoti(Window):
-    def __init__(self, **kwargs):
+class NotificationRevealer(Revealer):
+    def __init__(self, notification: Notification, on_transition_end=None, **kwargs):
+        self.notif_box = NotificationWidget(notification)
+        self.notification = notification
+        self.on_transition_end = on_transition_end
         super().__init__(
-            margin="8px 8px 8px 8px",
-            name="notification-window",
-            title="Notification Center",
-            layer="overlay",
-            anchor="top right",
             child=Box(
-                size=2,
-                spacing=4,
-                orientation="v",
-            ).build(
-                lambda viewport, _: Notifications(
-                    on_notification_added=self.on_notification_added
-                )
+                children=[self.notif_box],
             ),
-            **kwargs,
+            transition_duration=300,
+            transition_type="slide-left",
         )
 
-    def on_notification_added(self, notifs_service, nid):
-        modus_service.cache_notification(notifs_service.get_notification_from_id(nid))
-        if modus_service.dont_disturb == "True":
-            return
-        self.get_child().add(
-            NotificationWidget(
-                cast(Notification, notifs_service.get_notification_from_id(nid))
-            )
+        self.connect(
+            "notify::child-revealed",
+            self._on_child_revealed,
         )
+        self.notification.connect("closed", self.on_resolved)
+
+    def _on_child_revealed(self, *args):
+        if not self.get_child_revealed():
+            if self.on_transition_end:
+                self.on_transition_end()
+            self.destroy()
+
+    def on_resolved(
+        self,
+        notification: Notification,
+        reason: NotificationCloseReason,
+    ):
+        self.set_property("transition-type", "slide-right")
+        self.set_reveal_child(False)
+
+
+class ModusNoti(Window):
+    def __init__(self):
+        self._server = Notifications()
+        self.notifications = Box(
+            v_expand=True,
+            h_expand=True,
+            style="margin: 1px 0px 1px 1px;",
+            orientation="v",
+            spacing=5,
+        )
+        self._server.connect("notification-added", self.on_new_notification)
+        super().__init__(
+            anchor="top right",
+            child=self.notifications,
+            layer="overlay",
+            all_visible=True,
+            visible=True,
+            exclusive=False,
+        )
+
+    def on_new_notification(self, fabric_notif, id):
+        notification: Notification = fabric_notif.get_notification_from_id(id)
+        new_box = NotificationRevealer(notification, on_transition_end=None)
+        self.notifications.add(new_box)
+        new_box.set_reveal_child(True)
