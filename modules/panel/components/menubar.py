@@ -367,6 +367,12 @@ class MenuBar(Box):
             self.dropdown_system.global_menu_button_help,
         ]
 
-    def show_system_dropdown(self, _):
-        """Show the system dropdown menu"""
-        self.dropdown_system.menu_button_dropdown.toggle_mousecapture()
+    def show_system_dropdown(self, imac_button):
+        self.dropdown_system.menu_button_dropdown.child_window.set_pointing_to(
+            imac_button
+        )
+        mouse_capture = self.dropdown_system.menu_button_dropdown
+        if mouse_capture.is_visible():
+            mouse_capture.set_child_window_visible(False)
+        else:
+            mouse_capture.set_child_window_visible(True)
