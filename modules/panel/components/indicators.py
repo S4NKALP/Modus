@@ -3,9 +3,8 @@ from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.svg import Svg
-
-from services.battery import Battery
 from services.network import NetworkService
+from services.battery import Battery
 from utils.roam import modus_service
 
 
@@ -17,7 +16,7 @@ class BluetoothIndicator(Box):
         self.bt_icon = Svg(
             name="bt-icon",
             size=20,
-            svg_file=get_relative_path("../../../config/assets/icons/bluetooth.svg"),
+            svg_file=get_relative_path("../../../config/assets/icons/applets/bluetooth-clear.svg"),
         )
 
         self.bt_button = Button(name="bt-button", child=self.bt_icon)
@@ -35,14 +34,14 @@ class BluetoothIndicator(Box):
     def update_state(self):
         if not self.bluetooth.enabled:
             self.bt_icon.set_from_file(
-                get_relative_path("../../../config/assets/icons/bluetooth-off.svg")
+                get_relative_path("../../../config/assets/icons/applets/bluetooth-off-clear.svg")
             )
             tooltip = "Bluetooth disabled"
         else:
             connected_devices = self.bluetooth.connected_devices
             if connected_devices:
                 self.bt_icon.set_from_file(
-                    get_relative_path("../../../config/assets/icons/bluetooth.svg")
+                    get_relative_path("../../../config/assets/icons/applets/bluetooth-clear.svg")
                 )
                 if len(connected_devices) == 1:
                     device = connected_devices[0]
@@ -53,7 +52,7 @@ class BluetoothIndicator(Box):
                     tooltip = f"Connected to {len(connected_devices)} devices"
             else:
                 self.bt_icon.set_from_file(
-                    get_relative_path("../../../config/assets/icons/bluetooth.svg")
+                    get_relative_path("../../../config/assets/icons/applets/bluetooth-clear.svg")
                 )
                 tooltip = "No devices connected"
 
@@ -105,7 +104,7 @@ class NetworkIndicator(Box):
         self.network_icon = Svg(
             name="network-icon",
             size=22,
-            svg_file=get_relative_path("../../../config/assets/icons/wifi.svg"),
+            svg_file=get_relative_path("../../../config/assets/icons/applets/wifi-clear.svg"),
         )
 
         self.network_button = Button(name="network-button", child=self.network_icon)
@@ -177,26 +176,26 @@ class NetworkIndicator(Box):
     def update_state(self):
         primary_device = self.network_service.primary_device
         tooltip = "No network connection"
-        icon_file = "wifi-off.svg"
+        icon_file = "wifi-off-clear.svg"
 
         if primary_device == "wifi" and self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
             if not wifi.enabled:
-                icon_file = "wifi-off.svg"
+                icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disabled"
             elif wifi.internet == "activated":
-                icon_file = "wifi.svg"
+                icon_file = "wifi-clear.svg"
                 tooltip = f"Connected to {wifi.ssid}"
                 if wifi.strength >= 0:
                     tooltip += f" ({wifi.strength}%)"
             elif wifi.internet == "activating":
-                icon_file = "wifi.svg"
+                icon_file = "wifi-clear.svg"
                 tooltip = f"Connecting to {wifi.ssid}..."
             elif wifi.internet in ["deactivating", "deactivated", "disconnected"]:
-                icon_file = "wifi-off.svg"
+                icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disconnected"
             else:
-                icon_file = "wifi-off.svg"
+                icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disconnected"
 
         elif primary_device == "wired" and self.network_service.ethernet_device:
@@ -207,14 +206,14 @@ class NetworkIndicator(Box):
                 if hasattr(ethernet, "speed") and ethernet.speed > 0:
                     tooltip += f" ({ethernet.speed} Mbps)"
             elif ethernet.internet == "activating":
-                icon_file = "wifi.svg"
+                icon_file = "wifi-clear.svg"
                 tooltip = "Ethernet connecting..."
             else:
-                icon_file = "wifi-off.svg"
+                icon_file = "wifi-off-clear.svg"
                 tooltip = "Ethernet disconnected"
 
         self.network_icon.set_from_file(
-            get_relative_path(f"../../../config/assets/icons/{icon_file}")
+            get_relative_path(f"../../../config/assets/icons/applets/{icon_file}")
         )
         self.network_button.set_tooltip_text(tooltip)
 
@@ -228,7 +227,7 @@ class BatteryIndicator(Box):
         self.battery_icon = Svg(
             name="battery-icon",
             size=22,
-            svg_file=get_relative_path("../../../config/assets/icons/battery.svg"),
+            svg_file=get_relative_path("../../../config/assets/icons/battery/battery-100.svg"),
         )
 
         self.battery_button = Button(name="battery-button", child=self.battery_icon)

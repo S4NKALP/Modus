@@ -28,7 +28,7 @@ class RecordingIndicator(Button):
         self.recording_icon = Svg(
             name="indicators-icon",
             size=24,
-            svg_file=get_relative_path("../../../config/assets/icons/media-record.svg"),
+            svg_file=get_relative_path("../../../config/assets/icons/misc/media-record.svg"),
         )
         self.time_label = Label(
             name="recording-time-label",
