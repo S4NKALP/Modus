@@ -21,9 +21,31 @@ def read_dmi(field):
 
 # TODO: Remove GPUtil dependency if not needed? (maybe?)
 def get_gpu_name():
-    gpus = GPUtil.getGPUs()
-    if gpus:
-        return gpus[0].name.strip()
+    output = subprocess.check_output("lspci", text=True)
+    gpus = []
+
+    for line in output.splitlines():
+        if "VGA compatible controller" in line or "3D controller" in line:
+            parts = line.split(":", 2)
+            if len(parts) < 3:
+                continue
+            desc = parts[2].strip()
+            desc = re.sub(r"\(rev .*?\)", "", desc).strip()
+
+            if "NVIDIA" in desc:
+                match = re.search(r"\[(.*?)\]", desc)
+                name = match.group(1) if match else desc
+            elif "Intel" in desc:
+                name = re.sub(r"Intel Corporation", "Intel", desc).strip()
+            elif "AMD" in desc or "ATI" in desc:
+                matches = re.findall(r"\[(.*?)\]", desc)
+                name = matches[1] if len(matches) > 1 else desc
+            else:
+                name = desc
+
+            gpus.append((name))
+
+    return gpus[-1]
 
 
 class About(Gtk.Window):
