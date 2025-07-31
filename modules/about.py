@@ -8,6 +8,7 @@ from fabric.widgets.box import Box
 from widgets.wayland import WaylandWindow as Window
 from fabric.utils.helpers import exec_shell_command_async, get_relative_path
 from gi.repository import Gtk, GdkPixbuf  # type: ignore
+import GPUtil
 
 
 def read_dmi(field):
@@ -18,33 +19,11 @@ def read_dmi(field):
         return "Unknown"
 
 
+# TODO: Remove GPUtil dependency if not needed? (maybe?)
 def get_gpu_name():
-    try:
-        output = (
-            subprocess.check_output(
-                "lspci -nn | grep -i 'VGA compatible controller'", shell=True, text=True
-            )
-            .strip()
-            .split("\n")
-        )
-
-        def clean(line):
-            matches = re.findall(r"\[(.*?)\]", line)
-            if len(matches) >= 2:
-                return matches[1].strip()
-            desc = line.split(":", 2)[-1]
-            return desc.replace("Corporation", "").strip()
-
-        for line in output:
-            if any(vendor in line.lower() for vendor in ["nvidia", "amd", "radeon"]):
-                return clean(line)
-
-        if output:
-            return clean(output[0])
-
-        return "Unknown GPU"
-    except Exception:
-        return "Unknown GPU"
+    gpus = GPUtil.getGPUs()
+    if gpus:
+        return gpus[0].name.strip()
 
 
 class About(Gtk.Window):
