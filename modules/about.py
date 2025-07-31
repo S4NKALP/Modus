@@ -1,14 +1,8 @@
-import subprocess
 import re
-import gi  # type: ignore
+import subprocess
 
-from fabric.widgets.label import Label
-from fabric.widgets.button import Button
-from fabric.widgets.box import Box
-from widgets.wayland import WaylandWindow as Window
-from fabric.utils.helpers import exec_shell_command_async, get_relative_path
-from gi.repository import Gtk, GdkPixbuf  # type: ignore
-import GPUtil
+from fabric.utils.helpers import get_relative_path
+from gi.repository import GdkPixbuf, Gtk  # type: ignore
 
 
 def read_dmi(field):
@@ -19,7 +13,6 @@ def read_dmi(field):
         return "Unknown"
 
 
-# TODO: Remove GPUtil dependency if not needed? (maybe?)
 def get_gpu_name():
     output = subprocess.check_output("lspci", text=True)
     gpus = []
