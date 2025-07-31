@@ -19,10 +19,26 @@
   padding: 10px;
 }
 
-.icon {
+#focus-widget {
+  padding: 10px;
+  min-width: 100px;
+}
+
+#bluetooth-icon,
+#wifi-icon {
+  background-color: #666666;
+  padding: 8px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  color: #ffffff;
+  opacity: 0.6;
+}
+
+#bluetooth-icon.connected,
+#wifi-icon.connected {
   background-color: #2369ff;
-  font-size: 15px;
-  padding: 20px 20px;
+  opacity: 1;
 }
 
 #bluetooth-widget-label,
@@ -63,6 +79,28 @@
 
 #device-icon.connected {
   background-color: #2369ff;
+}
+
+#device-icon.connecting {
+  background-color: #ff9500;
+  animation: pulse 1s infinite;
+}
+
+#device-icon.disconnecting {
+  background-color: #ff3b30;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 #toggle-button {

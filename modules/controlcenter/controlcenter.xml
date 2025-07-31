@@ -7,7 +7,6 @@
             </BoxV>
             <BoxH name="dnd-widget" style_classes="menu" h_expand="true">
                 <Ref>self.focus_widget</Ref>
-                <Svg path="config/assets/icons/dnd.svg" name="dnd-menu-icon"/>
             </BoxH>
         </BoxH>
         <BoxV name="brightness-widget" style_classes="menu" h_expand="true">
