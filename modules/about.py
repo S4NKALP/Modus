@@ -1,8 +1,13 @@
-import re
 import subprocess
+import re
+import gi  # type: ignore
 
-from fabric.utils.helpers import get_relative_path
-from gi.repository import GdkPixbuf, Gtk  # type: ignore
+from fabric.widgets.label import Label
+from fabric.widgets.button import Button
+from fabric.widgets.box import Box
+from widgets.wayland import WaylandWindow as Window
+from fabric.utils.helpers import exec_shell_command_async, get_relative_path
+from gi.repository import Gtk, GdkPixbuf  # type: ignore
 
 
 def read_dmi(field):
@@ -14,31 +19,32 @@ def read_dmi(field):
 
 
 def get_gpu_name():
-    output = subprocess.check_output("lspci", text=True)
-    gpus = []
+    try:
+        output = (
+            subprocess.check_output(
+                "lspci -nn | grep -i 'VGA compatible controller'", shell=True, text=True
+            )
+            .strip()
+            .split("\n")
+        )
 
-    for line in output.splitlines():
-        if "VGA compatible controller" in line or "3D controller" in line:
-            parts = line.split(":", 2)
-            if len(parts) < 3:
-                continue
-            desc = parts[2].strip()
-            desc = re.sub(r"\(rev .*?\)", "", desc).strip()
+        def clean(line):
+            matches = re.findall(r"\[(.*?)\]", line)
+            if len(matches) >= 2:
+                return matches[1].strip()
+            desc = line.split(":", 2)[-1]
+            return desc.replace("Corporation", "").strip()
 
-            if "NVIDIA" in desc:
-                match = re.search(r"\[(.*?)\]", desc)
-                name = match.group(1) if match else desc
-            elif "Intel" in desc:
-                name = re.sub(r"Intel Corporation", "Intel", desc).strip()
-            elif "AMD" in desc or "ATI" in desc:
-                matches = re.findall(r"\[(.*?)\]", desc)
-                name = matches[1] if len(matches) > 1 else desc
-            else:
-                name = desc
+        for line in output:
+            if any(vendor in line.lower() for vendor in ["nvidia", "amd", "radeon"]):
+                return clean(line)
 
-            gpus.append((name))
+        if output:
+            return clean(output[0])
 
-    return gpus[-1]
+        return "Unknown GPU"
+    except Exception:
+        return "Unknown GPU"
 
 
 class About(Gtk.Window):
@@ -60,7 +66,7 @@ class About(Gtk.Window):
         # Logo
         logo_box = Gtk.Box(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
         pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-            get_relative_path("../config/assets/icons/imac.svg"),
+            get_relative_path("../config/assets/icons/misc/imac.svg"),
             158,
             108,
             preserve_aspect_ratio=True,

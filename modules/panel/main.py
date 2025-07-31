@@ -43,7 +43,7 @@ class Panel(Window):
             name="panel-button",
             child=Svg(
                 size=22,
-                svg_file=get_relative_path("../../config/assets/icons/logo.svg"),
+                svg_file=get_relative_path("../../config/assets/icons/misc/logo.svg"),
             ),
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
         )
@@ -63,7 +63,7 @@ class Panel(Window):
             child=Svg(
                 size=16,
                 svg_file=get_relative_path(
-                    "../../config/assets/icons/chevron-right.svg"
+                    "../../config/assets/icons/misc/chevron-right.svg"
                 ),
             ),
             on_clicked=self.toggle_tray,
@@ -85,7 +85,7 @@ class Panel(Window):
             on_clicked=lambda *_: self.search_apps(),
             child=Svg(
                 size=20,
-                svg_file=get_relative_path("../../config/assets/icons/search.svg"),
+                svg_file=get_relative_path("../../config/assets/icons/misc/search.svg"),
             ),
         )
 
@@ -100,7 +100,7 @@ class Panel(Window):
             child=Svg(
                 size=22,
                 svg_file=get_relative_path(
-                    "../../config/assets/icons/control-center.svg"
+                    "../../config/assets/icons/misc/control-center.svg"
                 ),
             ),
         )
@@ -146,9 +146,9 @@ class Panel(Window):
 
         if self.tray_revealer.child_revealed:
             self.chevron_button.get_child().set_from_file(
-                get_relative_path("../../config/assets/icons/chevron-left.svg")
+                get_relative_path("../../config/assets/icons/misc/chevron-left.svg")
             )
         else:
             self.chevron_button.get_child().set_from_file(
-                get_relative_path("../../config/assets/icons/chevron-right.svg")
+                get_relative_path("../../config/assets/icons/misc/chevron-right.svg")
             )

@@ -50,7 +50,7 @@ class BrightnessOSDContainer(Box):
             orientation="h",
         )
         self.osd_window_image = Svg(
-            get_relative_path("../config/assets/icons/brightness.svg"),
+            get_relative_path("../config/assets/icons/brightness/brightness.svg"),
             size=(84, 150),
             name="osd-image",
             h_align="center",
@@ -112,7 +112,7 @@ class AudioOSDContainer(Box):
             orientation="h",
         )
         self.osd_window_image = Svg(
-            get_relative_path("../config/assets/icons/audio-volume.svg"),
+            get_relative_path("../config/assets/icons/volume/audio-volume.svg"),
             size=(64, 150),
             name="osd-image",
             h_align="center",
@@ -253,7 +253,7 @@ class MicrophoneOSDContainer(Box):
         )
 
         self.osd_window_image = Svg(
-            get_relative_path("../config/assets/icons/microphone.svg"),
+            get_relative_path("../config/assets/icons/mic/microphone.svg"),
             size=(64, 150),
             name="osd-image",
             h_align="center",

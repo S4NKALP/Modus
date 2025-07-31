@@ -113,17 +113,23 @@ class ModusControlCenter(Window):
         self.has_bluetooth_open = False
         self.has_wifi_open = False
 
-        self.bluetooth_svg = Image(
+        self.bluetooth_svg = Svg(
             name="bluetooth-icon",
-            icon_name="bluetooth-symbolic",
-            size=24,
-            style_classes="connected" if bluetooth != "disabled" else "",
+            svg_file=get_relative_path(
+                "../../config/assets/icons/applets/bluetooth.svg"
+                if bluetooth != "disabled"
+                else "../../config/assets/icons/applets/bluetooth-off.svg"
+            ),
+            size=42,
         )
-        self.wifi_svg = Image(
+        self.wifi_svg = Svg(
             name="wifi-icon",
-            icon_name="network-wireless-symbolic",
-            size=24,
-            style_classes="connected" if wlan != "No Connection" else "",
+            svg_file=get_relative_path(
+                "../../config/assets/icons/applets/wifi.svg"
+                if wlan != "No Connection"
+                else "../../config/assets/icons/applets/wifi-off.svg"
+            ),
+            size=46,
         )
 
         self.bluetooth_widget = Button(
@@ -171,8 +177,9 @@ class ModusControlCenter(Window):
         )
 
         self.focus_icon = Svg(
-            svg_file=get_relative_path("../../config/assets/icons/dnd-off.svg"),
-            size=24,
+            name="focus-icon",
+            svg_file=get_relative_path("../../config/assets/icons/applets/dnd-off.svg"),
+            size=46,
         )
 
         self.focus_widget = Button(
@@ -252,9 +259,9 @@ class ModusControlCenter(Window):
         modus_service.dont_disturb = self.focus_mode
         self.focus_icon.set_from_file(
             get_relative_path(
-                "config/assets/icons/dnd.svg"
+                "../../config/assets/icons/applets/dnd.svg"
                 if self.focus_mode
-                else "config/assets/icons/dnd-off.svg"
+                else "../../config/assets/icons/applets/dnd-off.svg"
             )
         )
 
@@ -345,8 +352,14 @@ class ModusControlCenter(Window):
         )
 
     def wlan_changed(self, _, wlan):
+        self.wifi_svg.set_from_file(
+            get_relative_path(
+                "../../config/assets/icons/applets/wifi.svg"
+                if wlan != "No Connection"
+                else "../../config/assets/icons/applets/wifi-off.svg"
+            )
+        )
         if wlan != "No Connection":
-            self.wifi_svg.set_property("style-classes", "connected")
             if wlan.startswith("connected:"):
                 parts = wlan.split(":")
                 if len(parts) >= 2:
@@ -357,16 +370,21 @@ class ModusControlCenter(Window):
             else:
                 GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
         else:
-            self.wifi_svg.set_property("style-classes", "")
             GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
 
     def bluetooth_changed(self, _, bluetooth):
+        self.bluetooth_svg.set_from_file(
+            get_relative_path(
+                "../../config/assets/icons/applets/bluetooth.svg"
+                if bluetooth != "disabled"
+                else "../../config/assets/icons/applets/bluetooth-off.svg"
+            )
+        )
         if bluetooth != "disabled":
-            self.bluetooth_svg.set_property("style-classes", "connected")
             if bluetooth.startswith("connected:"):
                 parts = bluetooth.split(":")
                 if len(parts) >= 2:
-                    device_name = parts[1] 
+                    device_name = parts[1]
                     GLib.idle_add(lambda: self.bluetooth_label.set_property("label", device_name))
                 else:
                     GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "Connected"))
@@ -375,7 +393,6 @@ class ModusControlCenter(Window):
             else:
                 GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "On"))
         else:
-            self.bluetooth_svg.set_property("style-classes", "")
             GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "Off"))
 
     def audio_changed(self, *_):
