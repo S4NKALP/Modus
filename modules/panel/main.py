@@ -17,9 +17,9 @@ from modules.panel.components.indicators import (
 )
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
-
 from modules.controlcenter.main import ModusControlCenter
 from widgets.mousecapture import MouseCapture
+
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()

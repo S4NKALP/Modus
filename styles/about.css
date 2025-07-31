@@ -1,5 +1,5 @@
 #about-menu {
-	background-color: alpha(#111, 0.6);
+    background-color: alpha(#001, 0.3);
 	box-shadow: inset 0 -0.5px 0 .5px alpha(#555, 0.7), inset 0 0.5px 0 .5px alpha(#777, 0.7);
 	border: 1px solid alpha(#111, 0.3);
 	border-top: none;
@@ -22,7 +22,7 @@
 	padding: 1rem;
 }
 #vendor-label{
-        color: #888888;
+        color: #999999;
     margin-top : -1rem;
 }
 
@@ -57,21 +57,21 @@
 }
 
 #more-info-button {
-	background-color: #2369ff;
+    background-color: #888888;
 	border-radius: 5px;
 	padding: 0px 10px;
 	margin: 1px 2px;
 	transition: all 200ms ease-in-out;
 }
-
 #more-info-button:hover {
 	background-color: rgb(72, 130, 255);
+	background-color: #2369ff;
 }
 
 #more-info-button label {
 	font-size: 12px;
 	margin: 0px;
 	font-weight: 400;
-	color: #ddd;
+	color: #fff;
 }
 
