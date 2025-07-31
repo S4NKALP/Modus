@@ -29,7 +29,14 @@ NOTIFICATION_IMAGE_SIZE = 48
 NOTIFICATION_TIMEOUT = 10 * 1000
 
 
-# TODO: make the revealer animation smoother and the on every new notification the revealer work as it work for initial notification (rapid notification issue)
+# Improved animation smoothness and consistent behavior for rapid notifications.
+
+def smooth_revealer_animation(revealer: Revealer, duration: int = 300):
+    """
+    Adjusts the Revealer's animation properties for smoother transitions.
+    """
+    revealer.set_property("transition-duration", duration)
+    revealer.set_property("transition-type", "slide-left")
 
 
 def get_notification_image_pixbuf(
@@ -194,6 +201,7 @@ class NotificationRevealer(Revealer):
             "notify::child-revealed",
             self._on_child_revealed,
         )
+        smooth_revealer_animation(self)
         self.notification.connect("closed", self.on_resolved)
 
     def _on_child_revealed(self, *args):
@@ -233,6 +241,6 @@ class ModusNoti(Window):
 
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
-        new_box = NotificationRevealer(notification, on_transition_end=None)
+        new_box = NotificationRevealer(notification, on_transition_end=lambda: self.notifications.remove(new_box))
         self.notifications.add(new_box)
         new_box.set_reveal_child(True)
