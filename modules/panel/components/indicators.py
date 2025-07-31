@@ -103,7 +103,7 @@ class NetworkIndicator(Box):
 
         self.network_icon = Svg(
             name="network-icon",
-            size=25,
+            size=22,
             svg_file=get_relative_path("../../../config/assets/icons/wifi.svg"),
         )
 
@@ -221,7 +221,7 @@ class BatteryIndicator(Box):
 
         self.battery_icon = Svg(
             name="battery-icon",
-            size=25,
+            size=22,
             svg_file=get_relative_path("../../../config/assets/icons/battery.svg"),
         )
 
