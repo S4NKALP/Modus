@@ -1,364 +1,378 @@
+import os
+import subprocess
+
+from fabric.hyprland.widgets import HyprlandActiveWindow as ActiveWindow
+from fabric.utils import FormattedString
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-from fabric.hyprland.widgets import HyprlandActiveWindow
-from utils.wayland import WaylandWindow
-from gi.repository import Gtk, GLib
-from .menu_contents import get_default_menu_contents, get_app_specific_menu_contents
-from .menu_actions import MenuActionHandler
+
+from modules.about import About
+from utils.roam import modus_service
+from widgets.dropdown import ModusDropdown, dropdown_divider
+from widgets.mousecapture import DropDownMouseCapture
 
 
-class DropdownWindow(WaylandWindow):
-    def __init__(self, x=0, y=0, parent_menubar=None, **kwargs):
+class AppName:
+    def __init__(self, path="/usr/share/applications"):
+        self.files = os.listdir(path) if os.path.exists(path) else []
+        self.path = path
+
+    def get_app_name(self, wmclass):
+        desktop_file = ""
+        for f in self.files:
+            if f.startswith(wmclass + ".desktop"):
+                desktop_file = f
+
+        desktop_app_name = wmclass
+
+        if desktop_file == "":
+            return wmclass
+        try:
+            with open(os.path.join(self.path, desktop_file), "r") as f:
+                lines = f.readlines()
+                for line in lines:
+                    if line.startswith("Name="):
+                        desktop_app_name = line.split("=")[1].strip()
+                        break
+        except:
+            return wmclass
+        return desktop_app_name
+
+    def format_app_name(self, title, wmclass, update=False):
+        name = wmclass
+        if name == "":
+            name = title
+
+        # Try to get the proper app name from desktop file
+        name = self.get_app_name(wmclass=wmclass)
+
+        # Smart title formatting (capitalize first letter)
+        name = str(name).title()
+        if "." in name:
+            name = name.split(".")[-1]
+
+        if update:
+            modus_service.current_active_app_name = name
+        return name
+
+
+app_name_class = AppName()
+
+
+def format_window(title, wmclass):
+    name = app_name_class.format_app_name(title, wmclass, True)
+    if not name or name == "":
+        return "Desktop"
+    return name
+
+
+def dropdown_option(
+    label: str = "",
+    keybind: str = "",
+    on_click='echo "ModusPanelDropdown Action"',
+    on_clicked=None,
+):
+    def on_click_subthread(button):
+        # Execute the action first
+        if on_clicked:
+            on_clicked(button)
+        else:
+            subprocess.Popen(
+                f"nohup {on_click} &",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+        # Hide dropdown by finding the current visible dropdown and calling its hide method
+        from widgets.dropdown import dropdowns
+
+        for dropdown in dropdowns:
+            if dropdown.is_visible() and hasattr(dropdown, "hide_via_mousecapture"):
+                dropdown.hide_via_mousecapture()
+                break
+
+    return Button(
+        child=CenterBox(
+            start_children=[
+                Label(label=label, h_align="start", name="dropdown-option-label"),
+            ],
+            end_children=[
+                Label(label=keybind, h_align="end", name="dropdown-option-keybind")
+            ],
+            orientation="horizontal",
+            h_align="fill",
+            h_expand=True,
+            v_expand=True,
+        ),
+        name="dropdown-option",
+        h_align="fill",
+        on_clicked=on_click_subthread,
+        h_expand=True,
+        v_expand=True,
+    )
+
+
+class SystemDropdown(ModusDropdown):
+    def __init__(self, parent, **kwargs):
         super().__init__(
-            name="dropdown-window",
-            title="Menu Dropdown",
-            layer="overlay",
-            anchor="top left",
-            exclusivity="none",
-            margin=f"{y}px 0px 0px {x}px",
-            visible=False,
-            all_visible=True,
+            dropdown_id="os-menu",
+            parent=parent,
+            dropdown_children=[
+                dropdown_option(
+                    "About this PC", on_clicked=lambda _: About().toggle(_)
+                ),
+                dropdown_divider("---------------------"),
+                dropdown_option(
+                    "System Settings...",
+                    # TODO: Open Modus own setting
+                    # on_click="xdg-open settings",
+                ),
+                dropdown_divider("---------------------"),
+                dropdown_option("Force Quit", "", "hyprctl kill"),
+                dropdown_divider("---------------------"),
+                dropdown_option("Sleep", "", "systemctl suspend"),
+                dropdown_option("Restart...", "", "systemctl reboot"),
+                dropdown_option("Shut Down...", "", "shutdown now"),
+                dropdown_divider("---------------------"),
+                dropdown_option("Lock Screen", "󰘳     L", "hyprlock"),
+            ],
             **kwargs,
         )
 
-        # Store reference to parent menubar for closing dropdown
-        self.parent_menubar = parent_menubar
 
-        self.content_box = Box(
-            name="dropdown-content",
-            orientation="v",
-            spacing=2,
+class MenuBarDropdowns:
+    def __init__(self, parent):
+        self.parent = parent
+
+        # System dropdown
+        self.system_dropdown = SystemDropdown(parent=parent)
+        self.menu_button_dropdown = DropDownMouseCapture(
+            layer="bottom", child_window=self.system_dropdown
         )
-        self.add(self.content_box)
+        self.menu_button = Button(
+            label="Modus",
+            name="menu-button",
+            style_classes="button",
+            on_clicked=lambda _: self.menu_button_dropdown.toggle_mousecapture(),
+        )
+        self.menu_button_dropdown.child_window.set_pointing_to(self.menu_button)
 
-        self.connect("enter-notify-event", self.on_mouse_enter)
-        self.connect("leave-notify-event", self.on_mouse_leave)
+        # Global menu dropdowns
+        self.global_title_menu_about = dropdown_option(
+            f"About {modus_service.current_active_app_name}"
+        )
+        self.global_menu_title = DropDownMouseCapture(
+            layer="bottom",
+            child_window=ModusDropdown(
+                dropdown_id="global-menu-title",
+                parent=parent,
+                dropdown_children=[self.global_title_menu_about],
+            ),
+        )
 
-        self.auto_close_timer = None
+        self.global_menu_file = None
+        self.global_menu_edit = None
+        self.global_menu_view = DropDownMouseCapture(
+            layer="bottom",
+            child_window=ModusDropdown(
+                dropdown_id="global-menu-view",
+                parent=parent,
+                dropdown_children=[
+                    dropdown_option(
+                        "Enter Full Screen",
+                        on_click="hyprctl dispatch fullscreen",
+                    ),
+                ],
+            ),
+        )
+        self.global_menu_go = None
+        self.global_menu_window = DropDownMouseCapture(
+            layer="bottom",
+            child_window=ModusDropdown(
+                dropdown_id="global-menu-window",
+                parent=parent,
+                dropdown_children=[
+                    dropdown_option(
+                        "Zoom",
+                        on_clicked=lambda _: subprocess.run(
+                            "bash ~/.config/scripts/zoomer.sh", shell=True
+                        ),
+                    ),
+                    dropdown_option(
+                        "Move Window to Left",
+                        on_click="hyprctl dispatch movewindow l",
+                    ),
+                    dropdown_option(
+                        "Move Window to Right",
+                        on_click="hyprctl dispatch movewindow r",
+                    ),
+                    dropdown_option(
+                        "Cycle Through Windows",
+                        on_click="hyprctl dispatch cyclenext",
+                    ),
+                    dropdown_divider("---------------------"),
+                    dropdown_option(
+                        "Float", on_click="hyprctl dispatch togglefloating"
+                    ),
+                    dropdown_option("Quit", on_click="hyprctl dispatch killactive"),
+                    dropdown_option("Pseudo", on_click="hyprctl dispatch pseudo"),
+                    dropdown_option(
+                        "Toggle Split", on_click="hyprctl dispatch togglesplit"
+                    ),
+                    dropdown_option("Center", on_click="hyprctl dispatch centerwindow"),
+                    dropdown_option("Group", on_click="hyprctl dispatch togglegroup"),
+                    dropdown_option(
+                        "Pin",
+                        on_clicked=lambda _: subprocess.run(
+                            "bash ~/.config/scripts/winpin.sh", shell=True
+                        ),
+                    ),
+                ],
+            ),
+        )
 
-    def on_mouse_enter(self, widget, event):
-        # Only handle if the event is for the main dropdown window, not child widgets
-        if event.detail != 2:  # 2 = Gdk.NotifyType.INFERIOR (child widget)
-            # Cancel auto-close timer when mouse enters
-            if self.auto_close_timer:
-                GLib.source_remove(self.auto_close_timer)
-                self.auto_close_timer = None
-        return False
+        self.global_menu_help = DropDownMouseCapture(
+            layer="bottom",
+            child_window=ModusDropdown(
+                dropdown_id="global-menu-help",
+                parent=parent,
+                dropdown_children=[
+                    dropdown_option(
+                        "Modus",
+                        on_click="xdg-open https://github.com/S4NKALP/Modus/issues",
+                    ),
+                    dropdown_divider("---------------------"),
+                    dropdown_option(
+                        "Hyprland Wiki", on_click="xdg-open https://wiki.hyprland.org/"
+                    ),
+                ],
+            ),
+        )
 
-    def on_mouse_leave(self, widget, event):
-        # Only handle if actually leaving the dropdown window, not entering child widgets
-        if event.detail != 2:  # 2 = Gdk.NotifyType.INFERIOR (child widget)
-            # Start auto-close timer when mouse leaves
-            if not self.auto_close_timer:
-                self.auto_close_timer = GLib.timeout_add(
-                    300, self.auto_close_callback
-                )  # 300ms delay
-        return False
+        # Create menu buttons
+        modus_service.connect(
+            "current-active-app-name-changed",
+            lambda _, value: self.global_title_menu_about.set_property(
+                "label", f"About {value}"
+            ),
+        )
+        self.global_menu_button_title = Button(
+            child=ActiveWindow(
+                formatter=FormattedString(
+                    "{ format_window('None', 'Hyprland') if win_title == '' and win_class == '' else format_window(win_title, win_class) }",
+                    format_window=format_window,
+                )
+            ),
+            name="global-title-button",
+            style_classes="button",
+            on_clicked=lambda _: self.global_menu_title.toggle_mousecapture(),
+        )
+        self.global_menu_title.child_window.set_pointing_to(
+            self.global_menu_button_title
+        )
 
-    def auto_close_callback(self):
-        if self.parent_menubar:
-            self.parent_menubar.hide_dropdown()
-        self.auto_close_timer = None
-        return False
+        self.global_menu_button_file = Button(
+            label="File", name="global-menu-button-file", style_classes="button"
+        )
+        self.global_menu_button_edit = Button(
+            label="Edit", name="global-menu-button-edit", style_classes="button"
+        )
+        self.global_menu_button_view = Button(
+            label="View",
+            name="global-menu-button-view",
+            style_classes="button",
+            on_clicked=lambda _: self.global_menu_view.toggle_mousecapture(),
+        )
+        self.global_menu_view.child_window.set_pointing_to(self.global_menu_button_view)
+        self.global_menu_button_go = Button(
+            label="Go", name="global-menu-button-go", style_classes="button"
+        )
+        self.global_menu_button_window = Button(
+            label="Window",
+            name="global-menu-button-window",
+            style_classes="button",
+            on_clicked=lambda _: self.global_menu_window.toggle_mousecapture(),
+        )
+        self.global_menu_window.child_window.set_pointing_to(
+            self.global_menu_button_window
+        )
+        self.global_menu_button_help = Button(
+            label="Help",
+            name="global-menu-button-help",
+            style_classes="button",
+            on_clicked=lambda _: self.global_menu_help.toggle_mousecapture(),
+        )
+        self.global_menu_help.child_window.set_pointing_to(self.global_menu_button_help)
+
+        modus_service.connect("current-dropdown-changed", self.changed_dropdown)
+        modus_service.connect("dropdowns-hide-changed", self.hide_dropdowns)
+
+    def hide_dropdowns(self, *_):
+        self.menu_button.remove_style_class("active")
+        self.global_menu_button_edit.remove_style_class("active")
+        self.global_menu_button_file.remove_style_class("active")
+        self.global_menu_button_go.remove_style_class("active")
+        self.global_menu_button_help.remove_style_class("active")
+        self.global_menu_button_title.remove_style_class("active")
+        self.global_menu_button_view.remove_style_class("active")
+        self.global_menu_button_window.remove_style_class("active")
+
+    def changed_dropdown(self, _, dropdown_id):
+        self.hide_dropdowns(_, True)
+        match dropdown_id:
+            case "os-menu":
+                self.menu_button.add_style_class("active")
+            case "global-menu-edit":
+                self.global_menu_button_edit.add_style_class("active")
+            case "global-menu-file":
+                self.global_menu_button_file.add_style_class("active")
+            case "global-menu-go":
+                self.global_menu_button_go.add_style_class("active")
+            case "global-menu-help":
+                self.global_menu_button_help.add_style_class("active")
+            case "global-menu-title":
+                self.global_menu_button_title.add_style_class("active")
+            case "global-menu-view":
+                self.global_menu_button_view.add_style_class("active")
+            case "global-menu-window":
+                self.global_menu_button_window.add_style_class("active")
+            case _:
+                pass
 
 
 class MenuBar(Box):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="menubar",
-            orientation="h",
-            spacing=0,
-            **kwargs,
-        )
+    """Main MenuBar widget that contains all menu buttons"""
 
-        self.active_window = HyprlandActiveWindow(name="hyprland-window")
-        self.active_window.connect("window-activated", self.on_window_changed)
+    def __init__(self, parent_window=None, **kwargs):
+        # Extract parent_window from kwargs if not provided as parameter
+        if parent_window is None:
+            parent_window = kwargs.pop("parent_window", None)
 
-        self.current_window_class = None
-        self.current_window_title = None
+        super().__init__(name="menubar", orientation="horizontal", spacing=0, **kwargs)
 
-        self.current_dropdown = None
-        self.dropdown_window = None
+        # Create the dropdown system
+        self.dropdown_system = MenuBarDropdowns(parent=parent_window)
 
-        self.action_handler = MenuActionHandler()
-
-        # Menu items in macOS style order (excluding the first item which will be dynamic)
-        self.static_menu_items = ["File", "Edit", "View", "Go", "Window", "Help"]
-
-        self.menu_contents = get_default_menu_contents()
-
-        self.app_button = Button(
-            name="menubar-button",
-            child=Label(name="activewindow-label", label="Hyprland"),
-        )
-        self.app_button.connect(
-            "clicked", lambda widget: self.toggle_dropdown("Hyprland", widget)
-        )
-        self.add(self.app_button)
-
-        self.menu_buttons = []
-        for item in self.static_menu_items:
-            button = Button(
-                name="menubar-button",
-                child=Label(name="menubar-label", label=item),
-            )
-
-            button.connect(
-                "clicked",
-                lambda widget, menu_item=item: self.on_menu_button_clicked(
-                    menu_item, widget
-                ),
-            )
-            self.menu_buttons.append(button)
-            self.add(button)
-
-        self.update_menu_button_states()
-
-        self.show_all()
-
-    def get_button_for_item(self, menu_item):
-        if menu_item == "Hyprland":
-            return self.app_button
-
-        for i, item in enumerate(self.static_menu_items):
-            if item == menu_item:
-                return self.menu_buttons[i]
-        return None
-
-    def on_menu_button_clicked(self, menu_item, button):
-        # Check if we should allow this menu to be opened
-        if not self.should_menu_be_active(menu_item):
-            return
-
-        # Menu is allowed, proceed with normal toggle
-        self.toggle_dropdown(menu_item, button)
-
-    def should_menu_be_active(self, menu_item):
-        # These menus should only work when there's an active window
-        context_dependent_menus = ["File", "Edit", "View", "Go"]
-
-        if menu_item in context_dependent_menus:
-            # Only allow if there's an active window (not just showing "Hyprland")
-            has_active_window = (
-                self.current_window_title
-                and self.current_window_title.strip()
-                and self.app_button.get_child().get_label() != "Hyprland"
-            )
-            return has_active_window
-
-        # Window and Help menus are always available
-        return True
-
-    def update_menu_button_states(self):
-        context_dependent_menus = ["File", "Edit", "View", "Go"]
-
-        for i, menu_item in enumerate(self.static_menu_items):
-            if menu_item in context_dependent_menus:
-                button = self.menu_buttons[i]
-                is_active = self.should_menu_be_active(menu_item)
-
-                # Keep buttons sensitive for hovering, but add visual styling for inactive state
-                # Don't use set_sensitive(False) as it prevents hovering
-                if is_active:
-                    button.get_style_context().remove_class("inactive")
-                else:
-                    button.get_style_context().add_class("inactive")
-
-    def toggle_dropdown(self, menu_item, button):
-        # If same menu is clicked and dropdown is visible, hide it
-        if (
-            self.current_dropdown == menu_item
-            and self.dropdown_window
-            and self.dropdown_window.get_visible()
-        ):
-            self.hide_dropdown()
-            return
-
-        # (show_dropdown will handle hiding the previous one)
-        self.show_dropdown(menu_item, button)
-
-    def show_dropdown(self, menu_item, button):
-        # Hide existing dropdown if any and wait for it to be completely hidden
-        if self.dropdown_window:
-            self.dropdown_window.set_visible(False)
-            self.dropdown_window.destroy()
-            self.dropdown_window = None
-            # Wait a short moment to ensure the previous dropdown is completely gone
-            GLib.timeout_add(150, self._create_and_show_dropdown, menu_item, button)
-        else:
-            # No existing dropdown, show immediately
-            self._create_and_show_dropdown(menu_item, button)
-
-    def _create_and_show_dropdown(self, menu_item, button):
-        # Calculate position first
-        x, y = self.calculate_dropdown_position(button)
-
-        # Create new dropdown window at the calculated position
-        self.dropdown_window = DropdownWindow(x=x, y=y, parent_menubar=self)
-
-        # Get menu items for this menu
-        menu_items = self.menu_contents.get(menu_item, [])
-
-        # Add menu items to dropdown
-        for item in menu_items:
-            if item == "---":
-                # Add separator
-                separator = Box(
-                    name="menu-separator",
-                    size=(150, 1),
-                    style="background-color: #444; margin: 2px 0;",
-                )
-                self.dropdown_window.content_box.add(separator)
-            else:
-                # Add menu item button
-                menu_button = Button(
-                    name="dropdown-item",
-                    child=Label(
-                        name="dropdown-label",
-                        label=item,
-                        h_align="start",  # Align text to the left
-                    ),
-                    on_clicked=lambda *_, action=item: self.on_menu_action(action),
-                )
-                self.dropdown_window.content_box.add(menu_button)
-
-        self.dropdown_window.set_size_request(150, -1)
-
-        self.current_dropdown = menu_item
-        self.dropdown_window.set_visible(True)
-
-        return False
-
-    def calculate_dropdown_position(self, button):
-        # Get button allocation
-        allocation = button.get_allocation()
-
-        print(
-            f"Button allocation: x={allocation.x}, y={allocation.y}, width={allocation.width}, height={allocation.height}"
-        )
-
-        # Use the exact button position for perfect alignment
-        dropdown_x = allocation.x
-        dropdown_y = allocation.y + 3  # 3px gap below button
-
-        print(f"Perfect dropdown position: x={dropdown_x}, y={dropdown_y}")
-
-        return dropdown_x, dropdown_y
-
-    def hide_dropdown(self):
-        if self.dropdown_window:
-            self.dropdown_window.set_visible(False)
-            self.dropdown_window.destroy()
-            self.dropdown_window = None
-        self.current_dropdown = None
-
-    def on_menu_action(self, action):
-        # Hide dropdown after action
-        self.hide_dropdown()
-
-        # Handle window management actions
-        self.execute_menu_action(action)
-
-    def execute_menu_action(self, action):
-        self.action_handler.execute_action(action)
-
-    def on_window_changed(self, widget, window_class, window_title):
-        self.current_window_class = window_class
-        self.current_window_title = window_title
-
-        # Update the first button label and menu contents
-        if window_title and window_title.strip():
-            # Show the window title/app name when there's an active window
-            display_name = window_class if window_class else window_title
-            # Capitalize the first letter
-            display_name = display_name.capitalize() if display_name else "Hyprland"
-            self.app_button.get_child().set_label(display_name)
-
-            # Update the app menu contents dynamically
-            self.update_app_menu(display_name)
-        else:
-            # Show "Hyprland" when no active window
-            self.app_button.get_child().set_label("Hyprland")
-            self.update_app_menu("Hyprland")
-
-        # Update menu button states based on new context
-        self.update_menu_button_states()
-
-    def update_app_menu(self, app_name):
-        # Get app-specific menu contents (includes app-specific overrides if available)
-        self.menu_contents = get_app_specific_menu_contents(app_name)
-
-    def show_system_dropdown(self, button):
-        # If same system dropdown is open, hide it (toggle behavior)
-        if (
-            self.current_dropdown == "System"
-            and self.dropdown_window
-            and self.dropdown_window.get_visible()
-        ):
-            self.hide_dropdown()
-            return
-
-        # Hide existing dropdown if any and show system dropdown
-        if self.dropdown_window:
-            self.dropdown_window.set_visible(False)
-            self.dropdown_window.destroy()
-            self.dropdown_window = None
-            # Wait a short moment to ensure the previous dropdown is completely gone
-            GLib.timeout_add(150, self._create_and_show_system_dropdown, button)
-        else:
-            # No existing dropdown, show immediately
-            self._create_and_show_system_dropdown(button)
-
-    def _create_and_show_system_dropdown(self, button):
-        # Calculate position first
-        x, y = self.calculate_dropdown_position(button)
-
-        # Create new dropdown window at the calculated position
-        self.dropdown_window = DropdownWindow(x=x, y=y, parent_menubar=self)
-
-        # System menu items
-        system_menu_items = [
-            "About This PC",
-            "---",
-            "Force Quit",
-            "---",
-            "Shutdown",
-            "Restart",
-            "Sleep",
-            "Lock",
+        # Add all the menu buttons to the menubar
+        self.children = [
+            self.dropdown_system.global_menu_button_title,
+            self.dropdown_system.global_menu_button_file,
+            self.dropdown_system.global_menu_button_edit,
+            self.dropdown_system.global_menu_button_view,
+            self.dropdown_system.global_menu_button_go,
+            self.dropdown_system.global_menu_button_window,
+            self.dropdown_system.global_menu_button_help,
         ]
 
-        # Add menu items to dropdown
-        for item in system_menu_items:
-            if item == "---":
-                # Add separator
-                separator = Box(
-                    name="menu-separator",
-                    size=(150, 1),
-                    style="background-color: #444; margin: 2px 0;",
-                )
-                self.dropdown_window.content_box.add(separator)
-            else:
-                # Add menu item button
-                menu_button = Button(
-                    name="dropdown-item",
-                    child=Label(
-                        name="dropdown-label",
-                        label=item,
-                        h_align="start",  # Align text to the left
-                    ),
-                    on_clicked=lambda *_, action=item: self.on_menu_action(action),
-                )
-                self.dropdown_window.content_box.add(menu_button)
-
-        # Set dropdown window size
-        self.dropdown_window.set_size_request(150, -1)
-
-        # Show the dropdown without animations
-        self.current_dropdown = "System"
-        # Use set_visible(True) for immediate display without animations
-        self.dropdown_window.set_visible(True)
-
-        # Return False to stop the timeout
-        return False
+    def show_system_dropdown(self, imac_button):
+        self.dropdown_system.menu_button_dropdown.child_window.set_pointing_to(
+            imac_button
+        )
+        mouse_capture = self.dropdown_system.menu_button_dropdown
+        if mouse_capture.is_visible():
+            mouse_capture.set_child_window_visible(False)
+        else:
+            mouse_capture.set_child_window_visible(True)

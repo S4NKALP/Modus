@@ -36,7 +36,7 @@ if __name__ == "__main__":
     panel = Panel()
     # corners = Corners()
     dock = Dock()
-    envnoti = ModusNoti()
+    modusnoti = ModusNoti()
     switcher = ApplicationSwitcher()
     launcher = Launcher()
     panel.launcher = launcher
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     _ = css_file.connect("changed", lambda *_: set_css())
 
     # Make sure corners is added to the app
-    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher, envnoti, osd)
+    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher, modusnoti, osd)
 
     def set_css():
         app.set_stylesheet_from_file(

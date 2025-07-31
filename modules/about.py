@@ -5,7 +5,7 @@ import gi  # type: ignore
 from fabric.widgets.label import Label
 from fabric.widgets.button import Button
 from fabric.widgets.box import Box
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 from fabric.utils.helpers import exec_shell_command_async, get_relative_path
 from gi.repository import Gtk, GdkPixbuf  # type: ignore
 
