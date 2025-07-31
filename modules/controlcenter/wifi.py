@@ -1,13 +1,12 @@
-from gi.repository import Gtk, Gdk, GLib
-
-from services.network import NetworkService
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.eventbox import EventBox
+from gi.repository import Gdk, GLib, Gtk
+
+from services.network import NetworkService
 
 
 class WifiNetworkSlot(CenterBox):
@@ -20,14 +19,16 @@ class WifiNetworkSlot(CenterBox):
         self.ssid = network_data.get("ssid", "Unknown")
         self.bssid = network_data.get("bssid", "")
         self.strength = network_data.get("strength", 0)
-        self.icon_name = network_data.get("icon-name", "network-wireless-signal-none-symbolic")
+        self.icon_name = network_data.get(
+            "icon-name", "network-wireless-signal-none-symbolic"
+        )
 
         # The network service puts the same active-ap reference in all networks
         # We need to check if THIS specific network's BSSID matches the active AP's BSSID
         self.is_connected = False
         if self.wifi_service and self.wifi_service._ap:
             active_bssid = self.wifi_service._ap.get_bssid()
-            self.is_connected = (active_bssid == self.bssid)
+            self.is_connected = active_bssid == self.bssid
 
         # Initialize styles based on connection state
         self.styles = [
@@ -59,29 +60,71 @@ class WifiNetworkSlot(CenterBox):
         is_currently_connected = False
         if self.wifi_service and self.wifi_service._ap:
             active_bssid = self.wifi_service._ap.get_bssid()
-            is_currently_connected = (active_bssid == self.bssid)
+            is_currently_connected = active_bssid == self.bssid
 
         if is_currently_connected:
+            # Show disconnecting state
+            self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
+            self.dimage.add_style_class("disconnecting")
+
             # Disconnect from network
             success = self.wifi_service.disconnect_network(self.ssid)
             if success:
                 self.is_connected = False
+                # Remove disconnecting state after a short delay to show feedback
+                from gi.repository import GLib
+
+                GLib.timeout_add(500, lambda: self._reset_disconnect_state())
+            else:
+                # Reset state if disconnect failed
+                self._reset_disconnect_state()
         else:
+            # Show connecting state
+            self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
+            self.dimage.add_style_class("connecting")
+
             # Connect to network (try without password first, could be enhanced for password input)
             success = self.wifi_service.connect_network(self.ssid)
             if success:
                 self.is_connected = True
+                # Remove connecting state after a short delay
+                from gi.repository import GLib
+
+                GLib.timeout_add(500, lambda: self._reset_connect_state())
+            else:
+                # Reset state if connect failed
+                self._reset_connect_state()
 
         # Update display after connection attempt
         self.on_changed()
+
+    def _reset_disconnect_state(self):
+        """Reset visual state after disconnect operation"""
+        self.dimage.remove_style_class("disconnecting")
+        self.dimage.set_property("icon-name", "network-wireless-symbolic")
+        self.on_changed()
+        return False  # Remove timeout
+
+    def _reset_connect_state(self):
+        """Reset visual state after connect operation"""
+        self.dimage.remove_style_class("connecting")
+        self.dimage.set_property("icon-name", "network-wireless-symbolic")
+        self.on_changed()
+        return False  # Remove timeout
 
     def on_changed(self, *_):
         """Update display when connection state changes"""
         # Check if this network is currently connected by comparing BSSIDs
         is_currently_connected = False
         if self.wifi_service and self.wifi_service._ap:
-            active_bssid = self.wifi_service._ap.get_bssid()
-            is_currently_connected = (active_bssid == self.bssid)
+            # Also check the internet connection state to ensure we're actually connected
+            internet_state = self.wifi_service.internet
+            if internet_state == "activated":
+                active_bssid = self.wifi_service._ap.get_bssid()
+                is_currently_connected = active_bssid == self.bssid
+            # If deactivating or deactivated, definitely not connected
+            elif internet_state in ["deactivating", "deactivated", "disconnected"]:
+                is_currently_connected = False
 
         self.is_connected = is_currently_connected
         self.styles = [
@@ -114,7 +157,7 @@ class WifiConnections(Box):
             label="↓ Pull to scan for networks",
             h_align="center",
             visible=False,
-            style="color: #fff; font-size: 12px; padding: 5px;"
+            style="color: #fff; font-size: 12px; padding: 5px;",
         )
 
         self.title = Box(
@@ -135,7 +178,7 @@ class WifiConnections(Box):
         self.device_box = Box(
             spacing=2,
             orientation="vertical",
-            children=[self.refresh_indicator, self.available_networks]
+            children=[self.refresh_indicator, self.available_networks],
         )
 
         # Create scrolled window with pull-to-refresh
@@ -170,7 +213,9 @@ class WifiConnections(Box):
             self.toggle_button.set_active(self.wifi_service.enabled)
             self.toggle_button.connect(
                 "notify::active",
-                lambda *_: setattr(self.wifi_service, 'enabled', self.toggle_button.get_active()),
+                lambda *_: setattr(
+                    self.wifi_service, "enabled", self.toggle_button.get_active()
+                ),
             )
 
             # Connect to WiFi service signals
@@ -178,7 +223,12 @@ class WifiConnections(Box):
             self.wifi_service.connect("notify::scanning", self.on_scanning_changed)
             self.wifi_service.connect("changed", self.update_networks)
             # Also connect to access point changes to update connection states
-            self.wifi_service.connect("notify::access-points", self.refresh_network_states)
+            self.wifi_service.connect(
+                "notify::access-points", self.refresh_network_states
+            )
+            # Connect to internet state changes to handle disconnections
+            self.wifi_service.connect("notify::internet", self.refresh_network_states)
+            self.wifi_service.connect("notify::ssid", self.refresh_network_states)
 
             # Initial network update
             self.update_networks()
@@ -220,7 +270,7 @@ class WifiConnections(Box):
     def refresh_network_states(self, *_):
         """Refresh connection states for all network slots"""
         for child in self.available_networks.get_children():
-            if hasattr(child, 'on_changed'):
+            if hasattr(child, "on_changed"):
                 child.on_changed()
 
     def setup_pull_to_refresh(self):
@@ -237,7 +287,8 @@ class WifiConnections(Box):
         self.bounce_timeout_id = None
         self.bounce_frame = 0
         self.bounce_duration = 60  # Total frames for animation
-        self.bounce_amplitude = 30  # Maximum bounce height in pixels (increased for visibility)
+        # Maximum bounce height in pixels (increased for visibility)
+        self.bounce_amplitude = 30
 
         # Connect to scroll events
         self.scrolled_window.connect("scroll-event", self.on_scroll_event)
@@ -247,10 +298,10 @@ class WifiConnections(Box):
 
         # Enable events
         self.scrolled_window.set_events(
-            Gdk.EventMask.SCROLL_MASK |
-            Gdk.EventMask.BUTTON_PRESS_MASK |
-            Gdk.EventMask.BUTTON_RELEASE_MASK |
-            Gdk.EventMask.POINTER_MOTION_MASK
+            Gdk.EventMask.SCROLL_MASK
+            | Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
         )
 
     def on_scroll_event(self, widget, event):
@@ -332,22 +383,22 @@ class WifiConnections(Box):
 
     def ease_out_bounce(self, t):
         """Smooth bounce easing function (0 to 1)"""
-        import math
-        if t < 1/2.75:
+        if t < 1 / 2.75:
             return 7.5625 * t * t
-        elif t < 2/2.75:
-            t -= 1.5/2.75
+        elif t < 2 / 2.75:
+            t -= 1.5 / 2.75
             return 7.5625 * t * t + 0.75
-        elif t < 2.5/2.75:
-            t -= 2.25/2.75
+        elif t < 2.5 / 2.75:
+            t -= 2.25 / 2.75
             return 7.5625 * t * t + 0.9375
         else:
-            t -= 2.625/2.75
+            t -= 2.625 / 2.75
             return 7.5625 * t * t + 0.984375
 
     def ease_out_elastic(self, t):
         """Elastic easing function for smoother bounce"""
         import math
+
         if t == 0 or t == 1:
             return t
 
@@ -371,7 +422,10 @@ class WifiConnections(Box):
             self.refresh_indicator.set_margin_top(0)
             self.bounce_timeout_id = None
             # Hide indicator after animation if not scanning and not pulling
-            if not (self.wifi_service and self.wifi_service.scanning) and not self.is_pulling:
+            if (
+                not (self.wifi_service and self.wifi_service.scanning)
+                and not self.is_pulling
+            ):
                 self.refresh_indicator.set_visible(False)
             return False
 
@@ -395,7 +449,8 @@ class WifiConnections(Box):
 
         self.bounce_frame = 0
         self.bounce_duration = 80  # Longer for elastic effect
-        self.bounce_amplitude = 40  # Higher amplitude (increased for visibility)
+        # Higher amplitude (increased for visibility)
+        self.bounce_amplitude = 40
         self.bounce_timeout_id = GLib.timeout_add(16, self.animate_elastic)
 
     def animate_elastic(self):
@@ -405,7 +460,10 @@ class WifiConnections(Box):
             self.refresh_indicator.set_margin_top(0)
             self.bounce_timeout_id = None
             # Hide indicator after animation if not scanning and not pulling
-            if not (self.wifi_service and self.wifi_service.scanning) and not self.is_pulling:
+            if (
+                not (self.wifi_service and self.wifi_service.scanning)
+                and not self.is_pulling
+            ):
                 self.refresh_indicator.set_visible(False)
             return False
 
@@ -418,7 +476,6 @@ class WifiConnections(Box):
         # Calculate bounce offset
         bounce_offset = int(self.bounce_amplitude * (1 - eased_progress))
         self.refresh_indicator.set_margin_top(max(0, bounce_offset))
-
 
         self.bounce_frame += 1
         return True
@@ -433,3 +490,4 @@ class WifiConnections(Box):
     def on_destroy(self, widget):
         """Cleanup animations when widget is destroyed"""
         self.stop_bounce_animation()
+

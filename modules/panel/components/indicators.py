@@ -3,8 +3,9 @@ from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.svg import Svg
-from services.network import NetworkService
+
 from services.battery import Battery
+from services.network import NetworkService
 from utils.roam import modus_service
 
 
@@ -155,6 +156,8 @@ class NetworkIndicator(Box):
                     wlan_state += f":{wifi.strength}%"
             elif wifi.internet == "activating":
                 wlan_state = f"connecting:{wifi.ssid}"
+            elif wifi.internet in ["deactivating", "deactivated", "disconnected"]:
+                wlan_state = "No Connection"
             else:
                 wlan_state = "enabled"
 
@@ -189,6 +192,9 @@ class NetworkIndicator(Box):
             elif wifi.internet == "activating":
                 icon_file = "wifi.svg"
                 tooltip = f"Connecting to {wifi.ssid}..."
+            elif wifi.internet in ["deactivating", "deactivated", "disconnected"]:
+                icon_file = "wifi-off.svg"
+                tooltip = "WiFi disconnected"
             else:
                 icon_file = "wifi-off.svg"
                 tooltip = "WiFi disconnected"
