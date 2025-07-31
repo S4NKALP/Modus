@@ -17,9 +17,9 @@ from modules.panel.components.indicators import (
 )
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
+
 from modules.controlcenter.main import ModusControlCenter
 from widgets.mousecapture import MouseCapture
-
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
@@ -42,7 +42,7 @@ class Panel(Window):
         self.imac = Button(
             name="panel-button",
             child=Svg(
-                size=24,
+                size=22,
                 svg_file=get_relative_path("../../config/assets/icons/logo.svg"),
             ),
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
@@ -61,7 +61,7 @@ class Panel(Window):
         self.chevron_button = Button(
             name="panel-button",
             child=Svg(
-                size=18,
+                size=16,
                 svg_file=get_relative_path(
                     "../../config/assets/icons/chevron-right.svg"
                 ),
@@ -84,7 +84,7 @@ class Panel(Window):
             name="panel-button",
             on_clicked=lambda *_: self.search_apps(),
             child=Svg(
-                size=22,
+                size=20,
                 svg_file=get_relative_path("../../config/assets/icons/search.svg"),
             ),
         )
@@ -98,7 +98,7 @@ class Panel(Window):
             style_classes="button",
             on_clicked=self.control_center.toggle_mousecapture,
             child=Svg(
-                size=25,
+                size=22,
                 svg_file=get_relative_path(
                     "../../config/assets/icons/control-center.svg"
                 ),
