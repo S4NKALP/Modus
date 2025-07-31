@@ -31,6 +31,8 @@ class Wifi(Service):
         self._device: NM.DeviceWifi = device
         self._ap: NM.AccessPoint | None = None
         self._ap_signal: int | None = None
+        self._scan_cancellable: Gio.Cancellable | None = None
+        self._is_scanning: bool = False
         super().__init__(**kwargs)
 
         self._client.connect(
@@ -107,17 +109,43 @@ class Wifi(Service):
 
     def scan(self):
         """Start scanning for WiFi networks and emit scanning signal"""
-        if self._device:
-            self.emit("scanning", True)  # Emit signal that scanning has started
+        if self._device and not self._is_scanning:
+            self._is_scanning = True
+            self._scan_cancellable = Gio.Cancellable()
+            self.notify("scanning")  # Notify property change
             self._device.request_scan_async(
-                None,
-                lambda device, result: [
-                    device.request_scan_finish(result),
-                    self.emit(
-                        "scanning", False
-                    ),  # Emit signal that scanning has stopped
-                ],
+                self._scan_cancellable,
+                lambda device, result: self._scan_finished(device, result),
             )
+
+    def _scan_finished(self, device, result):
+        """Handle scan completion"""
+        try:
+            device.request_scan_finish(result)
+        except Exception as e:
+            logger.error(f"WiFi scan error: {e}")
+        finally:
+            self._is_scanning = False
+            self._scan_cancellable = None
+            self.notify("scanning")  # Notify property change
+
+    def toggle_scan(self):
+        """Toggle WiFi scanning on/off"""
+        if self._is_scanning:
+            # Stop current scan
+            if self._scan_cancellable:
+                self._scan_cancellable.cancel()
+                self._scan_cancellable = None
+            self._is_scanning = False
+            self.notify("scanning")  # Notify property change
+        else:
+            # Start new scan
+            self.scan()
+
+    @Property(bool, "readable", default_value=False)
+    def scanning(self) -> bool:
+        """Check if currently scanning"""
+        return self._is_scanning
 
     def is_active_ap(self, name) -> bool:
         return self._ap.get_bssid() == name if self._ap else False
