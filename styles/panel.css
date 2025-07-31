@@ -1,5 +1,7 @@
 #panel {
-    background-color: alpha(#000, 0.03);
+  background-color: alpha(#010101, 0.1);
+  border-bottom: 1px solid alpha(#010101, 0.025);
+  transition: all 120ms ease-in-out;
 }
 
 #panel-icon {
@@ -8,12 +10,42 @@
 
 #panel-button {
   border-radius: 8px;
-  margin: 0 4px 0 6px;
+  margin: 0 4px 0 4px;
   min-width: 20px;
   min-height: 20px;
 }
 
 #panel-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#battery-button {
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 8px;
+}
+
+#battery-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#network-button {
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 8px;
+}
+
+#network-button:hover {
+  background-color: var(--surface-bright);
+}
+
+#bt-button {
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 8px;
+}
+
+#bt-button:hover {
   background-color: var(--surface-bright);
 }
 
@@ -29,7 +61,7 @@
 }
 
 #date-time {
-  margin-right: 6px;
+  margin: 0 10px;
 }
 
 #modules-left,
@@ -38,36 +70,25 @@
   padding: 3px 0;
 }
 
-#notch-spot {
-  background-color: var(--surface);
+.button {
+  border-radius: 5px;
+  padding: 0 5px;
+  margin: 0 2.5px;
+  background: radial-gradient(alpha(#aaa, 0) 0%, transparent, transparent);
+  transition: all 100ms ease-in-out;
 }
 
-#indicators-icon {
-  font-size: 20px;
+.button:hover {
+  background: radial-gradient(alpha(#aaa, 0.2) 100%, transparent, transparent);
 }
 
-#bt-icon {
-  font-size: 18px;
-}
+/* .button.active { */
+/*   background: radial-gradient(alpha(#aaa, 0.2) 100%, transparent, transparent); */
+/* } */
 
-#indicators {
-  margin: 0 8px;
-}
+/* EnvSH Button */
 
-#indicators-icon.alert {
-  color: var(--red-dim);
-}
-
-#menubar-button {
-  margin: 0 2px;
-  border-radius: 4px;
-  padding: 0 6px;
-}
-
-#menubar-button:hover {
-  background-color: var(--surface-bright);
-}
-
-#activewindow-label {
-  font-weight: bold;
+#modus-button label {
+  font-size: 17px;
+  margin: 0 10px;
 }

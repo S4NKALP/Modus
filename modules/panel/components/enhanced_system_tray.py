@@ -10,6 +10,9 @@ from gi.repository import Gtk, GdkPixbuf
 from fabric.system_tray.widgets import SystemTrayItem
 
 
+# FIX: the tooltip should show application names instead of unknown
+
+
 def patched_do_update_properties(self, *_):
     # Try default GTK theme first
     icon_name = self._item.icon_name

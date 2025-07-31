@@ -20,9 +20,11 @@ from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 
 from modules.corners import MyCorner
+
+# TODO: use modus_service
 
 
 def read_config():
