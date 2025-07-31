@@ -221,12 +221,94 @@ class Wifi(Service):
         if not ssid:
             logger.error("[NetworkService] SSID cannot be empty")
             return False
+
         try:
-            subprocess.run(["nmcli", "con", "down", ssid], check=True)
-            return True
-        except subprocess.CalledProcessError as e:
+            # Method 1: Try to disconnect using device-based approach (more reliable)
+            if self._device and self._device.get_active_connection():
+                active_connection = self._device.get_active_connection()
+                # Verify this is the connection we want to disconnect
+                if self._ap and NM.utils_ssid_to_utf8(self._ap.get_ssid().get_data()) == ssid:
+                    try:
+                        # Use NetworkManager API to deactivate the connection
+                        self._client.deactivate_connection_async(
+                            active_connection,
+                            None,
+                            lambda client, result: self._disconnect_finished(client, result, ssid)
+                        )
+                        logger.info(f"[NetworkService] Initiated disconnect from {ssid}")
+
+                        # Force immediate state update to reflect disconnection
+                        from gi.repository import GLib
+                        GLib.timeout_add(100, lambda: self._force_state_update())
+
+                        return True
+                    except Exception as e:
+                        logger.warning(f"[NetworkService] API disconnect failed: {e}, trying nmcli")
+
+            # Method 2: Fallback to nmcli with proper connection ID resolution
+            try:
+                # First, get the connection ID that matches the SSID
+                result = subprocess.check_output(
+                    ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active"],
+                    text=True
+                )
+
+                connection_id = None
+                for line in result.strip().split('\n'):
+                    if line:
+                        name, conn_type = line.split(':', 1)
+                        if conn_type == "802-11-wireless" and name == ssid:
+                            connection_id = name
+                            break
+
+                if connection_id:
+                    subprocess.run(["nmcli", "con", "down", connection_id], check=True)
+                    logger.info(f"[NetworkService] Disconnected from {ssid} using connection ID")
+
+                    # Force immediate state update
+                    from gi.repository import GLib
+                    GLib.timeout_add(100, lambda: self._force_state_update())
+
+                    return True
+                else:
+                    # Method 3: Try disconnecting by device
+                    device_name = self._device.get_iface() if self._device else None
+                    if device_name:
+                        subprocess.run(["nmcli", "device", "disconnect", device_name], check=True)
+                        logger.info(f"[NetworkService] Disconnected device {device_name}")
+
+                        # Force immediate state update
+                        from gi.repository import GLib
+                        GLib.timeout_add(100, lambda: self._force_state_update())
+
+                        return True
+                    else:
+                        logger.error(f"[NetworkService] No active connection found for SSID: {ssid}")
+                        return False
+
+            except subprocess.CalledProcessError as e:
+                logger.error(f"[NetworkService] nmcli disconnect failed: {e}")
+                return False
+
+        except Exception as e:
             logger.error(f"[NetworkService] Failed disconnecting from network: {e}")
             return False
+
+    def _disconnect_finished(self, client, result, ssid):
+        """Handle async disconnect completion"""
+        try:
+            client.deactivate_connection_finish(result)
+            logger.info(f"[NetworkService] Successfully disconnected from {ssid}")
+            # Force state update after async completion
+            self._force_state_update()
+        except Exception as e:
+            logger.error(f"[NetworkService] Async disconnect failed: {e}")
+
+    def _force_state_update(self):
+        """Force an immediate state update to reflect changes"""
+        # Trigger all relevant property notifications
+        self.ap_update()
+        return False  # Remove timeout
 
     @Property(bool, "read-write", default_value=False)
     def enabled(self) -> bool:  # noqa: F811
@@ -267,13 +349,17 @@ class Wifi(Service):
 
     @Property(int, "readable")
     def internet(self):
+        active_connection = self._device.get_active_connection()
+        if not active_connection:
+            return "disconnected"
+
         return {
             NM.ActiveConnectionState.ACTIVATED: "activated",
             NM.ActiveConnectionState.ACTIVATING: "activating",
             NM.ActiveConnectionState.DEACTIVATING: "deactivating",
             NM.ActiveConnectionState.DEACTIVATED: "deactivated",
         }.get(
-            self._device.get_active_connection().get_state(),
+            active_connection.get_state(),
             "unknown",
         )
 
@@ -307,6 +393,14 @@ class Wifi(Service):
 
     @Property(str, "readable")
     def ssid(self):
+        # Check if we have an active connection first
+        active_connection = self._device.get_active_connection()
+        if not active_connection or active_connection.get_state() in [
+            NM.ActiveConnectionState.DEACTIVATED,
+            NM.ActiveConnectionState.DEACTIVATING
+        ]:
+            return "Disconnected"
+
         if not self._ap:
             return "Disconnected"
         ssid = self._ap.get_ssid().get_data()
