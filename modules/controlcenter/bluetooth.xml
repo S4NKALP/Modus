@@ -1,0 +1,9 @@
+<esh name="ControlCenter">
+    <BoxV h_expand="true" name="control-center-widgets">
+        <BoxH name="top-widget" h_expand="true">
+            <BoxV name="wb-widget" style_classes="menu" spacing="5">
+                <Ref>self.bluetooth_man</Ref>
+            </BoxV>
+        </BoxH>
+    </BoxV>
+</esh>

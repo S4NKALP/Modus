@@ -8,7 +8,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from gi.repository import Gdk
 from utils.icon_resolver import IconResolver
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 
 
 class ApplicationSwitcher(Window):

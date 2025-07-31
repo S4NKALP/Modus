@@ -9,6 +9,8 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.svg import Svg
 
+# FIX: Make the timer consistent with the recording start time
+
 
 class RecordingIndicator(Button):
     def __init__(self, **kwargs):
@@ -26,14 +28,14 @@ class RecordingIndicator(Button):
             name="recording-time-label",
             markup="00:00",
             max_width_chars=5,
-            ellipsize="none"
+            ellipsize="none",
         )
 
         self.recording_box = Box(
             orientation="h",
             spacing=2,
             children=[self.recording_icon, self.time_label],
-            size=(80, -1), 
+            size=(80, -1),
         )
 
         self.add(self.recording_box)

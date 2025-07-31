@@ -1,19 +1,16 @@
 from typing import List, Optional, Tuple
 
-import utils.icons as icons
 from fabric.core.service import Property
-from fabric.utils import exec_shell_command_async, get_relative_path
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
-from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import Gdk, GLib
+
 from modules.launcher.plugin_manager import PluginManager
 from modules.launcher.result import Result
 from modules.launcher.result_item import ResultItem
 from modules.launcher.trigger_config import TriggerConfig
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 
 # Constants
 SEARCH_DEBOUNCE_MS = 150
@@ -883,7 +880,6 @@ class Launcher(Window):
 
         # Enter - activate selected result
         if keyval == Gdk.KEY_Return:
-
             # Check for Shift+Enter for alternative actions
             if event.state & Gdk.ModifierType.SHIFT_MASK:
                 if self.results and 0 <= self.selected_index < len(self.results):

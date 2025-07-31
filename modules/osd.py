@@ -13,7 +13,7 @@ from gi.repository import GLib, GObject
 import math
 from services.brightness import Brightness
 from utils.animator import Animator
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 
 
 class AnimatedScale(Scale):
@@ -80,7 +80,9 @@ class BrightnessOSDContainer(Box):
         normalized_brightness = self._normalize_brightness(value)
         self.osd_window_image.set_from_file(
             get_relative_path(
-                f"../config/assets/icons/brightness/brightness-{self.get_svg(normalized_brightness)}.svg"
+                f"../config/assets/icons/brightness/brightness-{
+                    self.get_svg(normalized_brightness)
+                }.svg"
             )
         )
         self.scale.animate_value(normalized_brightness)
@@ -162,7 +164,9 @@ class AudioOSDContainer(Box):
                     volume = 0
                     self.osd_window_image.set_from_file(
                         get_relative_path(
-                            f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                            f"../config/assets/icons/volume/audio-volume-{
+                                self.get_svg(volume)
+                            }.svg"
                         )
                     )
 
@@ -171,7 +175,9 @@ class AudioOSDContainer(Box):
                     self.scale.remove_style_class("muted")
                     self.osd_window_image.set_from_file(
                         get_relative_path(
-                            f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                            f"../config/assets/icons/volume/audio-volume-{
+                                self.get_svg(volume)
+                            }.svg"
                         )
                     )
                     # self.icon.remove_style_class("muted")
@@ -206,14 +212,18 @@ class AudioOSDContainer(Box):
                 volume = 0
                 self.osd_window_image.set_from_file(
                     get_relative_path(
-                        f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                        f"../config/assets/icons/volume/audio-volume-{
+                            self.get_svg(volume)
+                        }.svg"
                     )
                 )
             else:
                 self.scale.remove_style_class("muted")
                 self.osd_window_image.set_from_file(
                     get_relative_path(
-                        f"../config/assets/icons/volume/audio-volume-{self.get_svg(volume)}.svg"
+                        f"../config/assets/icons/volume/audio-volume-{
+                            self.get_svg(volume)
+                        }.svg"
                     )
                 )
 
@@ -288,7 +298,9 @@ class MicrophoneOSDContainer(Box):
                 self.audio.microphone.set_volume(volume)
                 self.osd_window_image.set_from_file(
                     get_relative_path(
-                        f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                        f"../config/assets/icons/mic/microphone-{
+                            self.get_svg(volume)
+                        }.svg"
                     )
                 )
 
@@ -298,14 +310,18 @@ class MicrophoneOSDContainer(Box):
                     volume = 0
                     self.osd_window_image.set_from_file(
                         get_relative_path(
-                            f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                            f"../config/assets/icons/mic/microphone-{
+                                self.get_svg(volume)
+                            }.svg"
                         )
                     )
 
                 else:
                     self.osd_window_image.set_from_file(
                         get_relative_path(
-                            f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                            f"../config/assets/icons/mic/microphone-{
+                                self.get_svg(volume)
+                            }.svg"
                         )
                     )
                     self.scale.remove_style_class("muted")
@@ -330,7 +346,9 @@ class MicrophoneOSDContainer(Box):
                 self.previous_volume = current_volume
                 self.osd_window_image.set_from_file(
                     get_relative_path(
-                        f"../config/assets/icons/mic/microphone-{self.get_svg(current_volume)}.svg"
+                        f"../config/assets/icons/mic/microphone-{
+                            self.get_svg(current_volume)
+                        }.svg"
                     )
                 )
                 self.update_volume()
@@ -346,13 +364,17 @@ class MicrophoneOSDContainer(Box):
                 volume = 0
                 self.osd_window_image.set_from_file(
                     get_relative_path(
-                        f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                        f"../config/assets/icons/mic/microphone-{
+                            self.get_svg(volume)
+                        }.svg"
                     )
                 )
             else:
                 self.osd_window_image.set_from_file(
                     get_relative_path(
-                        f"../config/assets/icons/mic/microphone-{self.get_svg(volume)}.svg"
+                        f"../config/assets/icons/mic/microphone-{
+                            self.get_svg(volume)
+                        }.svg"
                     )
                 )
                 self.scale.remove_style_class("muted")

@@ -1,7 +1,7 @@
 from fabric.widgets.box import Box
 from fabric.widgets.shapes import Corner
 
-from utils.wayland import WaylandWindow as Window
+from widgets.wayland import WaylandWindow as Window
 
 
 class MyCorner(Box):
