@@ -199,7 +199,17 @@ class ModusService(Service):
 
     def sc(self, signal_name: str, callback: callable, def_value="..."):
         self.connect(signal_name, callback)
-        return def_value
+        # Return current property value instead of default
+        if signal_name == "bluetooth-changed":
+            return self.bluetooth if self.bluetooth else "Off"
+        elif signal_name == "wlan-changed":
+            return self.wlan if self.wlan else "No Connection"
+        elif signal_name == "battery-changed":
+            return self.battery if self.battery else "Unknown"
+        elif signal_name == "music-changed":
+            return self.music if self.music else ""
+        else:
+            return def_value
 
     def __init__(self):
         super().__init__()
