@@ -119,7 +119,8 @@ class NotificationWidget(Box):
                         children=[
                             Label(
                                 markup=self._notification.summary,  # type: ignore
-                                ellipsization="middle",
+                                ellipsization="end",
+                                max_chars_width=20,
                                 style_classes="summary",
                             )
                         ],
@@ -128,9 +129,11 @@ class NotificationWidget(Box):
                     ),
                     Label(
                         label=self._notification.body,  # type: ignore
-                        line_wrap="word-char",
+                        # line_wrap="word-char",
                         v_align="start",
                         h_align="start",
+                        ellipsization="end",
+                        max_chars_width=34,
                         style_classes="body",
                     ),
                 ],
