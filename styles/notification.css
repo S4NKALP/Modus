@@ -1,60 +1,63 @@
-
 #notification {
-    padding: 0.8rem;
-	background-color: alpha(#000, 0.3);
-	border: .5px solid alpha(#111, 0.4);
-	box-shadow: inset 0 0 200px 0 alpha(#111, 0.5), inset 0 0 0 .5px alpha(#aaa, 0.4);
-    border-radius: 1.2rem;
+  padding: 16px;
+  background-color: alpha(#000, 0.3);
+  border: 0.5px solid alpha(#111, 0.4);
+  box-shadow:
+    inset 0 0 200px 0 alpha(#111, 0.5),
+    inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border-radius: 20px;
+  margin: 4px;
 }
 
 #notification .summary {
-    font-size: 20px;
-    font-weight: bold;
+  font-size: 20px;
+  font-weight: bold;
 }
 
 #notification .body {
-    color: #ddd;
-    margin-top: 0.5rem;
-    font-weight: normal;
+  color: #ddd;
+  margin-top: 0.5rem;
+  font-weight: normal;
 }
 
 #noti-image {
-    border-radius: 7px;
+  border-radius: 7px;
 }
 
 #env-noti-center {
-	border-radius: 1.25rem;
+  border-radius: 1.25rem;
 }
 
-#notification-action{
-    background-color: #e0e0e0;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-weight: 500;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease, color 0.2s ease;
+#notification-action {
+  background-color: #e0e0e0;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 #notification-action label {
-    color: #000000;
+  color: #000000;
 }
 #notification-action:hover label {
-    color: #ffffff;
+  color: #ffffff;
 }
 
-#noti-image image{
-    border-radius: 25px;
+#noti-image image {
+  border-radius: 25px;
 }
 #notification-action:hover {
-    background-color: #007aff;         /* macOS-style blue */
-    color: #ffffff;
+  background-color: #007aff; /* macOS-style blue */
+  color: #ffffff;
 }
 
 #notification-center {
-	background-color: alpha(#000, 0.3);
-	box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
-	border: 1px solid alpha(#111, 0.4);
-	border-radius: 1.25rem;
-	padding: 1rem;
+  background-color: alpha(#000, 0.3);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 1.25rem;
+  padding: 1rem;
 }
-
