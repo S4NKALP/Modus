@@ -63,13 +63,15 @@ class AnimationManager:
         """Calculate optimal frame interval based on widget count"""
         widget_count = len(self._animating_widgets)
         if widget_count <= 1:
-            return 22  # 45 FPS for single widget
-        elif widget_count <= 3:
-            return 33  # 30 FPS for 2-3 widgets
+            return 16  # 60 FPS
+        elif widget_count <= 2:
+            return 16  # 60 FPS
+        elif widget_count <= 4:
+            return 22  # 45 FPS
         elif widget_count <= 6:
-            return 50  # 20 FPS for 4-6 widgets
+            return 33  # 30 FPS
         else:
-            return 67  # 15 FPS for 7+ widgets
+            return 50  # 20 FPS
 
     def _start_timer(self):
         interval = self._get_optimal_interval()
@@ -166,9 +168,10 @@ class SlideRevealer(Gtk.Overlay):
         t = min(elapsed / self.duration, 1.0)
 
         if self._show_animation:
-            eased = 1 - (1 - t) ** 3  # Inline ease_out_cubic
+            # Ease out quadratic (no bounce/overshoot)
+            eased = 1 - (1 - t) ** 2
         else:
-            eased = t**3  # Ease in cubic for hide animation
+            eased = t**2  # Ease in quadratic for hide animation
 
         self._pending_position = self._get_position_at_progress_cached(eased)
 

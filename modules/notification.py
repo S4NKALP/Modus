@@ -28,7 +28,7 @@ NOTIFICATION_IMAGE_SIZE = 48
 
 
 # Improved animation smoothness and consistent behavior for rapid notifications.
-def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 250):
+def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 600):
     revealer.duration = duration
 
 
@@ -207,7 +207,7 @@ class NotificationRevealer(SlideRevealer):
         super().__init__(
             child=self.event_box,
             direction="right",
-            duration=250,
+            duration=600,
         )
 
         smooth_revealer_animation(self)
@@ -283,6 +283,7 @@ class ModusNoti(Window):
         self.notifications = Box(
             v_expand=True,
             h_expand=True,
+            title="Notification Center",
             style="margin: 1px 0px 1px 1px;",
             orientation="v",
             spacing=5,
@@ -317,8 +318,17 @@ class ModusNoti(Window):
         current_children.insert(0, new_box)
         self.notifications.children = current_children
 
-
         # This ensures each notification's container is fully laid out before animation
+
+        if len(current_children) >= 4:
+            # Animate close for the oldest notification if we exceed the limit
+            oldest_notification = current_children[-1]
+            if hasattr(oldest_notification, 'notification'):
+                # Trigger the close animation by closing the underlying notification
+                # This will use the same slide animation as auto-dismiss (left-to-right)
+                oldest_notification.notification.close("expired")
+            current_children.pop()
+
         def start_animation():
             if new_box.get_parent():  # Only animate if still in the tree
                 new_box.reveal()
