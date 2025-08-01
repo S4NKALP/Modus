@@ -15,7 +15,7 @@ class BluetoothIndicator(Box):
         self.bluetooth = BluetoothClient()
         self.bt_icon = Svg(
             name="bt-icon",
-            size=20,
+            size=25,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/bluetooth-clear.svg"
             ),
@@ -211,15 +211,15 @@ class NetworkIndicator(Box):
         elif primary_device == "wired" and self.network_service.ethernet_device:
             ethernet = self.network_service.ethernet_device
             if ethernet.internet == "activated":
-                icon_file = "ethernet.svg"
+                icon_file = "network-wired.svg"
                 tooltip = "Ethernet connected"
                 if hasattr(ethernet, "speed") and ethernet.speed > 0:
                     tooltip += f" ({ethernet.speed} Mbps)"
             elif ethernet.internet == "activating":
-                icon_file = "wifi-clear.svg"
+                icon_file = "network-wired.svg"
                 tooltip = "Ethernet connecting..."
             else:
-                icon_file = "wifi-off-clear.svg"
+                icon_file = "network-wired-offline.svg"
                 tooltip = "Ethernet disconnected"
 
         self.network_icon.set_from_file(
