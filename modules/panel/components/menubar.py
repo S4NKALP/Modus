@@ -195,11 +195,16 @@ class MenuBarDropdowns:
                 parent=parent,
                 dropdown_children=[
                     dropdown_option(
-                        "Zoom",
-                        on_clicked=lambda _: subprocess.run(
-                            "bash ~/.config/scripts/zoomer.sh", shell=True
-                        ),
+                        "Zoom In",
+                        "󰍉     +",
+                        on_click="hyprctl -q keyword cursor:zoom_factor $(hyprctl getoption cursor:zoom_factor -j | jq '.float * 1.1')",
                     ),
+                    dropdown_option(
+                        "Zoom Out",
+                        "󰍉     -",
+                        on_click="hyprctl -q keyword cursor:zoom_factor $(hyprctl getoption cursor:zoom_factor -j | jq '(.float * 0.9) | if . < 1 then 1 else . end')",
+                    ),
+                    dropdown_divider("---------------------"),
                     dropdown_option(
                         "Move Window to Left",
                         on_click="hyprctl dispatch movewindow l",
