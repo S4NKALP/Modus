@@ -1,16 +1,15 @@
+import math
 import time
 from typing import ClassVar, Literal
 
-import utils.icons as icons
+from gi.repository import GLib, GObject
+
 from fabric.audio import Audio
+from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
-from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scale import Scale, ScaleMark
 from fabric.widgets.svg import Svg
-from fabric.utils.helpers import get_relative_path
-from gi.repository import GLib, GObject
-import math
 from services.brightness import Brightness
 from utils.animator import Animator
 from widgets.wayland import WaylandWindow as Window
@@ -410,6 +409,7 @@ class OSD(Window):
         super().__init__(
             layer="overlay",
             anchor="bottom",
+            title="modus",
             child=self.main_box,
             visible=False,
             pass_through=True,

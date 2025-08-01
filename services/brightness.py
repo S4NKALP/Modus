@@ -1,9 +1,10 @@
 import os
 
-from fabric.core.service import Property, Service, Signal
-from fabric.utils import exec_shell_command_async, monitor_file
 from gi.repository import GLib
 from loguru import logger
+
+from fabric.core.service import Property, Service, Signal
+from fabric.utils import exec_shell_command_async, monitor_file
 
 
 def exec_brightnessctl_async(args: str):

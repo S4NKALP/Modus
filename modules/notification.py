@@ -1,42 +1,35 @@
+import os
+import sys
 from typing import cast
 
-from fabric import Application
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.image import Image
-from fabric.widgets.button import Button
-from widgets.wayland import WaylandWindow as Window
-from fabric.widgets.revealer import Revealer
+from gi.repository import GdkPixbuf, GLib  # type: ignore
+
+from config.data import NOTIFICATION_TIMEOUT
 from fabric.notifications import (
-    NotificationAction,
-    Notifications,
     Notification,
+    NotificationAction,
     NotificationCloseReason,
-    NotificationImagePixmap,
+    Notifications,
 )
-import os
-from fabric.utils import invoke_repeater, get_relative_path
-
+from fabric.utils import invoke_repeater
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.eventbox import EventBox
+from fabric.widgets.label import Label
 from utils.roam import modus_service
+from widgets.custom_image import CustomImage
+from widgets.customrevealer import SlideRevealer
+from widgets.wayland import WaylandWindow as Window
 
-from utils.custom_image import CustomImage
-
-from gi.repository import GdkPixbuf  # type: ignore
-
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
-NOTIFICATION_TIMEOUT = 10 * 1000
 
 
 # Improved animation smoothness and consistent behavior for rapid notifications.
-
-def smooth_revealer_animation(revealer: Revealer, duration: int = 300):
-    """
-    Adjusts the Revealer's animation properties for smoother transitions.
-    """
-    revealer.set_property("transition-duration", duration)
-    revealer.set_property("transition-type", "slide-left")
+def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 250):
+    revealer.duration = duration
 
 
 def get_notification_image_pixbuf(
@@ -74,7 +67,6 @@ class NotificationWidget(Box):
         self.image = notification.app_icon
         body_container = Box(name="noti-image", spacing=4, orientation="h")
 
-        # Load and show image (from app_icon, image_file, or pixbuf)
         pixbuf = get_notification_image_pixbuf(notification)
         image_file = None
 
@@ -129,7 +121,6 @@ class NotificationWidget(Box):
                     ),
                     Label(
                         label=self._notification.body,  # type: ignore
-                        # line_wrap="word-char",
                         v_align="start",
                         h_align="start",
                         ellipsization="end",
@@ -187,39 +178,103 @@ class NotificationWidget(Box):
         self.destroy()
 
 
-class NotificationRevealer(Revealer):
+class NotificationRevealer(SlideRevealer):
     def __init__(self, notification: Notification, on_transition_end=None, **kwargs):
         self.notif_box = NotificationWidget(notification)
         self.notification = notification
         self.on_transition_end = on_transition_end
-        super().__init__(
-            child=Box(
-                children=[self.notif_box],
-            ),
-            transition_duration=300,
-            transition_type="slide-left",
+
+        # Add swipe detection variables
+        self._drag_start_x = 0
+        self._drag_start_y = 0
+        self._is_dragging = False
+        self._swipe_threshold = 100  # pixels to trigger swipe dismiss
+
+        # Wrap notification in EventBox for swipe detection
+        self.event_box = EventBox(
+            events=[
+                "button-press-event",
+                "button-release-event",
+                "motion-notify-event",
+            ],
+            child=self.notif_box,
         )
 
-        self.connect(
-            "notify::child-revealed",
-            self._on_child_revealed,
+        self.event_box.connect("button-press-event", self._on_button_press)
+        self.event_box.connect("button-release-event", self._on_button_release)
+        self.event_box.connect("motion-notify-event", self._on_motion)
+
+        super().__init__(
+            child=self.event_box,
+            direction="right",
+            duration=250,
         )
+
         smooth_revealer_animation(self)
+
+        # Disconnect the destroy_noti handler from the notification widget
+        # to prevent immediate destruction that interferes with slide animation
+        self.notification.disconnect_by_func(self.notif_box.destroy_noti)
+
+        # Connect our own handler that manages the slide animation
         self.notification.connect("closed", self.on_resolved)
 
-    def _on_child_revealed(self, *args):
-        if not self.get_child_revealed():
+    def _on_animation_complete(self, is_hiding=False):
+        if is_hiding:
+            # Manually destroy the notification widget since we disconnected its handler
+            self.notif_box.destroy_noti()
+
             if self.on_transition_end:
                 self.on_transition_end()
             self.destroy()
 
     def on_resolved(
         self,
-        notification: Notification,
+        _notification: Notification,
         reason: NotificationCloseReason,
     ):
-        self.set_property("transition-type", "slide-right")
-        self.set_reveal_child(False)
+        # Use left-to-right slide for auto-dismiss (expired), right-to-left for manual close
+        if reason == "expired":
+            # Left-to-right slide for auto-dismiss
+            self.set_slide_direction("left")
+        else:
+            # Right-to-left slide for manual close
+            self.set_slide_direction("right")
+
+        self.hide()
+        GLib.timeout_add(self.duration + 50, lambda: self._on_animation_complete(True))
+
+    def _on_button_press(self, _widget, event):
+        if event.button == 1:
+            self._drag_start_x = event.x
+            self._drag_start_y = event.y
+            self._is_dragging = True
+        return False
+
+    def _on_button_release(self, _widget, event):
+        if self._is_dragging and event.button == 1:
+            self._is_dragging = False
+
+            # Calculate swipe distance
+            dx = event.x - self._drag_start_x
+            dy = abs(event.y - self._drag_start_y)
+
+            if dx > self._swipe_threshold and dy < 50:  # 50px vertical tolerance
+                # Follow the swipe gesture direction
+                self.set_slide_direction("right")
+                self.hide()
+                # Schedule cleanup after animation
+                GLib.timeout_add(
+                    self.duration + 50, lambda: self._on_animation_complete(True)
+                )
+        return False
+
+    def _on_motion(self, _widget, event):
+        if self._is_dragging:
+            # TODO: Add visual feedback during swipe
+            # Could add translation or opacity changes here
+            pass
+        return False
 
 
 class ModusNoti(Window):
@@ -244,6 +299,29 @@ class ModusNoti(Window):
 
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
-        new_box = NotificationRevealer(notification, on_transition_end=lambda: self.notifications.remove(new_box))
-        self.notifications.add(new_box)
-        new_box.set_reveal_child(True)
+
+        # Check if Do Not Disturb is enabled
+        if modus_service.dont_disturb:
+            # Still cache the notification for notification center, but don't show it
+            modus_service.cache_notification(notification)
+            # Close the notification immediately to prevent it from showing
+            notification.close("dismissed-by-user")
+            return
+
+        new_box = NotificationRevealer(
+            notification, on_transition_end=lambda: self.notifications.remove(new_box)
+        )
+
+        # Insert at the beginning (index 0) to show new notifications at the top
+        current_children = list(self.notifications.children)
+        current_children.insert(0, new_box)
+        self.notifications.children = current_children
+
+
+        # This ensures each notification's container is fully laid out before animation
+        def start_animation():
+            if new_box.get_parent():  # Only animate if still in the tree
+                new_box.reveal()
+            return False
+
+        GLib.timeout_add(32, start_animation)

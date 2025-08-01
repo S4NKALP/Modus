@@ -6,9 +6,10 @@ including fallback mechanisms for file paths and common icon locations.
 """
 
 import os
-from gi.repository import Gtk, GdkPixbuf
-from fabric.system_tray.widgets import SystemTrayItem
 
+from gi.repository import GdkPixbuf, Gtk
+
+from fabric.system_tray.widgets import SystemTrayItem
 
 # FIX: the tooltip should show application names instead of unknown
 

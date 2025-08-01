@@ -1,7 +1,8 @@
-from fabric.core import Property, Service, Signal
-from pydbus import SystemBus
 import psutil
 from gi.repository import GLib
+from pydbus import SystemBus
+
+from fabric.core import Property, Service, Signal
 
 DeviceState = {
     0: "UNKNOWN",

@@ -1,19 +1,21 @@
+from gi.repository import Gdk, GLib, Gtk
+
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gdk, GLib, Gtk
-
 from services.network import NetworkService
+from widgets.wifi_password_dialog import WiFiPasswordDialog
 
 
 class WifiNetworkSlot(CenterBox):
-    def __init__(self, network_data: dict, wifi_service, **kwargs):
+    def __init__(self, network_data: dict, wifi_service, parent=None, **kwargs):
         super().__init__(**kwargs)
         self.network_data = network_data
         self.wifi_service = wifi_service
+        self.parent = parent  # Reference to control center
 
         # Get network info
         self.ssid = network_data.get("ssid", "Unknown")
@@ -42,6 +44,9 @@ class WifiNetworkSlot(CenterBox):
             name="device-icon",
             style_classes=" ".join(self.styles),
         )
+
+        # Initialize password dialog
+        self.password_dialog = None
 
         self.start_children = [
             Button(
@@ -79,11 +84,10 @@ class WifiNetworkSlot(CenterBox):
                 # Reset state if disconnect failed
                 self._reset_disconnect_state()
         else:
-            # Show connecting state
+            # Try to connect without password first (for open networks or saved connections)
             self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
             self.dimage.add_style_class("connecting")
 
-            # Connect to network (try without password first, could be enhanced for password input)
             success = self.wifi_service.connect_network(self.ssid)
             if success:
                 self.is_connected = True
@@ -92,8 +96,9 @@ class WifiNetworkSlot(CenterBox):
 
                 GLib.timeout_add(500, lambda: self._reset_connect_state())
             else:
-                # Reset state if connect failed
+                # Connection failed, likely needs password - show password dialog
                 self._reset_connect_state()
+                self._show_password_dialog()
 
         # Update display after connection attempt
         self.on_changed()
@@ -132,6 +137,67 @@ class WifiNetworkSlot(CenterBox):
         ]
         self.dimage.set_property("style-classes", " ".join(self.styles))
         return
+
+    def _show_password_dialog(self):
+        """Show the WiFi password dialog"""
+        # Close the control center first
+        if self.parent and hasattr(self.parent, "hide_controlcenter"):
+            self.parent.hide_controlcenter()
+
+        # Create a new dialog each time to ensure clean state
+        if self.password_dialog:
+            self.password_dialog.destroy_dialog()
+
+        self.password_dialog = WiFiPasswordDialog(
+            ssid=self.ssid,
+            on_connect_callback=self._on_password_connect,
+            on_cancel_callback=self._on_password_cancel,
+        )
+
+        self.password_dialog.show_dialog()
+
+    def _on_password_connect(self, ssid, password):
+        """Handle password dialog connect action"""
+        if password.strip():
+            # Show connecting state
+            self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
+            self.dimage.add_style_class("connecting")
+
+            # Try to connect with password
+            try:
+                success = self.wifi_service.connect_network(ssid, password)
+                if success:
+                    self.is_connected = True
+                    # Remove connecting state after a short delay
+                    from gi.repository import GLib
+
+                    GLib.timeout_add(500, lambda: self._reset_connect_state())
+                else:
+                    # Connection failed - show error in dialog immediately
+                    self._reset_connect_state()
+                    if self.password_dialog:
+                        # Show error immediately without delay
+                        self._show_connection_error()
+            except Exception:
+                # Handle any connection errors gracefully
+                self._reset_connect_state()
+                if self.password_dialog:
+                    # Show error immediately
+                    self._show_connection_error("Connection failed. Please try again.")
+
+            # Update display after connection attempt
+            self.on_changed()
+
+    def _show_connection_error(self, message="Incorrect password. Please try again."):
+        """Show connection error in a separate thread to prevent UI blocking"""
+        if self.password_dialog:
+            self.password_dialog.show_error(message)
+        return False  # Don't repeat if called from GLib.timeout_add
+
+    def _on_password_cancel(self):
+        """Handle password dialog cancel action"""
+        # Reset any connecting state
+        self._reset_connect_state()
 
 
 class WifiConnections(Box):
@@ -261,7 +327,9 @@ class WifiConnections(Box):
         access_points = self.wifi_service.access_points
         for ap_data in access_points:
             if ap_data.get("ssid") and ap_data.get("ssid") != "Unknown":
-                network_slot = WifiNetworkSlot(ap_data, self.wifi_service)
+                network_slot = WifiNetworkSlot(
+                    ap_data, self.wifi_service, parent=self.parent
+                )
                 self.available_networks.add(network_slot)
 
         # Update all network connection states

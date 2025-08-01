@@ -1,12 +1,13 @@
 import json
 
+from gi.repository import Gdk
+
 import config.data as data
 from fabric.hyprland.widgets import get_hyprland_connection
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from gi.repository import Gdk
 from utils.icon_resolver import IconResolver
 from widgets.wayland import WaylandWindow as Window
 

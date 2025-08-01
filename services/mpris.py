@@ -1,11 +1,9 @@
-from gi.repository import Playerctl, GLib
-from fabric.utils import bulk_connect
-from fabric.core.service import Service, Signal
-from fabric import Fabricator
+import gi
+from gi.repository import GLib, Playerctl
 
 from config.data import ALLOWED_PLAYERS
-
-import gi
+from fabric import Fabricator
+from fabric.core.service import Service, Signal
 
 gi.require_version("Playerctl", "2.0")
 
@@ -158,7 +156,6 @@ class PlayerService(Service):
                 and hasattr(self._player.props, "metadata")
                 and self._player.props.metadata
             ):
-
                 metadata = self._player.props.metadata
 
                 # Try mpris:length first (most common)

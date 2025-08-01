@@ -1,11 +1,15 @@
+import os
 import subprocess
 from typing import Any, List, Literal
 
 import gi
-from fabric.core.service import Property, Service, Signal
-from fabric.utils import bulk_connect
 from gi.repository import Gio
 from loguru import logger
+
+from fabric.core.service import Property, Service, Signal
+from fabric.utils import bulk_connect
+
+# FIX: HAHA Could be better if loc is less
 
 try:
     gi.require_version("NM", "1.0")
@@ -190,31 +194,285 @@ class Wifi(Service):
         if not ssid:
             logger.error("[NetworkService] SSID cannot be empty")
             return False
+
+        # Check if nm-applet is running before we kill it
+        nm_applet_was_running = self._is_nm_applet_running()
+
+        # Kill any running NetworkManager authentication agents to prevent GUI dialogs
         try:
-            # First try to connect using saved connection
+            subprocess.run(["pkill", "-f", "nm-applet"], capture_output=True)
+            subprocess.run(["pkill", "-f", "nm-connection-editor"], capture_output=True)
+            subprocess.run(
+                ["pkill", "-f", "polkit-gnome-authentication-agent"],
+                capture_output=True,
+            )
+        except:
+            pass  # Ignore errors if processes don't exist
+
+        try:
+            # First try to connect using saved connection (suppress GUI)
             try:
-                subprocess.run(["nmcli", "con", "up", ssid], check=True)
+                env = os.environ.copy()
+                env.update(
+                    {
+                        "DISPLAY": "",
+                        "WAYLAND_DISPLAY": "",
+                        "XDG_SESSION_TYPE": "tty",
+                    }
+                )
+                subprocess.run(
+                    ["nmcli", "--terse", "con", "up", ssid],
+                    check=True,
+                    capture_output=True,
+                    env=env,
+                )
                 return True
             except subprocess.CalledProcessError:
                 # If saved connection fails, try with password if provided
                 if password:
-                    cmd = [
+                    # Create environment without GUI components to prevent dialogs
+                    env = os.environ.copy()
+                    env.update(
+                        {
+                            "DISPLAY": "",  # No X11 display
+                            "WAYLAND_DISPLAY": "",  # No Wayland display
+                            "XDG_SESSION_TYPE": "tty",  # Force TTY session
+                            "DESKTOP_SESSION": "",  # No desktop session
+                            "NM_EDITOR": "/bin/false",  # Disable editor
+                            "NM_POLKIT_AGENT": "/bin/false",  # Disable polkit agent
+                        }
+                    )
+
+                    # First, try to delete any existing connection with the same name to avoid conflicts
+                    try:
+                        subprocess.run(
+                            ["nmcli", "connection", "delete", ssid],
+                            capture_output=True,
+                            env=env,
+                        )
+                    except:
+                        pass  # Ignore if connection doesn't exist
+
+                    # Create a temporary connection profile with the password
+                    # Use a unique temporary name to avoid conflicts
+                    temp_connection_name = f"temp_{ssid}_{os.getpid()}"
+
+                    create_cmd = [
                         "nmcli",
+                        "connection",
+                        "add",
+                        "type",
+                        "wifi",
+                        "con-name",
+                        temp_connection_name,
+                        "ssid",
+                        ssid,
+                        "wifi-sec.key-mgmt",
+                        "wpa-psk",
+                        "wifi-sec.psk",
+                        password,
+                        "connection.autoconnect",
+                        "no",  # Don't auto-connect
+                    ]
+
+                    create_result = subprocess.run(
+                        create_cmd, capture_output=True, text=True, env=env
+                    )
+
+                    if create_result.returncode == 0:
+                        # Try to activate the temporary connection with shorter timeout
+                        activate_cmd = [
+                            "nmcli",
+                            "--wait",
+                            "3",
+                            "connection",
+                            "up",
+                            temp_connection_name,
+                        ]
+                        try:
+                            activate_result = subprocess.run(
+                                activate_cmd,
+                                capture_output=True,
+                                text=True,
+                                env=env,
+                                timeout=5,  # 5 second timeout for faster failure detection
+                            )
+                        except subprocess.TimeoutExpired:
+                            # Connection timed out - treat as failure
+                            activate_result = subprocess.CompletedProcess(
+                                activate_cmd, 1, "", "Connection timeout"
+                            )
+
+                        if activate_result.returncode == 0:
+                            # Connection successful!
+                            if remember:
+                                # Rename the temporary connection to the final name
+                                rename_cmd = [
+                                    "nmcli",
+                                    "connection",
+                                    "modify",
+                                    temp_connection_name,
+                                    "connection.id",
+                                    ssid,
+                                    "connection.autoconnect",
+                                    "yes",
+                                ]
+                                subprocess.run(rename_cmd, capture_output=True, env=env)
+                            else:
+                                # Don't remember - delete the temporary connection
+                                subprocess.run(
+                                    [
+                                        "nmcli",
+                                        "connection",
+                                        "delete",
+                                        temp_connection_name,
+                                    ],
+                                    capture_output=True,
+                                    env=env,
+                                )
+                            return True
+                        else:
+                            # Connection failed - delete the temporary connection immediately
+                            # This ensures incorrect passwords are never saved
+                            subprocess.run(
+                                ["nmcli", "connection", "delete", temp_connection_name],
+                                capture_output=True,
+                                env=env,
+                            )
+                            return False
+                    else:
+                        # Failed to create connection profile
+                        return False
+
+                    # Fallback: try the old method but always use temporary connections first
+                    # This ensures incorrect passwords are never permanently saved
+                    fallback_cmd = [
+                        "nmcli",
+                        "--terse",
+                        "--wait",
+                        "3",  # Reduced wait time for faster response
                         "device",
                         "wifi",
                         "connect",
                         ssid,
                         "password",
                         password,
+                        "--temporary",  # Always use temporary for initial attempt
                     ]
-                    if not remember:
-                        cmd.extend(["--temporary"])
-                    subprocess.run(cmd, check=True)
-                    return True
+
+                    # Set additional environment variables to suppress dialogs
+                    env.update(
+                        {
+                            "SSH_ASKPASS": "/bin/false",
+                            "GIT_ASKPASS": "/bin/false",
+                            "SUDO_ASKPASS": "/bin/false",
+                            "NM_POLKIT_AGENT": "",
+                        }
+                    )
+
+                    result = subprocess.run(
+                        fallback_cmd,
+                        capture_output=True,
+                        text=True,
+                        env=env,
+                        stdin=subprocess.DEVNULL,
+                    )
+
+                    # If connection succeeded and we want to remember it
+                    if result.returncode == 0 and remember:
+                        # Create a permanent connection profile
+                        save_cmd = [
+                            "nmcli",
+                            "connection",
+                            "add",
+                            "type",
+                            "wifi",
+                            "con-name",
+                            ssid,
+                            "ssid",
+                            ssid,
+                            "wifi-sec.key-mgmt",
+                            "wpa-psk",
+                            "wifi-sec.psk",
+                            password,
+                            "connection.autoconnect",
+                            "yes",
+                        ]
+                        subprocess.run(save_cmd, capture_output=True, env=env)
+
+                    return result.returncode == 0
                 return False
         except subprocess.CalledProcessError as e:
             logger.error(f"[NetworkService] Failed connecting to network: {e}")
             return False
+        finally:
+            # Cleanup: Remove any leftover temporary connections for this process
+            self._cleanup_temp_connections()
+
+            # Restart nm-applet if it was running before we killed it
+            if nm_applet_was_running:
+                self._restart_nm_applet()
+
+    def _is_nm_applet_running(self):
+        """Check if nm-applet is currently running"""
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "nm-applet"], capture_output=True, text=True
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def _restart_nm_applet(self):
+        """Restart nm-applet with indicator support"""
+        try:
+            # Small delay to ensure connection process is complete
+            import time
+
+            time.sleep(0.5)
+
+            # Start nm-applet in the background with indicator support
+            subprocess.Popen(
+                ["nm-applet", "--indicator"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,  # Detach from parent process
+            )
+            logger.debug("[NetworkService] Restarted nm-applet with indicator support")
+        except Exception as e:
+            logger.debug(f"[NetworkService] Failed to restart nm-applet: {e}")
+
+    def _cleanup_temp_connections(self):
+        """Clean up any temporary connections created by this process"""
+        try:
+            # List all connections and find temporary ones created by this process
+            result = subprocess.run(
+                ["nmcli", "-t", "-f", "NAME", "connection", "show"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode == 0:
+                connections = result.stdout.strip().split("\n")
+                temp_prefix = "temp_"
+                process_suffix = f"_{os.getpid()}"
+
+                for connection in connections:
+                    if connection.startswith(temp_prefix) and connection.endswith(
+                        process_suffix
+                    ):
+                        # Delete this temporary connection
+                        subprocess.run(
+                            ["nmcli", "connection", "delete", connection],
+                            capture_output=True,
+                        )
+                        logger.debug(
+                            f"[NetworkService] Cleaned up temporary connection: {
+                                connection
+                            }"
+                        )
+        except Exception as e:
+            logger.debug(f"[NetworkService] Error during temp connection cleanup: {e}")
 
     def disconnect_network(self, ssid: str) -> bool:
         """Disconnect from a WiFi network"""
@@ -227,46 +485,67 @@ class Wifi(Service):
             if self._device and self._device.get_active_connection():
                 active_connection = self._device.get_active_connection()
                 # Verify this is the connection we want to disconnect
-                if self._ap and NM.utils_ssid_to_utf8(self._ap.get_ssid().get_data()) == ssid:
+                if (
+                    self._ap
+                    and NM.utils_ssid_to_utf8(self._ap.get_ssid().get_data()) == ssid
+                ):
                     try:
                         # Use NetworkManager API to deactivate the connection
                         self._client.deactivate_connection_async(
                             active_connection,
                             None,
-                            lambda client, result: self._disconnect_finished(client, result, ssid)
+                            lambda client, result: self._disconnect_finished(
+                                client, result, ssid
+                            ),
                         )
-                        logger.info(f"[NetworkService] Initiated disconnect from {ssid}")
+                        logger.info(
+                            f"[NetworkService] Initiated disconnect from {ssid}"
+                        )
 
                         # Force immediate state update to reflect disconnection
                         from gi.repository import GLib
+
                         GLib.timeout_add(100, lambda: self._force_state_update())
 
                         return True
                     except Exception as e:
-                        logger.warning(f"[NetworkService] API disconnect failed: {e}, trying nmcli")
+                        logger.warning(
+                            f"[NetworkService] API disconnect failed: {e}, trying nmcli"
+                        )
 
             # Method 2: Fallback to nmcli with proper connection ID resolution
             try:
                 # First, get the connection ID that matches the SSID
                 result = subprocess.check_output(
-                    ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active"],
-                    text=True
+                    [
+                        "nmcli",
+                        "-t",
+                        "-f",
+                        "NAME,TYPE",
+                        "connection",
+                        "show",
+                        "--active",
+                    ],
+                    text=True,
                 )
 
                 connection_id = None
-                for line in result.strip().split('\n'):
+                for line in result.strip().split("\n"):
                     if line:
-                        name, conn_type = line.split(':', 1)
+                        name, conn_type = line.split(":", 1)
                         if conn_type == "802-11-wireless" and name == ssid:
                             connection_id = name
                             break
 
                 if connection_id:
                     subprocess.run(["nmcli", "con", "down", connection_id], check=True)
-                    logger.info(f"[NetworkService] Disconnected from {ssid} using connection ID")
+                    logger.info(
+                        f"[NetworkService] Disconnected from {ssid} using connection ID"
+                    )
 
                     # Force immediate state update
                     from gi.repository import GLib
+
                     GLib.timeout_add(100, lambda: self._force_state_update())
 
                     return True
@@ -274,16 +553,25 @@ class Wifi(Service):
                     # Method 3: Try disconnecting by device
                     device_name = self._device.get_iface() if self._device else None
                     if device_name:
-                        subprocess.run(["nmcli", "device", "disconnect", device_name], check=True)
-                        logger.info(f"[NetworkService] Disconnected device {device_name}")
+                        subprocess.run(
+                            ["nmcli", "device", "disconnect", device_name], check=True
+                        )
+                        logger.info(
+                            f"[NetworkService] Disconnected device {device_name}"
+                        )
 
                         # Force immediate state update
                         from gi.repository import GLib
+
                         GLib.timeout_add(100, lambda: self._force_state_update())
 
                         return True
                     else:
-                        logger.error(f"[NetworkService] No active connection found for SSID: {ssid}")
+                        logger.error(
+                            f"[NetworkService] No active connection found for SSID: {
+                                ssid
+                            }"
+                        )
                         return False
 
             except subprocess.CalledProcessError as e:
@@ -371,9 +659,11 @@ class Wifi(Service):
             return {
                 "bssid": ap.get_bssid(),
                 "last_seen": ap.get_last_seen(),
-                "ssid": NM.utils_ssid_to_utf8(ap.get_ssid().get_data())
-                if ap.get_ssid()
-                else "Unknown",
+                "ssid": (
+                    NM.utils_ssid_to_utf8(ap.get_ssid().get_data())
+                    if ap.get_ssid()
+                    else "Unknown"
+                ),
                 "active-ap": self._ap,
                 "strength": ap.get_strength(),
                 "frequency": ap.get_frequency(),
@@ -397,7 +687,7 @@ class Wifi(Service):
         active_connection = self._device.get_active_connection()
         if not active_connection or active_connection.get_state() in [
             NM.ActiveConnectionState.DEACTIVATED,
-            NM.ActiveConnectionState.DEACTIVATING
+            NM.ActiveConnectionState.DEACTIVATING,
         ]:
             return "Disconnected"
 
@@ -502,6 +792,7 @@ class NetworkService(Service):
         self.wifi_device: Wifi | None = None
         self.ethernet_device: Ethernet | None = None
         super().__init__(**kwargs)
+
         NM.Client.new_async(
             cancellable=None,
             callback=self._init_network_client,
@@ -517,6 +808,8 @@ class NetworkService(Service):
 
         if wifi_device:
             self.wifi_device = Wifi(self._client, wifi_device)
+            # Clean up any leftover temporary connections from previous runs
+            self._cleanup_temp_connections()
             self.emit("device-ready")
 
         if ethernet_device:
@@ -547,12 +840,75 @@ class NetworkService(Service):
             "wifi"
             if "wireless"
             in str(self._client.get_primary_connection().get_connection_type())
-            else "wired"
-            if "ethernet"
-            in str(self._client.get_primary_connection().get_connection_type())
-            else None
+            else (
+                "wired"
+                if "ethernet"
+                in str(self._client.get_primary_connection().get_connection_type())
+                else None
+            )
         )
 
     @Property(str, "readable")
     def primary_device(self) -> Literal["wifi", "wired"] | None:
         return self._get_primary_device()
+
+    def _is_nm_applet_running(self):
+        """Check if nm-applet is currently running"""
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "nm-applet"], capture_output=True, text=True
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def _restart_nm_applet(self):
+        """Restart nm-applet with indicator support"""
+        try:
+            # Small delay to ensure connection process is complete
+            import time
+
+            time.sleep(0.5)
+
+            # Start nm-applet in the background with indicator support
+            subprocess.Popen(
+                ["nm-applet", "--indicator"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,  # Detach from parent process
+            )
+            logger.debug("[NetworkService] Restarted nm-applet with indicator support")
+        except Exception as e:
+            logger.debug(f"[NetworkService] Failed to restart nm-applet: {e}")
+
+    def _cleanup_temp_connections(self):
+        """Clean up any temporary connections created by this process"""
+        try:
+            # List all connections and find temporary ones created by this process
+            result = subprocess.run(
+                ["nmcli", "-t", "-f", "NAME", "connection", "show"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode == 0:
+                connections = result.stdout.strip().split("\n")
+                temp_prefix = "temp_"
+                process_suffix = f"_{os.getpid()}"
+
+                for connection in connections:
+                    if connection.startswith(temp_prefix) and connection.endswith(
+                        process_suffix
+                    ):
+                        # Delete this temporary connection
+                        subprocess.run(
+                            ["nmcli", "connection", "delete", connection],
+                            capture_output=True,
+                        )
+                        logger.debug(
+                            f"[NetworkService] Cleaned up temporary connection: {
+                                connection
+                            }"
+                        )
+        except Exception as e:
+            logger.debug(f"[NetworkService] Error during temp connection cleanup: {e}")
