@@ -2,6 +2,8 @@ import json
 import logging
 
 import cairo
+from gi.repository import Gdk, GLib, Gtk
+
 import config.data as data
 from fabric.hyprland.widgets import get_hyprland_connection
 from fabric.utils import (
@@ -17,12 +19,10 @@ from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
-from gi.repository import Gdk, GLib, Gtk
+from modules.corners import MyCorner
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from widgets.wayland import WaylandWindow as Window
-
-from modules.corners import MyCorner
 
 # TODO: use modus_service
 

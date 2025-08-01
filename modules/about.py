@@ -1,13 +1,9 @@
-import subprocess
 import re
-import gi  # type: ignore
+import subprocess
 
-from fabric.widgets.label import Label
-from fabric.widgets.button import Button
-from fabric.widgets.box import Box
-from widgets.wayland import WaylandWindow as Window
-from fabric.utils.helpers import exec_shell_command_async, get_relative_path
-from gi.repository import Gtk, GdkPixbuf  # type: ignore
+from gi.repository import GdkPixbuf, Gtk  # type: ignore
+
+from fabric.utils.helpers import get_relative_path
 
 
 def read_dmi(field):

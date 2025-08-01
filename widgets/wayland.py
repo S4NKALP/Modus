@@ -5,11 +5,12 @@ from typing import Literal, cast
 
 import cairo
 import gi
+from gi.repository import Gdk, GObject, Gtk
+from loguru import logger
+
 from fabric.core.service import Property
 from fabric.utils.helpers import extract_css_values, get_enum_member
 from fabric.widgets.window import Window
-from gi.repository import Gdk, GObject, Gtk
-from loguru import logger
 
 gi.require_version("Gtk", "3.0")
 

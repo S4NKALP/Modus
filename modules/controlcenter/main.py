@@ -1,3 +1,5 @@
+from gi.repository import Gdk, GLib
+
 from fabric.utils import idle_add
 from fabric.utils.helpers import (
     get_relative_path,
@@ -8,9 +10,6 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.svg import Svg
-from fabric.widgets.image import Image
-from gi.repository import Gdk, GLib
-
 from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
@@ -37,7 +36,7 @@ class ModusControlCenter(Window):
             visible=False,
             **kwargs,
         )
-        self.focus_mode = False
+        self.focus_mode = modus_service.dont_disturb
         self._updating_brightness = False
         self._updating_volume = False
 
@@ -50,6 +49,7 @@ class ModusControlCenter(Window):
 
         audio_service.connect("changed", self.audio_changed)
         audio_service.connect("changed", self.volume_changed)
+        modus_service.connect("dont-disturb-changed", self.dnd_changed)
 
         self.wlan_label = Label(wlan, name="wifi-widget-label", h_align="start")
         if bluetooth != "disabled":
@@ -178,7 +178,11 @@ class ModusControlCenter(Window):
 
         self.focus_icon = Svg(
             name="focus-icon",
-            svg_file=get_relative_path("../../config/assets/icons/applets/dnd-off.svg"),
+            svg_file=get_relative_path(
+                "../../config/assets/icons/applets/dnd.svg"
+                if self.focus_mode
+                else "../../config/assets/icons/applets/dnd-off.svg"
+            ),
             size=46,
         )
 
@@ -364,9 +368,13 @@ class ModusControlCenter(Window):
                 parts = wlan.split(":")
                 if len(parts) >= 2:
                     wifi_name = parts[1]
-                    GLib.idle_add(lambda: self.wlan_label.set_property("label", wifi_name))
+                    GLib.idle_add(
+                        lambda: self.wlan_label.set_property("label", wifi_name)
+                    )
                 else:
-                    GLib.idle_add(lambda: self.wlan_label.set_property("label", "Connected"))
+                    GLib.idle_add(
+                        lambda: self.wlan_label.set_property("label", "Connected")
+                    )
             else:
                 GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
         else:
@@ -385,9 +393,13 @@ class ModusControlCenter(Window):
                 parts = bluetooth.split(":")
                 if len(parts) >= 2:
                     device_name = parts[1]
-                    GLib.idle_add(lambda: self.bluetooth_label.set_property("label", device_name))
+                    GLib.idle_add(
+                        lambda: self.bluetooth_label.set_property("label", device_name)
+                    )
                 else:
-                    GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "Connected"))
+                    GLib.idle_add(
+                        lambda: self.bluetooth_label.set_property("label", "Connected")
+                    )
             elif bluetooth == "enabled":
                 GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "On"))
             else:
@@ -397,6 +409,16 @@ class ModusControlCenter(Window):
 
     def audio_changed(self, *_):
         pass
+
+    def dnd_changed(self, _, dnd_state):
+        self.focus_mode = dnd_state
+        self.focus_icon.set_from_file(
+            get_relative_path(
+                "../../config/assets/icons/applets/dnd.svg"
+                if self.focus_mode
+                else "../../config/assets/icons/applets/dnd-off.svg"
+            )
+        )
 
     def _init_mousecapture(self, mousecapture):
         self._mousecapture_parent = mousecapture

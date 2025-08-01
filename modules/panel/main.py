@@ -4,22 +4,19 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
-from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.svg import Svg
-from widgets.wayland import WaylandWindow as Window
-
+from modules.controlcenter.main import ModusControlCenter
 from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from modules.panel.components.indicators import (
+    BatteryIndicator,
     BluetoothIndicator,
     NetworkIndicator,
-    BatteryIndicator,
 )
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
-
-from modules.controlcenter.main import ModusControlCenter
 from widgets.mousecapture import MouseCapture
+from widgets.wayland import WaylandWindow as Window
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()

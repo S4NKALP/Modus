@@ -2,8 +2,9 @@ import math
 from typing import cast
 
 import cairo
-from fabric.widgets.image import Image
 from gi.repository import Gtk
+
+from fabric.widgets.image import Image
 
 
 class CustomImage(Image):

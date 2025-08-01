@@ -3,8 +3,8 @@ from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.svg import Svg
-from services.network import NetworkService
 from services.battery import Battery
+from services.network import NetworkService
 from utils.roam import modus_service
 
 
@@ -16,7 +16,9 @@ class BluetoothIndicator(Box):
         self.bt_icon = Svg(
             name="bt-icon",
             size=20,
-            svg_file=get_relative_path("../../../config/assets/icons/applets/bluetooth-clear.svg"),
+            svg_file=get_relative_path(
+                "../../../config/assets/icons/applets/bluetooth-clear.svg"
+            ),
         )
 
         self.bt_button = Button(name="bt-button", child=self.bt_icon)
@@ -34,14 +36,18 @@ class BluetoothIndicator(Box):
     def update_state(self):
         if not self.bluetooth.enabled:
             self.bt_icon.set_from_file(
-                get_relative_path("../../../config/assets/icons/applets/bluetooth-off-clear.svg")
+                get_relative_path(
+                    "../../../config/assets/icons/applets/bluetooth-off-clear.svg"
+                )
             )
             tooltip = "Bluetooth disabled"
         else:
             connected_devices = self.bluetooth.connected_devices
             if connected_devices:
                 self.bt_icon.set_from_file(
-                    get_relative_path("../../../config/assets/icons/applets/bluetooth-clear.svg")
+                    get_relative_path(
+                        "../../../config/assets/icons/applets/bluetooth-clear.svg"
+                    )
                 )
                 if len(connected_devices) == 1:
                     device = connected_devices[0]
@@ -52,7 +58,9 @@ class BluetoothIndicator(Box):
                     tooltip = f"Connected to {len(connected_devices)} devices"
             else:
                 self.bt_icon.set_from_file(
-                    get_relative_path("../../../config/assets/icons/applets/bluetooth-clear.svg")
+                    get_relative_path(
+                        "../../../config/assets/icons/applets/bluetooth-clear.svg"
+                    )
                 )
                 tooltip = "No devices connected"
 
@@ -104,7 +112,9 @@ class NetworkIndicator(Box):
         self.network_icon = Svg(
             name="network-icon",
             size=22,
-            svg_file=get_relative_path("../../../config/assets/icons/applets/wifi-clear.svg"),
+            svg_file=get_relative_path(
+                "../../../config/assets/icons/applets/wifi-clear.svg"
+            ),
         )
 
         self.network_button = Button(name="network-button", child=self.network_icon)
@@ -227,7 +237,9 @@ class BatteryIndicator(Box):
         self.battery_icon = Svg(
             name="battery-icon",
             size=22,
-            svg_file=get_relative_path("../../../config/assets/icons/battery/battery-100.svg"),
+            svg_file=get_relative_path(
+                "../../../config/assets/icons/battery/battery-100.svg"
+            ),
         )
 
         self.battery_button = Button(name="battery-button", child=self.battery_icon)

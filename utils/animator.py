@@ -1,7 +1,8 @@
 from typing import cast
 
-from fabric import Property, Service, Signal
 from gi.repository import GLib, Gtk
+
+from fabric import Property, Service, Signal
 
 
 class Animator(Service):

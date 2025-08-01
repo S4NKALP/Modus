@@ -1,12 +1,9 @@
 import sys
-import os
 
-# from hyprpy import Hyprland
-from fabric.audio import Audio
-from fabric.notifications import Notifications
-from services.modus import ModusService
 from loguru import logger
 
+from fabric.audio import Audio
+from services.modus import ModusService
 
 global modus_service
 try:

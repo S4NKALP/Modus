@@ -1,7 +1,6 @@
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
-
 from utils.roam import modus_service
 from widgets.popup_window import PopupWindow
 

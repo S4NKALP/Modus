@@ -7,7 +7,6 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-
 from modules.about import About
 from utils.roam import modus_service
 from widgets.dropdown import ModusDropdown, dropdown_divider

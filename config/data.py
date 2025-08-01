@@ -13,6 +13,36 @@ APP_NAME_CAP = "Modus"
 ALLOWED_PLAYERS = ["vlc", "cmus", "firefox", "spotify", "chromium", "vivaldi", "brave"]
 
 
+def parse_timeout_string(timeout_str):
+    """
+    Parse timeout string in format like '5s', '10m', '30s' etc.
+    Returns timeout in milliseconds.
+    """
+    if not timeout_str or not isinstance(timeout_str, str):
+        return 5000
+
+    timeout_str = timeout_str.strip().lower()
+
+    if timeout_str.endswith("s"):
+        try:
+            seconds = int(timeout_str[:-1])
+            return seconds * 1000
+        except ValueError:
+            return 5000
+    elif timeout_str.endswith("m"):
+        try:
+            minutes = int(timeout_str[:-1])
+            return minutes * 60 * 1000
+        except ValueError:
+            return 5000
+    else:
+        try:
+            seconds = int(timeout_str)
+            return seconds * 1000
+        except ValueError:
+            return 5000
+
+
 CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
 
 USERNAME = os.getlogin()
@@ -72,6 +102,9 @@ if os.path.exists(CONFIG_FILE):
         "dock_hide_special_workspace_apps", True
     )
 
+    NOTIFICATION_TIMEOUT_STR = config.get("notification_timeout", "5s")
+    NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
+
     DOCK_COMPONENTS_VISIBILITY = {
         "workspace": config.get("dock_workspace_visible", True),
         "metrics": config.get("dock_metrics_visible", True),
@@ -103,6 +136,9 @@ else:
     WINDOW_SWITCHER_ITEMS_PER_ROW = 13
     DOCK_HIDE_SPECIAL_WORKSPACE = True
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = True
+
+    NOTIFICATION_TIMEOUT_STR = "5s"
+    NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
 
     DOCK_COMPONENTS_VISIBILITY = {
         "workspace": True,

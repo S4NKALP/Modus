@@ -1,4 +1,4 @@
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gdk, GLib, Gtk
 
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
 from fabric.widgets.box import Box
@@ -7,7 +7,6 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.eventbox import EventBox
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -68,8 +67,6 @@ class BluetoothConnections(Box):
 
         self.client = BluetoothClient(on_device_added=self.on_device_added)
 
-
-
         self.title = Box(
             orientation="h",
             children=[
@@ -95,10 +92,7 @@ class BluetoothConnections(Box):
         )
 
         # Connect scanning state changes to update scan button
-        self.client.connect(
-            "notify::scanning",
-            lambda *_: self.update_scan_label()
-        )
+        self.client.connect("notify::scanning", lambda *_: self.update_scan_label())
 
         self.not_paired = Box(spacing=2, orientation="vertical")
         self.paired = Box(spacing=2, orientation="vertical")
@@ -108,13 +102,13 @@ class BluetoothConnections(Box):
             name="bluetooth-refresh-indicator",
             label="↓ Pull to scan for devices",
             h_align="center",
-            visible=False
+            visible=False,
         )
 
         self.device_box = Box(
             spacing=2,
             orientation="vertical",
-            children=[self.refresh_indicator, self.paired, self.not_paired]
+            children=[self.refresh_indicator, self.paired, self.not_paired],
         )
 
         # Create scrolled window with pull-to-refresh
@@ -143,8 +137,6 @@ class BluetoothConnections(Box):
         # Connect cleanup on destroy
         self.connect("destroy", self.on_destroy)
 
-
-
     def on_destroy(self, widget):
         """Cleanup animations when widget is destroyed"""
         self.stop_bounce_animation()
@@ -165,8 +157,6 @@ class BluetoothConnections(Box):
         self.bounce_duration = 60  # Total frames for animation
         self.bounce_amplitude = 15  # Maximum bounce height in pixels
 
-
-
         # Connect to scroll events
         self.scrolled_window.connect("scroll-event", self.on_scroll_event)
         self.scrolled_window.connect("button-press-event", self.on_button_press)
@@ -175,10 +165,10 @@ class BluetoothConnections(Box):
 
         # Enable events
         self.scrolled_window.set_events(
-            Gdk.EventMask.SCROLL_MASK |
-            Gdk.EventMask.BUTTON_PRESS_MASK |
-            Gdk.EventMask.BUTTON_RELEASE_MASK |
-            Gdk.EventMask.POINTER_MOTION_MASK
+            Gdk.EventMask.SCROLL_MASK
+            | Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
         )
 
     def on_scroll_event(self, widget, event):
@@ -243,22 +233,22 @@ class BluetoothConnections(Box):
 
     def ease_out_bounce(self, t):
         """Smooth bounce easing function (0 to 1)"""
-        import math
-        if t < 1/2.75:
+        if t < 1 / 2.75:
             return 7.5625 * t * t
-        elif t < 2/2.75:
-            t -= 1.5/2.75
+        elif t < 2 / 2.75:
+            t -= 1.5 / 2.75
             return 7.5625 * t * t + 0.75
-        elif t < 2.5/2.75:
-            t -= 2.25/2.75
+        elif t < 2.5 / 2.75:
+            t -= 2.25 / 2.75
             return 7.5625 * t * t + 0.9375
         else:
-            t -= 2.625/2.75
+            t -= 2.625 / 2.75
             return 7.5625 * t * t + 0.984375
 
     def ease_out_elastic(self, t):
         """Elastic easing function for smoother bounce"""
         import math
+
         if t == 0 or t == 1:
             return t
 
@@ -326,8 +316,6 @@ class BluetoothConnections(Box):
 
         self.bounce_frame += 1
         return True
-
-
 
     def stop_bounce_animation(self):
         """Stop any ongoing animations"""

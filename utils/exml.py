@@ -31,7 +31,15 @@ def dxml(root, depth=0):
             elif child.tag == "BoxH":
                 additional["orientation"] = "horizontal"
             if k == "path":
-                v = get_relative_path("../" + v)
+                # Handle path resolution more robustly
+                import os
+
+                # Get the directory where the XML file is located
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                # Go up to project root and then to the specified path
+                project_root = os.path.dirname(current_dir)  # Go up from utils/
+                full_path = os.path.join(project_root, v)
+                v = full_path
                 k = "svg_file"
             if v == "true" or v == "false":
                 v = v == "true"

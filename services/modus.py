@@ -1,7 +1,9 @@
-from loguru import logger
-from fabric.core.service import Service, Signal, Property
-from fabric.notifications import Notification
 from typing import List
+
+from loguru import logger
+
+from fabric.core.service import Property, Service, Signal
+from fabric.notifications import Notification
 
 
 class ModusService(Service):

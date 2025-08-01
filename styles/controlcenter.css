@@ -19,26 +19,10 @@
   padding: 10px;
 }
 
-#focus-widget {
-  padding: 10px;
-  min-width: 100px;
-}
-
-#bluetooth-icon,
-#wifi-icon {
-  background-color: #666666;
-  padding: 8px;
-  min-width: 24px;
-  min-height: 24px;
-  border-radius: 50%;
-  color: #ffffff;
-  opacity: 0.6;
-}
-
-#bluetooth-icon.connected,
-#wifi-icon.connected {
+.icon {
   background-color: #2369ff;
-  opacity: 1;
+  font-size: 15px;
+  padding: 20px 20px;
 }
 
 #bluetooth-widget-label,
@@ -47,6 +31,140 @@
   margin-left: 5px;
   font-weight: 400;
   color: #aaa;
+}
+
+/* WiFi Password Dialog */
+#wifi-password-dialog {
+  background-color: transparent;
+}
+
+#wifi-dialog-background {
+  background-color: rgba(40, 40, 40, 0.95);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  min-width: 300px;
+}
+
+#wifi-dialog-title-container {
+  margin-bottom: 12px;
+}
+
+#wifi-dialog-icon {
+  color: #007aff;
+  margin-right: 4px;
+}
+
+#wifi-dialog-title {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#wifi-dialog-error {
+  color: #ff4444;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+#wifi-dialog-password-container {
+  margin: 12px 0;
+}
+
+#wifi-dialog-password-label {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+#wifi-dialog-password-entry {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+#wifi-dialog-password-entry:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#wifi-dialog-show-password-box {
+  margin-top: 8px;
+}
+
+#wifi-dialog-show-password-button {
+  background-color: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+#wifi-dialog-show-password-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#wifi-dialog-show-password-button image {
+  color: #ffffff;
+}
+
+#wifi-dialog-show-password-label {
+  color: #ffffff;
+  font-size: 12px;
+}
+
+#wifi-dialog-button-box {
+  margin-top: 20px;
+}
+
+#wifi-dialog-cancel-button,
+#wifi-dialog-join-button {
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 80px;
+  min-height: 30px;
+}
+
+#wifi-dialog-cancel-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+#wifi-dialog-cancel-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#wifi-dialog-join-button {
+  background-color: #007aff;
+  border: 1px solid #007aff;
+  color: #ffffff;
+}
+
+#wifi-dialog-join-button:hover {
+  background-color: #0056cc;
+  border-color: #0056cc;
+}
+
+#wifi-dialog-join-button.disabled {
+  opacity: 0.5;
+  background-color: #555555;
+  border-color: #555555;
+  color: #aaaaaa;
+}
+
+#wifi-dialog-join-button.disabled:hover {
+  background-color: #555555;
+  border-color: #555555;
+  color: #aaaaaa;
 }
 
 #bluetooth-widget-title {
@@ -81,28 +199,6 @@
   background-color: #2369ff;
 }
 
-#device-icon.connecting {
-  background-color: #ff9500;
-  animation: pulse 1s infinite;
-}
-
-#device-icon.disconnecting {
-  background-color: #ff3b30;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
 #toggle-button {
   min-width: 40px;
   min-height: 20px;
@@ -111,13 +207,13 @@
   padding: 2px;
   transition: background-color 0.3s ease;
 }
+
 #toggle-button slider {
   background-color: var(--primary);
   border-radius: 16px;
   min-width: 16px;
   min-height: 8px;
-  transition:
-    background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
+  transition: background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
     transform 0.25s cubic-bezier(0.5, 0.25, 0, 1.25);
 }
 
