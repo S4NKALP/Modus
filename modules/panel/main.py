@@ -41,7 +41,7 @@ class Panel(Window):
         self.imac = Button(
             name="panel-button",
             child=Svg(
-                size=28,
+                size=23,
                 svg_file=get_relative_path("../../config/assets/icons/misc/logo.svg"),
             ),
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
@@ -128,7 +128,7 @@ class Panel(Window):
         self.datetime_button = Button(
             name="datetime-button",
             on_clicked=self.notification_center.toggle_mousecapture,
-            child=DateTime(name="date-time", formatters=["%a %b %d %I:%M"]),
+            child=DateTime(name="date-time", formatters=["%a %b %d %I:%M %P"]),
         )
 
         self.recording_indicator = RecordingIndicator()
