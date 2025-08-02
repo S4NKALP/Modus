@@ -25,7 +25,6 @@ class AnimationManager:
             # Use 120 FPS for ultra-smooth animations like macOS
             self._timer_id = GLib.timeout_add(8, self._animate_all)  # 120 FPS
 
-
     def remove_widget(self, widget):
         self._animating_widgets.discard(widget)
         if not self._animating_widgets and self._timer_id:
@@ -40,7 +39,7 @@ class AnimationManager:
         self._containers_to_redraw.clear()
 
         widgets_to_remove = []
-        
+
         # Process all animations in a single frame
         for widget in list(self._animating_widgets):
             if not widget._calculate_position():
@@ -72,7 +71,6 @@ class AnimationManager:
         """Keep consistent 120 FPS for macOS-like smoothness"""
         return 8  # 120 FPS
 
-
     def _start_timer(self):
         interval = self._get_optimal_interval()
         self._timer_id = GLib.timeout_add(interval, self._animate_all)
@@ -84,35 +82,35 @@ class AnimationManager:
 
 class MacOSEasing:
     """macOS-style easing functions for natural motion"""
-    
+
     @staticmethod
     def ease_out_expo(t):
         """Exponential ease out - fast start, slow end"""
         return 1 - math.pow(2, -10 * t) if t != 1 else 1
-    
+
     @staticmethod
     def ease_in_out_quart(t):
         """Quartic ease in-out for smooth acceleration/deceleration"""
         return 8 * t * t * t * t if t < 0.5 else 1 - math.pow(-2 * t + 2, 4) / 2
-    
+
     @staticmethod
     def ease_out_back(t):
         """Back ease out for slight overshoot effect"""
         c1 = 1.70158
         c3 = c1 + 1
         return 1 + c3 * math.pow(t - 1, 3) + c1 * math.pow(t - 1, 2)
-    
+
     @staticmethod
     def ease_out_cubic_bezier(t):
         """Custom cubic bezier similar to macOS default (0.25, 0.1, 0.25, 1.0)"""
         # Approximation of cubic-bezier(0.25, 0.1, 0.25, 1.0)
         return t * t * t * (t * (6 * t - 15) + 10)
-    
+
     @staticmethod
     def ease_in_cubic(t):
         """Cubic ease in for smooth acceleration"""
         return t * t * t
-    
+
     @staticmethod
     def ease_out_quint(t):
         """Quintic ease out for very smooth deceleration"""
@@ -132,7 +130,8 @@ class SlideRevealer(Gtk.Overlay):
         self._start_time = None
         self._show_animation = False
         self._pending_position = None
-        self._current_position = (0.0, 0.0)  # Use float for sub-pixel positioning
+        # Use float for sub-pixel positioning
+        self._current_position = (0.0, 0.0)
         self._animation_id = None  # Track individual animation instances
 
         self._fixed = Gtk.Fixed()
@@ -168,16 +167,7 @@ class SlideRevealer(Gtk.Overlay):
         if self._revealed and not self._animating:
             return
         self._revealed = True
-
-        # Ensure widget is properly laid out before starting animation
-        if self.get_realized():
-            self._start_animation(show=True)
-        else:
-            # Wait for widget to be realized
-            def on_realize(*_):
-                self._start_animation(show=True)
-                self.disconnect_by_func(on_realize)
-            self.connect("realize", on_realize)
+        self._start_animation(show=True)
 
     def hide(self):
         if not self._revealed and not self._animating:
@@ -206,10 +196,8 @@ class SlideRevealer(Gtk.Overlay):
             pos = self._get_offscreen_pos_cached()
             self._current_position = (float(pos[0]), float(pos[1]))
             self._fixed.move(self.child, int(pos[0]), int(pos[1]))
- 
 
-        # Use idle_add to ensure layout is complete
-        GLib.idle_add(start_with_dimensions)
+        AnimationManager.get_instance().add_widget(self)
 
     def _calculate_position(self):
         if not self._animating:
