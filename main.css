@@ -9,12 +9,13 @@
 @import url("./styles/dropdown.css");
 @import url("./styles/about.css");
 @import url("./styles/notification-center.css");
+@import url("./styles/player.css");
 
 * {
   all: unset;
   color: var(--foreground);
   font-size: 12px;
-    font-family: "Rubik", sans-serif;
+  font-family: unset;
 }
 
 #corner {

@@ -1,0 +1,135 @@
+.player-box {
+  min-height: 60px;
+  min-width: 313px;
+  margin: 2px;
+  padding: 2px;
+  box-shadow:
+    inset 0 0 100px rgba(148, 148, 148, 0.3),
+    inset 70px 0 20px rgba(255, 255, 255, 0.3),
+    inset 0px 0px 20px 5px rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background-position: center;
+  background-size: cover;
+}
+
+#player-container {
+  min-height: 60px;
+  border-radius: 10px;
+  background-position: center;
+  background-size: cover;
+}
+
+.album-image {
+  min-width: 60px;
+  background-position: center;
+  background-size: cover;
+  border-radius: 10px;
+}
+
+#artist {
+  color: var(--primary);
+}
+
+#song {
+  color: var(--surface);
+  font-size: 15px;
+  margin-top: 5px;
+}
+
+#source {
+  margin-left: -20px;
+  border-radius: 10px;
+}
+
+#play-pause-label {
+  color: var(--surface);
+  text-shadow: none;
+}
+
+#pause-button {
+  background-color: whitesmoke;
+  border-radius: 16px;
+  padding: 10px;
+}
+
+#pause-label,
+#play-label {
+  color: var(--shadow);
+  font-size: 20px;
+  padding: 2px;
+  border-radius: 999px;
+  min-width: 25px;
+}
+
+#pause-label.mini,
+#play-label.mini {
+  color: white;
+  font-size: 20px;
+  padding: 2px;
+  border-radius: 999px;
+  min-width: 25px;
+}
+
+#shuffle-button,
+#next-button,
+#prev-button,
+#play-pause-button {
+  border: none;
+  padding: 0px;
+  padding-left: 11px;
+  padding-right: 11px;
+}
+
+#shuffle-button:hover,
+#next-button:hover,
+#prev-button:hover,
+#play-pause-button:hover {
+  border-radius: 100%;
+
+  box-shadow: inset rgba(255, 255, 255, 0.5) 0 0 10px;
+}
+
+.player-button {
+  border-radius: 5px;
+  background-color: var(--shadow);
+  /* background-color: white; */
+  opacity: 1;
+  min-width: 10px;
+  min-height: 10px;
+  padding: 0px;
+  margin: 0px;
+  border: none;
+  margin-top: 5px;
+}
+
+.player-button.active {
+  opacity: 1;
+  /* min-width: 40px; */
+  /* border-radius: 5px; */
+}
+
+#player-switch-container {
+  margin-top: 0px;
+  margin-left: -18px;
+  padding-right: 10px;
+}
+
+#controls {
+  padding-bottom: 10px;
+  margin-top: 5px;
+  margin-bottom: 0px;
+}
+
+#player-icon {
+  font-size: 20px;
+  color: black;
+  text-shadow: 0 0 5px white;
+}
+
+#shuffle {
+  font-size: 17px;
+}
+
+#disable-shuffle {
+  font-size: 27px;
+}
