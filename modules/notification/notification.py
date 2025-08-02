@@ -432,9 +432,9 @@ class NotificationRevealer(SlideRevealer):
         return 1 + c3 * pow(t - 1, 3) + c1 * pow(t - 1, 2)
 
     def _animate_dismiss(self, start_offset):
-        """Animate the notification sliding out completely"""
+        """Animate the notification sliding out completely - now much faster"""
         target_offset = NOTIFICATION_WIDTH + 50  # Slide completely out of view
-        duration = 250  # Quick dismiss animation
+        duration = 120  # Much faster dismiss animation (was 250)
         
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
@@ -447,18 +447,18 @@ class NotificationRevealer(SlideRevealer):
             elapsed = current_time - start_time
             progress = min(1.0, elapsed / duration)
             
-            # Use easing for smooth exit
-            eased_progress = 1 - pow(1 - progress, 3)  # Ease out cubic
+            # Use faster easing for snappier exit
+            eased_progress = progress * progress  # Quadratic ease out - faster than cubic
             current_offset = start_offset + (offset_diff * eased_progress)
             
             # Fade out and scale down during dismiss
-            opacity = 1.0 - progress
-            scale = 1.0 - (progress * 0.2)
+            opacity = 1.0 - (progress * 1.2)  # Faster fade out
+            scale = 1.0 - (progress * 0.15)   # Slightly more scale change
             
             self._apply_transform(current_offset, opacity, scale)
             
             if progress >= 1.0:
-                # Trigger the actual notification dismissal
+                # Trigger the actual notification dismissal immediately
                 try:
                     self.notification.close("dismissed-by-user")
                 except:
@@ -468,7 +468,7 @@ class NotificationRevealer(SlideRevealer):
             return True
         
         self._animation_in_progress = True
-        self._spring_timer_id = GLib.timeout_add(16, animate_step)
+        self._spring_timer_id = GLib.timeout_add(12, animate_step)  # Higher fps for smoother animation
 
     def _calculate_drag_velocity(self, current_x):
         """Calculate the velocity of the drag gesture"""
@@ -510,15 +510,18 @@ class NotificationRevealer(SlideRevealer):
             # Left-to-right slide for auto-dismiss (expired)
             self.set_slide_direction("left")
         elif self._swipe_in_progress:
-            # Maintain swipe direction for swipe dismissals
+            # For swipe dismissals, use immediate hiding without additional slide animation
+            # The swipe animation already handled the visual feedback
+            self.duration = 50  # Very fast transition
             self.set_slide_direction("right")
         else:
             # Right-to-left slide for manual close (button clicks)
             self.set_slide_direction("right")
 
         self.hide()
-        # Reduced timeout for snappier transitions
-        GLib.timeout_add(self.duration + 30, lambda: self._on_animation_complete(True))
+        # Reduced timeout for snappier transitions, especially for swipe dismissals
+        timeout_duration = 80 if self._swipe_in_progress else (self.duration + 30)
+        GLib.timeout_add(timeout_duration, lambda: self._on_animation_complete(True))
 
     def _on_button_press(self, _widget, event):
         if event.button == 1:
@@ -566,8 +569,13 @@ class NotificationRevealer(SlideRevealer):
             if should_dismiss:
                 try:
                     self._swipe_in_progress = True
-                    # Animate the dismiss
-                    self._animate_dismiss(self._current_offset)
+                    # For fast dismissal, if already dragged far enough, close immediately
+                    if dx > NOTIFICATION_WIDTH * 0.6:
+                        # Skip animation and close immediately for very large swipes
+                        self.notification.close("dismissed-by-user")
+                    else:
+                        # Animate the dismiss for smaller swipes
+                        self._animate_dismiss(self._current_offset)
                     logger.debug(f"Notification dismissed by swipe: dx={dx}, velocity={self._drag_velocity}")
                 except Exception as e:
                     logger.error(f"Error dismissing notification by swipe: {e}")
