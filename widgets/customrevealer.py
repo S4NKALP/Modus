@@ -21,7 +21,7 @@ class AnimationManager:
     def add_widget(self, widget):
         self._animating_widgets.add(widget)
         if self._timer_id is None:
-            self._timer_id = GLib.timeout_add(22, self._animate_all)  # 45 FPS
+            self._timer_id = GLib.timeout_add(16, self._animate_all)  # 60 FPS
 
     def remove_widget(self, widget):
         self._animating_widgets.discard(widget)
@@ -60,7 +60,6 @@ class AnimationManager:
         return len(self._animating_widgets) > 0  # Continue if widgets remain
 
     def _get_optimal_interval(self):
-        """Calculate optimal frame interval based on widget count"""
         widget_count = len(self._animating_widgets)
         if widget_count <= 1:
             return 16  # 60 FPS
@@ -133,7 +132,16 @@ class SlideRevealer(Gtk.Overlay):
         if self._revealed or self._animating:
             return
         self._revealed = True
-        self._start_animation(show=True)
+
+        # Ensure widget is properly laid out before starting animation
+        if self.get_realized():
+            self._start_animation(show=True)
+        else:
+            # Wait for widget to be realized
+            def on_realize(*_):
+                self._start_animation(show=True)
+                self.disconnect_by_func(on_realize)
+            self.connect("realize", on_realize)
 
     def hide(self):
         if not self._revealed or self._animating:
@@ -145,20 +153,30 @@ class SlideRevealer(Gtk.Overlay):
         if self._animating:
             AnimationManager.get_instance().remove_widget(self)
 
-        self._cached_dimensions = self._get_dimensions()
-        if self._cached_dimensions[0] == 0 or self._cached_dimensions[1] == 0:
-            self._animating = False
-            return
-
-        self._start_time = GLib.get_monotonic_time()
-        self._animating = True
-        self._show_animation = show
-
+        # Force layout update to get accurate dimensions
         if show:
             self.child.show()
-            self._fixed.move(self.child, *self._get_offscreen_pos_cached())
+            self.queue_resize()
 
-        AnimationManager.get_instance().add_widget(self)
+        # Wait for layout to complete before getting dimensions
+        def start_with_dimensions():
+            self._cached_dimensions = self._get_dimensions()
+            if self._cached_dimensions[0] == 0 or self._cached_dimensions[1] == 0:
+                self._animating = False
+                return False
+
+            self._start_time = GLib.get_monotonic_time()
+            self._animating = True
+            self._show_animation = show
+
+            if show:
+                self._fixed.move(self.child, *self._get_offscreen_pos_cached())
+
+            AnimationManager.get_instance().add_widget(self)
+            return False
+
+        # Use idle_add to ensure layout is complete
+        GLib.idle_add(start_with_dimensions)
 
     def _calculate_position(self):
         if not self._animating:
