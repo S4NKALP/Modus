@@ -86,11 +86,11 @@ class NotificationWidget(Box):
         self.notification = notification
         self.timeout_ms = timeout_ms
         self._timeout_id = None
-        
+
         # Add hover events to the main notification widget
         self.connect("enter-notify-event", self._on_enter_notify)
         self.connect("leave-notify-event", self._on_leave_notify)
-        
+
         self.start_timeout()
 
     def create_header(self, notification):
@@ -343,9 +343,9 @@ class NotificationRevealer(SlideRevealer):
     ):
         if self._is_closing:
             return
-        
+
         self._is_closing = True
-        
+
         # Use left-to-right slide for auto-dismiss (expired), right-to-left for manual close
         if reason == "expired":
             # Left-to-right slide for auto-dismiss
@@ -405,7 +405,7 @@ class NotificationState:
     HIDING = 2
 
 
-class NotificationCenter(Window):
+class ModusNoti(Window):
     def __init__(self):
         self._server = notification_service
         self.notifications = Box(
@@ -466,30 +466,37 @@ class NotificationCenter(Window):
 
         # Add new notification to queue
         self.notification_queue.append(notification)
-        
+
         # Process the queue
         self._process_notification_queue()
 
     def _process_notification_queue(self):
         # If we're currently showing a notification and there's a new one in queue
-        if (self.notification_state == NotificationState.SHOWING and 
-            self.current_notification and 
-            self.notification_queue):
-            
+        if (
+            self.notification_state == NotificationState.SHOWING
+            and self.current_notification
+            and self.notification_queue
+        ):
+
             # Start hiding the current notification to make room for the new one
             self._start_hiding_current_notification()
-            
-        elif self.notification_state == NotificationState.IDLE and self.notification_queue:
+
+        elif (
+            self.notification_state == NotificationState.IDLE
+            and self.notification_queue
+        ):
             # If we're idle and have notifications in queue, show the next one
             self._show_next_notification()
 
     def _start_hiding_current_notification(self):
-        if (self.current_notification and 
-            self.notification_state == NotificationState.SHOWING and
-            not self.current_notification._is_closing):
-            
+        if (
+            self.current_notification
+            and self.notification_state == NotificationState.SHOWING
+            and not self.current_notification._is_closing
+        ):
+
             self.notification_state = NotificationState.HIDING
-            
+
             # Force close the current notification to trigger hiding animation
             try:
                 self.current_notification.notification.close("dismissed-by-user")
@@ -497,7 +504,10 @@ class NotificationCenter(Window):
                 pass
 
     def _show_next_notification(self):
-        if not self.notification_queue or self.notification_state != NotificationState.IDLE:
+        if (
+            not self.notification_queue
+            or self.notification_state != NotificationState.IDLE
+        ):
             return
 
         notification = self.notification_queue.pop(0)
@@ -554,7 +564,7 @@ class NotificationCenter(Window):
         if self.notification_queue:
             self._transition_timer_id = GLib.timeout_add(
                 50,  # Very short delay for seamless transitions
-                lambda: self._show_next_notification() or False
+                lambda: self._show_next_notification() or False,
             )
 
     def show_next_notification(self):
