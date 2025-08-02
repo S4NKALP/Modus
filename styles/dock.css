@@ -4,7 +4,7 @@
   margin: 8px 8px 5px 8px;
   border-radius: 16px;
   /* border: 2px solid var(--surface); */
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
 }
 
 #dock.vertical {
@@ -18,7 +18,7 @@
 }
 
 #dock-full {
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
   opacity: 1;
 }
 
@@ -32,7 +32,7 @@
   padding: 4px;
   border-radius: 24px;
   /* box-shadow: 0 0 4px alpha(var(--shadow), 0.5); */
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
 }
 
 #dock-app-button:hover {
