@@ -1,6 +1,6 @@
 import os
 
-from gi.repository import Gdk, GdkPixbuf, GLib  # type: ignore
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
 from loguru import logger
 
 import config.data as data
@@ -312,6 +312,7 @@ class NotificationRevealer(SlideRevealer):
         # Animation state
         self._animation_in_progress = False
         self._spring_timer_id = None
+        self._css_provider = None
 
         # Wrap notification in EventBox for swipe detection
         self.event_box = EventBox(
@@ -326,6 +327,7 @@ class NotificationRevealer(SlideRevealer):
         self.event_box.connect("button-press-event", self._on_button_press)
         self.event_box.connect("button-release-event", self._on_button_release)
         self.event_box.connect("motion-notify-event", self._on_motion)
+        self.event_box.connect("realize", self._on_realize)
 
         super().__init__(
             child=self.event_box,
@@ -338,8 +340,17 @@ class NotificationRevealer(SlideRevealer):
         # Connect our own handler that manages the slide animation
         self.notification.connect("closed", self.on_resolved)
 
+    def _on_realize(self, widget):
+        """Setup CSS provider when widget is realized"""
+        try:
+            self._css_provider = Gtk.CssProvider()
+            context = widget.get_style_context()
+            context.add_provider(self._css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        except Exception as e:
+            logger.warning(f"Could not setup CSS provider for notification animation: {e}")
+
     def _apply_transform(self, offset_x, opacity=1.0, scale=1.0):
-        """Apply CSS transform to the notification widget for smooth animation"""
+        """Apply transform to the notification widget for smooth animation"""
         if not self.event_box or not self.event_box.get_realized():
             return
             
@@ -348,25 +359,33 @@ class NotificationRevealer(SlideRevealer):
         opacity = max(0.1, min(1.0, opacity))  # Keep some visibility
         scale = max(0.8, min(1.0, scale))  # Subtle scale effect
         
-        # Apply CSS transform
-        css_transform = f"""
-        * {{
-            transform: translateX({int(offset_x)}px) scale({scale});
-            opacity: {opacity};
-            transition: none;
-        }}
-        """
-        
         try:
-            # Apply the transform using GTK's CSS provider
-            provider = self.event_box.get_style_context().get_property(
-                "transition", self.event_box.get_state_flags()
-            )
-            self.event_box.get_style_context().add_class("notification-transform")
-            # Note: In a real implementation, you'd need to set up a CSS provider
-            # This is a simplified version showing the concept
-        except:
-            pass  # Fallback if CSS transforms aren't available
+            if self._css_provider:
+                # Apply CSS transform using the provider
+                css_data = f"""
+                * {{
+                    margin-left: {int(offset_x)}px;
+                    opacity: {opacity};
+                    transform: scale({scale});
+                }}
+                """
+                self._css_provider.load_from_data(css_data.encode('utf-8'))
+            else:
+                # Fallback: use widget margins for offset
+                current_margin = self.event_box.get_margin_start()
+                if current_margin != int(offset_x):
+                    self.event_box.set_margin_start(int(offset_x))
+                
+                # Set opacity directly on the widget
+                self.event_box.set_opacity(opacity)
+                
+        except Exception as e:
+            # Final fallback: just use margin
+            try:
+                self.event_box.set_margin_start(int(offset_x))
+                self.event_box.set_opacity(opacity)
+            except:
+                pass
 
     def _animate_spring_back(self, start_offset, target_offset=0, duration=None):
         """Animate the notification springing back to its original position"""
@@ -598,6 +617,12 @@ class NotificationRevealer(SlideRevealer):
                     self._current_offset = 0
                     self._apply_transform(0, 1.0, 1.0)
         return False
+
+    def destroy(self):
+        # Clean up CSS provider and timers
+        if self._spring_timer_id:
+            GLib.source_remove(self._spring_timer_id)
+        super().destroy()
 
 
 class NotificationState:
