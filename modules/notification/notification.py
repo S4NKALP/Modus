@@ -24,7 +24,7 @@ NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
 
 
-def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 500):
+def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 400):
     revealer.duration = duration
 
 
@@ -285,7 +285,7 @@ class NotificationRevealer(SlideRevealer):
         super().__init__(
             child=self.event_box,
             direction="right",
-            duration=600,
+            duration=400,  # Reduced duration for snappier animations
         )
 
         smooth_revealer_animation(self)

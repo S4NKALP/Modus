@@ -21,7 +21,7 @@ class AnimationManager:
     def add_widget(self, widget):
         self._animating_widgets.add(widget)
         if self._timer_id is None:
-            self._timer_id = GLib.timeout_add(22, self._animate_all)  # 45 FPS
+            self._timer_id = GLib.timeout_add(16, self._animate_all)  # 60 FPS
 
     def remove_widget(self, widget):
         self._animating_widgets.discard(widget)
@@ -60,39 +60,25 @@ class AnimationManager:
         return len(self._animating_widgets) > 0  # Continue if widgets remain
 
     def _get_optimal_interval(self):
-        """Calculate optimal frame interval based on widget count"""
-        widget_count = len(self._animating_widgets)
-        if widget_count <= 1:
-            return 16  # 60 FPS
-        elif widget_count <= 2:
-            return 16  # 60 FPS
-        elif widget_count <= 4:
-            return 22  # 45 FPS
-        elif widget_count <= 6:
-            return 33  # 30 FPS
-        else:
-            return 50  # 20 FPS
+        """Keep consistent 60 FPS regardless of widget count"""
+        return 16  # 60 FPS
 
     def _start_timer(self):
         interval = self._get_optimal_interval()
         self._timer_id = GLib.timeout_add(interval, self._animate_all)
 
     def _adjust_frame_rate(self):
-        if not self._timer_id:
-            return
-
-        new_interval = self._get_optimal_interval()
-        GLib.source_remove(self._timer_id)
-        self._timer_id = GLib.timeout_add(new_interval, self._animate_all)
+        # No need to adjust frame rate anymore - keep it consistent
+        pass
 
 
 class SlideRevealer(Gtk.Overlay):
-    def __init__(self, child: Gtk.Widget, direction="right", duration=600, size=None):
+    def __init__(self, child: Gtk.Widget, direction="right", duration=400, size=None):
         super().__init__()
 
         self.child = child
         self.direction = direction
-        self.duration = duration
+        self.duration = duration  # Reduced default duration for snappier feel
         self.fixed_size = size
         self._revealed = False
         self._animating = False
@@ -168,10 +154,11 @@ class SlideRevealer(Gtk.Overlay):
         t = min(elapsed / self.duration, 1.0)
 
         if self._show_animation:
-            # Ease out quadratic (no bounce/overshoot)
-            eased = 1 - (1 - t) ** 2
+            # Smoother ease out cubic for revealing
+            eased = 1 - (1 - t) ** 3
         else:
-            eased = t**2  # Ease in quadratic for hide animation
+            # Smoother ease in cubic for hiding
+            eased = t ** 3
 
         self._pending_position = self._get_position_at_progress_cached(eased)
 
