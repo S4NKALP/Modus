@@ -39,6 +39,8 @@ class AnimationManager:
         self._containers_to_redraw.clear()
 
         widgets_to_remove = []
+        
+        # Process all animations in a single frame
         for widget in list(self._animating_widgets):
             if not widget._calculate_position():
                 widgets_to_remove.append(widget)
@@ -47,11 +49,11 @@ class AnimationManager:
                 if container:
                     self._containers_to_redraw.add(container)
 
-        # Apply all position changes at once
+        # Apply all position changes at once to prevent conflicts
         for widget in self._animating_widgets:
             widget._apply_position()
 
-        # Single redraw call per container
+        # Batch redraw calls to minimize performance impact
         for container in self._containers_to_redraw:
             container.queue_draw()
 
@@ -60,6 +62,10 @@ class AnimationManager:
             self.remove_widget(widget)
 
         return len(self._animating_widgets) > 0  # Continue if widgets remain
+
+    def get_active_widget_count(self):
+        """Return the number of currently animating widgets"""
+        return len(self._animating_widgets)
 
     def _get_optimal_interval(self):
         """Keep consistent 120 FPS for macOS-like smoothness"""
@@ -99,6 +105,16 @@ class MacOSEasing:
         """Custom cubic bezier similar to macOS default (0.25, 0.1, 0.25, 1.0)"""
         # Approximation of cubic-bezier(0.25, 0.1, 0.25, 1.0)
         return t * t * t * (t * (6 * t - 15) + 10)
+    
+    @staticmethod
+    def ease_in_cubic(t):
+        """Cubic ease in for smooth acceleration"""
+        return t * t * t
+    
+    @staticmethod
+    def ease_out_quint(t):
+        """Quintic ease out for very smooth deceleration"""
+        return 1 - math.pow(1 - t, 5)
 
 
 class SlideRevealer(Gtk.Overlay):
@@ -115,6 +131,7 @@ class SlideRevealer(Gtk.Overlay):
         self._show_animation = False
         self._pending_position = None
         self._current_position = (0.0, 0.0)  # Use float for sub-pixel positioning
+        self._animation_id = None  # Track individual animation instances
 
         self._fixed = Gtk.Fixed()
         self._fixed.set_has_window(False)
@@ -146,18 +163,19 @@ class SlideRevealer(Gtk.Overlay):
             self.hide()
 
     def reveal(self):
-        if self._revealed or self._animating:
+        if self._revealed and not self._animating:
             return
         self._revealed = True
         self._start_animation(show=True)
 
     def hide(self):
-        if not self._revealed or self._animating:
+        if not self._revealed and not self._animating:
             return
         self._revealed = False
         self._start_animation(show=False)
 
     def _start_animation(self, show: bool):
+        # Stop any existing animation for this widget
         if self._animating:
             AnimationManager.get_instance().remove_widget(self)
 
@@ -166,9 +184,11 @@ class SlideRevealer(Gtk.Overlay):
             self._animating = False
             return
 
+        # Use high-precision monotonic time for smooth animations
         self._start_time = GLib.get_monotonic_time()
         self._animating = True
         self._show_animation = show
+        self._animation_id = id(self)  # Unique ID for this animation instance
 
         if show:
             self.child.show()
@@ -185,18 +205,20 @@ class SlideRevealer(Gtk.Overlay):
         elapsed = (GLib.get_monotonic_time() - self._start_time) / 1000
         t = min(elapsed / self.duration, 1.0)
 
+        # Use different easing functions for better smoothness
         if self._show_animation:
-            # Use macOS-style ease out for revealing (fast start, smooth end)
-            eased = MacOSEasing.ease_out_cubic_bezier(t)
+            # Use quintic ease out for very smooth revealing
+            eased = MacOSEasing.ease_out_quint(t)
         else:
-            # Use ease in-out for hiding (smooth both ends)
-            eased = MacOSEasing.ease_in_out_quart(t)
+            # Use cubic ease in for smooth hiding
+            eased = MacOSEasing.ease_in_cubic(t)
 
         self._pending_position = self._get_position_at_progress_cached(eased)
 
         if t >= 1.0:
             self._animating = False
             self._cached_dimensions = None
+            self._animation_id = None
             if not self._show_animation:
                 GLib.idle_add(lambda: self.child.hide())
             return False
@@ -275,6 +297,7 @@ class SlideRevealer(Gtk.Overlay):
             AnimationManager.get_instance().remove_widget(self)
             self._animating = False
             self._cached_dimensions = None
+            self._animation_id = None
 
     def destroy(self):
         self.stop_animation()

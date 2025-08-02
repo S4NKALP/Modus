@@ -262,6 +262,7 @@ class NotificationRevealer(SlideRevealer):
         self.on_transition_end = on_transition_end
         # Reference to ModusNoti window for queue clearing
         self.parent_window = parent_window
+        self._is_closing = False
 
         # Add swipe detection variables
         self._drag_start_x = 0
@@ -308,6 +309,11 @@ class NotificationRevealer(SlideRevealer):
         _notification: Notification,
         reason: NotificationCloseReason,
     ):
+        if self._is_closing:
+            return
+        
+        self._is_closing = True
+        
         # Use left-to-right slide for auto-dismiss (expired), right-to-left for manual close
         if reason == "expired":
             # Left-to-right slide for auto-dismiss
@@ -361,6 +367,12 @@ class NotificationRevealer(SlideRevealer):
         return False
 
 
+class NotificationState:
+    IDLE = 0
+    SHOWING = 1
+    HIDING = 2
+
+
 class ModusNoti(Window):
     def __init__(self):
         self._server = notification_service
@@ -373,10 +385,11 @@ class ModusNoti(Window):
             spacing=5,
         )
 
-        # Queue system for macOS-like behavior
+        # Enhanced queue system for smooth transitions
         self.notification_queue = []
         self.current_notification = None
-        self.is_showing_notification = False
+        self.notification_state = NotificationState.IDLE
+        self._transition_timer_id = None
 
         # Initialize ignored apps list from config
         self.ignored_apps = data.NOTIFICATION_IGNORED_APPS
@@ -411,6 +424,7 @@ class ModusNoti(Window):
             notification.close("dismissed-by-user")
             return
 
+        # Clear any pending notifications in queue (except the current one being shown)
         for pending_notification in list(self.notification_queue):
             try:
                 pending_notification.close("dismissed-by-user")
@@ -418,46 +432,54 @@ class ModusNoti(Window):
                 pass
         self.notification_queue.clear()
 
-        if self.current_notification and self.is_showing_notification:
-            current_allocation = None
-            try:
-                if self.current_notification.get_parent():
-                    current_allocation = self.current_notification.get_allocation()
-            except:
-                pass
-
-            if hasattr(self.current_notification, "stop_animation"):
-                self.current_notification.stop_animation()
-
-            try:
-                if self.current_notification in self.notifications.children:
-                    self.notifications.remove(self.current_notification)
-                if hasattr(self.current_notification, "notification"):
-                    self.current_notification.notification.close("dismissed-by-user")
-            except:
-                pass
-
-            self.current_notification = None
-            self.is_showing_notification = False
-
+        # Add new notification to queue
         self.notification_queue.append(notification)
-        self.show_next_notification()
+        
+        # Process the queue
+        self._process_notification_queue()
 
-    def show_next_notification(self):
-        if not self.notification_queue or self.is_showing_notification:
+    def _process_notification_queue(self):
+        # If we're currently showing a notification and there's a new one in queue
+        if (self.notification_state == NotificationState.SHOWING and 
+            self.current_notification and 
+            self.notification_queue):
+            
+            # Start hiding the current notification to make room for the new one
+            self._start_hiding_current_notification()
+            
+        elif self.notification_state == NotificationState.IDLE and self.notification_queue:
+            # If we're idle and have notifications in queue, show the next one
+            self._show_next_notification()
+
+    def _start_hiding_current_notification(self):
+        if (self.current_notification and 
+            self.notification_state == NotificationState.SHOWING and
+            not self.current_notification._is_closing):
+            
+            self.notification_state = NotificationState.HIDING
+            
+            # Force close the current notification to trigger hiding animation
+            try:
+                self.current_notification.notification.close("dismissed-by-user")
+            except:
+                pass
+
+    def _show_next_notification(self):
+        if not self.notification_queue or self.notification_state != NotificationState.IDLE:
             return
 
         notification = self.notification_queue.pop(0)
-        self.is_showing_notification = True
+        self.notification_state = NotificationState.SHOWING
 
         new_box = NotificationRevealer(
             notification,
-            on_transition_end=lambda: self.on_notification_finished(new_box),
+            on_transition_end=lambda: self._on_notification_finished(new_box),
             parent_window=self,
         )
 
         self.current_notification = new_box
 
+        # Clear any existing children
         for child in list(self.notifications.children):
             try:
                 self.notifications.remove(child)
@@ -465,24 +487,25 @@ class ModusNoti(Window):
                 pass
 
         self.notifications.children = [new_box]
-
         new_box.show_all()
         self.notifications.queue_resize()
 
         def start_animation():
-            if new_box.get_parent():
-                if new_box.get_realized():
-                    new_box.reveal()
-                    return False
-                else:
-                    return True
-            return False
+            if new_box.get_parent() and new_box.get_realized():
+                new_box.reveal()
+                return False
+            return True
 
         GLib.idle_add(start_animation)
 
-    def on_notification_finished(self, notification_box):
+    def _on_notification_finished(self, notification_box):
         if notification_box != self.current_notification:
             return
+
+        # Cancel any pending transition timer
+        if self._transition_timer_id:
+            GLib.source_remove(self._transition_timer_id)
+            self._transition_timer_id = None
 
         # Safely remove notification box
         try:
@@ -490,13 +513,25 @@ class ModusNoti(Window):
                 self.notifications.remove(notification_box)
         except:
             pass
+
         # Reset state
         self.current_notification = None
-        self.is_showing_notification = False
+        self.notification_state = NotificationState.IDLE
 
+        # Process next notification with a small delay for smooth transitions
         if self.notification_queue:
-            # Reduced delay for more responsive queuing
-            GLib.timeout_add(80, lambda: self.show_next_notification() or False)
+            self._transition_timer_id = GLib.timeout_add(
+                50,  # Very short delay for seamless transitions
+                lambda: self._show_next_notification() or False
+            )
+
+    def show_next_notification(self):
+        # Legacy method for compatibility - redirect to new implementation
+        self._show_next_notification()
+
+    def on_notification_finished(self, notification_box):
+        # Legacy method for compatibility - redirect to new implementation
+        self._on_notification_finished(notification_box)
 
     def clear_notification_queue(self):
         queue_length = len(self.notification_queue)
@@ -507,6 +542,11 @@ class ModusNoti(Window):
                 except:
                     pass  # Ignore errors if notification is already closed
             self.notification_queue.clear()
+
+        # Cancel any pending transition timer
+        if self._transition_timer_id:
+            GLib.source_remove(self._transition_timer_id)
+            self._transition_timer_id = None
 
     def get_queue_length(self):
         return len(self.notification_queue)
