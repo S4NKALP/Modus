@@ -24,7 +24,8 @@ NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
 
 
-def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 400):
+def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 350):
+    """Configure revealer for macOS-like smooth animation"""
     revealer.duration = duration
 
 
@@ -285,7 +286,7 @@ class NotificationRevealer(SlideRevealer):
         super().__init__(
             child=self.event_box,
             direction="right",
-            duration=400,  # Reduced duration for snappier animations
+            duration=350,  # Optimized duration for macOS-like feel
         )
 
         smooth_revealer_animation(self)
@@ -316,7 +317,8 @@ class NotificationRevealer(SlideRevealer):
             self.set_slide_direction("right")
 
         self.hide()
-        GLib.timeout_add(self.duration + 50, lambda: self._on_animation_complete(True))
+        # Reduced timeout for snappier transitions
+        GLib.timeout_add(self.duration + 30, lambda: self._on_animation_complete(True))
 
     def _on_button_press(self, _widget, event):
         if event.button == 1:
@@ -493,7 +495,8 @@ class ModusNoti(Window):
         self.is_showing_notification = False
 
         if self.notification_queue:
-            GLib.timeout_add(100, lambda: self.show_next_notification() or False)
+            # Reduced delay for more responsive queuing
+            GLib.timeout_add(80, lambda: self.show_next_notification() or False)
 
     def clear_notification_queue(self):
         queue_length = len(self.notification_queue)
