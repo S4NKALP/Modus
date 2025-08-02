@@ -1,14 +1,14 @@
 #launcher {
   background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* backdrop-filter: blur(20px); */
+  /* -webkit-backdrop-filter: blur(20px); */
   padding: 0;
   border-radius: 12px;
   min-width: 640px;
-  max-width: 640px;
+  /* max-width: 640px; */
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-  transition: all 0.2s ease-out;
+  /* transition: all 0.2s ease-out; */
 }
 
 #header_box {
@@ -146,12 +146,12 @@
 @keyframes loadSlot {
   0% {
     opacity: 0;
-    transform: translateY(4px);
+    /* transform: translateY(4px); */
   }
 
   100% {
     opacity: 1;
-    transform: translateY(0);
+    /* transform: translateY(0); */
   }
 }
 
