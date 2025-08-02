@@ -25,6 +25,7 @@ class AnimationManager:
             # Use 120 FPS for ultra-smooth animations like macOS
             self._timer_id = GLib.timeout_add(8, self._animate_all)  # 120 FPS
 
+
     def remove_widget(self, widget):
         self._animating_widgets.discard(widget)
         if not self._animating_widgets and self._timer_id:
@@ -70,6 +71,7 @@ class AnimationManager:
     def _get_optimal_interval(self):
         """Keep consistent 120 FPS for macOS-like smoothness"""
         return 8  # 120 FPS
+
 
     def _start_timer(self):
         interval = self._get_optimal_interval()
@@ -166,7 +168,16 @@ class SlideRevealer(Gtk.Overlay):
         if self._revealed and not self._animating:
             return
         self._revealed = True
-        self._start_animation(show=True)
+
+        # Ensure widget is properly laid out before starting animation
+        if self.get_realized():
+            self._start_animation(show=True)
+        else:
+            # Wait for widget to be realized
+            def on_realize(*_):
+                self._start_animation(show=True)
+                self.disconnect_by_func(on_realize)
+            self.connect("realize", on_realize)
 
     def hide(self):
         if not self._revealed and not self._animating:
@@ -195,8 +206,10 @@ class SlideRevealer(Gtk.Overlay):
             pos = self._get_offscreen_pos_cached()
             self._current_position = (float(pos[0]), float(pos[1]))
             self._fixed.move(self.child, int(pos[0]), int(pos[1]))
+ 
 
-        AnimationManager.get_instance().add_widget(self)
+        # Use idle_add to ensure layout is complete
+        GLib.idle_add(start_with_dimensions)
 
     def _calculate_position(self):
         if not self._animating:
