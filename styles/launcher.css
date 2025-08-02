@@ -1,5 +1,6 @@
 #launcher {
-  background: rgba(30, 30, 30, 0.95);
+    background-color: alpha(#999, 0.3);
+    color: #000;
   padding: 0;
   border-radius: 12px;
   min-width: 640px;
@@ -8,7 +9,8 @@
 }
 
 #header_box {
-  padding: 20px 20px 0 20px;
+  padding: 0px 20px 0 20px;
+    color: #000;
 }
 
 #close-button,
