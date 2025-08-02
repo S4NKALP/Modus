@@ -37,6 +37,7 @@ class Launcher(Window):
     def __init__(self, **kwargs):
         super().__init__(
             name="launcher-window",
+            title="launcher",
             layer="top",
             anchor="center",
             exclusivity="none",
@@ -696,15 +697,21 @@ class Launcher(Window):
         if self.triggered_plugin:
             if self.results:
                 # Show more minimal placeholder for triggered mode
-                self.search_entry.set_placeholder_text(f"Search {self.active_trigger.strip()}...")
+                self.search_entry.set_placeholder_text(
+                    f"Search {self.active_trigger.strip()}..."
+                )
             else:
                 # In trigger mode but no results yet
                 if current_text == self.active_trigger.strip():
                     # Just the trigger keyword
-                    self.search_entry.set_placeholder_text(f"Search {self.active_trigger.strip()}...")
+                    self.search_entry.set_placeholder_text(
+                        f"Search {self.active_trigger.strip()}..."
+                    )
                 else:
                     # Searching within trigger
-                    self.search_entry.set_placeholder_text(f"Searching {self.active_trigger.strip()}...")
+                    self.search_entry.set_placeholder_text(
+                        f"Searching {self.active_trigger.strip()}..."
+                    )
         else:
             # Not in trigger mode - show Spotlight-style help
             if current_text == ":":
