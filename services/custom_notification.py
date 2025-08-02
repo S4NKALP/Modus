@@ -15,6 +15,8 @@ NOTIFICATION_CACHE_FILE = os.path.join(PERSISTENT_DIR, "notification_history.jso
 
 def write_json_file(data: Dict, path: str):
     try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
@@ -66,6 +68,9 @@ class CustomNotifications(Notifications):
 
     def _load_notifications(self):
         """Read and validate notifications from the cache file."""
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(NOTIFICATION_CACHE_FILE), exist_ok=True)
+
         if not os.path.exists(NOTIFICATION_CACHE_FILE):
             return
 
@@ -152,7 +157,7 @@ class CustomNotifications(Notifications):
         serialized.update(
             {
                 "id": self._count,
-                "app_name": data.app_name,
+                "app-name": data.app_name,
             }
         )
         return serialized
@@ -167,12 +172,12 @@ class CustomNotifications(Notifications):
         self, widget_config, new_notification: dict, max_count: int
     ):
         """Ensure per-app limits are respected."""
-        app_name = new_notification["app_name"]
+        app_name = new_notification["app-name"]
         per_app_limits = widget_config.get("notification", {}).get("per_app_limits", {})
         app_limit = per_app_limits.get(app_name, max_count)
 
         app_notifications = [
-            n for n in self.all_notifications if n["app_name"] == app_name
+            n for n in self.all_notifications if n["app-name"] == app_name
         ]
 
         if len(app_notifications) >= app_limit:
@@ -243,7 +248,7 @@ class CustomNotifications(Notifications):
 
     def get_deserialized_with_ids(self) -> List[tuple[Notification, int]]:
         """Return the notifications with their IDs as tuples."""
-        
+
         def deserialize_with_id(notification):
             """Helper to deserialize and return result with ID."""
             try:
