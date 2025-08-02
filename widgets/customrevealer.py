@@ -206,7 +206,10 @@ class SlideRevealer(Gtk.Overlay):
             pos = self._get_offscreen_pos_cached()
             self._current_position = (float(pos[0]), float(pos[1]))
             self._fixed.move(self.child, int(pos[0]), int(pos[1]))
- 
+
+        def start_with_dimensions():
+            AnimationManager.get_instance().add_widget(self)
+            return False
 
         # Use idle_add to ensure layout is complete
         GLib.idle_add(start_with_dimensions)
