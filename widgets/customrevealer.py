@@ -87,7 +87,7 @@ class AnimationManager:
 
 
 class SlideRevealer(Gtk.Overlay):
-    def __init__(self, child: Gtk.Widget, direction="right", duration=300, size=None):
+    def __init__(self, child: Gtk.Widget, direction="right", duration=600, size=None):
         super().__init__()
 
         self.child = child

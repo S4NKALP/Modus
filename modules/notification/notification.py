@@ -24,7 +24,7 @@ NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
 
 
-def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 600):
+def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 500):
     revealer.duration = duration
 
 
