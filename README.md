@@ -33,10 +33,18 @@
 
 - [x] Launcher
 - [x] Dock
-- [ ] Application Switcher
-- [ ] Notification
-- [ ] Control Center
+- [x] Notification
+- [x] Control Center
+- [ ] Music Player
+- [ ] Settings
+- [ ] New Dock
+- [ ] New Launcher (maybe like Spotlight)
+- [ ] New Application Switcher
 - [ ] Panel Widget
+
+## Bug Fixes (the bug found till now)
+
+- [ ] WiFi
 
 ## Special Thanks
 
