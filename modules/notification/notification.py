@@ -68,6 +68,8 @@ class NotificationWidget(Box):
         **kwargs,
     ):
         self.show_close_button = show_close_button
+        self.close_button = None
+        self._is_hovered = False
 
         super().__init__(
             size=(NOTIFICATION_WIDTH, -1),
@@ -84,6 +86,11 @@ class NotificationWidget(Box):
         self.notification = notification
         self.timeout_ms = timeout_ms
         self._timeout_id = None
+        
+        # Add hover events to the main notification widget
+        self.connect("enter-notify-event", self._on_enter_notify)
+        self.connect("leave-notify-event", self._on_leave_notify)
+        
         self.start_timeout()
 
     def create_header(self, notification):
@@ -183,6 +190,30 @@ class NotificationWidget(Box):
             ],
         )
 
+    def create_close_button(self):
+        if self.close_button is None:
+            self.close_button = Button(
+                name="notification-close-button",
+                visible=False,  # Initially hidden
+                on_clicked=lambda *_: self.notification.close("dismissed-by-user"),
+                child=Label(label="×", name="close-button-label"),
+            )
+        return self.close_button
+
+    def _on_enter_notify(self, widget, event):
+        self._is_hovered = True
+        if self.close_button:
+            self.close_button.set_visible(True)
+        self.pause_timeout()
+        return False
+
+    def _on_leave_notify(self, widget, event):
+        self._is_hovered = False
+        if self.close_button:
+            self.close_button.set_visible(False)
+        self.resume_timeout()
+        return False
+
     def get_pixbuf(self, icon_path, width, height):
         if icon_path.startswith("file://"):
             icon_path = icon_path[7:]
@@ -227,7 +258,8 @@ class NotificationWidget(Box):
         self.stop_timeout()
 
     def resume_timeout(self):
-        self.start_timeout()
+        if not self._is_hovered:  # Only resume if not hovered
+            self.start_timeout()
 
     def destroy(self):
         self.stop_timeout()
@@ -245,7 +277,7 @@ class NotificationWidget(Box):
         self.set_pointer_cursor(button, "hand2")
 
     def unhover_button(self, button):
-        self.resume_timeout()
+        # Don't resume timeout here since the notification itself might still be hovered
         self.set_pointer_cursor(button, "arrow")
 
 
@@ -260,7 +292,7 @@ class NotificationRevealer(SlideRevealer):
         self.notif_box = NotificationWidget(notification, show_close_button=False)
         self.notification = notification
         self.on_transition_end = on_transition_end
-        # Reference to ModusNoti window for queue clearing
+        # Reference to NotificationCenter window for queue clearing
         self.parent_window = parent_window
         self._is_closing = False
 
@@ -373,7 +405,7 @@ class NotificationState:
     HIDING = 2
 
 
-class ModusNoti(Window):
+class NotificationCenter(Window):
     def __init__(self):
         self._server = notification_service
         self.notifications = Box(
