@@ -1,5 +1,6 @@
 #noti-center-box {
-  background-color: alpha(#001, 0.3);
+        background-color: alpha(#fff, 0.09);
+
   border: 1px solid alpha(#111, 0.3);
   border-radius: 16px;
   padding: 20px;

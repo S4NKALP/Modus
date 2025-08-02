@@ -13,3 +13,4 @@ config/hypr/colors.conf
 fabric/**
 fabric/
 # styles/colors.css
+.aider*
