@@ -6,9 +6,8 @@ from fabric import Application
 from fabric.utils import get_relative_path, monitor_file
 from modules.dock import Dock
 from modules.launcher.main import Launcher
+from modules.notification.notification import ModusNoti
 from modules.osd import OSD
-from modules.about import About
-from modules.notification import ModusNoti
 
 # from modules.corners import Corners
 from modules.panel.main import Panel

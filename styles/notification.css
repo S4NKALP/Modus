@@ -10,55 +10,73 @@
   transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-#notification .summary {
-  font-size: 20px;
+#notification-action-buttons button.start-action {
+  border-radius: 20px;
+}
+
+#notification-action-buttons button {
+  background-color: alpha(#000, 0.3);
+  padding: 8px;
+  border-radius: 20px;
+  transition: background-color 0.1s ease;
+}
+
+#notification-action-buttons button:hover {
+  background-color: var(--surface-bright);
+}
+
+#notification-action-buttons button:active {
+  background-color: var(--primary);
+}
+
+#notification-action-buttons button:active #button-label {
+  color: var(--shadow);
+}
+
+#notification-image image {
+  border-radius: 16px;
+  color: var(--on-surface);
+}
+
+#notification-summary,
+#button-label {
   font-weight: bold;
 }
 
-#notification .body {
-  color: #ddd;
-  margin-top: 0.5rem;
-  font-weight: normal;
+#notification-summary {
+  font-weight: bold;
+  color: var(--primary);
 }
 
-#noti-image {
-  border-radius: 7px;
+#notification-app-name {
+  color: var(--outline);
 }
 
-#env-noti-center {
-  border-radius: 1.25rem;
+#action-button {
+  margin-top: 8px;
 }
 
-#notification-action {
-  background-color: #e0e0e0;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
-}
-#notification-action label {
-  color: #000000;
-}
-#notification-action:hover label {
-  color: #ffffff;
+#notif-close-button {
+  background-color: var(--surface);
+  border-radius: 16px;
+  padding: 4px;
+  transition: background-color 0.1s ease;
 }
 
-#noti-image image {
-  border-radius: 25px;
-}
-#notification-action:hover {
-  background-color: #007aff; /* macOS-style blue */
-  color: #ffffff;
+#notif-close-button:hover,
+#notif-close-button:focus {
+  background-color: var(--surface-bright);
 }
 
-#notification-center {
-  background-color: alpha(#000, 0.3);
-  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
-  border: 1px solid alpha(#111, 0.4);
-  border-radius: 1.25rem;
-  padding: 1rem;
+#notif-close-button:active {
+  background-color: var(--red-dim);
+}
+
+#notif-close-label {
+  color: var(--red-dim);
+  font-size: 20px;
+}
+
+#notif-close-button:active #notif-close-label {
+  color: var(--shadow);
 }

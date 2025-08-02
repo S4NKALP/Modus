@@ -8,6 +8,7 @@
 @import url("./styles/notification.css");
 @import url("./styles/dropdown.css");
 @import url("./styles/about.css");
+@import url("./styles/notification-center.css");
 
 * {
   all: unset;

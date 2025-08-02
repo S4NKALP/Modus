@@ -4,7 +4,9 @@ from loguru import logger
 
 from fabric.core.service import Property, Service, Signal
 from fabric.notifications import Notification
+from services.custom_notification import CustomNotifications
 
+notification_service = CustomNotifications()
 
 class ModusService(Service):
     @Signal
@@ -21,12 +23,6 @@ class ModusService(Service):
 
     @Signal
     def dock_apps_changed(self, new_dock_apps: str) -> None: ...
-
-    @Signal
-    def clear_all_changed(self, value: bool) -> None: ...
-
-    @Signal
-    def notification_count_changed(self, value: int) -> None: ...
 
     @Signal
     def dont_disturb_changed(self, value: bool) -> None: ...
@@ -55,6 +51,9 @@ class ModusService(Service):
     @Signal
     def show_notificationcenter_changed(self, value: bool) -> None: ...
 
+    @Signal
+    def notification_count_changed(self, value: int) -> None: ...
+
     @Property(str, flags="read-write")
     def current_active_app_name(self) -> str:
         return self._current_active_app_name
@@ -78,10 +77,6 @@ class ModusService(Service):
     @Property(str, flags="read-write")
     def dock_apps(self) -> str:
         return self._dock_apps
-
-    @Property(str, flags="read-write")
-    def notification_count(self) -> int:
-        return self._notification_count
 
     @Property(str, flags="read-write")
     def dont_disturb(self) -> bool:
@@ -220,8 +215,6 @@ class ModusService(Service):
         self._battery = ""
         self._bluetooth = ""
         self._dock_apps = ""
-        self._notifications = []
-        self._notification_count = len(self._notifications)
         self._dont_disturb = False
         self._current_active_app_name = ""
         self._music = ""
@@ -233,43 +226,29 @@ class ModusService(Service):
         self._dock_width = 0
         self._dock_height = 0
 
-        self.notifications = []
 
     def remove_notification(self, id: int):
-        item = next((p for p in self._notifications if p["id"] == id), None)
-        if item is None:
-            return
-        index = self._notifications.index(item)
-
-        self._notifications.pop(index)
-        self._notification_count -= 1
-        self.notification_count_changed(self._notification_count)
-        if self._notification_count == 0:
-            self.clear_all_changed(True)
+        notification_service.remove_notification(id)
+        self.notification_count_changed(self.notification_count)
 
     def cache_notification(self, data: Notification):
-        existing_data = self._notifications
-        serialized_data = data.serialize()
-        serialized_data.update({"id": self._notification_count + 1})
-        existing_data.append(serialized_data)
-
-        self._notification_count += 1
-        self._notifications = existing_data
-        self.notification_count_changed(self._notification_count)
+        widget_config = {"notification": {"per_app_limits": {}}}
+        notification_service.cache_notification(widget_config, data, max_count=100)
+        self.notification_count_changed(self.notification_count)
 
     def clear_all_notifications(self):
-        self._notifications = []
-        self._notification_count = 0
-
-        self.clear_all_changed(True)
-        self.notification_count_changed(self._notification_count)
+        notification_service.clear_all_notifications()
+        self.notification_count_changed(self.notification_count)
 
     def get_deserialized(self) -> List[Notification]:
-        if len(self.notifications) <= 0:
-            self.notifications = [
-                Notification.deserialize(data) for data in self._notifications
-            ]
-        return self.notifications
+        return notification_service.get_deserialized()
+
+    def get_deserialized_with_ids(self):
+        return notification_service.get_deserialized_with_ids()
+
+    @property
+    def notification_count(self) -> int:
+        return notification_service.count
 
 
 global modus_service

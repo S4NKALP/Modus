@@ -15,10 +15,10 @@ from widgets.mousecapture import DropDownMouseCapture
 
 class AppName:
     def __init__(self, path="/usr/share/applications"):
-        self.files = os.listdir(path) if os.path.exists(path) else []
+        self.files = os.listdir(path)
         self.path = path
 
-    def get_app_name(self, wmclass):
+    def get_app_name(self, wmclass, format_=False):
         desktop_file = ""
         for f in self.files:
             if f.startswith(wmclass + ".desktop"):
@@ -28,16 +28,38 @@ class AppName:
 
         if desktop_file == "":
             return wmclass
-        try:
-            with open(os.path.join(self.path, desktop_file), "r") as f:
-                lines = f.readlines()
-                for line in lines:
-                    if line.startswith("Name="):
-                        desktop_app_name = line.split("=")[1].strip()
-                        break
-        except:
-            return wmclass
+        with open(os.path.join(self.path, desktop_file), "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("Name="):
+                    desktop_app_name = line.split("=")[1].strip()
+                    break
         return desktop_app_name
+
+    def get_app_exec(self, wmclass, format_=False):
+        desktop_file = ""
+        for f in self.files:
+            if f.startswith(wmclass + ".desktop"):
+                desktop_file = f
+
+        desktop_app_name = wmclass
+
+        if desktop_file == "":
+            return wmclass
+        with open(os.path.join(self.path, desktop_file), "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("Exec="):
+                    desktop_app_name = line.split("=")[1].strip()
+                    break
+        return desktop_app_name
+
+    def get_desktop_file(self, wmclass):
+        desktop_file = ""
+        for f in self.files:
+            if f.startswith(wmclass + ".desktop"):
+                desktop_file = f
+        return desktop_file
 
     def format_app_name(self, title, wmclass, update=False):
         name = wmclass
@@ -62,8 +84,6 @@ app_name_class = AppName()
 
 def format_window(title, wmclass):
     name = app_name_class.format_app_name(title, wmclass, True)
-    if not name or name == "":
-        return "Desktop"
     return name
 
 
@@ -263,10 +283,11 @@ class MenuBarDropdowns:
                 "label", f"About {value}"
             ),
         )
+
         self.global_menu_button_title = Button(
             child=ActiveWindow(
                 formatter=FormattedString(
-                    "{ format_window('None', 'Hyprland') if win_title == '' and win_class == '' else format_window(win_title, win_class) }",
+                    "{ format_window(win_title, win_class) if win_title or win_class else 'Hyprland' }",
                     format_window=format_window,
                 )
             ),
@@ -274,6 +295,7 @@ class MenuBarDropdowns:
             style_classes="button",
             on_clicked=lambda _: self.global_menu_title.toggle_mousecapture(),
         )
+
         self.global_menu_title.child_window.set_pointing_to(
             self.global_menu_button_title
         )

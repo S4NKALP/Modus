@@ -7,6 +7,7 @@ from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.svg import Svg
 from modules.controlcenter.main import ModusControlCenter
+from modules.notification.notification_center import NotificationCenter
 from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from modules.panel.components.indicators import (
     BatteryIndicator,
@@ -15,6 +16,7 @@ from modules.panel.components.indicators import (
 )
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
+from utils.roam import modus_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
 
@@ -39,10 +41,25 @@ class Panel(Window):
         self.imac = Button(
             name="panel-button",
             child=Svg(
-                size=22,
+                size=28,
                 svg_file=get_relative_path("../../config/assets/icons/misc/logo.svg"),
             ),
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
+        )
+
+        # DND indicator
+        self.dnd_icon = Svg(
+            size=34,
+            svg_file=get_relative_path(
+                "../../config/assets/icons/applets/dnd-clear.svg"
+            ),
+        )
+
+        self.dnd_indicator = Button(
+            name="dnd-indicator",
+            child=self.dnd_icon,
+            style="opacity: 0.2;",
+            visible=True,
         )
 
         self.tray = SystemTray(name="system-tray", spacing=4, icon_size=20)
@@ -81,7 +98,7 @@ class Panel(Window):
             name="panel-button",
             on_clicked=lambda *_: self.search_apps(),
             child=Svg(
-                size=20,
+                size=22,
                 svg_file=get_relative_path("../../config/assets/icons/misc/search.svg"),
             ),
         )
@@ -100,6 +117,18 @@ class Panel(Window):
                     "../../config/assets/icons/misc/control-center.svg"
                 ),
             ),
+        )
+
+        # Notification Center with MouseCapture
+        self.notification_center = MouseCapture(
+            layer="overlay", child_window=NotificationCenter()
+        )
+
+        # Clickable DateTime for notification center
+        self.datetime_button = Button(
+            name="datetime-button",
+            on_clicked=self.notification_center.toggle_mousecapture,
+            child=DateTime(name="date-time", formatters=["%a %b %d %I:%M"]),
         )
 
         self.recording_indicator = RecordingIndicator()
@@ -122,15 +151,21 @@ class Panel(Window):
                 spacing=4,
                 orientation="h",
                 children=[
+                    self.dnd_indicator,
                     self.tray_revealer,
                     self.chevron_button,
                     self.indicators,
                     self.search,
                     self.control_center_button,
-                    DateTime(name="date-time", formatters=["%a %b %d %I:%M"]),
+                    self.datetime_button,
                 ],
             ),
         )
+
+        # Connect to DND state changes
+        modus_service.connect("dont-disturb-changed", self.on_dnd_changed)
+        # Set initial DND state
+        self.update_dnd_indicator(modus_service.dont_disturb)
 
         return self.show_all()
 
@@ -149,3 +184,16 @@ class Panel(Window):
             self.chevron_button.get_child().set_from_file(
                 get_relative_path("../../config/assets/icons/misc/chevron-right.svg")
             )
+
+    def on_dnd_changed(self, _, dnd_state):
+        """Handle DND state changes from the service."""
+        self.update_dnd_indicator(dnd_state)
+
+    def update_dnd_indicator(self, dnd_enabled):
+        """Update the DND indicator opacity based on DND state."""
+        if dnd_enabled:
+            # 100% opacity when DND is enabled
+            self.dnd_indicator.set_style("opacity: 1.0;")
+        else:
+            # 20% opacity when DND is disabled
+            self.dnd_indicator.set_style("opacity: 0.2;")

@@ -104,6 +104,7 @@ if os.path.exists(CONFIG_FILE):
 
     NOTIFICATION_TIMEOUT_STR = config.get("notification_timeout", "5s")
     NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
+    NOTIFICATION_IGNORED_APPS = config.get("notification_ignored_apps", ["Hyprshot"])
 
     DOCK_COMPONENTS_VISIBILITY = {
         "workspace": config.get("dock_workspace_visible", True),
@@ -139,6 +140,7 @@ else:
 
     NOTIFICATION_TIMEOUT_STR = "5s"
     NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
+    NOTIFICATION_IGNORED_APPS = ["Hyprshot"]
 
     DOCK_COMPONENTS_VISIBILITY = {
         "workspace": True,
