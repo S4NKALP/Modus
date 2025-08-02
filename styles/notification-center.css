@@ -1,0 +1,74 @@
+#noti-center-box {
+  background-color: alpha(#001, 0.3);
+  border: 1px solid alpha(#111, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 6px;
+}
+
+#noti-clear-button {
+  min-width: 10px;
+  min-height: 40px;
+  border-radius: 50px;
+  margin-top: 10px;
+}
+
+#noti-clear-button:hover {
+  background-color: var(--surface-bright);
+}
+
+/* Stacked notification group styles */
+.stacked-notification-group {
+  margin: 8px 0;
+}
+
+.stacked-notification-container {
+}
+
+.stacked-notification-item {
+  background-color: alpha(#000, 0.4);
+  border: 0.5px solid alpha(#111, 0.4);
+  box-shadow:
+    inset 0 0 200px 0 alpha(#111, 0.5),
+    inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+#notif-clear-btn {
+  border-radius: 10px;
+  font-size: 12px;
+  padding: 2px;
+}
+
+#notif-clear-btn:hover {
+  background-color: var(--surface-bright);
+}
+
+#stacked-notification-item:hover {
+  background-color: alpha(#111, 0.5);
+  box-shadow:
+    inset 0 0 200px 0 alpha(#111, 0.5),
+    inset 0 0 0 0.5px alpha(#aaa, 0.4),
+    0 4px 12px alpha(#000, 0.3);
+}
+
+/* Stack count indicator */
+#stack-count-indicator {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 2px 8px;
+  font-weight: 500;
+}
+
+/* Expanded view styles - notifications use their default styling */
+#expanded-notification-list {
+  margin-top: 8px;
+}
+
+/* Make expanded notifications clickable with subtle hover effect */
+#expanded-notification-list:hover {
+  background-color: alpha(#111, 0.1);
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
