@@ -17,16 +17,16 @@ SEARCH_DEBOUNCE_MS = 150
 TRIGGER_SEARCH_DEBOUNCE_MS = 50
 CURSOR_POSITION_DELAY_MS = 10
 SCROLL_PADDING = 10
-DEFAULT_ITEM_HEIGHT = 60
+DEFAULT_ITEM_HEIGHT = 68
 PAGE_NAVIGATION_STEP = 5
-LAUNCHER_WIDTH = 550
-LAUNCHER_HEIGHT = 260
+LAUNCHER_WIDTH = 640
+LAUNCHER_HEIGHT = 400
 
 
 class Launcher(Window):
     """
     Main launcher window with search functionality and plugin system.
-    Similar to Albert Launcher interface.
+    Spotlight-style interface.
     """
 
     # Properties
@@ -62,7 +62,7 @@ class Launcher(Window):
         # Current results and selection
         self.results: List[Result] = []
         self.selected_index = 0
-        self.max_results = 10
+        self.max_results = 8  # Spotlight typically shows fewer results
 
         # Trigger system
         self.triggered_plugin = None  # Currently active triggered plugin
@@ -84,10 +84,10 @@ class Launcher(Window):
         )
         self.add(main_box)
 
-        # Search entry with overlay for trigger indication
+        # Search entry with Spotlight-style large text
         self.search_entry = Entry(
             name="launcher-search",
-            placeholder="Type to search...",
+            placeholder="Spotlight Search",
             h_expand=True,
             h_align="fill",
             notify_text=lambda entry, *_: self._on_search_changed(entry),
@@ -106,7 +106,7 @@ class Launcher(Window):
 
         main_box.add(self.header_box)
 
-        # Results container
+        # Results container with increased height for Spotlight-style
         self.results_scroll = ScrolledWindow(
             name="launcher-results-scroll",
             h_scrollbar_policy="never",
@@ -644,7 +644,7 @@ class Launcher(Window):
         if getattr(self, "_initializing", True) or not hasattr(self, "results_box"):
             return
 
-        # Update input field with trigger indication (Albert-style)
+        # Update input field with trigger indication (Spotlight-style)
         self._update_input_action_text()
 
         # Clear existing results
@@ -684,7 +684,7 @@ class Launcher(Window):
             self.results_scroll.hide()
 
     def _update_input_action_text(self):
-        """Update the input field with action text (Albert-style)."""
+        """Update the input field with action text (Spotlight-style)."""
         # Check if search_entry is initialized
         if not hasattr(self, "search_entry") or self.search_entry is None:
             return
@@ -692,51 +692,27 @@ class Launcher(Window):
         # Get the current input text
         current_text = self.search_entry.get_text()
 
+        # Spotlight-style placeholder text
         if self.triggered_plugin:
             if self.results:
-                # Show the first result as action text
-                first_result = self.results[0]
-                action_text = first_result.title
-
-                # For calculator results, show the evaluation
-                if hasattr(first_result, "data") and "result" in first_result.data:
-                    action_text = str(first_result.data["result"])
-
-                # Set placeholder to show the action text
-                if action_text and action_text != current_text:
-                    self.search_entry.set_placeholder_text(
-                        f"{current_text} → {action_text}"
-                    )
-                else:
-                    self.search_entry.set_placeholder_text(
-                        f"[{self.active_trigger.strip()}] searching..."
-                    )
+                # Show more minimal placeholder for triggered mode
+                self.search_entry.set_placeholder_text(f"Search {self.active_trigger.strip()}...")
             else:
                 # In trigger mode but no results yet
                 if current_text == self.active_trigger.strip():
                     # Just the trigger keyword
-                    self.search_entry.set_placeholder_text(
-                        f"[{self.active_trigger.strip()}] ready - type to search"
-                    )
+                    self.search_entry.set_placeholder_text(f"Search {self.active_trigger.strip()}...")
                 else:
                     # Searching within trigger
-                    self.search_entry.set_placeholder_text(
-                        f"[{self.active_trigger.strip()}] searching..."
-                    )
+                    self.search_entry.set_placeholder_text(f"Searching {self.active_trigger.strip()}...")
         else:
-            # Not in trigger mode - show trigger help
+            # Not in trigger mode - show Spotlight-style help
             if current_text == ":":
-                self.search_entry.set_placeholder_text(
-                    "Showing all available triggers."
-                )
+                self.search_entry.set_placeholder_text("Available search triggers")
             elif current_text:
-                self.search_entry.set_placeholder_text(
-                    "Type trigger keyword (calc, app, file, system...)"
-                )
+                self.search_entry.set_placeholder_text("Spotlight Search")
             else:
-                self.search_entry.set_placeholder_text(
-                    "Type trigger keyword: calc, app, file, system..."
-                )
+                self.search_entry.set_placeholder_text("Spotlight Search")
 
     def _clear_results(self):
         """Clear all results."""
@@ -1116,7 +1092,7 @@ class Launcher(Window):
             # Try to get actual allocation, fallback to estimation
             try:
                 allocation = selected_child.get_allocation()
-                item_height = allocation.height if allocation.height > 0 else 60
+                item_height = allocation.height if allocation.height > 0 else 68
                 item_y = allocation.y
             except:
                 # Fallback to estimation
