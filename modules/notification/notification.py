@@ -300,7 +300,8 @@ class NotificationRevealer(SlideRevealer):
         self._drag_start_x = 0
         self._drag_start_y = 0
         self._is_dragging = False
-        self._swipe_threshold = 100  # pixels to trigger swipe dismiss
+        self._swipe_threshold = 80  # Reduced threshold for more responsive swipes
+        self._swipe_in_progress = False
 
         # Wrap notification in EventBox for swipe detection
         self.event_box = EventBox(
@@ -346,12 +347,15 @@ class NotificationRevealer(SlideRevealer):
 
         self._is_closing = True
 
-        # Use left-to-right slide for auto-dismiss (expired), right-to-left for manual close
+        # Use different slide directions based on dismiss reason
         if reason == "expired":
-            # Left-to-right slide for auto-dismiss
+            # Left-to-right slide for auto-dismiss (expired)
             self.set_slide_direction("left")
+        elif self._swipe_in_progress:
+            # Maintain swipe direction for swipe dismissals
+            self.set_slide_direction("right")
         else:
-            # Right-to-left slide for manual close
+            # Right-to-left slide for manual close (button clicks)
             self.set_slide_direction("right")
 
         self.hide()
@@ -363,6 +367,7 @@ class NotificationRevealer(SlideRevealer):
             self._drag_start_x = event.x
             self._drag_start_y = event.y
             self._is_dragging = True
+            self._swipe_in_progress = False
         return False
 
     def _on_button_release(self, _widget, event):
@@ -383,19 +388,29 @@ class NotificationRevealer(SlideRevealer):
             dx = event.x - self._drag_start_x
             dy = abs(event.y - self._drag_start_y)
 
-            # Left-to-right swipe: dismiss current notification only
-            if dx > self._swipe_threshold and dy < 50:  # 50px vertical tolerance
+            # Right swipe: dismiss current notification (swipe to right to dismiss)
+            if dx > self._swipe_threshold and dy < 60:  # 60px vertical tolerance
                 try:
+                    self._swipe_in_progress = True
                     self.notification.close("dismissed-by-user")
-                except:
-                    pass  # Ignore errors
+                    logger.debug(f"Notification dismissed by swipe to right: dx={dx}, dy={dy}")
+                except Exception as e:
+                    logger.error(f"Error dismissing notification by swipe: {e}")
+                    pass
         return False
 
     def _on_motion(self, _widget, event):
         if self._is_dragging:
-            # TODO: Add visual feedback during swipe
-            # Could add translation or opacity changes here
-            pass
+            # Calculate current swipe distance for visual feedback
+            dx = event.x - self._drag_start_x
+            dy = abs(event.y - self._drag_start_y)
+            
+            # Optional: Add visual feedback during swipe
+            # You could add opacity changes or slight translation here
+            if dx > 20 and dy < 60:  # Starting to swipe right
+                # Visual indication that swipe gesture is recognized
+                # Could modify opacity or add translation effect here
+                pass
         return False
 
 
