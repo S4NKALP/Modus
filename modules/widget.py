@@ -79,14 +79,26 @@ def get_weather(callback):
                     condition = responseinfo["current_condition"][0]["weatherDesc"][0][
                         "value"
                     ]
+                    maxtemp = responseinfo["weather"][0]["maxtempC"] + "°"
+                    mintemp = responseinfo["weather"][0]["mintempC"] + "°"
                     location = responseinfo["nearest_area"][0]["areaName"][0]["value"]
                     emoji = response.text.strip()
                     update_time = datetime.datetime.now().strftime("%I:%M:%S %p")
 
                     GLib.idle_add(
                         callback,
-                        [emoji, temp, condition, feels_like, location, update_time],
+                        [
+                            emoji,
+                            temp,
+                            condition,
+                            feels_like,
+                            location,
+                            update_time,
+                            maxtemp,
+                            mintemp,
+                        ],
                     )
+                    print(emoji, temp, condition, feels_like, location, update_time)
                     return
             except requests.RequestException as e:
                 print(f"Error fetching weather (attempt {attempt + 1}): {e}")
@@ -448,9 +460,67 @@ def create_widgets(config):
     return widgets
 
 
-# if data.DESKTOP_WIDGETS:
-#     if config.get("widgets_displaytype_visible", True):
+class Weather(Box):
+    def __init__(self, parent, **kwargs):
+        super().__init__(
+            name="weather-widget",
+            h_expand=True,
+            v_expand=True,
+            justification="right",
+            orientation="v",
+            all_visible=False,
+            **kwargs,
+        )
 
+        self.parent = parent
+        self.city = Label(
+            name="city", label="New York", justification="right", h_align="start"
+        )
+        self.temperature = Label(name="temperature", label="36", h_align="start")
+        self.condition_em = Label(name="condition-emoji", label="☁️", h_align="start")
+        self.condition = Label(name="condition", label="Cloudy", h_align="start")
+        self.feels_like = Label(name="feels-like", label="H:28 L:20", h_align="start")
+        self.add(self.city)
+        self.add(self.temperature)
+        self.add(self.condition_em)
+        self.add(self.condition)
+        self.add(self.feels_like)
+        update_weather(self)
+
+    def update_labels(self, weather_info):
+        if not self.weatherinfo:
+            return
+
+        # Unpack weather info into variables for better readability
+        emoji, temp, condition, feels_like, location, update_time, maxtemp, mintemp = (
+            self.weatherinfo
+        )
+        maxmin = f"H:{maxtemp} L:{mintemp}"
+
+        # Store references to deeply nested children to avoid repeated lookups
+
+        self.city.set_label(location)
+        self.feels_like.set_label(maxmin)
+        self.condition.set_label(condition)
+        self.temperature.set_label(temp)
+        self.condition_em.set_label(emoji)
+        self.parent.set_visible(True)
+
+    class WeatherContainer(Box):
+    def __init__(self, **kwargs):
+        super().__init__(
+            orientation="v",
+            name="box-widget-2",
+            v_expand=True,
+            v_align="center",
+            visible=False,
+            h_align="center",
+            children=[
+                Weather(),
+            ],
+            **kwargs,
+        )
+        self.add(WeatherWidget())
 
 class Date(Box):
     def __init__(self, **kwargs):
@@ -475,6 +545,8 @@ class Date(Box):
         self.add(self.datethree)
 
 
+
+
 class Deskwidgets(Window):
     def __init__(self, **kwargs):
         config = load_config()
@@ -482,24 +554,37 @@ class Deskwidgets(Window):
             name="desktop",
             layer="bottom",
             title="desktop-widgets",
+            orientation="v",
             exclusivity="none",
             child=[
                 Window(
                     anchor="top left",
+                    orientation="h",
                     layer="bottom",
                     child=[
                         Box(
-                            orientation="v",
-                            name="box-widget",
-                            v_expand=True,
-                            v_align="center",
-                            h_align="center",
-                            children=[Date()],
-                        )
+                            name="desktop-widgets-container",
+                            children=[
+                                Box(
+                                    orientation="v",
+                                    name="box-widget",
+                                    v_expand=True,
+                                    v_align="center",
+                                    h_align="center",
+                                    children=[Date()],
+                                ),
+                                WeatherContainer(),
+                            ],
+                        ),
                     ],
-                )
+                ),
+                Window(
+                    anchor="bottom left",
+                    orientation="h",
+                    layer="bottom",
+                    child=[],
+                ),
             ],
-            all_visible=True,
             **kwargs,
         )
 

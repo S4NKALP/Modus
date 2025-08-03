@@ -82,6 +82,56 @@ menu > menuitem:hover > label {
 
 
 
+#weather-widget label{
+    font-family: "SF Pro Rounded";
+    /* font-size: 20px; */
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+#city {
+    margin-top: 10px;
+    font-size: 20px;
+
+}
+#temperature {
+    font-size: 50px;
+}
+
+#condition-emoji{
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+#condition {
+    font-size: 15px;
+}
+#feels-like {
+
+    font-size: 15px;
+}
+/* # */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#date-widget label {
+    font-family: "SF Pro Rounded";
+    margin-top: 10px;
+}
 #day label,
 #month label{
     color: var(--foreground);
@@ -89,7 +139,6 @@ menu > menuitem:hover > label {
     margin-top: 10px;
     font-size: 30px;
     color: alpha(#fff, 0.7);
-    font-family: "SF Pro Rounded";
     font-weight: 600;
 }
 
@@ -98,16 +147,19 @@ menu > menuitem:hover > label {
     margin-top: -10px;
     font-size: 90px;
     font-weight: 600;
-    font-family: "SF Pro Rounded";
 }
 #day label{
     color: alpha(#FF0000, 0.7);
 }
-#date{
-}
 #box-widget{
     background-color: alpha(#232323, 1);
-    margin-top: 20px;
+    margin: 20px 20px 20px 20px;
+    min-width: 170px;
+    min-height: 170px;
+    border-radius: 16px;
+}
+#box-widget-2{
+    background-color: alpha(#425D8A, 1);
     min-width: 170px;
     min-height: 170px;
     border-radius: 16px;
