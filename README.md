@@ -35,16 +35,18 @@
 - [x] Dock
 - [x] Notification
 - [x] Control Center
-- [ ] Music Player
+- [x] Music Player
+- [ ] New Launcher (maybe like Spotlight)
 - [ ] Settings
 - [ ] New Dock
-- [ ] New Launcher (maybe like Spotlight)
 - [ ] New Application Switcher
 - [ ] Panel Widget
 
 ## Bug Fixes (the bug found till now)
 
 - [ ] WiFi
+- [ ] wifi off button looks bigger
+- [ ] Metadata Changes delay in Media Player
 
 ## Special Thanks
 
