@@ -156,10 +156,20 @@ class ApplicationsPlugin(PluginBase):
         pattern = ".*".join(re.escape(char) for char in query)
         return bool(re.search(pattern, text, re.IGNORECASE))
 
+        import subprocess
+
     def _launch_application(self, app: DesktopApp):
-        print(app.command_line)
-        final_command = f"hyprctl dispatch exec uwsm app -- { app.command_line}"
+        print("Original:", app.command_line)
+
+        # Remove ALL % codes (e.g., %u, %U, %f, %F, %i, %c, etc.)
+        cleaned_command = re.sub(r"%\w+", "", app.command_line).strip()
+
+        print("Cleaned:", cleaned_command)
+
+        # Final command with hyprctl dispatch
+        final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
         subprocess.Popen(final_command, shell=True)
+
         # app.launch()
 
     def _get_all_applications(self) -> List[Result]:
