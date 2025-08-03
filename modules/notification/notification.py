@@ -175,7 +175,11 @@ class NotificationWidget(Box):
                                 ellipsization="end",
                             )
                             if notification.body
-                            else Box()
+                            else Label(
+                                markup="",
+                                h_align="start",
+                                ellipsization="end",
+                            )
                         ),
                     ],
                 ),
