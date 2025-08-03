@@ -81,33 +81,44 @@ menu > menuitem:hover > label {
 
 
 
+#box-widget-2{
+    /* background-color: alpha(#1C1C1C, 1); */
+    background: linear-gradient(to bottom, #202020, #141414);
+    min-width: 170px;
+    min-height: 170px;
+    border-radius: 16px;
+}
 
 #weather-widget label{
     font-family: "SF Pro Rounded";
     /* font-size: 20px; */
-    font-weight: 600;
-    margin-left: 10px;
+    margin-left: 12px;
 }
 
 #city {
     margin-top: 10px;
+    color: #68A7B5;
+    font-weight: 600;
     font-size: 20px;
 
 }
 #temperature {
     font-size: 50px;
+    font-weight: 400;
 }
 
 #condition-emoji{
-    margin-top: 10px;
+    margin-top: 5px;
     font-size: 16px;
 }
 
 #condition {
     font-size: 15px;
+    font-weight: 600;
 }
 #feels-like {
 
+    font-weight: 600;
     font-size: 15px;
 }
 /* # */
@@ -138,29 +149,69 @@ menu > menuitem:hover > label {
     padding: 5px;
     margin-top: 10px;
     font-size: 30px;
-    color: alpha(#fff, 0.7);
+    color: alpha(#fff, 0.9);
     font-weight: 600;
 }
 
 #date label{
-    color: alpha(#fff, 0.7);
+    color: alpha(#fff, 0.9);
+
     margin-top: -10px;
     font-size: 90px;
     font-weight: 600;
 }
 #day label{
-    color: alpha(#FF0000, 0.7);
+
+    color: alpha(#72BBCC, 0.9);
 }
 #box-widget{
-    background-color: alpha(#232323, 1);
+    /* background-color: alpha(#232323, 1); */
+    background: linear-gradient(to bottom, #202020, #141414);
     margin: 20px 20px 20px 20px;
     min-width: 170px;
     min-height: 170px;
     border-radius: 16px;
 }
-#box-widget-2{
-    background-color: alpha(#425D8A, 1);
+#info-box-widget{
+    /* background-color: alpha(#232323, 1); */
+    background: linear-gradient(to bottom, #202020, #000000);
+    margin: 20px 10px 20px 10px;
     min-width: 170px;
     min-height: 170px;
     border-radius: 16px;
+}
+#ram-progress{
+    font-family: "SF Pro Rounded";
+    margin-left: 12px;
+    color: var(--foreground);
+    /* background-color: alpha(#72BBCC, 0.9); */
+}
+#progress-label{
+    /* background-color: alpha(#FFF, 0.9); */
+
+    font-family: "SF Pro Rounded";
+    font-weight:600;
+    font-size: 13px;
+}
+#progress{
+    font-family: "SF Pro Rounded";
+    border: solid 8px #0984FF;
+
+        /* border-radius: 100px; */
+    color: alpha(#AAAAAA, 0.7);
+}
+#info {
+
+
+    font-family: "SF Pro Rounded";
+    margin-left: -8px;
+    margin-top: 5px;
+    font-size:14px;
+    font-weight:600;
+    /* margin-bottom:-10px; */
+    /* margin-top:-35px; */
+}
+#component-name{
+
+    font-size: 10px;
 }
