@@ -88,7 +88,6 @@ class Player(Box):
             f"background-image:url('{data.HOME_DIR}/.current.wall')"
         )
 
-    
         self.children = [
             self.album_cover,
             Box(
@@ -201,9 +200,6 @@ class Player(Box):
             return
         self.duration = dur
 
-
-
-
     def on_seek(self, sender, ratio):
         pos = ratio * self.duration  # duration in seconds
         self._player.set_position(int(pos))
@@ -269,7 +265,7 @@ class Player(Box):
 
         self._is_updating = True
         update_func, args, kwargs = self._update_queue.pop(0)
-        
+
         try:
             update_func(*args, **kwargs)
         except Exception as e:
@@ -284,13 +280,14 @@ class Player(Box):
         """Finish current update and process next item in queue."""
         self._is_updating = False
         self._update_timeout_id = None
-        
+
         if self._update_queue:
             self._process_queue()
         return False
 
     def _handle_thumbnail(self, metadata, player):
         """Queue thumbnail update to prevent overlapping operations."""
+
         def _update_thumbnail():
             keys = metadata.keys()
             player_name = player.props.player_name
@@ -305,16 +302,24 @@ class Player(Box):
                     logger.debug(f"Found MPRIS art for {player_name}: {art_url}")
 
             # Check for browser players and YouTube URLs
-            elif player_name in ["firefox", "chromium", "vivaldi", "brave"] and "xesam:url" in keys:
+            elif (
+                player_name in ["firefox", "chromium", "vivaldi", "brave"]
+                and "xesam:url" in keys
+            ):
                 webpage_url = metadata["xesam:url"]
                 if webpage_url and "youtube.com" in webpage_url:
                     # Simple YouTube thumbnail extraction
                     import re
+
                     match = re.search(r"(?:v=|/)([a-zA-Z0-9_-]{11})", webpage_url)
                     if match:
                         video_id = match.group(1)
-                        new_thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-                        logger.debug(f"Found YouTube thumbnail for {player_name}: {new_thumbnail}")
+                        new_thumbnail = (
+                            f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+                        )
+                        logger.debug(
+                            f"Found YouTube thumbnail for {player_name}: {new_thumbnail}"
+                        )
 
             # Only update if thumbnail has changed
             if new_thumbnail and new_thumbnail != self._current_thumbnail:
@@ -324,12 +329,12 @@ class Player(Box):
             elif not new_thumbnail and self._current_thumbnail:
                 # Reset to default if no thumbnail found
                 self._current_thumbnail = None
-                self.album_cover.set_style(f"background-image:url('{data.HOME_DIR}/.current.wall')")
+                self.album_cover.set_style(
+                    f"background-image:url('{data.HOME_DIR}/.current.wall')"
+                )
                 logger.debug(f"Reset to default wallpaper for {player_name}")
 
         self._queue_update(_update_thumbnail)
-
-
 
     def handle_next(self, player):
         def _do_next():
@@ -337,7 +342,7 @@ class Player(Box):
                 self._player._player.next()
             except Exception as e:
                 logger.warning(f"Failed to go to next track: {e}")
-        
+
         self._queue_update(_do_next)
 
     def handle_prev(self, player):
@@ -346,10 +351,8 @@ class Player(Box):
                 self._player._player.previous()
             except Exception as e:
                 logger.warning(f"Failed to go to previous track: {e}")
-        
+
         self._queue_update(_do_prev)
-
-
 
     def handle_play_pause(self, player):
         def _do_play_pause():
@@ -431,9 +434,7 @@ class Placeholder(Box):
                 children=[
                     CenterBox(
                         name="details",
-                        center_children=Label(
-                            label="Nothing Playing", style="color:black;"
-                        ),
+                        center_children=Label(label="Nothing Playing"),
                     )
                 ],
             ),

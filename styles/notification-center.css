@@ -14,8 +14,11 @@
   margin-top: 10px;
 }
 
+#noti-clear-button {
+        background-color: alpha(#888, 0.09);
+}
 #noti-clear-button:hover {
-  background-color: var(--surface-bright);
+        background-color: alpha(#fff, 0.09);
 }
 
 /* Stacked notification group styles */

@@ -1,3 +1,4 @@
+from fabric.core import widgets
 import setproctitle
 from loguru import logger
 
@@ -7,6 +8,7 @@ from fabric.utils import get_relative_path, monitor_file
 from modules.dock import Dock
 from modules.launcher.main import Launcher
 from modules.notification.notification import ModusNoti
+from modules.widget import Deskwidgets
 from modules.osd import OSD
 
 # from modules.corners import Corners
@@ -41,6 +43,7 @@ if __name__ == "__main__":
     panel.launcher = launcher
     osd = OSD()
 
+    widgets = Deskwidgets()
     # Set corners visibility based on config
     # corners_visible = config.get("corners_visible", True)
     # corners.set_visible(corners_visible)
@@ -50,7 +53,9 @@ if __name__ == "__main__":
     _ = css_file.connect("changed", lambda *_: set_css())
 
     # Make sure corners is added to the app
-    app = Application(f"{APP_NAME}", panel, dock, switcher, launcher, modusnoti, osd)
+    app = Application(
+        f"{APP_NAME}", panel, dock, switcher, launcher, modusnoti, osd, widgets
+    )
 
     def set_css():
         app.set_stylesheet_from_file(
