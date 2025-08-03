@@ -72,10 +72,6 @@ def get_weather(callback):
                     temp = (
                         responseinfo["current_condition"][0][f"temp_{temp_unit}"] + "°"
                     )
-                    feels_like = (
-                        responseinfo["current_condition"][0][f"FeelsLike{temp_unit}"]
-                        + "°"
-                    )
                     condition = responseinfo["current_condition"][0]["weatherDesc"][0][
                         "value"
                     ]
@@ -83,7 +79,6 @@ def get_weather(callback):
                     mintemp = responseinfo["weather"][0]["mintempC"] + "°"
                     location = responseinfo["nearest_area"][0]["areaName"][0]["value"]
                     emoji = response.text.strip()
-                    update_time = datetime.datetime.now().strftime("%I:%M:%S %p")
 
                     GLib.idle_add(
                         callback,
@@ -91,14 +86,11 @@ def get_weather(callback):
                             emoji,
                             temp,
                             condition,
-                            feels_like,
                             location,
-                            update_time,
                             maxtemp,
                             mintemp,
                         ],
                     )
-                    print(emoji, temp, condition, feels_like, location, update_time)
                     return
             except requests.RequestException as e:
                 print(f"Error fetching weather (attempt {attempt + 1}): {e}")
@@ -238,95 +230,6 @@ class Sysinfo(Box):
 
         executor.submit(update)
         return True
-
-
-class WeatherWidget(Box):
-    def __init__(self, **kwargs):
-        super().__init__(
-            layer="bottom",
-            name="weather-widget",
-            anchor="center",
-            h_align="center",
-            v_align="center",
-            h_expand=True,
-            visible=False,
-            v_expand=True,
-            **kwargs,
-        )
-        self.weatherinfo = None
-        self.header = Box(
-            name="header1",
-            orientation="h",
-            h_expand=True,
-            children=[
-                Box(
-                    orientation="v",
-                    children=[
-                        Label(label="", h_align="start", name="weather-location"),
-                        Label(label="", h_align="start", name="weather-update-time"),
-                        Label(label="", h_align="start", name="weather-condition"),
-                    ],
-                ),
-            ],
-        )
-        self.temp = Box(
-            name="header2",
-            orientation="h",
-            h_align="center",
-            children=[
-                Box(
-                    orientation="v",
-                    children=[
-                        Label(label="", name="weather-current-temperature"),
-                        Label(label="", name="weather-feels-like-temperature"),
-                    ],
-                ),
-            ],
-        )
-        self.header_right = Box(
-            name="header3",
-            orientation="h",
-            children=[
-                Box(
-                    orientation="v",
-                    children=[
-                        Label(label="", name="weather-emoji"),
-                    ],
-                ),
-            ],
-        )
-        self.add(
-            Box(
-                name="window-inner",
-                orientation="h",
-                h_align="center",
-                v_align="center",
-                children=[self.header, self.temp, self.header_right],
-            ),
-        )
-        self.set_visible(False)
-        update_weather(self)
-
-    def update_labels(self, weather_info):
-        if not self.weatherinfo:
-            return
-
-        # Unpack weather info into variables for better readability
-        emoji, temp, condition, feels_like, location, update_time = self.weatherinfo
-
-        # Store references to deeply nested children to avoid repeated lookups
-        header_left = self.header.children[0].children
-        temp_labels = self.temp.children[0].children
-        header_right = self.header_right.children[0].children
-
-        # Update labels efficiently
-        self.set_visible(True)
-        header_left[0].set_label(location)
-        header_left[1].set_label(f"Updated {update_time}")
-        header_left[2].set_label(condition)
-        temp_labels[0].set_label(temp)
-        temp_labels[1].set_label(f"Feels like {feels_like}")
-        header_right[0].set_label(emoji)
 
 
 def fetch_quote(callback):
@@ -492,9 +395,7 @@ class Weather(Box):
             return
 
         # Unpack weather info into variables for better readability
-        emoji, temp, condition, feels_like, location, update_time, maxtemp, mintemp = (
-            self.weatherinfo
-        )
+        emoji, temp, condition, location, maxtemp, mintemp = self.weatherinfo
         maxmin = f"H:{maxtemp} L:{mintemp}"
 
         # Store references to deeply nested children to avoid repeated lookups
@@ -514,14 +415,15 @@ class WeatherContainer(Box):
             name="box-widget-2",
             v_expand=True,
             v_align="center",
-            visible=False,
+            visible=True,
             h_align="center",
             children=[
                 Weather(self),
             ],
             **kwargs,
         )
-        self.add(WeatherWidget())
+        # self.set_style("background-color: rgba(0, 0, 0, 0.5);")
+        # self.add(Weather())
 
 
 class Date(Box):
