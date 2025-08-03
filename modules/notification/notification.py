@@ -211,13 +211,10 @@ class NotificationWidget(Box):
     def get_pixbuf(self, icon_path, width, height):
         if icon_path.startswith("file://") and os.path.exists(icon_path):
             icon_path = icon_path[7:]
-        else:
-            icon_path = get_relative_path("../../config/assets/icons/notification.png")
-            logger.warning(f"Invalid icon path: {icon_path}")
 
         if not os.path.exists(icon_path):
             logger.warning(f"Icon path does not exist: {icon_path}")
-            return None
+            icon_path = get_relative_path("../../config/assets/icons/notification.png")
 
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(icon_path)
