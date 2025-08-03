@@ -19,7 +19,9 @@ class NotificationCenterWidget(NotificationWidget):
     def create_close_button(self):
         close_button = Button(
             name="notif-close-button",
-            child=Image(icon_name="close-symbolic", name="notif-close-label", size=5),
+            child=Image(
+                icon_name="dialog-cancel-symbolic", name="notif-close-label", size=5
+            ),
             on_clicked=self._on_close_clicked,
         )
         close_button.connect(
