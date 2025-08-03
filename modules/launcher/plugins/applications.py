@@ -1,6 +1,7 @@
 import json
 import re
 from typing import List
+import subprocess
 
 from fabric.utils import DesktopApp
 from fabric.utils.helpers import get_desktop_applications, get_relative_path
@@ -156,7 +157,10 @@ class ApplicationsPlugin(PluginBase):
         return bool(re.search(pattern, text, re.IGNORECASE))
 
     def _launch_application(self, app: DesktopApp):
-        app.launch()
+        print(app.command_line)
+        final_command = f"hyprctl dispatch exec uwsm app -- { app.command_line}"
+        subprocess.Popen(final_command, shell=True)
+        # app.launch()
 
     def _get_all_applications(self) -> List[Result]:
         """Get a list of all available applications."""
