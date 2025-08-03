@@ -537,8 +537,8 @@ class RamInfo(Box):
         used_gb = mem.used / (1024**3)
         free_gb = mem.available / (1024**3)
 
-        self.ram_info_label.set_label(
-            f"Used: {round( used_gb,1 ):>3}GB\nFree: {round( free_gb,1 ):>3}GB"
+        self.ram_info_label.set_markup(
+            f"<span foreground='#8E8E8E'>Used</span> {round(used_gb, 1):>5}GB\n<span foreground='#8E8E8E'>Free</span> {round(free_gb, 1):>5}GB"
         )
         GLib.idle_add(self.ram_progress.set_value, mem.percent)
         # executor.submit(update)
@@ -640,7 +640,9 @@ class CpuInfo(Box):
         cpu = psutil.cpu_percent()
         self.cpu_label.set_label(f" {round(cpu):<2} %\nCPU")
 
-        self.cpu_info_label.set_label(f"Temp: {self.get_cpu_temp()}°C")
+        self.cpu_info_label.set_markup(
+            f"<span foreground='#8E8E8E'>Temp</span>   {self.get_cpu_temp()}°C"
+        )
         GLib.idle_add(self.cpu_progress.set_value, cpu)
         # executor.submit(update)
         return True
