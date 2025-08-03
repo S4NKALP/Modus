@@ -450,43 +450,51 @@ class Date(Box):
 
 
 class Deskwidgets(Window):
+    config = load_config()
+
     def __init__(self, **kwargs):
-        config = load_config()
+        top_left = Window(
+            anchor="top left",
+            orientation="h",
+            layer="bottom",
+            child=Box(
+                name="desktop-widgets-container",
+                children=[
+                    Box(
+                        orientation="v",
+                        name="box-widget",
+                        v_expand=True,
+                        v_align="center",
+                        h_align="center",
+                        children=[Date()],
+                    ),
+                    WeatherContainer(),
+                ],
+            ),
+        )
+
+        bottom_left = Window(
+            anchor="bottom left",
+            orientation="h",
+            layer="bottom",
+            child=Box(),
+        )
+
+        container = Box(
+            orientation="v",
+            children=[
+                top_left,
+                bottom_left,
+            ],
+        )
+
         super().__init__(
             name="desktop",
             layer="bottom",
             title="desktop-widgets",
             orientation="v",
             exclusivity="none",
-            child=[
-                Window(
-                    anchor="top left",
-                    orientation="h",
-                    layer="bottom",
-                    child=[
-                        Box(
-                            name="desktop-widgets-container",
-                            children=[
-                                Box(
-                                    orientation="v",
-                                    name="box-widget",
-                                    v_expand=True,
-                                    v_align="center",
-                                    h_align="center",
-                                    children=[Date()],
-                                ),
-                                WeatherContainer(),
-                            ],
-                        ),
-                    ],
-                ),
-                Window(
-                    anchor="bottom left",
-                    orientation="h",
-                    layer="bottom",
-                    child=[],
-                ),
-            ],
+            child=container,
             **kwargs,
         )
 
