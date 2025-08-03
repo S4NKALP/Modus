@@ -50,6 +50,11 @@
 - [ ] wifi off button looks bigger
 - [ ] Metadata Changes delay in Media Player
 
+## Team
+
+- [SANKALP](https://github.com/S4NKALP/)
+- [Tr1xem](https://github.com/tr1xem)
+
 ## Special Thanks
 
 A big thank you to the following people for their incredible help with code and creative ideas. Your help made a real difference!
