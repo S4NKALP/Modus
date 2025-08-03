@@ -62,7 +62,7 @@ class ResultItem(EventBox):
             icon_widget = Image(pixbuf=self.result.icon, name="result-item-icon")
         elif self.result.icon_name:
             icon_widget = Image(
-                icon_name=self.result.icon_name, icon_size=32, name="result-item-icon"
+                icon_name=self.result.icon_name, icon_size=48, name="result-item-icon"
             )
         elif self.result.icon_markup:
             icon_widget = Label(
@@ -71,8 +71,8 @@ class ResultItem(EventBox):
         else:
             # Default icon
             icon_widget = Image(
-                icon_name="application-x-executable",
-                icon_size=32,
+                icon_name="application-default-icon",
+                icon_size=48,
                 name="result-item-icon",
             )
 

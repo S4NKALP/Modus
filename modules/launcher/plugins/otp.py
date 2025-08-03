@@ -6,8 +6,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from fabric.utils import get_relative_path
-
-import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from services.auth import (
@@ -354,7 +352,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Invalid format",
                     subtitle="Usage: add <account_name> <secret> or add <account_name>```<secret>```",
-                    icon_markup=icons.question,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -373,7 +371,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Error adding account",
                     subtitle=f"Debug: {str(e)}",
-                    icon_markup=icons.cancel,
+                    icon_name="cancel",
                     action=lambda: None,
                     relevance=0.5,
                     plugin_name=self.display_name,
@@ -390,7 +388,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="No OTP accounts configured",
                     subtitle="Use 'add <account> <secret>' to add your first account",
-                    icon_markup=icons.key,
+                    icon_name="gtk-authentication-symbolic",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -401,7 +399,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Available commands:",
                     subtitle="add <account> <secret> | remove <account> | qr <account>",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -425,7 +423,7 @@ class OTPPlugin(PluginBase):
                         subtitle_markup=f"{display_name} • {
                             time_display
                         } remaining • Shift+Enter: remove",
-                        icon_markup=icons.key,
+                        icon_name="gtk-authentication-symbolic",
                         action=lambda code=totp_code: self._copy_to_clipboard(code),
                         relevance=1.0,
                         plugin_name=self.display_name,
@@ -444,7 +442,7 @@ class OTPPlugin(PluginBase):
                     Result(
                         title=f"Error: {account_name}",
                         subtitle="Invalid secret or configuration",
-                        icon_markup=icons.cancel,
+                        icon_name="dialog-cancel-symbolic",
                         action=lambda: None,
                         relevance=0.5,
                         plugin_name=self.display_name,
@@ -485,7 +483,7 @@ class OTPPlugin(PluginBase):
                             subtitle_markup=f"{display_name} • {
                                 time_display
                             } remaining • Shift+Enter: remove",
-                            icon_markup=icons.key,
+                            icon_name="gtk-authentication-symbolic",
                             action=lambda code=totp_code: self._copy_to_clipboard(code),
                             relevance=1.0,
                             plugin_name=self.display_name,
@@ -505,7 +503,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title=f"No accounts found for '{query}'",
                     subtitle="Use 'add <account> <secret>' to create new account",
-                    icon_markup=icons.magnifier,
+                    icon_name="edit-find-symbolic",
                     action=lambda: None,
                     relevance=0.5,
                     plugin_name=self.display_name,
@@ -516,7 +514,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Available commands:",
                     subtitle="add <account> <secret> | remove <account> | qr <account>",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=0.4,
                     plugin_name=self.display_name,
@@ -533,7 +531,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Enter account name",
                     subtitle="Usage: add <account_name> <secret>",
-                    icon_markup=icons.question,
+                    icon_name="dialog-question-symbolic",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -545,7 +543,7 @@ class OTPPlugin(PluginBase):
             Result(
                 title=f"To add '{account_name}':",
                 subtitle=f"Type: add {account_name} <secret>",
-                icon_markup=icons.bulb,
+                icon_name="info",
                 action=lambda: None,
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -558,7 +556,7 @@ class OTPPlugin(PluginBase):
             Result(
                 title="Base32 Secret Format:",
                 subtitle="Example: add gmail JBSWY3DPEHPK3PXP",
-                icon_markup=icons.info,
+                icon_name="info",
                 action=lambda: None,
                 relevance=0.9,
                 plugin_name=self.display_name,
@@ -567,7 +565,7 @@ class OTPPlugin(PluginBase):
             Result(
                 title="otpauth URI Format:",
                 subtitle="Example: add github otpauth://totp/GitHub:user?secret=JBSWY3DPEHPK3PXP",
-                icon_markup=icons.info,
+                icon_name="info",
                 action=lambda: None,
                 relevance=0.9,
                 plugin_name=self.display_name,
@@ -576,7 +574,7 @@ class OTPPlugin(PluginBase):
             Result(
                 title="Remove Account:",
                 subtitle="Example: remove gmail",
-                icon_markup=icons.trash,
+                icon_name="trash",
                 action=lambda: None,
                 relevance=0.8,
                 plugin_name=self.display_name,
@@ -591,7 +589,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Scan QR Code",
                     subtitle="Click to scan QR code from screen",
-                    icon_markup=icons.connect,
+                    icon_name="view-barcode-qr-symbolic",
                     action=lambda: self._scan_qr_and_add_account(""),
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -600,7 +598,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="QR Scan Instructions:",
                     subtitle="Use 'qr <account_name>' to specify account name",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -612,7 +610,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title=f"Scan QR Code for '{account_name}'",
                     subtitle="Click to scan QR code from screen",
-                    icon_markup=icons.connect,
+                    icon_name="view-barcode-qr-symbolic",
                     action=lambda name=account_name: self._scan_qr_and_add_account(
                         name
                     ),
@@ -658,7 +656,7 @@ class OTPPlugin(PluginBase):
                     Result(
                         title="No OTP accounts to remove",
                         subtitle="Use 'add <account> <secret>' to add accounts first",
-                        icon_markup=icons.info,
+                        icon_name="info",
                         action=lambda: None,
                         relevance=1.0,
                         plugin_name=self.display_name,
@@ -670,7 +668,7 @@ class OTPPlugin(PluginBase):
                     Result(
                         title="Select account to remove:",
                         subtitle="Type: remove <account_name> to remove an account",
-                        icon_markup=icons.trash,
+                        icon_name="user-trash-symbolic",
                         action=lambda: None,
                         relevance=1.0,
                         plugin_name=self.display_name,
@@ -697,7 +695,7 @@ class OTPPlugin(PluginBase):
                                 subtitle_markup=f"Press Enter to remove • {
                                     time_display
                                 } remaining",
-                                icon_markup=icons.trash,
+                                icon_name="user-trash-symbolic",
                                 action=lambda acc=acc_name: self._remove_account_and_refresh(
                                     acc
                                 ),
@@ -716,7 +714,7 @@ class OTPPlugin(PluginBase):
                             Result(
                                 title=f"Error: {acc_name}",
                                 subtitle="Press Enter to remove (Invalid secret)",
-                                icon_markup=icons.trash,
+                                icon_name="user-trash-symbolic",
                                 action=lambda acc=acc_name: self._remove_account_and_refresh(
                                     acc
                                 ),
@@ -738,7 +736,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title=f"Account '{account_name}' not found",
                     subtitle="Use 'remove' to see all available accounts",
-                    icon_markup=icons.cancel,
+                    icon_name="dialog-cancel-symbolic",
                     action=lambda: None,
                     relevance=0.5,
                     plugin_name=self.display_name,
@@ -756,7 +754,7 @@ class OTPPlugin(PluginBase):
             Result(
                 title=f"Remove '{display_name}'?",
                 subtitle="Press Enter to confirm removal",
-                icon_markup=icons.trash,
+                icon_name="user-trash-symbolic",
                 action=lambda acc=account_name: self._remove_account_and_refresh(acc),
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -777,7 +775,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Invalid Base32 secret",
                     subtitle=result["error"],
-                    icon_markup=icons.cancel,
+                    icon_name="dialog-cancel-symbolic",
                     action=lambda: None,
                     relevance=0.5,
                     plugin_name=self.display_name,
@@ -800,7 +798,7 @@ class OTPPlugin(PluginBase):
                 subtitle=f"OTP account added successfully (secret: {
                     result['secret'][:4]
                 }...)",
-                icon_markup=icons.check,
+                icon_name="emblem-ok-symbolic",
                 action=lambda: self._trigger_refresh(),
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -817,7 +815,7 @@ class OTPPlugin(PluginBase):
                 Result(
                     title="Error parsing otpauth URI",
                     subtitle=result["error"],
-                    icon_markup=icons.cancel,
+                    icon_name="dialog-cancel-symbolic",
                     action=lambda: None,
                     relevance=0.5,
                     plugin_name=self.display_name,
@@ -843,7 +841,7 @@ class OTPPlugin(PluginBase):
             Result(
                 title=f"✓ Added '{display_name}'",
                 subtitle="OTP account added from URI",
-                icon_markup=icons.check,
+                icon_name="emblem-ok-symbolic",
                 action=lambda: self._trigger_refresh(),
                 relevance=1.0,
                 plugin_name=self.display_name,

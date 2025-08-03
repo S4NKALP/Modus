@@ -5,10 +5,8 @@ import threading
 import time
 from typing import List, Set, Union
 
-from fabric.utils import exec_shell_command_async
-
 import config.data as data
-import utils.icons as icons
+from fabric.utils import exec_shell_command_async
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -91,7 +89,6 @@ class SystemPlugin(PluginBase):
             current_time - self._last_bin_update > self._bin_update_interval
             or not self._bin_cache
         ):
-
             if not self._cache_building:
                 self._cache_building = True
                 self._cache_thread = threading.Thread(
@@ -213,7 +210,7 @@ class SystemPlugin(PluginBase):
             result = Result(
                 title=display_command,
                 subtitle=f"Execute: {display_command}",
-                icon_markup=icons.terminal,
+                icon_name="terminal",
                 action=self._create_action(command_to_execute),
                 relevance=relevance,
                 plugin_name=self.display_name,

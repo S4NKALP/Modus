@@ -4,8 +4,6 @@ from typing import Any, Dict, List
 
 from fabric.utils import get_relative_path
 
-import utils.icons as icons
-
 
 class TriggerConfig:
     def __init__(self, config_path: str = None):
@@ -29,7 +27,7 @@ class TriggerConfig:
         # Initialize settings with defaults
         default_settings = {
             "max_examples_shown": 2,
-            "default_icon": "apps",
+            "default_icon": "application-default-icon",
             "fallback_example_template": "{trigger} <search>",
             "config_version": "1.0",
         }
@@ -45,10 +43,10 @@ class TriggerConfig:
         return examples
 
     def get_trigger_icon(self, trigger: str) -> str:
-        icon_name = self.launcher_config.get(trigger, {}).get(
-            "icon", self.settings.get("default_icon", "apps")
+        icon = self.launcher_config.get(trigger, {}).get(
+            "icon", self.settings.get("default_icon", "application-default-icon")
         )
-        return getattr(icons, icon_name, icons.apps)
+        return icon
 
     def get_trigger_description(self, trigger: str) -> str:
         return self.launcher_config.get(trigger, {}).get(

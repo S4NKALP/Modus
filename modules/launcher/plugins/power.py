@@ -1,8 +1,6 @@
 from typing import List
 
 from fabric.utils import exec_shell_command_async
-
-import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -19,27 +17,27 @@ class PowerPlugin(PluginBase):
         self.commands = {
             "shutdown": {
                 "description": "Shutdown the system",
-                "icon": icons.shutdown,
+                "icon": "system-shutdown-symbolic",
                 "action": self.shutdown,
             },
             "restart": {
                 "description": "Restart the system",
-                "icon": icons.reboot,
+                "icon": "system-reboot-symbolic",
                 "action": self.restart,
             },
             "lock": {
                 "description": "Lock the screen",
-                "icon": icons.lock,
+                "icon": "system-lock-screen-symbolic",
                 "action": self.lock,
             },
             "suspend": {
                 "description": "Suspend the system",
-                "icon": icons.suspend,
+                "icon": "system-suspend-symbolic",
                 "action": self.suspend,
             },
             "logout": {
                 "description": "Logout from current session",
-                "icon": icons.logout,
+                "icon": "system-log-out-symbolic",
                 "action": self.logout,
             },
         }
@@ -63,7 +61,7 @@ class PowerPlugin(PluginBase):
                 result = Result(
                     title=cmd.capitalize(),
                     subtitle=info["description"],
-                    icon_markup=info["icon"],
+                    icon_name=info["icon"],
                     action=info["action"],
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -77,7 +75,7 @@ class PowerPlugin(PluginBase):
                     result = Result(
                         title=cmd.capitalize(),
                         subtitle=info["description"],
-                        icon_markup=info["icon"],
+                        icon_name=info["icon"],
                         action=info["action"],
                         relevance=1.0 if query == cmd else 0.7,
                         plugin_name=self.display_name,

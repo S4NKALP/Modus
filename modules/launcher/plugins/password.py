@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from fabric.utils import get_relative_path
-
-import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -242,7 +240,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title="No passwords stored",
                     subtitle="Use 'pass add <name> <password>' to add your first password",
-                    icon_markup=icons.key,
+                    icon_name="password-symbolic",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -253,7 +251,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title="Available commands:",
                     subtitle="add <name> <password> | remove <name> | <name> (to search)",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -284,7 +282,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title=title,
                     subtitle=subtitle,
-                    icon_markup=icons.key,
+                    icon_name="key",
                     action=lambda n=name: self._copy_password_to_clipboard(n),
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -311,7 +309,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title="Add Password - Invalid format",
                     subtitle="Usage: add <name> <password> [description]",
-                    icon_markup=icons.cancel,
+                    icon_name="cancel",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -330,7 +328,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title=f"Update password for '{name}'?",
                     subtitle="Password already exists. Click to update it.",
-                    icon_markup=icons.key,
+                    icon_name="key",
                     action=lambda: self._add_password_action(
                         name, password, description, update=True
                     ),
@@ -345,7 +343,7 @@ class PasswordPlugin(PluginBase):
                     title=f"Add password for '{name}'",
                     subtitle="Click to save password"
                     + (f" | {description}" if description else ""),
-                    icon_markup=icons.plus,
+                    icon_name="plus",
                     action=lambda: self._add_password_action(
                         name, password, description
                     ),
@@ -367,7 +365,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title="Remove Password - Invalid format",
                     subtitle="Usage: remove <name>",
-                    icon_markup=icons.cancel,
+                    icon_name="cancel",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -383,7 +381,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title=f"Password '{name}' not found",
                     subtitle="Check the name and try again",
-                    icon_markup=icons.cancel,
+                    icon_name="cancel",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -395,7 +393,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title=f"Remove password '{name}'?",
                     subtitle="Click to confirm deletion (this cannot be undone)",
-                    icon_markup=icons.trash,
+                    icon_name="trash",
                     action=lambda: self._remove_password_action(name),
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -420,7 +418,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title=f"No passwords found matching '{query}'",
                     subtitle="Try a different search term or use 'pass' to see all passwords",
-                    icon_markup=icons.magnifier,
+                    icon_name="magnifier",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -462,7 +460,7 @@ class PasswordPlugin(PluginBase):
                 Result(
                     title=title,
                     subtitle=subtitle,
-                    icon_markup=icons.key,
+                    icon_name="key",
                     action=lambda n=name: self._copy_password_to_clipboard(n),
                     relevance=get_relevance(name),
                     plugin_name=self.display_name,

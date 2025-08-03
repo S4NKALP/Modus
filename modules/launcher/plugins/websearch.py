@@ -2,7 +2,6 @@ import subprocess
 import urllib.parse
 from typing import List
 
-import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -23,49 +22,49 @@ class WebSearchPlugin(PluginBase):
             "google": {
                 "name": "Google",
                 "url": "https://www.google.com/search?q={}",
-                "icon": icons.google,
+                "icon": "google-symbolic",
                 "description": "Search with Google",
             },
             "duckduckgo": {
                 "name": "DuckDuckGo",
                 "url": "https://duckduckgo.com/?q={}",
-                "icon": icons.duckduckgo,
+                "icon": "preferences-desktop-search",
                 "description": "Search with DuckDuckGo (privacy-focused)",
             },
             "youtube": {
                 "name": "YouTube",
                 "url": "https://www.youtube.com/results?search_query={}",
-                "icon": icons.youtube,
+                "icon": "youtube-symbolic",
                 "description": "Search videos on YouTube",
             },
             "github": {
                 "name": "GitHub",
                 "url": "https://github.com/search?q={}",
-                "icon": icons.github,
+                "icon": "github-desktop-symbolic",
                 "description": "Search repositories on GitHub",
             },
             "stackoverflow": {
                 "name": "Stack Overflow",
                 "url": "https://stackoverflow.com/search?q={}",
-                "icon": icons.stackoverflow,
+                "icon": "stack",
                 "description": "Search programming questions on Stack Overflow",
             },
             "wikipedia": {
                 "name": "Wikipedia",
                 "url": "https://en.wikipedia.org/wiki/Special:Search?search={}",
-                "icon": icons.wikipedia,
+                "icon": "search-menus-symbolic",
                 "description": "Search articles on Wikipedia",
             },
             "reddit": {
                 "name": "Reddit",
                 "url": "https://www.reddit.com/search/?q={}",
-                "icon": icons.reddit,
+                "icon": "reddit-symbolic",
                 "description": "Search discussions on Reddit",
             },
             "linkedin": {
                 "name": "LinkedIn",
                 "url": "https://www.linkedin.com/search/results/all/?keywords={}",
-                "icon": icons.linkedin,
+                "icon": "link",
                 "description": "Search professionals and jobs on LinkedIn",
             },
         }
@@ -166,7 +165,7 @@ class WebSearchPlugin(PluginBase):
         return Result(
             title=f"Open {url}",
             subtitle="Open this URL in your default browser",
-            icon_markup=icons.world,
+            icon_name="link",
             action=lambda u=url: self._open_url(u),
             relevance=1.0,
             plugin_name=self.display_name,
@@ -190,7 +189,7 @@ class WebSearchPlugin(PluginBase):
             result = Result(
                 title=engine_info["name"],
                 subtitle=engine_info["description"],
-                icon_markup=engine_info["icon"],
+                icon_name=engine_info["icon"],
                 action=lambda e=engine_id: self._show_engine_help(e),
                 relevance=1.0 if engine_id == self.default_engine else 0.8,
                 plugin_name=self.display_name,
@@ -207,7 +206,7 @@ class WebSearchPlugin(PluginBase):
         return Result(
             title=f"Search '{query}' on {engine_info['name']}",
             subtitle=f"{engine_info['description']} - {query}",
-            icon_markup=engine_info["icon"],
+            icon_name=engine_info["icon"],
             action=lambda e=engine_id, q=query: self._perform_search(e, q),
             relevance=1.0 if engine_id == self.default_engine else 0.9,
             plugin_name=self.display_name,
@@ -221,7 +220,7 @@ class WebSearchPlugin(PluginBase):
         return Result(
             title=f"{engine_info['name']} Search",
             subtitle=f"{engine_info['description']} - Type your search query",
-            icon_markup=engine_info["icon"],
+            icon_name=engine_info["icon"],
             action=lambda: None,  # No action for info result
             relevance=1.0,
             plugin_name=self.display_name,

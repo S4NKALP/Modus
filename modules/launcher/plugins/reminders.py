@@ -4,7 +4,6 @@ import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -258,7 +257,7 @@ class RemindersPlugin(PluginBase):
                     subtitle=f"Active reminders: {
                         active_count
                     } | Usage: remind 5m Take a break",
-                    icon_markup=icons.timer_on,
+                    icon_name="alarm-timer",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -279,7 +278,7 @@ class RemindersPlugin(PluginBase):
                     Result(
                         title=example,
                         subtitle=desc,
-                        icon_markup=icons.timer_on,
+                        icon_name="alarm-timer",
                         action=lambda: None,
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -296,7 +295,7 @@ class RemindersPlugin(PluginBase):
                     Result(
                         title="No Active Reminders",
                         subtitle="Use 'remind 5m message' to set a reminder",
-                        icon_markup=icons.timer_off,
+                        icon_name="timer-off",
                         action=lambda: None,
                         relevance=1.0,
                         plugin_name=self.display_name,
@@ -314,7 +313,7 @@ class RemindersPlugin(PluginBase):
                         Result(
                             title=f"#{reminder.id}: {reminder.message}",
                             subtitle=f"In {time_remaining} (at {target_time})",
-                            icon_markup=icons.timer_on,
+                            icon_name="alarm-timer",
                             action=lambda rid=reminder.id: self._cancel_reminder(rid),
                             relevance=1.0,
                             plugin_name=self.display_name,
@@ -334,7 +333,7 @@ class RemindersPlugin(PluginBase):
                     Result(
                         title=f"Cancelled {count} Reminders",
                         subtitle="All active reminders have been cancelled",
-                        icon_markup=icons.timer_off,
+                        icon_name="timer-off",
                         action=lambda: None,
                         relevance=1.0,
                         plugin_name=self.display_name,
@@ -351,7 +350,7 @@ class RemindersPlugin(PluginBase):
                             Result(
                                 title=f"Cancelled Reminder #{reminder_id}",
                                 subtitle="Reminder has been cancelled",
-                                icon_markup=icons.timer_off,
+                                icon_name="timer-off",
                                 action=lambda: None,
                                 relevance=1.0,
                                 plugin_name=self.display_name,
@@ -363,7 +362,7 @@ class RemindersPlugin(PluginBase):
                             Result(
                                 title="Reminder Not Found",
                                 subtitle=f"No reminder with ID #{reminder_id}",
-                                icon_markup=icons.alert,
+                                icon_name="alert",
                                 action=lambda: None,
                                 relevance=0.5,
                                 plugin_name=self.display_name,
@@ -375,7 +374,7 @@ class RemindersPlugin(PluginBase):
                         Result(
                             title="Invalid Reminder ID",
                             subtitle="Please provide a valid reminder ID number",
-                            icon_markup=icons.alert,
+                            icon_name="alert",
                             action=lambda: None,
                             relevance=0.5,
                             plugin_name=self.display_name,
@@ -407,7 +406,7 @@ class RemindersPlugin(PluginBase):
                             subtitle=f"Will remind in {time_remaining} (at {
                                 target_time_str
                             })",
-                            icon_markup=icons.timer_on,
+                            icon_name="alarm-timer",
                             action=lambda ts=time_str, msg=message: self._create_and_confirm_reminder(
                                 ts, msg
                             ),
@@ -425,7 +424,7 @@ class RemindersPlugin(PluginBase):
                         Result(
                             title="Time is in the Past",
                             subtitle="Please specify a future time",
-                            icon_markup=icons.alert,
+                            icon_name="alert",
                             action=lambda: None,
                             relevance=0.5,
                             plugin_name=self.display_name,
@@ -438,7 +437,7 @@ class RemindersPlugin(PluginBase):
                     Result(
                         title="Invalid Time Format",
                         subtitle="Use formats like: 5m, 30s, 2h, 14:30, or '5 minutes'",
-                        icon_markup=icons.alert,
+                        icon_name="alert",
                         action=lambda: None,
                         relevance=0.5,
                         plugin_name=self.display_name,

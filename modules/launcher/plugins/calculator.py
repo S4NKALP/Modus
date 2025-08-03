@@ -4,7 +4,6 @@ import subprocess
 import time
 from typing import List
 
-import utils.icons as icons
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from utils.conversion import Conversion
@@ -99,7 +98,7 @@ class CalculatorPlugin(PluginBase):
                     Result(
                         title=f"{result:.6g} {to_unit}",
                         subtitle=subtitle,
-                        icon_markup=icons.calculator,
+                        icon_name="calculator-symbolic",
                         action=lambda r=f"{result:.6g}": self._copy_to_clipboard(r),
                         relevance=1.0,
                         plugin_name=self.display_name,
@@ -111,7 +110,7 @@ class CalculatorPlugin(PluginBase):
                     Result(
                         title="Invalid conversion",
                         subtitle=str(e),
-                        icon_markup=icons.calculator,
+                        icon_name="calculator-symbolic",
                         relevance=0.0,
                         plugin_name=self.display_name,
                     )
@@ -127,7 +126,7 @@ class CalculatorPlugin(PluginBase):
                         Result(
                             title=f"{result:.6g}",
                             subtitle=f"{query} = {result:.6g}",
-                            icon_markup=icons.calculator,
+                            icon_name="calculator-symbolic",
                             action=lambda r=f"{result:.6g}": self._copy_to_clipboard(r),
                             relevance=1.0,
                             plugin_name=self.display_name,
