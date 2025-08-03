@@ -453,38 +453,46 @@ class Deskwidgets(Window):
     config = load_config()
 
     def __init__(self, **kwargs):
-        top_left = Window(
-            anchor="top left",
-            orientation="h",
-            layer="bottom",
-            child=Box(
-                name="desktop-widgets-container",
-                children=[
-                    Box(
-                        orientation="v",
-                        name="box-widget",
-                        v_expand=True,
-                        v_align="center",
-                        h_align="center",
-                        children=[Date()],
-                    ),
-                    WeatherContainer(),
-                ],
-            ),
-        )
-
-        bottom_left = Window(
-            anchor="bottom left",
-            orientation="h",
-            layer="bottom",
-            child=Box(),
-        )
-
-        container = Box(
+        # Create the main container with proper layout
+        main_container = Box(
+            name="desktop-main-container",
             orientation="v",
+            h_expand=True,
+            v_expand=True,
             children=[
-                top_left,
-                bottom_left,
+                # Top section
+                Box(
+                    name="desktop-top-section",
+                    orientation="h",
+                    h_expand=True,
+                    v_expand=True,
+                    v_align="start",
+                    children=[
+                        Box(
+                            name="desktop-widgets-container",
+                            orientation="h",
+                            children=[
+                                Box(
+                                    orientation="v",
+                                    name="box-widget",
+                                    v_expand=True,
+                                    v_align="center",
+                                    h_align="center",
+                                    children=[Date()],
+                                ),
+                                WeatherContainer(),
+                            ],
+                        ),
+                    ],
+                ),
+                # Bottom section (empty for now, but expandable)
+                Box(
+                    name="desktop-bottom-section",
+                    orientation="h",
+                    h_expand=True,
+                    v_expand=True,
+                    v_align="end",
+                ),
             ],
         )
 
@@ -492,9 +500,10 @@ class Deskwidgets(Window):
             name="desktop",
             layer="bottom",
             title="desktop-widgets",
+            anchor="top left",
             orientation="v",
             exclusivity="none",
-            child=container,
+            child=main_container,
             **kwargs,
         )
 
