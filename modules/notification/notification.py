@@ -1,5 +1,6 @@
 import os
 
+from fabric.utils import get_relative_path
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
 from loguru import logger
 
@@ -103,7 +104,7 @@ class NotificationWidget(Box):
             if "file://" in notification.app_icon
             else Image(
                 name="notification-icon",
-                icon_name="dialog-information-symbolic" or notification.app_icon,
+                icon_name="notifications" or notification.app_icon,
                 icon_size=24,
             )
         )
@@ -208,8 +209,11 @@ class NotificationWidget(Box):
         return False
 
     def get_pixbuf(self, icon_path, width, height):
-        if icon_path.startswith("file://"):
+        if icon_path.startswith("file://") and os.path.exists(icon_path):
             icon_path = icon_path[7:]
+        else:
+            icon_path = get_relative_path("../../config/assets/icons/notification.png")
+            logger.warning(f"Invalid icon path: {icon_path}")
 
         if not os.path.exists(icon_path):
             logger.warning(f"Icon path does not exist: {icon_path}")
