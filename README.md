@@ -36,11 +36,13 @@
 - [x] Notification
 - [x] Control Center
 - [x] Music Player
+- [x] Desktop Widgets
 - [ ] New Launcher (maybe like Spotlight)
 - [ ] Settings
-- [ ] New Dock
+- [ ] New Dock with zoom effect on hover
 - [ ] New Application Switcher
 - [ ] Panel Widget
+- [ ] Calendar Widget
 
 ## Bug Fixes (the bug found till now)
 
@@ -55,5 +57,6 @@ A big thank you to the following people for their incredible help with code and 
 - [darsh](https://github.com/its-darsh): for creating Fabric, which made everything possible.
 - [gummy bear album](https://github.com/muhchaudhary): for sharing fantastic code snippets that saved me time and effort.
 - [axenide](https://github.com/Axenide): for the amazing config that not only inspired parts of mine but also provided some gems I couldn’t resist borrowing.
+- [E3nviction](https://github.com/E3nviction/): for code snippets and ideas that were incredibly helpful.
 
 I truly appreciate your support
