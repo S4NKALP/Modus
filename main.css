@@ -172,3 +172,46 @@ menu > menuitem:hover > label {
     min-height: 170px;
     border-radius: 16px;
 }
+#info-box-widget{
+    /* background-color: alpha(#232323, 1); */
+    background: linear-gradient(to bottom, #202020, #000000);
+    margin: 20px 10px 20px 10px;
+    min-width: 170px;
+    min-height: 170px;
+    border-radius: 16px;
+}
+#ram-progress{
+    font-family: "SF Pro Rounded";
+    margin-left: 12px;
+    color: var(--foreground);
+    /* background-color: alpha(#72BBCC, 0.9); */
+}
+#progress-label{
+    /* background-color: alpha(#FFF, 0.9); */
+
+    font-family: "SF Pro Rounded";
+    font-weight:600;
+    font-size: 13px;
+}
+#progress{
+    font-family: "SF Pro Rounded";
+    border: solid 8px #0984FF;
+
+        /* border-radius: 100px; */
+    color: alpha(#AAAAAA, 0.7);
+}
+#info {
+
+
+    font-family: "SF Pro Rounded";
+    margin-left: -8px;
+    margin-top: 5px;
+    font-size:14px;
+    font-weight:600;
+    /* margin-bottom:-10px; */
+    /* margin-top:-35px; */
+}
+#component-name{
+
+    font-size: 10px;
+}
