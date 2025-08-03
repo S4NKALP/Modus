@@ -1,15 +1,15 @@
 from typing import List, Optional, Tuple
 
+from gi.repository import Gdk, GLib
+
 from fabric.core.service import Property
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gdk, GLib
-
 from modules.launcher.plugin_manager import PluginManager
 from modules.launcher.result import Result
 from modules.launcher.result_item import ResultItem
 from modules.launcher.trigger_config import TriggerConfig
+from widgets.smartscrolled import SmartScrolledBox
 from widgets.wayland import WaylandWindow as Window
 
 # Constants
@@ -44,26 +44,15 @@ class Launcher(Window):
             keyboard_mode="exclusive",
             **kwargs,
         )
-
-        # Initialization flag to prevent callbacks during setup
         self._initializing = True
-
-        # Flag to prevent recursion when automatically adding spaces
         self._auto_adding_space = False
-
-        # Flag to prevent search change handler interference during backspace processing
         self._processing_backspace = False
-
-        # Initialize plugin manager
         self.plugin_manager = PluginManager()
-
-        # Initialize trigger configuration
         self.trigger_config = TriggerConfig()
 
-        # Current results and selection
         self.results: List[Result] = []
         self.selected_index = 0
-        self.max_results = 8  # Spotlight typically shows fewer results
+        self.max_results = 5  # Show 4 applications by default instead of list
 
         # Trigger system
         self.triggered_plugin = None  # Currently active triggered plugin
@@ -74,6 +63,16 @@ class Launcher(Window):
 
         # Focus management
         self.focus_mode = "search"  # "search", "results"
+
+        # Mouse activity tracking
+        self._mouse_active = False
+        self._last_mouse_activity = 0
+        self._mouse_activity_timeout = 1000  # 1 second timeout
+        self._keyboard_used_recently = False
+        self._last_keyboard_activity = 0
+        self._keyboard_activity_timeout = 2000  # 2 second timeout
+        self._launcher_just_opened = False
+        self._mouse_interaction_delay = 500  # 500ms delay after opening
 
         # Setup UI
         main_box = Box(
@@ -107,28 +106,29 @@ class Launcher(Window):
 
         main_box.add(self.header_box)
 
-        # Results container with increased height for Spotlight-style
-        self.results_scroll = ScrolledWindow(
-            name="launcher-results-scroll",
-            h_scrollbar_policy="never",
-            min_content_size=(LAUNCHER_WIDTH, LAUNCHER_HEIGHT),
-            max_content_size=(LAUNCHER_WIDTH, LAUNCHER_HEIGHT),
-            propagate_width=False,
-            propagate_height=False,
-        )
+        self.results_scroll = SmartScrolledBox(max_height=LAUNCHER_HEIGHT)
 
         self.results_box = Box(
             name="launcher-results",
             orientation="v",
             spacing=0,
         )
-        self.results_scroll.add(self.results_box)
+        self.results_scroll.append(self.results_box)
         main_box.add(self.results_scroll)
 
-        # Initially hide the results container
-        self.results_scroll.hide()
+        # Keep the results container visible initially
 
         self.connect("key-press-event", self._on_key_press)
+
+        # Connect mouse events to track activity
+        self.results_scroll.connect("button-press-event", self._on_mouse_activity)
+        self.results_scroll.connect("motion-notify-event", self._on_mouse_activity)
+        self.results_scroll.connect("scroll-event", self._on_mouse_activity)
+
+        # Also track mouse activity on the main window for better coverage
+        self.connect("button-press-event", self._on_mouse_activity)
+        self.connect("motion-notify-event", self._on_mouse_activity)
+
         self.hide()
 
         # Mark initialization as complete
@@ -144,6 +144,20 @@ class Launcher(Window):
             trigger_keyword: Optional trigger keyword to activate immediately (e.g., "google", "calc", "app")
             external: If True, execute the command without showing the launcher UI
         """
+        # Reset mouse activity tracking when launcher is shown
+        self._mouse_active = False
+        self._last_mouse_activity = 0
+        self._keyboard_used_recently = False
+        self._last_keyboard_activity = 0
+        self._launcher_just_opened = True
+
+        # Schedule to allow mouse interactions after a delay
+        def enable_mouse_interactions():
+            self._launcher_just_opened = False
+            return False
+
+        GLib.timeout_add(self._mouse_interaction_delay, enable_mouse_interactions)
+
         if external and trigger_keyword:
             # Execute command externally without showing launcher
             return self._execute_external_command(trigger_keyword)
@@ -180,10 +194,11 @@ class Launcher(Window):
                 self.search_entry.set_text("")
                 self._clear_results()
         else:
-            # Normal launcher opening - clear everything
+            # Normal launcher opening - show applications
             self.opened_with_trigger = False
             self.search_entry.set_text("")
-            self._clear_results()
+            # Trigger initial search to show applications immediately
+            self._perform_search("")
 
         # Reset focus mode to search
         self.focus_mode = "search"
@@ -305,8 +320,8 @@ class Launcher(Window):
             # Debounce search to avoid too many queries
             GLib.timeout_add(SEARCH_DEBOUNCE_MS, self._perform_search, query)
         else:
-            # Hide results when query is empty
-            self._clear_results()
+            # Show applications when query is empty
+            self._perform_search("")
 
     def _perform_search(self, query: str) -> bool:
         """Perform search across all plugins."""
@@ -315,10 +330,25 @@ class Launcher(Window):
             return False
 
         if not query:
-            # Empty query - reset trigger mode and hide results
+            # Empty query - show popular applications
             self.triggered_plugin = None
             self.active_trigger = ""
-            self._clear_results()
+
+            # Get applications plugin and show popular apps
+            applications_plugin = self._get_applications_plugin()
+            if applications_plugin:
+                try:
+                    # Query with empty string to get popular/frequently used applications
+                    all_results = applications_plugin.query("")
+                    # Limit to max_results for empty query
+                    self.results = all_results[: self.max_results]
+                    self.selected_index = 0
+                    self._update_results_display()
+                except Exception as e:
+                    print(f"Error getting applications: {e}")
+                    self._clear_results()
+            else:
+                self._clear_results()
             return False
 
         # Check if we're already in trigger mode
@@ -365,13 +395,24 @@ class Launcher(Window):
                     print(f"Error in triggered plugin {triggered_plugin.name}: {e}")
                     all_results = []
             else:
-                # No trigger detected - only show trigger suggestions
+                # No trigger detected - search applications and show trigger suggestions
                 self.triggered_plugin = None
                 self.active_trigger = ""
 
-                # Show trigger suggestions if query matches trigger prefixes
+                all_results = []
+
+                # Search applications directly without trigger
+                applications_plugin = self._get_applications_plugin()
+                if applications_plugin:
+                    try:
+                        app_results = applications_plugin.query(query)
+                        all_results.extend(app_results)
+                    except Exception as e:
+                        print(f"Error searching applications: {e}")
+
+                # Also show trigger suggestions if query matches trigger prefixes
                 trigger_suggestions = self._get_trigger_suggestions(query)
-                all_results = trigger_suggestions
+                all_results.extend(trigger_suggestions)
 
         # Sort results by relevance score
         all_results.sort(key=lambda r: r.relevance, reverse=True)
@@ -387,8 +428,19 @@ class Launcher(Window):
             # In trigger mode - show all results from the triggered plugin
             self.results = all_results
         elif not has_bypass:
-            # Global search or trigger suggestions - apply max_results limit
-            self.results = all_results[: self.max_results]
+            # Global search - check if it's an application search
+            applications_plugin = self._get_applications_plugin()
+            is_application_search = applications_plugin and any(
+                hasattr(r, "plugin_name") and r.plugin_name == "Applications"
+                for r in all_results
+            )
+
+            if is_application_search:
+                # Don't limit application search results
+                self.results = all_results
+            else:
+                # Apply max_results limit for other global searches and trigger suggestions
+                self.results = all_results[: self.max_results]
         else:
             # Has bypass flag - show all results
             self.results = all_results
@@ -462,6 +514,16 @@ class Launcher(Window):
 
         return None, ""
 
+    def _get_applications_plugin(self):
+        """Get the applications plugin instance."""
+        for plugin in self.plugin_manager.get_active_plugins():
+            if (
+                hasattr(plugin, "display_name")
+                and plugin.display_name == "Applications"
+            ):
+                return plugin
+        return None
+
     def _get_trigger_suggestions(self, query: str) -> List[Result]:
         """
         Get trigger suggestions based on the current query.
@@ -515,7 +577,7 @@ class Launcher(Window):
         return Result(
             title=f"{trigger_clean}",
             subtitle=f"{description} - {', '.join(examples[:max_examples])}",
-            icon_markup=icon_name,
+            icon_name=icon_name,
             action=lambda t=trigger_clean: self._activate_trigger(t),
             # Shorter triggers get higher relevance
             relevance=100 - len(trigger_clean),
@@ -678,11 +740,11 @@ class Launcher(Window):
 
         self.results_box.show_all()
 
-        # Show/hide scroll container based on results
-        if self.results:
-            self.results_scroll.show()
-        else:
-            self.results_scroll.hide()
+        # Force height constraints after adding results
+        self.results_scroll.force_height_constraint()
+
+        # Always show scroll container
+        self.results_scroll.show()
 
     def _update_input_action_text(self):
         """Update the input field with action text (Spotlight-style)."""
@@ -716,8 +778,6 @@ class Launcher(Window):
             # Not in trigger mode - show Spotlight-style help
             if current_text == ":":
                 self.search_entry.set_placeholder_text("Available search triggers")
-            elif current_text:
-                self.search_entry.set_placeholder_text("Spotlight Search")
             else:
                 self.search_entry.set_placeholder_text("Spotlight Search")
 
@@ -727,7 +787,7 @@ class Launcher(Window):
         self.selected_index = 0
         for child in self.results_box.get_children():
             self.results_box.remove(child)
-        self.results_scroll.hide()
+        # Keep the results scroll visible even when empty
 
     def _handle_escape_key(self) -> bool:
         """Handle escape key press."""
@@ -816,6 +876,13 @@ class Launcher(Window):
 
     def _on_key_press(self, _widget, event):
         """Handle key press events."""
+        # Track keyboard activity
+        import time
+
+        current_time = int(time.time() * 1000)
+        self._last_keyboard_activity = current_time
+        self._keyboard_used_recently = True
+
         keyval = event.keyval
 
         # Escape - handle password entry, exit trigger mode, or hide launcher
@@ -1011,16 +1078,58 @@ class Launcher(Window):
 
     def _on_result_clicked(self, _result_item, index):
         """Handle result item click."""
-        self.selected_index = index
-        self._activate_selected()
+        # Only allow clicks when mouse is active or keyboard hasn't been used recently
+        if self._should_allow_mouse_interaction():
+            self.selected_index = index
+            self._activate_selected()
 
     def _on_result_hovered(self, index):
         """Handle result item hover."""
-        # Update selection when mouse hovers over a result (without scrolling)
-        if 0 <= index < len(self.results):
-            self.selected_index = index
-            self.focus_mode = "results"  # Switch to results focus mode
-            self._update_selection_visual_only()
+        # Only allow hover selection when mouse is active and keyboard hasn't been used recently
+        if self._should_allow_mouse_interaction():
+            if 0 <= index < len(self.results):
+                self.selected_index = index
+                self.focus_mode = "results"  # Switch to results focus mode
+                self._update_selection_visual_only()
+
+    def _on_mouse_activity(self, widget, event):
+        """Track mouse activity to determine when mouse interactions should be enabled."""
+        import time
+
+        current_time = int(time.time() * 1000)
+        self._last_mouse_activity = current_time
+        self._mouse_active = True
+
+        # Schedule a check to disable mouse activity after timeout
+        def check_mouse_timeout():
+            if current_time - self._last_mouse_activity >= self._mouse_activity_timeout:
+                self._mouse_active = False
+            return False
+
+        GLib.timeout_add(self._mouse_activity_timeout, check_mouse_timeout)
+        return False
+
+    def _should_allow_mouse_interaction(self):
+        """Determine if mouse interactions should be allowed."""
+        import time
+
+        current_time = int(time.time() * 1000)
+
+        # Don't allow mouse interactions immediately after launcher opens
+        if self._launcher_just_opened:
+            return False
+
+        # Allow mouse interaction if:
+        # 1. Mouse is currently active (recent activity)
+        # 2. OR keyboard hasn't been used recently (2 seconds)
+        mouse_recently_active = (
+            current_time - self._last_mouse_activity
+        ) < self._mouse_activity_timeout
+        keyboard_not_recently_used = (
+            current_time - self._last_keyboard_activity
+        ) > self._keyboard_activity_timeout
+
+        return mouse_recently_active or keyboard_not_recently_used
 
     def _is_mouse_over_results(self):
         """Check if mouse is over the results area."""

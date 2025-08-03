@@ -5,9 +5,8 @@ import time
 from collections import OrderedDict
 from typing import Dict, List
 
-from fabric.utils import get_relative_path
-
 import config.data as data
+from fabric.utils import get_relative_path
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 

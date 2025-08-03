@@ -4,7 +4,6 @@ from typing import List
 
 from fabric.utils import DesktopApp
 from fabric.utils.helpers import get_desktop_applications, get_relative_path
-
 from modules.dock import Dock
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
@@ -17,8 +16,7 @@ class ApplicationsPlugin(PluginBase):
         self.description = "Search and launch desktop applications"
 
     def initialize(self):
-        # Set up triggers for applications - both with and without spaces
-        self.set_triggers(["app"])
+        pass
 
     def cleanup(self):
         pass
@@ -71,9 +69,8 @@ class ApplicationsPlugin(PluginBase):
     def query(self, query_string: str) -> List[Result]:
         """Search applications based on query."""
         if not query_string.strip():
-            return []
+            return self._get_all_applications()
 
-        # Get fresh applications list each time (like examples/app-launcher)
         try:
             applications = get_desktop_applications(include_hidden=False)
         except Exception as e:
@@ -86,9 +83,8 @@ class ApplicationsPlugin(PluginBase):
         for app in applications:
             relevance = self._calculate_relevance(app, query)
             if relevance > 0:
-                # Truncate description to prevent overflow beyond 550px window
                 description = app.description or app.generic_name or ""
-                if len(description) > 80:  # Limit to ~80 characters to fit in 550px
+                if len(description) > 80:
                     description = description[:70] + "..."
 
                 result = Result(
@@ -161,3 +157,35 @@ class ApplicationsPlugin(PluginBase):
 
     def _launch_application(self, app: DesktopApp):
         app.launch()
+
+    def _get_all_applications(self) -> List[Result]:
+        """Get a list of all available applications."""
+        try:
+            applications = get_desktop_applications(include_hidden=False)
+        except Exception as e:
+            print(f"Failed to load applications: {e}")
+            return []
+
+        results = []
+
+        for app in applications:
+            # Truncate description
+            description = app.description or app.generic_name or ""
+            if len(description) > 80:
+                description = description[:70] + "..."
+
+            result = Result(
+                title=app.display_name or app.name,
+                subtitle=description,
+                icon=app.get_icon_pixbuf(size=48),
+                action=lambda a=app: self._launch_application(a),
+                relevance=0.5,  # Default relevance for all apps
+                plugin_name=self.display_name,
+                data={
+                    "app": app,
+                    "pin_action": lambda a=app: self._pin_application(a),
+                },
+            )
+            results.append(result)
+
+        return results

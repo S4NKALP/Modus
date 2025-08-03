@@ -8,12 +8,11 @@ import threading
 import time
 from typing import Dict, List, Optional
 
-from fabric.utils.helpers import exec_shell_command_async
 from gi.repository import GdkPixbuf
 from PIL import Image
 
 import config.data as data
-import utils.icons as icons
+from fabric.utils.helpers import exec_shell_command_async
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -124,8 +123,9 @@ class WallpaperPlugin(PluginBase):
         """Clear the launcher search query and reset to trigger."""
         try:
             # Try to access the launcher through the fabric Application
-            from fabric import Application
             from gi.repository import GLib
+
+            from fabric import Application
 
             app = Application.get_default()
 
@@ -467,16 +467,7 @@ class WallpaperPlugin(PluginBase):
                 Result(
                     title=f"Random Wallpaper{indicator_text}",
                     subtitle=f"Set a random wallpaper • {status_text}",
-                    icon_markup=random.choice(
-                        [
-                            icons.dice_1,
-                            icons.dice_2,
-                            icons.dice_3,
-                            icons.dice_4,
-                            icons.dice_5,
-                            icons.dice_6,
-                        ]
-                    ),
+                    icon_name="media-playlist-shuffle-symbolic",
                     action=lambda: self._set_random_wallpaper(),
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -493,16 +484,7 @@ class WallpaperPlugin(PluginBase):
                 Result(
                     title=f"Random Wallpaper{indicator_text}",
                     subtitle=f"Set a random wallpaper • {status_text}",
-                    icon_markup=random.choice(
-                        [
-                            icons.dice_1,
-                            icons.dice_2,
-                            icons.dice_3,
-                            icons.dice_4,
-                            icons.dice_5,
-                            icons.dice_6,
-                        ]
-                    ),
+                    icon_name="media-playlist-shuffle-symbolic",
                     action=lambda: self._set_random_wallpaper(),
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -552,10 +534,9 @@ class WallpaperPlugin(PluginBase):
                                     subtitle=f"Apply with {scheme_name} scheme • {
                                         status_text
                                     }",
-                                    icon_markup=icons.palette,
-                                    action=lambda c=hex_color, s=scheme: self._apply_hex_color_direct(
-                                        c, s
-                                    ),
+                                    icon_name="color-picker-symbolic",
+                                    action=lambda c=hex_color,
+                                    s=scheme: self._apply_hex_color_direct(c, s),
                                     relevance=1.0,
                                     plugin_name=self.display_name,
                                     data={
@@ -575,7 +556,7 @@ class WallpaperPlugin(PluginBase):
                                         indicator_text
                                     }",
                                     subtitle="Matugen is enabled • Disable matugen to use hex colors",
-                                    icon_markup=icons.palette,
+                                    icon_name="color-picker-symbolic",
                                     action=lambda: None,
                                     relevance=1.0,
                                     plugin_name=self.display_name,
@@ -594,7 +575,7 @@ class WallpaperPlugin(PluginBase):
                                 subtitle=f"Apply with {scheme_name} scheme • {
                                     status_text
                                 }",
-                                icon_markup=icons.palette,
+                                icon_name="color-picker-symbolic",
                                 action=lambda c=hex_color, s=scheme: (
                                     self._apply_hex_color_direct(c, s)
                                     if not matugen_enabled
@@ -617,7 +598,7 @@ class WallpaperPlugin(PluginBase):
                         Result(
                             title=f"Hex Color (incomplete): {hex_color}",
                             subtitle="Complete the 6-digit hex color to apply",
-                            icon_markup=icons.palette,
+                            icon_name="color-picker-symbolic",
                             action=lambda: None,
                             relevance=0.7,
                             plugin_name=self.display_name,
@@ -647,7 +628,7 @@ class WallpaperPlugin(PluginBase):
                                 subtitle=f"Generate and apply random color with {
                                     scheme_name
                                 } scheme • {status_text}",
-                                icon_markup=icons.palette,
+                                icon_name="color-picker-symbolic",
                                 action=lambda s=scheme: self._apply_hex_color_direct(
                                     self._generate_random_hex_color(), s
                                 ),
@@ -667,7 +648,7 @@ class WallpaperPlugin(PluginBase):
                             Result(
                                 title=f"Cannot Apply Random Color{indicator_text}",
                                 subtitle="Matugen is enabled • Disable matugen to use hex colors",
-                                icon_markup=icons.palette,
+                                icon_name="color-picker-symbolic",
                                 action=lambda: None,
                                 relevance=1.0,
                                 plugin_name=self.display_name,
@@ -683,7 +664,7 @@ class WallpaperPlugin(PluginBase):
                         Result(
                             title=f"Random Hex Color{indicator_text}",
                             subtitle=f"Generate and apply random color • {status_text}",
-                            icon_markup=icons.palette,
+                            icon_name="color-picker-symbolic",
                             action=lambda s=scheme: (
                                 self._apply_hex_color_direct(
                                     self._generate_random_hex_color(), s
@@ -707,7 +688,7 @@ class WallpaperPlugin(PluginBase):
                     Result(
                         title="Hex Color Commands",
                         subtitle="Use: color #FF5733, hex #00FF00, color random",
-                        icon_markup=icons.palette,
+                        icon_name="color-picker-symbolic",
                         action=lambda: None,
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -761,7 +742,7 @@ class WallpaperPlugin(PluginBase):
                                 if not matugen_enabled
                                 else ""
                             ),
-                            icon_markup=icons.palette,
+                            icon_name="color-management-symbolic",
                             action=lambda s=scheme_id: self._set_current_scheme(s),
                             relevance=1.0 if scheme_id == current_scheme else 0.8,
                             plugin_name=self.display_name,
@@ -785,7 +766,7 @@ class WallpaperPlugin(PluginBase):
                     Result(
                         title=f"Enable Matugen{indicator_text}",
                         subtitle=f"Turn on dynamic color generation • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: self._set_matugen_state(True),
                         relevance=0.9,
                         plugin_name=self.display_name,
@@ -802,7 +783,7 @@ class WallpaperPlugin(PluginBase):
                     Result(
                         title=f"Disable Matugen{indicator_text}",
                         subtitle=f"Turn off dynamic color generation • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: self._set_matugen_state(False),
                         relevance=0.9,
                         plugin_name=self.display_name,
@@ -824,7 +805,7 @@ class WallpaperPlugin(PluginBase):
                         subtitle=f"Switch matugen to {
                             'enabled' if new_state else 'disabled'
                         } • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: self._set_matugen_state(new_state),
                         relevance=0.9,
                         plugin_name=self.display_name,
@@ -843,7 +824,7 @@ class WallpaperPlugin(PluginBase):
                     Result(
                         title=f"Enable Matugen{indicator_text}",
                         subtitle=f"Turn on dynamic color generation • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: self._set_matugen_state(True),
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -862,7 +843,7 @@ class WallpaperPlugin(PluginBase):
                     Result(
                         title=f"Disable Matugen{indicator_text}",
                         subtitle=f"Turn off dynamic color generation • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: self._set_matugen_state(False),
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -879,7 +860,7 @@ class WallpaperPlugin(PluginBase):
                     Result(
                         title=f"Toggle Matugen{indicator_text}",
                         subtitle=f"Switch matugen state • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: self._set_matugen_state(not current_state),
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -898,7 +879,7 @@ class WallpaperPlugin(PluginBase):
                             indicator_text
                         }",
                         subtitle=f"Dynamic colors • {status_text}",
-                        icon_markup=icons.palette,
+                        icon_name="color-management-symbolic",
                         action=lambda: None,
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -912,7 +893,7 @@ class WallpaperPlugin(PluginBase):
                 Result(
                     title=f"Wallpaper System Status{indicator_text}",
                     subtitle=status_text,
-                    icon_markup=icons.palette,
+                    icon_name="color-management-symbolic",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -925,16 +906,7 @@ class WallpaperPlugin(PluginBase):
                 Result(
                     title=f"Random Wallpaper{indicator_text}",
                     subtitle=f"Set a random wallpaper • {status_text}",
-                    icon_markup=random.choice(
-                        [
-                            icons.dice_1,
-                            icons.dice_2,
-                            icons.dice_3,
-                            icons.dice_4,
-                            icons.dice_5,
-                            icons.dice_6,
-                        ]
-                    ),
+                    icon_name="media-playlist-shuffle-symbolic",
                     action=lambda: self._set_random_wallpaper(),
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -981,7 +953,7 @@ class WallpaperPlugin(PluginBase):
                             ' • ' + status_text if not query else ''
                         }",
                         icon=icon,
-                        icon_markup=icons.wallpapers if not icon else None,
+                        icon_name="image-x-generic-symbolic" if not icon else None,
                         action=lambda w=wallpaper: self._set_wallpaper(w),
                         relevance=relevance,
                         plugin_name=self.display_name,

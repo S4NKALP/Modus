@@ -3,10 +3,8 @@ import threading
 import time
 from typing import List
 
-from fabric.utils import exec_shell_command_async
-
 import config.data as data
-import utils.icons as icons
+from fabric.utils import exec_shell_command_async
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -24,13 +22,15 @@ class TmuxPlugin(PluginBase):
         # Cache for sessions to avoid repeated subprocess calls
         self._sessions_cache = []
         self._last_cache_update = 0
-        self._cache_ttl = 10  # Cache sessions for 10 seconds (increased from 2)
+        # Cache sessions for 10 seconds (increased from 2)
+        self._cache_ttl = 10
 
         # Threading for auto-refresh - only when actively used
         self.refresh_thread = None
         self.stop_refresh = threading.Event()
         self._last_query_time = 0
-        self._active_refresh_timeout = 30  # Stop refreshing after 30 seconds of inactivity
+        # Stop refreshing after 30 seconds of inactivity
+        self._active_refresh_timeout = 30
 
     def initialize(self):
         """Initialize the tmux plugin."""
@@ -67,7 +67,7 @@ class TmuxPlugin(PluginBase):
                     self._sessions_cache = self._get_tmux_sessions()
                     self._last_cache_update = current_time
 
-                self.stop_refresh.wait(5) 
+                self.stop_refresh.wait(5)
             except Exception as e:
                 print(f"TmuxPlugin: Error in refresh thread: {e}")
                 self.stop_refresh.wait(10)  # Wait longer on error
@@ -166,7 +166,7 @@ class TmuxPlugin(PluginBase):
         return Result(
             title=f"Attach to '{session_name}'",
             subtitle=f"Connect to tmux session: {session_name}",
-            icon_markup=icons.terminal,
+            icon_name="terminal",
             action=lambda: self._attach_to_session(session_name),
             relevance=0.9,
             data={"type": "attach", "session": session_name},
@@ -177,8 +177,10 @@ class TmuxPlugin(PluginBase):
         display_name = session_name if session_name else "new session"
         return Result(
             title=f"Create '{display_name}'",
-            subtitle=f"Create new tmux session{f': {session_name}' if session_name else ''}",
-            icon_markup=icons.plus,
+            subtitle=f"Create new tmux session{
+                f': {session_name}' if session_name else ''
+            }",
+            icon_name="plus",
             action=lambda: self._create_session(session_name),
             relevance=0.8,
             data={"type": "create", "session": session_name},
@@ -189,7 +191,7 @@ class TmuxPlugin(PluginBase):
         return Result(
             title=f"Kill '{session_name}'",
             subtitle=f"Terminate tmux session: {session_name}",
-            icon_markup=icons.trash,
+            icon_name="trash",
             action=lambda: self._kill_session(session_name),
             relevance=0.7,
             data={"type": "kill", "session": session_name},
@@ -200,7 +202,7 @@ class TmuxPlugin(PluginBase):
         return Result(
             title=f"Rename '{old_name}' to '{new_name}'",
             subtitle=f"Rename tmux session from {old_name} to {new_name}",
-            icon_markup=icons.config,
+            icon_name="config",
             action=lambda: self._rename_session(old_name, new_name),
             relevance=0.6,
             data={"type": "rename", "old_session": old_name, "new_session": new_name},

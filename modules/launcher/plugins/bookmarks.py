@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
-from fabric.utils.helpers import get_relative_path
 from thefuzz import fuzz
 
-import utils.icons as icons
+from fabric.utils.helpers import get_relative_path
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -268,7 +267,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="No Bookmarks Found",
                     subtitle="Use 'add <title> <url>' to add first bookmark",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -298,7 +297,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="No Bookmarks Yet",
                     subtitle="Use 'add <title> <url>' to add first bookmark",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -307,7 +306,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Example: Add Google",
                     subtitle="add Google https://google.com",
-                    icon_markup=icons.bulb,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -334,7 +333,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Add Bookmark",
                     subtitle="Usage: add <title> <url> [description]",
-                    icon_markup=icons.info,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -343,7 +342,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Example",
                     subtitle="add Google https://google.com Search engine",
-                    icon_markup=icons.bulb,
+                    icon_name="info",
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -358,7 +357,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Invalid Format",
                     subtitle="Usage: add <title> <url> [description]",
-                    icon_markup=icons.alert,
+                    icon_name="alert",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -387,7 +386,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Bookmark Already Exists",
                     subtitle=f"URL '{display_url}' already exists",
-                    icon_markup=icons.alert,
+                    icon_name="alert",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -407,7 +406,7 @@ class BookmarksPlugin(PluginBase):
             # Truncate description to prevent launcher resize
             max_desc_len = 35 - len(domain)  # Account for domain + separator
             if len(description) > max_desc_len:
-                description = description[:max_desc_len-3] + "..."
+                description = description[: max_desc_len - 3] + "..."
             subtitle += f" • {description}"
 
         # Truncate title for display
@@ -419,7 +418,7 @@ class BookmarksPlugin(PluginBase):
             Result(
                 title=f"Add bookmark '{display_title}'",
                 subtitle=subtitle,
-                icon_markup=icons.plus,
+                icon_name="plus",
                 action=lambda: self._add_bookmark_action(title, url, description),
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -451,7 +450,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Bookmark Not Found",
                     subtitle=f"No bookmark found matching '{identifier}'",
-                    icon_markup=icons.alert,
+                    icon_name="alert",
                     action=lambda: None,
                     relevance=1.0,
                     plugin_name=self.display_name,
@@ -477,7 +476,7 @@ class BookmarksPlugin(PluginBase):
             Result(
                 title=f"Remove '{display_title}'?",
                 subtitle=f"Click to confirm: {display_domain}",
-                icon_markup=icons.trash,
+                icon_name="trash",
                 action=lambda: self._remove_bookmark_action(identifier),
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -492,7 +491,7 @@ class BookmarksPlugin(PluginBase):
             Result(
                 title="Remove Bookmark",
                 subtitle="Usage: remove <title|url|domain>",
-                icon_markup=icons.info,
+                icon_name="info",
                 action=lambda: None,
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -506,7 +505,7 @@ class BookmarksPlugin(PluginBase):
                 Result(
                     title="Available Bookmarks:",
                     subtitle=f"{len(bookmarks)} bookmarks available to remove",
-                    icon_markup=icons.bookmark,
+                    icon_name="bookmarks-organize",
                     action=lambda: None,
                     relevance=0.9,
                     plugin_name=self.display_name,
@@ -532,7 +531,7 @@ class BookmarksPlugin(PluginBase):
                     Result(
                         title=f"remove {display_title}",
                         subtitle=f"Click to remove: {display_title} ({display_domain})",
-                        icon_markup=icons.trash,
+                        icon_name="trash",
                         action=lambda t=title: self._remove_bookmark_action(t),
                         relevance=0.8,
                         plugin_name=self.display_name,
@@ -643,9 +642,10 @@ class BookmarksPlugin(PluginBase):
 
             if description:
                 # Truncate description to prevent launcher resize
-                max_desc_len = 50 - len(domain)  # Account for domain + separator
+                # Account for domain + separator
+                max_desc_len = 50 - len(domain)
                 if len(description) > max_desc_len:
-                    description = description[:max_desc_len-3] + "..."
+                    description = description[: max_desc_len - 3] + "..."
                 subtitle = f"{domain} • {description}"
             else:
                 subtitle = domain
@@ -657,7 +657,7 @@ class BookmarksPlugin(PluginBase):
             return Result(
                 title=title,
                 subtitle=subtitle,
-                icon_markup=icons.bookmark,
+                icon_name="bookmark-organize",
                 action=lambda u=url: self._open_bookmark(u),
                 relevance=relevance,
                 plugin_name=self.display_name,

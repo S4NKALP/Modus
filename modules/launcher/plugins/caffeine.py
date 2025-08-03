@@ -3,11 +3,10 @@ from threading import Timer
 from typing import List
 
 import gi
-from fabric.utils import get_relative_path
-from fabric.utils.helpers import exec_shell_command_async
 
 import config.data as data
-import utils.icons as icons
+from fabric.utils import get_relative_path
+from fabric.utils.helpers import exec_shell_command_async
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -173,7 +172,7 @@ class CaffeinePlugin(PluginBase):
             result = Result(
                 title=f"Custom: {query}",
                 subtitle="Set custom duration",
-                icon_markup=icons.coffee,
+                icon_name="caffeine",
                 action=self._create_inhibit_action(query),
                 relevance=1.0,
                 plugin_name=self.display_name,
@@ -194,7 +193,7 @@ class CaffeinePlugin(PluginBase):
                 result = Result(
                     title=description,
                     subtitle=subtitle,
-                    icon_markup=icons.coffee,
+                    icon_name="caffeine",
                     action=self._create_inhibit_action(duration),
                     relevance=0.9 if query == duration else 0.7,
                     plugin_name=self.display_name,

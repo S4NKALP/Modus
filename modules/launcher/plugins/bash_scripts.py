@@ -4,10 +4,8 @@ import threading
 import time
 from typing import Dict, List
 
-from fabric.utils import exec_shell_command_async
-
 import config.data as data
-import utils.icons as icons
+from fabric.utils import exec_shell_command_async
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -38,17 +36,17 @@ class BashScriptsPlugin(PluginBase):
             "pm balanced": {
                 "description": "Switch to balanced power profile",
                 "profile": "balanced",
-                "icon": icons.power_balanced,
+                "icon": "power-balanced",
             },
             "pm performance": {
                 "description": "Switch to performance power profile",
                 "profile": "performance",
-                "icon": icons.power_performance,
+                "icon": "power-performance",
             },
             "pm saver": {
                 "description": "Switch to power saver profile",
                 "profile": "power-saver",
-                "icon": icons.power_saving,
+                "icon": "power-saving",
             },
         }
 
@@ -134,12 +132,16 @@ class BashScriptsPlugin(PluginBase):
             if actual_profile:
                 self._battery_service._profile_proxy.ActiveProfile = actual_profile
                 print(
-                    f"BashScriptsPlugin: Successfully set power profile to {actual_profile}"
+                    f"BashScriptsPlugin: Successfully set power profile to {
+                        actual_profile
+                    }"
                 )
                 return True
             else:
                 print(
-                    f"BashScriptsPlugin: No matching profile found for '{profile}' in available profiles: {available_profiles}"
+                    f"BashScriptsPlugin: No matching profile found for '{
+                        profile
+                    }' in available profiles: {available_profiles}"
                 )
                 return False
 
@@ -186,7 +188,6 @@ class BashScriptsPlugin(PluginBase):
             current_time - self._last_cache_update > self._cache_update_interval
             or not self._scripts_cache
         ):
-
             if not self._cache_building:
                 self._cache_building = True
                 self._cache_thread = threading.Thread(
@@ -197,7 +198,6 @@ class BashScriptsPlugin(PluginBase):
     def _build_scripts_cache_background(self):
         """Build scripts cache in background thread."""
         try:
-
             new_cache = {}
 
             # Scan Modus scripts directory for discovered scripts
@@ -208,7 +208,9 @@ class BashScriptsPlugin(PluginBase):
                     self._scan_directory_for_scripts(self.modus_scripts_dir, new_cache)
                 except (PermissionError, FileNotFoundError, OSError) as e:
                     print(
-                        f"BashScriptsPlugin: Error scanning Modus scripts directory: {e}"
+                        f"BashScriptsPlugin: Error scanning Modus scripts directory: {
+                            e
+                        }"
                     )
 
             # Update cache atomically
@@ -423,13 +425,12 @@ class BashScriptsPlugin(PluginBase):
                 or query_lower in cmd_lower
                 or query_lower in description_lower
             ):
-
                 relevance = 1.0 if query_lower == cmd_lower else 0.9
 
                 result = Result(
                     title=cmd,
                     subtitle=info["description"],
-                    icon_markup=info["icon"],
+                    icon_name=info["icon"],
                     action=self._create_power_action(info["profile"]),
                     relevance=relevance,
                     plugin_name=self.display_name,
@@ -451,7 +452,7 @@ class BashScriptsPlugin(PluginBase):
             result = Result(
                 title=cmd,
                 subtitle=info["description"],
-                icon_markup=info["icon"],
+                icon_name=info["icon"],
                 action=self._create_power_action(info["profile"]),
                 relevance=0.8,
                 plugin_name=self.display_name,
@@ -473,8 +474,9 @@ class BashScriptsPlugin(PluginBase):
             if success:
                 # Clear the search query after successful execution
                 try:
-                    from fabric import Application
                     from gi.repository import GLib
+
+                    from fabric import Application
 
                     app = Application.get_default()
                     if app and hasattr(app, "launcher"):
@@ -517,16 +519,16 @@ class BashScriptsPlugin(PluginBase):
 
         # Choose icon based on script type and status
         if not executable:
-            icon_markup = icons.file
+            icon_name = "gtk-file"
         elif script_type == "custom":
-            icon_markup = icons.star
+            icon_name = "folder-script-symbolic"
         else:
-            icon_markup = icons.terminal
+            icon_name = "terminalc"
 
         return Result(
             title=script_name,
             subtitle=subtitle,
-            icon_markup=icon_markup,
+            icon_name=icon_name,
             action=self._create_script_action(script_name, script_info),
             relevance=relevance,
             plugin_name=self.display_name,
@@ -556,7 +558,7 @@ class BashScriptsPlugin(PluginBase):
                 variant_result = Result(
                     title=f"{script_name} {arg}",
                     subtitle=f"{desc} | [scripts]",
-                    icon_markup=icons.terminal,
+                    icon_name="terminal-symbolic",
                     action=self._create_script_action_with_args(
                         script_name, script_info, [arg]
                     ),
