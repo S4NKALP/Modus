@@ -449,6 +449,37 @@ class Date(Box):
         self.add(self.datethree)
 
 
+class raminfo(Box):
+    @staticmethod
+    def bake_progress_bar(name: str = "progress-bar", size: int = 45, **kwargs):
+        return CircularProgressBar(
+            name=name,
+            start_angle=180,
+            end_angle=540,
+            min_value=0,
+            max_value=100,
+            size=size,
+            **kwargs,
+        )
+
+    @staticmethod
+    def bake_progress_icon(**kwargs):
+        return Label(**kwargs).build().add_style_class("progress-icon").unwrap()
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            layer="bottom",
+            title="sysinfo",
+            name="sysinfo",
+            visible=False,
+            all_visible=False,
+            **kwargs,
+        )
+
+
+# FIX: GTK ERRORS
+
+
 class Deskwidgets(Window):
     config = load_config()
 
@@ -475,9 +506,10 @@ class Deskwidgets(Window):
 
         bottom_left = Window(
             anchor="bottom left",
+            name="box-widget",
             orientation="h",
             layer="bottom",
-            child=Box(),
+            child=raminfo(),
         )
 
         container = Box(
