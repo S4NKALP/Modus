@@ -41,7 +41,7 @@ class Panel(Window):
         self.imac = Button(
             name="panel-button",
             child=Svg(
-                size=20,
+                size=21,
                 svg_file=get_relative_path("../../config/assets/icons/misc/logo.svg"),
             ),
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
