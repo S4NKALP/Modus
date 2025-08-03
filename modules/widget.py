@@ -506,7 +506,8 @@ class Weather(Box):
         self.condition_em.set_label(emoji)
         self.parent.set_visible(True)
 
-    class WeatherContainer(Box):
+
+class WeatherContainer(Box):
     def __init__(self, **kwargs):
         super().__init__(
             orientation="v",
@@ -516,11 +517,12 @@ class Weather(Box):
             visible=False,
             h_align="center",
             children=[
-                Weather(),
+                Weather(self),
             ],
             **kwargs,
         )
         self.add(WeatherWidget())
+
 
 class Date(Box):
     def __init__(self, **kwargs):
@@ -543,8 +545,6 @@ class Date(Box):
         self.top.add(self.datetwo)
         self.add(self.top)
         self.add(self.datethree)
-
-
 
 
 class Deskwidgets(Window):
