@@ -2,13 +2,12 @@ import os
 import subprocess
 import time
 
-from gi.repository import GLib
-
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.svg import Svg
+from gi.repository import GLib
 
 
 class RecordingIndicator(Button):
@@ -28,7 +27,9 @@ class RecordingIndicator(Button):
         self.recording_icon = Svg(
             name="indicators-icon",
             size=24,
-            svg_file=get_relative_path("../../../config/assets/icons/misc/media-record.svg"),
+            svg_file=get_relative_path(
+                "../../../config/assets/icons/misc/media-record.svg"
+            ),
         )
         self.time_label = Label(
             name="recording-time-label",
@@ -56,10 +57,10 @@ class RecordingIndicator(Button):
         GLib.timeout_add(100, lambda: self.remove_style_class("pressed") or False)
         return False
 
-    def is_wf_recorder_running(self):
+    def is_recorder_running(self):
         try:
             result = subprocess.run(
-                ["pgrep", "-x", "wf-recorder"],
+                ["pgrep", "-x", "wf-recorder", "-x", "gpu-screen-recorder"],
                 capture_output=True,
                 text=True,
                 timeout=1,
@@ -73,7 +74,7 @@ class RecordingIndicator(Button):
         self.last_process_check = current_time
 
         try:
-            is_recording = self.is_wf_recorder_running()
+            is_recording = self.is_recorder_running()
 
             if is_recording:
                 if not self.get_visible():
@@ -128,32 +129,35 @@ class RecordingIndicator(Button):
             self.timer_timeout_id = None
 
     def get_recording_start_time(self):
-        start_time_file = "/tmp/recording_start_time.txt"
+        wf_file = "/tmp/recording_start_time.txt"
+        gpu_file = "/tmp/gpu_recording_start_time.txt"
 
-        try:
-            if not os.path.exists(start_time_file):
-                return None
-
-            file_mtime = os.path.getmtime(start_time_file)
-
-            with open(start_time_file, "r") as f:
-                content = f.read().strip()
-                if content:
-                    recorded_time = float(content)
-
-                    current_time = time.time()
-                    if abs(recorded_time - current_time) > 3600:
-                        return file_mtime
-
-                    return recorded_time
-                else:
-                    return file_mtime
-
-        except (ValueError, OSError):
+        def read_timestamp(path):
             try:
-                return os.path.getmtime(start_time_file)
-            except OSError:
+                with open(path, "r") as f:
+                    content = f.read().strip()
+                    if content:
+                        t = float(content)
+                        if abs(t - time.time()) <= 3600:
+                            return t
+                    return os.path.getmtime(path)
+            except (OSError, ValueError):
                 return None
+
+        if os.path.exists(wf_file):
+            t = read_timestamp(wf_file)
+            if t:
+                print("[DEBUG] Using wf-recorder start time")
+                return t
+
+        if os.path.exists(gpu_file):
+            t = read_timestamp(gpu_file)
+            if t:
+                print("[DEBUG] Using gpu-screen-recorder start time")
+                return t
+
+        print("[DEBUG] No start time file found, using current time")
+        return time.time()
 
     def on_stop_recording(self, *args):
         try:
@@ -181,7 +185,7 @@ class RecordingIndicator(Button):
 
     def _verify_recording_stopped(self):
         try:
-            if self.is_wf_recorder_running():
+            if self.is_recorder_running():
                 if self.recording_start_time is None:
                     self.recording_start_time = self.get_recording_start_time()
 
@@ -193,7 +197,6 @@ class RecordingIndicator(Button):
                         self.timer_timeout_id = GLib.timeout_add(
                             self.timer_update_interval, self.update_timer_display
                         )
-
             else:
                 self.set_visible(False)
                 self.cleanup_recording_state()
