@@ -15,7 +15,7 @@ class BluetoothIndicator(Box):
         self.bluetooth = BluetoothClient()
         self.bt_icon = Svg(
             name="bt-icon",
-            size=23,
+            size=18,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/bluetooth-clear.svg"
             ),
@@ -49,7 +49,12 @@ class BluetoothIndicator(Box):
                         "../../../config/assets/icons/applets/bluetooth-clear.svg"
                     )
                 )
-                if len(connected_devices) == 1:
+                if len(connected_devices) >= 1:
+                    self.bt_icon.set_from_file(
+                        get_relative_path(
+                            "../../../config/assets/icons/applets/bluetooth-paired.svg"
+                        )
+                    )
                     device = connected_devices[0]
                     tooltip = f"Connected to {device.alias}"
                     if device.battery_percentage > 0:
@@ -111,7 +116,7 @@ class NetworkIndicator(Box):
 
         self.network_icon = Svg(
             name="network-icon",
-            size=25,
+            size=18,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/wifi-clear.svg"
             ),
@@ -236,7 +241,7 @@ class BatteryIndicator(Box):
 
         self.battery_icon = Svg(
             name="battery-icon",
-            size=22,
+            size=23,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/battery/battery-100.svg"
             ),
