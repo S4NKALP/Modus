@@ -510,7 +510,7 @@ class Player(Box):
         shuffle_button.get_child().set_style("color: var(--outline)")
 
 
-class PlacheholderMini(Box):
+class Placheholder(Box):
     def __init__(self, **kwargs):
         super().__init__(style_classes="player-box", **kwargs)
 
@@ -556,7 +556,7 @@ class PlayerContainer(Box):
         self.manager = PlayerManager()
         self.manager.connect("new-player", self.new_player)
         self.manager.connect("player-vanish", self.on_player_vanish)
-        self.placeholder = PlacheholderMini()
+        self.placeholder = Placheholder()
         self.stack = Stack(
             transition_type="crossfade",
             transition_duration=100,
@@ -575,16 +575,16 @@ class PlayerContainer(Box):
             orientation="v",
             center_children=[],
         )
-        self.mini_tile_icon = Image(
+        self.tile_icon = Image(
             name="disc",
             style="font-size:30px; margin:0px; padding:0px;",
             icon_name="disc-symbolic",
             size=30,
         )
 
-        self.mini_tile_view = CenterBox(
+        self.tile_view = CenterBox(
             v_expand=False,
-            center_children=self.mini_tile_icon,
+            center_children=self.tile_icon,
         )
         self.event_box = EventBox(
             events=["scroll"],
@@ -597,12 +597,9 @@ class PlayerContainer(Box):
         self.stack.connect("notify::visible-child", self.on_visible_child_changed)
 
     def new_player(self, manager, player):
-        print(player.props.player_name, "new player")
-        print(player)
         new_player = Player(player=player)
         new_player.set_name(player.props.player_name)
         self.players.append(new_player)
-        print("stacking mini", player.props.player_name)
         self.stack.add_named(new_player, player.props.player_name)
         if len(self.players) == 1:
             self.stack.remove(self.placeholder)
@@ -678,8 +675,8 @@ class PlayerContainer(Box):
         if curr_child is None:
             return
         curr_player = curr_child.get_name()
-        self.mini_tile_icon.set_name(curr_player)
-        self.mini_tile_icon.set_icon_name(self._get_player_icon_name(curr_player))
+        self.tile_icon.set_name(curr_player)
+        self.tile_icon.set_icon_name(self._get_player_icon_name(curr_player))
 
-    def get_mini_view(self):
-        return self.mini_tile_view
+    def get_view(self):
+        return self.tile_view
