@@ -449,50 +449,241 @@ class Date(Box):
         self.add(self.datethree)
 
 
+class DateContainer(Box):
+    def __init__(self, **kwargs):
+        super().__init__(
+            orientation="v",
+            name="box-widget",
+            v_expand=True,
+            v_align="center",
+            h_align="center",
+            children=[Date()],
+            **kwargs,
+        )
+
+
+class RamInfo(Box):
+    @staticmethod
+    def bake_progress_bar(name: str = "progress-bar", size: int = 80, **kwargs):
+        return CircularProgressBar(
+            name=name,
+            start_angle=270,
+            end_angle=630,
+            min_value=0,
+            max_value=100,
+            size=size,
+            **kwargs,
+        )
+
+    @staticmethod
+    def bake_progress_label(text, **kwargs):
+        return Label(label=text, **kwargs)
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            layer="bottom",
+            title="sysinfo",
+            name="info-box-widget",
+            visible=True,
+            h_expand=True,
+            v_expand=True,
+            all_visible=True,
+            **kwargs,
+        )
+
+        self.ram_progress = self.bake_progress_bar(name="progress")
+        self.ram_label = Label(
+            label="15%\nRam", justification="center", name="progress-label"
+        )
+
+        self.ram_info_label = Label(
+            label="ram info", name="info", justification="center", h_align="center"
+        )
+        self.progress_container = Box(
+            name="progress-bar-container",
+            h_expand=True,
+            v_expand=True,
+            orientation="v",
+            spacing=12,
+            h_align="center",
+            v_align="center",
+            children=[
+                Box(
+                    children=[
+                        Overlay(
+                            child=self.ram_progress,
+                            tooltip_text="",
+                            overlays=self.ram_label,
+                        ),
+                    ],
+                ),
+                Box(
+                    h_align="center",
+                    justification="centre",
+                    orientation="v",
+                    children=[
+                        self.ram_info_label,
+                    ],
+                ),
+            ],
+        )
+        self.add(self.progress_container)
+        invoke_repeater(1000, self.update)
+
+    def update(self):
+        mem = psutil.virtual_memory()
+        self.ram_label.set_label(f" {round(mem.percent):<2} %\nRAM")
+
+        used_gb = mem.used / (1024**3)
+        free_gb = mem.available / (1024**3)
+
+        self.ram_info_label.set_label(
+            f"Used: {round( used_gb,1 ):>3}GB\nFree: {round( free_gb,1 ):>3}GB"
+        )
+        GLib.idle_add(self.ram_progress.set_value, mem.percent)
+        # executor.submit(update)
+        return True
+
+
+class CpuInfo(Box):
+    @staticmethod
+    def bake_progress_bar(name: str = "progress-bar", size: int = 80, **kwargs):
+        return CircularProgressBar(
+            name=name,
+            start_angle=270,
+            end_angle=630,
+            min_value=0,
+            max_value=100,
+            size=size,
+            **kwargs,
+        )
+
+    @staticmethod
+    def bake_progress_label(text, **kwargs):
+        return Label(label=text, **kwargs)
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            layer="bottom",
+            title="sysinfo",
+            name="info-box-widget",
+            visible=True,
+            h_expand=True,
+            v_expand=True,
+            all_visible=True,
+            **kwargs,
+        )
+
+        self.cpu_progress = self.bake_progress_bar(name="progress")
+        self.cpu_label = Label(
+            label="15%\nCPU", justification="center", name="progress-label"
+        )
+
+        self.cpu_info_label = Label(
+            label="CPU Info", name="info", justification="center", h_align="center"
+        )
+
+        self.progress_container = Box(
+            name="progress-bar-container",
+            h_expand=True,
+            v_expand=True,
+            orientation="v",
+            spacing=12,
+            h_align="center",
+            v_align="center",
+            children=[
+                Box(
+                    children=[
+                        Overlay(
+                            child=self.cpu_progress,
+                            tooltip_text="",
+                            overlays=self.cpu_label,
+                        ),
+                    ],
+                ),
+                Box(
+                    h_align="center",
+                    justification="centre",
+                    orientation="v",
+                    children=[
+                        self.cpu_info_label,
+                    ],
+                ),
+            ],
+        )
+        self.add(self.progress_container)
+        invoke_repeater(1000, self.update)
+
+    def get_cpu_temp(self):
+        temps = psutil.sensors_temperatures()
+        if not temps:
+            return None
+
+        for name, entries in temps.items():
+            if (
+                "coretemp" in name.lower()
+                or "k10temp" in name.lower()
+                or "cpu" in name.lower()
+            ):
+                for entry in entries:
+                    # Match common CPU temp labels
+                    if (
+                        "package id 0" in (entry.label or "").lower()
+                        or "core 0" in (entry.label or "").lower()
+                        or (entry.label is None or entry.label.strip() == "")
+                    ):
+                        return round(entry.current, 1)
+
+        return None
+
+    def update(self):
+        cpu = psutil.cpu_percent()
+        self.cpu_label.set_label(f" {round(cpu):<2} %\nCPU")
+
+        self.cpu_info_label.set_label(f"Temp: {self.get_cpu_temp()}°C")
+        GLib.idle_add(self.cpu_progress.set_value, cpu)
+        # executor.submit(update)
+        return True
+
+
+# FIX: GTK ERRORS
+
+
 class Deskwidgets(Window):
     config = load_config()
 
     def __init__(self, **kwargs):
-        # Create the main container with proper layout
-        main_container = Box(
-            name="desktop-main-container",
+        top_left = Window(
+            anchor="top left",
+            orientation="h",
+            layer="bottom",
+            child=Box(
+                name="desktop-widgets-container",
+                children=[
+                    DateContainer(),
+                    WeatherContainer(),
+                ],
+            ),
+        )
+
+        bottom_left = Window(
+            anchor="top right",
+            orientation="h",
+            layer="bottom",
+            child=Box(
+                name="desktop-widgets-container",
+                children=[
+                    CpuInfo(),
+                    RamInfo(),
+                ],
+            ),
+        )
+
+        container = Box(
             orientation="v",
-            h_expand=True,
-            v_expand=True,
             children=[
-                # Top section
-                Box(
-                    name="desktop-top-section",
-                    orientation="h",
-                    h_expand=True,
-                    v_expand=True,
-                    v_align="start",
-                    children=[
-                        Box(
-                            name="desktop-widgets-container",
-                            orientation="h",
-                            children=[
-                                Box(
-                                    orientation="v",
-                                    name="box-widget",
-                                    v_expand=True,
-                                    v_align="center",
-                                    h_align="center",
-                                    children=[Date()],
-                                ),
-                                WeatherContainer(),
-                            ],
-                        ),
-                    ],
-                ),
-                # Bottom section (empty for now, but expandable)
-                Box(
-                    name="desktop-bottom-section",
-                    orientation="h",
-                    h_expand=True,
-                    v_expand=True,
-                    v_align="end",
-                ),
+                top_left,
+                bottom_left,
             ],
         )
 
@@ -500,10 +691,9 @@ class Deskwidgets(Window):
             name="desktop",
             layer="bottom",
             title="desktop-widgets",
-            anchor="top left",
             orientation="v",
             exclusivity="none",
-            child=main_container,
+            child=container,
             **kwargs,
         )
 
