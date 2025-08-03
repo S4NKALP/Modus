@@ -512,7 +512,7 @@ class Player(Box):
 
 class PlacheholderMini(Box):
     def __init__(self, **kwargs):
-        super().__init__(style_classes="player-mini", **kwargs)
+        super().__init__(style_classes="player-box", **kwargs)
 
         self.album_cover = Box(style_classes="album-image")
         self.album_cover.set_style(
@@ -520,7 +520,7 @@ class PlacheholderMini(Box):
         )
         self.player_name = Image(
             name="player-icon",
-            icon_name="disc-symbolic",
+            icon_name="media-player-48",
             size=20,
         )
 
