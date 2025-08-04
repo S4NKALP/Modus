@@ -166,6 +166,7 @@ menu > menuitem:hover > label {
 
 #calendar-day {
     font-size: 12px;
+    margin:1.4px 0px 1.4px 0px;
     font-weight: 500;
     color: #ffffff;
     min-width: 18px;
