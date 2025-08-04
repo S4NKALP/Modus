@@ -56,7 +56,7 @@ CURRENT_WIDTH = screen.get_width()
 CURRENT_HEIGHT = screen.get_height()
 
 
-WALLPAPERS_DIR_DEFAULT = get_relative_path("../../../Pictures/Wallpapers")
+WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")
 CONFIG_FILE = get_relative_path("../config/assets/config.json")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 

@@ -14,3 +14,5 @@ fabric/**
 fabric/
 # styles/colors.css
 .aider*
+.venv/*
+.venv/
