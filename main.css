@@ -129,75 +129,77 @@ menu > menuitem:hover > label {
     margin: 20px 20px 20px 10px;
     min-width: 170px;
     min-height: 170px;
+    max-width: 170px;
+    max-height: 170px;
     border-radius: 16px;
 }
 
 #calendar-widget {
     font-family: "SF Pro Rounded";
-    margin: 16px;
+    margin: 12px;
 }
 
 #calendar-month {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: #68A7B5;
-    margin-bottom: 12px;
-}
-
-#calendar-days-header {
     margin-bottom: 8px;
 }
 
+#calendar-days-header {
+    margin-bottom: 6px;
+}
+
 #calendar-day-header {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #ffffff;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 16px;
 }
 
 #calendar-day-header-weekend {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #8E8D93;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 16px;
 }
 
 #calendar-day {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #ffffff;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 16px;
 }
 
 #calendar-day-weekend {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #8E8D93;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 16px;
 }
 
 #calendar-day-today {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #191919;
     background-color: #6AABBB;
     border-radius: 50%;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 16px;
     padding: 2px;
 }
 
 #calendar-day-empty {
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 16px;
 }
 
 #calendar-grid {
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 

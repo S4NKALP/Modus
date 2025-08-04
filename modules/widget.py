@@ -494,7 +494,7 @@ class Calendar(Box):
             name="calendar-days-header",
             orientation="h",
             h_expand=True,
-            # spacing=4
+            spacing=2
         )
 
         day_names = ["S", "M", "T", "W", "T", "F", "S"]
@@ -517,7 +517,7 @@ class Calendar(Box):
         self.calendar_grid = Box(
             name="calendar-grid",
             orientation="v",
-            # spacing=3
+            spacing=1
         )
 
         self.update_calendar()
@@ -556,7 +556,7 @@ class Calendar(Box):
         cal = calendar.monthcalendar(self.current_year, self.current_month)
 
         for week in cal:
-            week_box = Box(orientation="h", spacing=4, h_expand=True)
+            week_box = Box(orientation="h", spacing=2, h_expand=True)
 
             for day_index, day in enumerate(week):
                 if day == 0:
