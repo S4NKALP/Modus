@@ -384,13 +384,13 @@ class RamInfo(Box):
         # Create info with color indicators
         self.used_indicator = Label(label="■", name="used-color-indicator")
         self.free_indicator = Label(label="■", name="free-color-indicator")
-        
+
         # Create the info labels
         self.used_info = Label(label="Used", name="info-text")
         self.used_value = Label(label="0.0GB", name="info-value")
-        self.free_info = Label(label="Free", name="info-text")
+        self.free_info = Label(label="Free ", name="info-text")
         self.free_value = Label(label="0.0GB", name="info-value")
-        
+
         # Create horizontal boxes for each info line
         self.used_line = Box(
             orientation="h",
@@ -400,18 +400,19 @@ class RamInfo(Box):
                 self.used_indicator,
                 self.used_info,
                 self.used_value,
-            ]
+            ],
         )
-        
+
         self.free_line = Box(
-            orientation="h", 
+            orientation="h",
             spacing=4,
-            h_align="start",
+            h_align="center",
+            justification="start",
             children=[
                 self.free_indicator,
                 self.free_info,
                 self.free_value,
-            ]
+            ],
         )
 
         self.ram_info_container = Box(
@@ -422,7 +423,7 @@ class RamInfo(Box):
             children=[
                 self.used_line,
                 self.free_line,
-            ]
+            ],
         )
 
         self.progress_container = Box(
@@ -465,7 +466,7 @@ class RamInfo(Box):
 
         self.used_value.set_label(f"{round(used_gb, 1)}GB")
         self.free_value.set_label(f"{round(free_gb, 1)}GB")
-        
+
         GLib.idle_add(self.ram_progress.set_value, mem.percent)
         # executor.submit(update)
         return True
@@ -506,20 +507,20 @@ class CpuInfo(Box):
             label="15%\nCPU", justification="center", name="progress-label"
         )
 
-        # Create temp info with color indicator  
+        # Create temp info with color indicator
         self.temp_indicator = Label(label="■", name="temp-color-indicator")
         self.temp_info = Label(label="Temp", name="info-text")
         self.temp_value = Label(label="0°C", name="info-value")
-        
+
         self.temp_line = Box(
             orientation="h",
             spacing=4,
-            h_align="start", 
+            h_align="start",
             children=[
-                self.temp_indicator,
+                # self.temp_indicator,
                 self.temp_info,
                 self.temp_value,
-            ]
+            ],
         )
 
         self.cpu_info_container = Box(
@@ -528,7 +529,7 @@ class CpuInfo(Box):
             h_align="center",
             children=[
                 self.temp_line,
-            ]
+            ],
         )
 
         self.progress_container = Box(
@@ -593,7 +594,7 @@ class CpuInfo(Box):
             self.temp_value.set_label(f"{temp}°C")
         else:
             self.temp_value.set_label("N/A")
-            
+
         GLib.idle_add(self.cpu_progress.set_value, cpu)
         # executor.submit(update)
         return True

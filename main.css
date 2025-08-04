@@ -293,7 +293,7 @@ menu > menuitem:hover > label {
 }
 
 #free-color-indicator {
-    color: #333333;
+    color: #7C7C7C;
     font-size: 10px;
     font-weight: 900;
 }
@@ -307,7 +307,7 @@ menu > menuitem:hover > label {
 /* Info text styling */
 #info-text {
     font-family: "SF Pro Rounded";
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: #8E8E8E;
     min-width: 32px;
