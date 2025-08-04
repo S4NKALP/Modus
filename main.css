@@ -129,8 +129,6 @@ menu > menuitem:hover > label {
     margin: 20px 20px 20px 10px;
     min-width: 170px;
     min-height: 170px;
-    max-width: 170px;
-    max-height: 170px;
     border-radius: 16px;
 }
 
@@ -151,7 +149,7 @@ menu > menuitem:hover > label {
 }
 
 #calendar-day-header {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: #ffffff;
     min-width: 18px;
@@ -159,7 +157,7 @@ menu > menuitem:hover > label {
 }
 
 #calendar-day-header-weekend {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: #8E8D93;
     min-width: 18px;
@@ -167,7 +165,7 @@ menu > menuitem:hover > label {
 }
 
 #calendar-day {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     color: #ffffff;
     min-width: 18px;
@@ -175,7 +173,7 @@ menu > menuitem:hover > label {
 }
 
 #calendar-day-weekend {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     color: #8E8D93;
     min-width: 18px;
@@ -183,7 +181,7 @@ menu > menuitem:hover > label {
 }
 
 #calendar-day-today {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: #191919;
     background-color: #6AABBB;
