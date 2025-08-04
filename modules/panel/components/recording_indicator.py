@@ -12,7 +12,7 @@ from gi.repository import GLib
 
 class RecordingIndicator(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="panel-button", visible=False, **kwargs)
+        super().__init__(name="panel-button", visible=True, **kwargs)
 
         self.script_path = get_relative_path("../../../scripts/screen-capture.sh")
         self.recording_start_time = None
@@ -58,14 +58,20 @@ class RecordingIndicator(Button):
         return False
 
     def is_recorder_running(self):
+        # add more process names if needed
+        recorder_processes = ["wf-recorder", "gpu-screen-recorder"]
+
         try:
-            result = subprocess.run(
-                ["pgrep", "-x", "wf-recorder", "-x", "gpu-screen-recorder"],
-                capture_output=True,
-                text=True,
-                timeout=1,
-            )
-            return result.returncode == 0
+            for proc in recorder_processes:
+                result = subprocess.run(
+                    ["pgrep", "-x", proc],
+                    capture_output=True,
+                    text=True,
+                    timeout=1,
+                )
+                if result.returncode == 0:
+                    return True  # Found a running recorder process
+            return False  # None found running
         except Exception:
             return False
 

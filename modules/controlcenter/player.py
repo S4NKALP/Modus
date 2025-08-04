@@ -318,7 +318,9 @@ class Player(Box):
                             f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
                         )
                         logger.debug(
-                            f"Found YouTube thumbnail for {player_name}: {new_thumbnail}"
+                            f"Found YouTube thumbnail for {player_name}: {
+                                new_thumbnail
+                            }"
                         )
 
             # Only update if thumbnail has changed
