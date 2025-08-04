@@ -29,17 +29,18 @@
 #wifi-widget-label {
   font-size: 10px;
   margin-left: 5px;
-  font-weight: 400;
+  /* font-weight: 400; */
   color: #aaa;
 }
 
 /* WiFi Password Dialog */
 #wifi-password-dialog {
   background-color: transparent;
+  font-family: "SF Pro Rounded";
 }
 
 #wifi-dialog-background {
-  background-color: rgba(40, 40, 40, 0.95);
+  background-color: alpha(#fff, 0.05);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 20px;
@@ -47,7 +48,7 @@
 }
 
 #wifi-dialog-title-container {
-  margin-bottom: 12px;
+  /* margin-bottom: 12px; */
 }
 
 #wifi-dialog-icon {
@@ -57,25 +58,28 @@
 
 #wifi-dialog-title {
   color: #ffffff;
+  font-family: "SF Pro Rounded";
   font-size: 14px;
   font-weight: 500;
 }
 
 #wifi-dialog-error {
+  font-family: "SF Pro Rounded";
   color: #ff4444;
   font-size: 12px;
   font-weight: 500;
-  margin-bottom: 8px;
+  /* margin-bottom: 8px; */
 }
 
 #wifi-dialog-password-container {
-  margin: 12px 0;
+  margin: 5px 0;
 }
 
 #wifi-dialog-password-label {
   color: #ffffff;
   font-size: 13px;
   font-weight: 500;
+  font-family: "SF Pro Rounded";
   margin-bottom: 4px;
 }
 
@@ -95,7 +99,7 @@
 }
 
 #wifi-dialog-show-password-box {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 #wifi-dialog-show-password-button {
@@ -108,7 +112,7 @@
 }
 
 #wifi-dialog-show-password-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: alpha(#fff, 0.1);
 }
 
 #wifi-dialog-show-password-button image {
@@ -121,7 +125,7 @@
 }
 
 #wifi-dialog-button-box {
-  margin-top: 20px;
+  margin-top: -15px;
 }
 
 #wifi-dialog-cancel-button,
