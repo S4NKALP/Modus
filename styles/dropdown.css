@@ -1,5 +1,6 @@
 #dropdown-menu {
   background-color: transparent;
+
   border-radius: 0.75rem;
   margin: 0;
 }
@@ -27,7 +28,8 @@
 }
 
 #dropdown-option-label {
-  font-size: 12px;
+  font-size: 13px;
+  font-family: "SF Pro Rounded";
   margin: 0px;
   color: #fff;
   font-weight: 400;

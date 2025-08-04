@@ -1,19 +1,25 @@
 {
     "pinned_apps": [
         {
-            "name": "kitty",
-            "display_name": "kitty",
-            "executable": "kitty",
-            "command_line": "kitty",
-            "icon_name": "kitty"
+            "name": "Bulk Rename",
+            "display_name": "Bulk Rename",
+            "window_class": null,
+            "executable": "thunar",
+            "command_line": "thunar --bulk-rename %F"
+        },
+        {
+            "name": "Ghostty",
+            "display_name": "Ghostty",
+            "window_class": "com.mitchellh.ghostty",
+            "executable": "ghostty",
+            "command_line": "ghostty"
         },
         {
             "name": "Zen Browser",
             "display_name": "Zen Browser",
             "window_class": "zen",
             "executable": "/opt/zen-browser-bin/zen-bin",
-            "command_line": "/opt/zen-browser-bin/zen-bin %u",
-            "icon_name": "zen-browser"
+            "command_line": "/opt/zen-browser-bin/zen-bin %u"
         },
         {
             "name": "Visual Studio Code",

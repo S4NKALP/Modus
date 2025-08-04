@@ -1,19 +1,17 @@
 #panel {
-    background-color: alpha(#fff, 0.05);
+  background-color: alpha(#fff, 0.05);
 
-    font-family: "SF Pro Rounded SemiBold";
   border-bottom: 1px solid alpha(#010101, 0.025);
-    margin-top: -4px;
-    margin-bottom: -4px;
+  margin-top: -4px;
+  margin-bottom: -4px;
   transition: all 120ms ease-in-out;
 }
 
 #panel-icon {
   font-size: 18px;
 }
-#global-title-button{
-
-    font-weight: 600;
+#global-title-button {
+  font-weight: 700;
 }
 
 #panel-button {
@@ -26,6 +24,11 @@
   background-color: var(--surface-bright);
 }
 
+#menubar label {
+  font-family: "SF Pro Rounded";
+  font-size: 13px;
+  /* font-weight: 400; */
+}
 #battery-button {
   padding-right: 3px;
   padding-left: 3px;
@@ -69,7 +72,7 @@
 
 #date-time {
   margin: 0 10px;
-    font-weight: 500;
+  font-weight: 500;
 }
 
 #modules-left,
@@ -89,7 +92,6 @@
 .button:hover {
   background: radial-gradient(alpha(#aaa, 0.2) 100%, transparent, transparent);
 }
-
 
 #modus-button label {
   font-size: 17px;

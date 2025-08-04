@@ -1,17 +1,17 @@
 #launcher {
-    background-color: alpha(#000, 0.3);
+  background-color: alpha(#000, 0.3);
   padding: 0;
   border-radius: 12px;
   min-width: 640px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-#launcher-search{
-    color: #000;
+#launcher-search {
+  color: #000;
 }
 #header_box {
   padding: 0px 20px 0 20px;
-    color: #000;
+  color: #000;
 }
 
 #close-button,
@@ -38,11 +38,11 @@
 }
 
 #close-button.focused #close-label {
-  color: #007AFF;
+  color: #007aff;
 }
 
 #config-button.focused #config-label {
-  color: #007AFF;
+  color: #007aff;
 }
 
 #close-button:active {
