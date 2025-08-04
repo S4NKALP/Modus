@@ -15,6 +15,7 @@ import time
 import config.data as data
 from config.data import load_config
 import subprocess
+import calendar
 
 executor = ThreadPoolExecutor(max_workers=4)
 
@@ -464,6 +465,134 @@ class DateContainer(Box):
         )
 
 
+class Calendar(Box):
+    def __init__(self, **kwargs):
+        super().__init__(
+            name="calendar-widget",
+            h_expand=True,
+            v_expand=True,
+            orientation="v",
+            **kwargs,
+        )
+
+        # Create current date for calendar
+        now = datetime.datetime.now()
+        self.current_month = now.month
+        self.current_year = now.year
+        self.current_day = now.day
+
+        # Month and year header
+        self.month_label = Label(
+            name="calendar-month",
+            label=f"{calendar.month_name[self.current_month]} {self.current_year}",
+            h_align="center",
+            justification="center"
+        )
+
+        # Day abbreviations
+        days_header = Box(
+            name="calendar-days-header",
+            orientation="h",
+            h_expand=True,
+            spacing=2
+        )
+        
+        day_names = ["S", "M", "T", "W", "T", "F", "S"]
+        for day_name in day_names:
+            day_label = Label(
+                name="calendar-day-header",
+                label=day_name,
+                h_align="center",
+                h_expand=True
+            )
+            days_header.add(day_label)
+
+        # Calendar grid
+        self.calendar_grid = Box(
+            name="calendar-grid",
+            orientation="v",
+            spacing=2
+        )
+
+        self.update_calendar()
+        
+        self.add(self.month_label)
+        self.add(days_header)
+        self.add(self.calendar_grid)
+
+        # Update calendar daily
+        invoke_repeater(86400000, self.update_calendar_if_needed)  # 24 hours
+
+    def update_calendar_if_needed(self):
+        """Check if date changed and update calendar if needed."""
+        now = datetime.datetime.now()
+        if now.month != self.current_month or now.year != self.current_year or now.day != self.current_day:
+            self.current_month = now.month
+            self.current_year = now.year
+            self.current_day = now.day
+            self.update_calendar()
+        return True
+
+    def update_calendar(self):
+        """Update the calendar grid with current month."""
+        # Clear existing calendar
+        for child in self.calendar_grid.get_children():
+            self.calendar_grid.remove(child)
+
+        # Update month label
+        self.month_label.set_label(f"{calendar.month_name[self.current_month]} {self.current_year}")
+
+        # Get calendar for current month
+        cal = calendar.monthcalendar(self.current_year, self.current_month)
+
+        for week in cal:
+            week_box = Box(
+                orientation="h",
+                spacing=2,
+                h_expand=True
+            )
+            
+            for day in week:
+                if day == 0:
+                    # Empty day
+                    day_label = Label(
+                        name="calendar-day-empty",
+                        label="",
+                        h_align="center",
+                        h_expand=True
+                    )
+                else:
+                    # Regular day
+                    is_today = (day == self.current_day and 
+                              self.current_month == datetime.datetime.now().month and 
+                              self.current_year == datetime.datetime.now().year)
+                    
+                    day_label = Label(
+                        name="calendar-day-today" if is_today else "calendar-day",
+                        label=str(day),
+                        h_align="center",
+                        h_expand=True
+                    )
+                
+                week_box.add(day_label)
+            
+            self.calendar_grid.add(week_box)
+
+
+class CalendarContainer(Box):
+    def __init__(self, **kwargs):
+        super().__init__(
+            orientation="v",
+            name="calendar-box-widget",
+            v_expand=True,
+            size=(170, 170),
+            v_align="center",
+            h_align="center",
+            children=[Calendar()],
+            **kwargs,
+        )
+
+
 class RamInfo(Box):
     @staticmethod
     def bake_progress_bar(name: str = "progress-bar", size: int = 80, **kwargs):
@@ -668,6 +797,7 @@ class Deskwidgets(Window):
                 children=[
                     DateContainer(),
                     WeatherContainer(),
+                    CalendarContainer(),
                 ],
             ),
         )

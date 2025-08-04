@@ -123,6 +123,56 @@ menu > menuitem:hover > label {
 }
 /* # */
 
+/* Calendar Widget */
+#calendar-box-widget {
+    background: linear-gradient(to bottom, #202020, #141414);
+    margin: 20px 10px 20px 10px;
+    min-width: 170px;
+    min-height: 170px;
+    border-radius: 16px;
+}
+
+#calendar-widget {
+    font-family: "SF Pro Rounded";
+    margin: 12px;
+}
+
+#calendar-month {
+    font-size: 16px;
+    font-weight: 600;
+    color: #68A7B5;
+    margin-bottom: 8px;
+}
+
+#calendar-days-header {
+    margin-bottom: 4px;
+}
+
+#calendar-day-header {
+    font-size: 10px;
+    font-weight: 600;
+    color: alpha(#fff, 0.6);
+    min-width: 18px;
+}
+
+#calendar-day {
+    font-size: 10px;
+    font-weight: 500;
+    color: alpha(#fff, 0.8);
+    min-width: 18px;
+}
+
+#calendar-day-today {
+    font-size: 10px;
+    font-weight: 700;
+    color: #0984FF;
+    min-width: 18px;
+}
+
+#calendar-day-empty {
+    min-width: 18px;
+}
+
 
 
 
