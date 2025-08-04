@@ -156,7 +156,7 @@ class WeatherContainer(Box):
     def __init__(self, **kwargs):
         super().__init__(
             orientation="v",
-            name="box-widget-2",
+            name="weather-container",
             v_expand=True,
             v_align="center",
             size=(170, 170),
@@ -200,7 +200,7 @@ class DateContainer(Box):
     def __init__(self, **kwargs):
         super().__init__(
             orientation="v",
-            name="box-widget",
+            name="date-container",
             v_expand=True,
             size=(170, 170),
             v_align="center",

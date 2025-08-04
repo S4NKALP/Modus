@@ -1,5 +1,5 @@
 #noti-center-box {
-        background-color: alpha(#fff, 0.09);
+  background-color: alpha(#fff, 0.09);
 
   border: 1px solid alpha(#111, 0.3);
   border-radius: 16px;
@@ -15,10 +15,10 @@
 }
 
 #noti-clear-button {
-        background-color: alpha(#888, 0.09);
+  background-color: alpha(#888, 0.09);
 }
 #noti-clear-button:hover {
-        background-color: alpha(#fff, 0.09);
+  background-color: alpha(#fff, 0.09);
 }
 
 /* Stacked notification group styles */
