@@ -29,6 +29,17 @@
 </figure>
 <br>
 
+## Installation (WIP)
+
+```bash
+git clone https://github.com/S4NKALP/Modus
+cd Modus
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
+```
+
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
 - [x] Launcher
