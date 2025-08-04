@@ -134,57 +134,70 @@ menu > menuitem:hover > label {
 
 #calendar-widget {
     font-family: "SF Pro Rounded";
-    margin: 12px;
+    margin: 16px;
 }
 
 #calendar-month {
     font-size: 18px;
     font-weight: 600;
     color: #68A7B5;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 #calendar-days-header {
-    margin-bottom: 4px;
+    margin-bottom: 8px;
 }
 
 #calendar-day-header {
     font-size: 12px;
     font-weight: 600;
     color: #ffffff;
-    min-width: 18px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 #calendar-day-header-weekend {
     font-size: 12px;
     font-weight: 600;
     color: #8E8D93;
-    min-width: 18px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 #calendar-day {
     font-size: 12px;
     font-weight: 500;
     color: #ffffff;
-    min-width: 18px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 #calendar-day-weekend {
     font-size: 12px;
     font-weight: 500;
     color: #8E8D93;
-    min-width: 18px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 #calendar-day-today {
     font-size: 12px;
     font-weight: 700;
-    color: #0984FF;
-    min-width: 18px;
+    color: #191919;
+    background-color: #6AABBB;
+    border-radius: 50%;
+    min-width: 20px;
+    min-height: 20px;
+    padding: 2px;
 }
 
 #calendar-day-empty {
-    min-width: 18px;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+#calendar-grid {
+    margin-top: 4px;
 }
 
 
