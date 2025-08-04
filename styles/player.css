@@ -1,128 +1,80 @@
-.player-box {
-  min-height: 60px;
-  min-width: 300px;
-  padding: 10px;
-  background-color: alpha(#000, 0.3);
-  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
-  border-radius: 10px;
-  background-position: center;
-  background-size: cover;
+#player-stack-button {
+  border-radius: 5px;
+  min-width: 7px;
+  min-height: 7px;
+  margin: 10px 3px;
 }
 
-#player-container {
-  min-height: 60px;
-  border-radius: 10px;
-  padding: 2px;
-  margin-left: 2px;
-  background-position: center;
-  background-size: cover;
-}
-
-#player-details {
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.album-image {
-  min-width: 60px;
-  background-position: center;
-  background-size: cover;
-  border-radius: 10px;
-}
-
-/* #artist { */
-/*   color: var(--primary); */
-/* } */
-
-#song {
-  font-size: 15px;
-  margin-top: 5px;
-}
-
-#source {
-  margin-left: -20px;
-  border-radius: 10px;
-}
-
-#play-pause-label {
-  color: var(--surface);
-  text-shadow: none;
-}
-
-#pause-button {
-  /* background-color: whitesmoke; */
-  border-radius: 16px;
-  padding: 10px;
-}
-
-#pause-label,
-#play-label {
-  /* color: var(--shadow); */
-  font-size: 20px;
-  padding: 2px;
-  border-radius: 9px;
-}
-
-#shuffle-button,
-#next-button,
-#prev-button,
-#play-pause-button {
-  border: none;
-  border-radius: 12px;
-  padding: 0px;
-  padding-left: 11px;
-  padding-right: 11px;
-  min-width: 25px;
-  min-height: 25px;
-}
-
-#shuffle-button:hover,
-#next-button:hover,
-#prev-button:hover,
-#play-pause-button:hover {
+#player-stack-button:hover {
+  background-color: #646464;
   box-shadow: inset rgba(255, 255, 255, 0.5) 0 0 10px;
 }
 
-.player-button {
+#player-stack-button.active {
   border-radius: 5px;
-  /* background-color: var(--shadow); */
-  background-color: white;
-  opacity: 1;
-  min-width: 10px;
-  min-height: 10px;
-  padding: 0px;
-  margin: 0px;
-  border: none;
+  background-color: rgb(221.25, 221.25, 223.65);
+}
+
+#outer-player-box {
+  min-height: 100px;
+  min-width: 363px;
+  border-radius: 10px;
+  margin: 0 6px;
+  background-color: alpha(#000, 0.3);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+}
+
+#player-box:disabled highlight,
+#player-box:disabled progress {
+  background-color: rgba(205, 214, 244, 0.6);
+  background-image: none;
+}
+
+#player-info-box {
+  margin-left: 130px;
+}
+
+#player-title {
+  margin-top: 18px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+#player-artist,
+#player-album {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+#player-controls {
   margin-top: 5px;
+  margin-bottom: 15px;
 }
 
-.player-button.active {
-  opacity: 1;
-  /* min-width: 40px; */
-  /* border-radius: 5px; */
+.player-icon {
+  font-size: 16px;
 }
 
-#player-switch-container {
-  margin-top: 0px;
-  margin-left: -18px;
-  padding-right: 10px;
+.player-button {
+  min-width: 20px;
+  min-height: 20px;
+  padding: 1px;
+  border-radius: 100%;
 }
 
-#controls {
-  padding-bottom: 10px;
-  margin-top: 5px;
-  margin-bottom: 0px;
+.player-button:hover {
+  box-shadow: inset rgba(255, 255, 255, 0.5) 0 0 10px;
 }
 
-#player-icon {
-  font-size: 20px;
-  color: black;
-  text-shadow: 0 0 5px white;
+#player-box #player-controls #button-box .player-button:disabled {
+  color: #5f5f5f;
 }
 
-#shuffle {
-  font-size: 17px;
-}
-
-#disable-shuffle {
-  font-size: 27px;
+.album-image {
+  min-width: 100px;
+  min-height: 90px;
+  background-position: center;
+  background-size: cover;
+  margin-left: 12px;
+  border-radius: 10px;
 }

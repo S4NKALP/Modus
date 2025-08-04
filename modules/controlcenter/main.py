@@ -16,8 +16,8 @@ from services.brightness import Brightness
 from utils.exml import exml
 from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
-from modules.controlcenter.player import PlayerContainer
-# from modules.controlcenter.player1 import PlayerContainer
+from modules.controlcenter.player import PlayerBoxStack
+from services.mpris import MprisPlayerManager
 
 brightness_service = Brightness.get_initial()
 
@@ -106,7 +106,7 @@ class ModusControlCenter(Window):
 
         self.music_widget = Box(
             name="music-widget",
-            children=[PlayerContainer()],
+            children=[PlayerBoxStack(MprisPlayerManager())],
         )
 
         self.wifi_man = WifiConnections(self)
