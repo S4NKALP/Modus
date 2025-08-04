@@ -126,7 +126,7 @@ menu > menuitem:hover > label {
 /* Calendar Widget */
 #calendar-box-widget {
     background: linear-gradient(to bottom, #202020, #141414);
-    margin: 20px 10px 20px 10px;
+    margin: 20px 20px 20px 10px;
     min-width: 170px;
     min-height: 170px;
     border-radius: 16px;
