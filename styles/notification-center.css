@@ -2,15 +2,15 @@
   background-color: alpha(#fff, 0.09);
 
   border: 1px solid alpha(#111, 0.3);
-  border-radius: 16px;
+  border-radius: 10px;
   padding: 20px;
-  margin: 6px;
+  /* margin: 6px; */
 }
 
 #noti-clear-button {
   min-width: 10px;
   min-height: 40px;
-  border-radius: 50px;
+  border-radius: 10px;
   margin-top: 10px;
 }
 
@@ -23,7 +23,7 @@
 
 /* Stacked notification group styles */
 .stacked-notification-group {
-  margin: 8px 0;
+  margin: 4px 0;
 }
 
 .stacked-notification-container {

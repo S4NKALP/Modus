@@ -139,10 +139,10 @@ class NotificationWidget(Box):
                     children=CustomImage(
                         pixbuf=(
                             notification.image_pixbuf.scale_simple(
-                                48, 48, GdkPixbuf.InterpType.BILINEAR
+                                35, 35, GdkPixbuf.InterpType.BILINEAR
                             )
                             if notification.image_pixbuf
-                            else self.get_pixbuf(notification.app_icon, 48, 48)
+                            else self.get_pixbuf(notification.app_icon, 35, 35)
                         )
                     ),
                 ),
@@ -161,12 +161,12 @@ class NotificationWidget(Box):
                                     h_align="start",
                                     ellipsization="end",
                                 ),
-                                Label(
-                                    name="notification-app-name",
-                                    markup=" | " + notification.app_name,
-                                    h_align="start",
-                                    ellipsization="end",
-                                ),
+                                # Label(
+                                #     name="notification-app-name",
+                                #     markup=" | " + notification.app_name,
+                                #     h_align="start",
+                                #     ellipsization="end",
+                                # ),
                             ],
                         ),
                         (
@@ -185,11 +185,19 @@ class NotificationWidget(Box):
                     ],
                 ),
                 Box(h_expand=True),
-                Button(
-                    name="notification-close-button",
-                    image=CustomImage(icon_name="close-symbolic", icon_size=18),
-                    visible=True,  # Initially hidden
-                    on_clicked=lambda *_: self.notification.close("dismissed-by-user"),
+                Box(
+                    orientation="v",
+                    children=[
+                        Button(
+                            name="notification-close-button",
+                            image=CustomImage(icon_name="close-symbolic", icon_size=18),
+                            visible=True,  # Initially hidden
+                            on_clicked=lambda *_: self.notification.close(
+                                "dismissed-by-user"
+                            ),
+                        ),
+                        Box(v_expand=True),
+                    ],
                 ),
             ],
         )
