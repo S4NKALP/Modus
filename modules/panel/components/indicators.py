@@ -341,6 +341,6 @@ class BatteryIndicator(Box):
 
         # Update icon and tooltip
         self.battery_icon.set_from_file(
-            get_relative_path(f"../../../config/assets/icons/{icon_file}")
+            get_relative_path(f"../../../config/assets/icons/battery/{icon_file}")
         )
         self.battery_button.set_tooltip_text(tooltip)
