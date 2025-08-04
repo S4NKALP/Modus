@@ -12,23 +12,11 @@ import datetime
 from gi.repository import GLib
 from concurrent.futures import ThreadPoolExecutor
 import time
-import config.data as data
 from config.data import load_config
 import subprocess
 import calendar
 
 executor = ThreadPoolExecutor(max_workers=4)
-
-
-config = load_config()
-
-
-def margin():
-    return (
-        data.DOCK_ICON_SIZE + 10
-        if not data.DOCK_ALWAYS_OCCLUDED and data.DOCK_ENABLED
-        else 0
-    )
 
 
 def get_location():
@@ -119,251 +107,6 @@ def update_widget(widget, weather_info):
         widget.update_labels(weather_info)
 
 
-class Sysinfo(Box):
-    @staticmethod
-    def bake_progress_bar(name: str = "progress-bar", size: int = 45, **kwargs):
-        return CircularProgressBar(
-            name=name,
-            start_angle=180,
-            end_angle=540,
-            min_value=0,
-            max_value=100,
-            size=size,
-            **kwargs,
-        )
-
-    @staticmethod
-    def bake_progress_icon(**kwargs):
-        return Label(**kwargs).build().add_style_class("progress-icon").unwrap()
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            layer="bottom",
-            title="sysinfo",
-            name="sysinfo",
-            visible=False,
-            all_visible=False,
-            **kwargs,
-        )
-
-        self.cpu_progress = self.bake_progress_bar()
-        self.ram_progress = self.bake_progress_bar()
-        self.bat_circular = self.bake_progress_bar().build().set_value(42).unwrap()
-
-        self.progress_container = Box(
-            name="progress-bar-container",
-            spacing=12,
-            children=[
-                Box(
-                    children=[
-                        Overlay(
-                            child=self.cpu_progress,
-                            tooltip_text="",
-                            overlays=[
-                                self.bake_progress_icon(
-                                    label="",
-                                    name="progress-icon-cpu",
-                                )
-                            ],
-                        ),
-                    ],
-                ),
-                Box(
-                    children=[
-                        Overlay(
-                            child=self.ram_progress,
-                            tooltip_text="",
-                            overlays=[
-                                self.bake_progress_icon(
-                                    name="progress-icon-ram",
-                                    label="󰘚",
-                                )
-                            ],
-                        )
-                    ]
-                ),
-                Box(
-                    children=[
-                        Overlay(
-                            child=self.bat_circular,
-                            tooltip_text="",
-                            overlays=[
-                                self.bake_progress_icon(
-                                    label="󱊣",
-                                    name="progress-icon-bat",
-                                )
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-        self.update_status()
-        invoke_repeater(1000, self.update_status)
-
-        self.add(
-            Box(
-                name="progress-bar-container-main",
-                orientation="v",
-                spacing=24,
-                children=[self.progress_container],
-            ),
-        )
-        self.show_all()
-
-    def update_status(self):
-        """Update system info asynchronously to prevent UI lag."""
-
-        def update():
-            cpu = psutil.cpu_percent()
-            ram = psutil.virtual_memory().percent
-            battery = (
-                psutil.sensors_battery().percent if psutil.sensors_battery() else 80
-            )
-            GLib.idle_add(self.cpu_progress.set_value, cpu)
-            GLib.idle_add(self.ram_progress.set_value, ram)
-            GLib.idle_add(self.bat_circular.set_value, battery)
-
-            GLib.idle_add(self.cpu_progress.set_tooltip_text, f"{str(round(cpu))}%")
-            GLib.idle_add(self.ram_progress.set_tooltip_text, f"{str(round(ram))}%")
-            GLib.idle_add(self.bat_circular.set_tooltip_text, f"{str(round(battery))}%")
-
-        executor.submit(update)
-        return True
-
-
-def fetch_quote(callback):
-    """Fetch quotes asynchronously."""
-
-    def fetch():
-        quotes_type = "stoic"
-
-        url = (
-            "https://stoic-quotes.com/api/quote"
-            if quotes_type == "stoic"
-            else "https://zenquotes.io/api/random"
-        )
-
-        for attempt in range(5):
-            try:
-                response = requests.get(url, timeout=3)
-                response.raise_for_status()
-                respdata = response.json()
-                quote = (
-                    f"{respdata[0]['q']} - {respdata[0]['a']}"
-                    if quotes_type == "zen"
-                    else f"{respdata['text']} - {respdata['author']}"
-                )
-                break
-            except requests.RequestException as e:
-                print(f"Error fetching quote: {e}")
-                if attempt < 4:
-                    time.sleep(10)
-                else:
-                    try:
-                        result = subprocess.run(
-                            ["hyprctl", "splash"],
-                            capture_output=True,
-                            text=True,
-                            check=True,
-                        )
-                        quote = result.stdout.strip() + " - Team Hyprland"
-                    except subprocess.CalledProcessError as e:
-                        print(f"Error fetching quote from hyprctl: {e}")
-                        quote = "I learn from the mistakes of people who take my advice - Trix"
-
-        GLib.idle_add(callback, quote)
-
-    executor.submit(fetch)
-
-
-def fetch_quote_async(callback):
-    GLib.idle_add(lambda: fetch_quote(callback))
-
-
-class QuoteWidget(Label):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="quote",
-            label="",
-            anchor="center",
-            h_align="center",
-            v_align="center",
-            h_expand=True,
-            justification="center",
-            v_expand=True,
-            visible=False,
-        )
-        fetch_quote_async(self.update_label)
-
-    def update_label(self, quote):
-        """Update quote asynchronously."""
-        max_width = 150  # Set the maximum width for the quote
-        if len(quote) > max_width:
-            words = quote.split()
-            line1, line2 = "", ""
-            for word in words:
-                if len(line1) + len(word) + 1 <= max_width:
-                    line1 += word + " "
-                else:
-                    line2 += word + " "
-            quote = line1.strip() + "\n" + line2.strip()
-        self.set_label(quote)
-        self.set_visible(True)
-
-
-class ActivationMainText(Label):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="activation-main-text",
-            label="",
-            anchor="bottom right",
-            justification="left",
-            v_align="start",
-            h_align="start",
-            h_expand=True,
-            v_expand=True,
-            visible=False,
-        )
-        self.set_label("Activate Linux")
-
-
-class ActivationSubText(Label):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="activation-sub-text",
-            label="",
-            anchor="bottom right",
-            justification="left",
-            v_align="start",
-            h_align="start",
-            h_expand=True,
-            v_expand=True,
-            visible=False,
-        )
-        self.set_label("Go to Settings to activate Linux")
-
-
-def create_widgets(config):
-    widgets = []
-    if config.get("widgets_displaytype_visible", True):
-        if config.get("widgets_clock_visible", True):
-            widgets.append(
-                DateTime(formatters=["%A, %d %B"], interval=10000, name="date")
-            )
-        if config.get("widgets_date_visible", True):
-            widgets.append(DateTime(formatters=["%I:%M %p"], name="clock"))
-        if config.get("widgets_quote_visible", True):
-            widgets.append(QuoteWidget())
-        if config.get("widgets_weatherwid_visible", True):
-            widgets.append(WeatherContainer())
-    else:
-        widgets.append(DateTime(formatters=["%I:%M %p"], name="clock"))
-        widgets.append(DateTime(formatters=["%A. %d %B"], interval=10000, name="date"))
-    return widgets
-
-
 class Weather(Box):
     def __init__(self, parent, **kwargs):
         super().__init__(
@@ -424,6 +167,8 @@ class WeatherContainer(Box):
             ],
             **kwargs,
         )
+        # TODO: Background Colours according to weather condtions?
+
         # self.set_style("background-color: rgba(0, 0, 0, 0.5);")
         # self.add(Weather())
 
@@ -491,10 +236,7 @@ class Calendar(Box):
 
         # Day abbreviations
         days_header = Box(
-            name="calendar-days-header",
-            orientation="h",
-            h_expand=True,
-            spacing=2
+            name="calendar-days-header", orientation="h", h_expand=True, spacing=2
         )
 
         day_names = ["S", "M", "T", "W", "T", "F", "S"]
@@ -514,11 +256,7 @@ class Calendar(Box):
             days_header.add(day_label)
 
         # Calendar grid
-        self.calendar_grid = Box(
-            name="calendar-grid",
-            orientation="v",
-            spacing=1
-        )
+        self.calendar_grid = Box(name="calendar-grid", orientation="v", spacing=1)
 
         self.update_calendar()
 
@@ -847,54 +585,3 @@ class Deskwidgets(Window):
             child=container,
             **kwargs,
         )
-
-
-#     else:
-#
-#         class Deskwidgets(Window):
-#             def __init__(self, **kwargs):
-#                 config = load_config()
-#                 super().__init__(name="desktop", **kwargs)
-#                 desktop_widget = Window(
-#                     layer="bottom",
-#                     anchor="bottom left",
-#                     v_align="start",
-#                     h_align="start",
-#                     h_expand=True,
-#                     v_expand=True,
-#                     justification="left",
-#                     exclusivity="none",
-#                     child=Box(
-#                         orientation="v",
-#                         children=create_widgets(config),
-#                     ),
-#                     all_visible=True,
-#                 )
-#                 if config.get("widgets_activation_visible", True):
-#                     activationnag = Window(
-#                         name="activation",
-#                         anchor="bottom right",
-#                         layer="top",
-#                         justification="left",
-#                         v_align="start",
-#                         h_align="start",
-#                         h_expand=True,
-#                         v_expand=True,
-#                         child=Box(
-#                             orientation="v",
-#                             children=[
-#                                 ActivationMainText(),
-#                                 ActivationSubText(),
-#                             ],
-#                         ),
-#                         all_visible=True,
-#                     )
-#                 else:
-#                     activationnag = None
-#
-# else:
-#
-#     class Deskwidgets(Window):
-#         def __init__(self, **kwargs):
-#             super().__init__(name="desktop", **kwargs)
-#             self.set_visible(False)
