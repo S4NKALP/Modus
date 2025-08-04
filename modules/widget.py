@@ -356,7 +356,7 @@ def create_widgets(config):
         if config.get("widgets_quote_visible", True):
             widgets.append(QuoteWidget())
         if config.get("widgets_weatherwid_visible", True):
-            widgets.append(WeatherWidget())
+            widgets.append(WeatherContainer())
     else:
         widgets.append(DateTime(formatters=["%I:%M %p"], name="clock"))
         widgets.append(DateTime(formatters=["%A. %d %B"], interval=10000, name="date"))
