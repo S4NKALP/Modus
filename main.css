@@ -138,7 +138,7 @@ menu > menuitem:hover > label {
 }
 
 #calendar-month {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     color: #68A7B5;
     margin-bottom: 8px;
@@ -149,21 +149,35 @@ menu > menuitem:hover > label {
 }
 
 #calendar-day-header {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
-    color: alpha(#fff, 0.6);
+    color: #ffffff;
+    min-width: 18px;
+}
+
+#calendar-day-header-weekend {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8E8D93;
     min-width: 18px;
 }
 
 #calendar-day {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 500;
-    color: alpha(#fff, 0.8);
+    color: #ffffff;
+    min-width: 18px;
+}
+
+#calendar-day-weekend {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8E8D93;
     min-width: 18px;
 }
 
 #calendar-day-today {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     color: #0984FF;
     min-width: 18px;
