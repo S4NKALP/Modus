@@ -29,11 +29,9 @@
 }
 
 tooltip {
-  border: solid 1px;
-  border-radius: 16px;
-  border-color: var(--surface);
-  background-color: var(--shadow);
-  /* animation: tooltipShow 0.25s cubic-bezier(0.5, 0.25, 0, 1); */
+  border: #474747 solid 1px;
+  border-radius: 0.75rem;
+  background-color: alpha(#fff, 0.05);
 }
 
 @keyframes tooltipShow {
@@ -47,29 +45,39 @@ tooltip {
 }
 
 tooltip > * {
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 3px 10px;
+  border-radius: 0.75rem;
 }
 
 menu {
-  border: solid 1px;
-  border-radius: 16px;
+  border: #474747 solid 1px;
+  border-radius: 0.75rem;
+  transition: all 100ms ease-in-out;
   border-color: var(--surface);
-  background-color: var(--shadow);
-  padding: 6px;
+    background-color: alpha(#fff, 0.05);
 }
 
 menu > menuitem {
-  border-radius: 10px;
-  padding: 6px 10px;
+  padding: 5px 10px;
+  margin: 1px 2px;
+  border-bottom: #474747 solid 1px;
 }
 
+menu > menuitem:last-child {
+  border-bottom: none;
+}
 menu > menuitem:hover {
-  background-color: var(--primary);
+  transition: all 20ms ease-in-out;
+  border-radius: 4px;
+  color: #222;
+  background-color: alpha(#2369ff, 1);
 }
 
 menu > menuitem:hover > label {
-  color: var(--shadow);
+  font-size: 12px;
+  margin: 0px;
+  color: #fff;
+  font-weight: 400;
 }
 
 
