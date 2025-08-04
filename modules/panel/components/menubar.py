@@ -62,17 +62,22 @@ class AppName:
         return desktop_file
 
     def format_app_name(self, title, wmclass, update=False):
-        name = wmclass
-        if name == "":
-            name = title
+        # Handle case when both title and wmclass are empty (no active window)
+        if not title and not wmclass:
+            name = "Hyprland"
+        else:
+            name = wmclass
+            if name == "":
+                name = title
 
-        # Try to get the proper app name from desktop file
-        name = self.get_app_name(wmclass=wmclass)
+            # Try to get the proper app name from desktop file only if wmclass is not empty
+            if wmclass:
+                name = self.get_app_name(wmclass=wmclass)
 
-        # Smart title formatting (capitalize first letter)
-        name = str(name).title()
-        if "." in name:
-            name = name.split(".")[-1]
+            # Smart title formatting (capitalize first letter)
+            name = str(name).title()
+            if "." in name:
+                name = name.split(".")[-1]
 
         if update:
             modus_service.current_active_app_name = name
@@ -382,8 +387,22 @@ class MenuBar(Box):
         # Create the dropdown system
         self.dropdown_system = MenuBarDropdowns(parent=parent_window)
 
+        # Create combined workspace and app label
+        self.workspace_label = Label(
+            label=f"{modus_service.current_workspace} -",
+            name="workspace-name",
+            style_classes="workspace-label",
+        )
+
+        # Connect to workspace changes
+        modus_service.connect(
+            "current-workspace-changed",
+            lambda _, value: self.workspace_label.set_label(f"{value} -"),
+        )
+
         # Add all the menu buttons to the menubar
         self.children = [
+            self.workspace_label,
             self.dropdown_system.global_menu_button_title,
             self.dropdown_system.global_menu_button_file,
             self.dropdown_system.global_menu_button_edit,

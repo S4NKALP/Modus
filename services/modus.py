@@ -1,8 +1,10 @@
+import json
 from typing import List
 
 from loguru import logger
 
 from fabric.core.service import Property, Service, Signal
+from fabric.hyprland.service import Hyprland
 from fabric.notifications import Notification
 from services.custom_notification import CustomNotifications
 
@@ -29,6 +31,9 @@ class ModusService(Service):
 
     @Signal
     def current_active_app_name_changed(self, value: str) -> None: ...
+
+    @Signal
+    def current_workspace_changed(self, value: str) -> None: ...
 
     @Signal
     def music_changed(self, value: str) -> None: ...
@@ -59,6 +64,10 @@ class ModusService(Service):
         return self._current_active_app_name
 
     @Property(str, flags="read-write")
+    def current_workspace(self) -> str:
+        return self._current_workspace
+
+    @Property(str, flags="read-write")
     def bluetooth(self) -> str:
         return self._bluetooth
 
@@ -78,7 +87,7 @@ class ModusService(Service):
     def dock_apps(self) -> str:
         return self._dock_apps
 
-    @Property(str, flags="read-write")
+    @Property(bool, flags="read-write", default_value=False)
     def dont_disturb(self) -> bool:
         return self._dont_disturb
 
@@ -115,6 +124,12 @@ class ModusService(Service):
         if value != self._current_active_app_name:
             self._current_active_app_name = value
             self.current_active_app_name_changed(value)
+
+    @current_workspace.setter
+    def current_workspace(self, value: str):
+        if value != self._current_workspace:
+            self._current_workspace = value
+            self.current_workspace_changed(value)
 
     @volume.setter
     def volume(self, value: int):
@@ -216,7 +231,8 @@ class ModusService(Service):
         self._bluetooth = ""
         self._dock_apps = ""
         self._dont_disturb = False
-        self._current_active_app_name = ""
+        self._current_active_app_name = "Hyprland"
+        self._current_workspace = "1"
         self._music = ""
         self._current_dropdown = None
         self._dropdowns_hide = False
@@ -226,6 +242,33 @@ class ModusService(Service):
         self._dock_width = 0
         self._dock_height = 0
 
+        # Initialize Hyprland connection for workspace monitoring
+        self._setup_workspace_monitoring()
+
+    def _setup_workspace_monitoring(self):
+        """Setup Hyprland connection and workspace monitoring"""
+        try:
+            self._hyprland_connection = Hyprland()
+
+            # Get initial workspace
+            workspace_data = self._hyprland_connection.send_command("j/activeworkspace").reply
+            active_workspace = json.loads(workspace_data.decode("utf-8"))["name"]
+            self._current_workspace = str(active_workspace)
+
+            # Connect to workspace change events
+            self._hyprland_connection.connect("event::workspace", self._on_workspace_changed)
+
+        except Exception as e:
+            logger.error(f"[ModusService] Failed to setup workspace monitoring: {e}")
+            self._current_workspace = "1"
+
+    def _on_workspace_changed(self, obj, signal):
+        """Handle workspace change events from Hyprland"""
+        try:
+            workspace_name = json.loads(signal.data[0])
+            self.current_workspace = str(workspace_name)
+        except Exception as e:
+            logger.error(f"[ModusService] Error processing workspace change: {e}")
 
     def remove_notification(self, id: int):
         notification_service.remove_notification(id)
@@ -255,4 +298,4 @@ global modus_service
 try:
     modus_service = ModusService()
 except Exception as e:
-    logger.error("[Main] Failed to create EnvShellService:", e)
+    logger.error("[Main] Failed to create ModusShellService:", e)
