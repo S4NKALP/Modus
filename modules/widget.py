@@ -359,10 +359,6 @@ class RamInfo(Box):
             **kwargs,
         )
 
-    @staticmethod
-    def bake_progress_label(text, **kwargs):
-        return Label(label=text, **kwargs)
-
     def __init__(self, **kwargs):
         super().__init__(
             layer="bottom",
@@ -484,10 +480,6 @@ class CpuInfo(Box):
             size=size,
             **kwargs,
         )
-
-    @staticmethod
-    def bake_progress_label(text, **kwargs):
-        return Label(label=text, **kwargs)
 
     def __init__(self, **kwargs):
         super().__init__(
