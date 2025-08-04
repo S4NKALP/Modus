@@ -44,7 +44,7 @@ menu > menuitem:hover {
 }
 
 menu > menuitem:hover > label {
-  font-size: 12px;
+  font-family: "SF Pro Rounded";
   color: #fff;
   font-weight: 400;
 }
