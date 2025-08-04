@@ -1,8 +1,8 @@
 #osd {
-    background-color: alpha(#fff, 0.09);
+  background-color: alpha(#fff, 0.09);
   padding: 12px 20px;
   margin: 70px;
-    min-height: 200px;
+  min-height: 200px;
   border-radius: 16px;
 }
 
@@ -19,7 +19,7 @@
 }
 
 #osd trough highlight {
-  border-radius: 100px 0px 0px 100px;
+  border-radius: 100px;
   background: var(--primary);
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
