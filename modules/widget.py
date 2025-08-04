@@ -484,9 +484,9 @@ class Calendar(Box):
         # Month and year header
         self.month_label = Label(
             name="calendar-month",
-            label=f"{calendar.month_name[self.current_month]} {self.current_year}",
-            h_align="center",
-            justification="center"
+            label=f"{calendar.month_name[self.current_month]}",
+            h_align="start",
+            justification="left"
         )
 
         # Day abbreviations
@@ -498,9 +498,11 @@ class Calendar(Box):
         )
         
         day_names = ["S", "M", "T", "W", "T", "F", "S"]
-        for day_name in day_names:
+        for i, day_name in enumerate(day_names):
+            # Saturday (6) and Sunday (0) get weekend styling
+            is_weekend = i == 0 or i == 6
             day_label = Label(
-                name="calendar-day-header",
+                name="calendar-day-header-weekend" if is_weekend else "calendar-day-header",
                 label=day_name,
                 h_align="center",
                 h_expand=True
@@ -540,7 +542,7 @@ class Calendar(Box):
             self.calendar_grid.remove(child)
 
         # Update month label
-        self.month_label.set_label(f"{calendar.month_name[self.current_month]} {self.current_year}")
+        self.month_label.set_label(f"{calendar.month_name[self.current_month]}")
 
         # Get calendar for current month
         cal = calendar.monthcalendar(self.current_year, self.current_month)
@@ -552,7 +554,7 @@ class Calendar(Box):
                 h_expand=True
             )
             
-            for day in week:
+            for day_index, day in enumerate(week):
                 if day == 0:
                     # Empty day
                     day_label = Label(
@@ -567,8 +569,18 @@ class Calendar(Box):
                               self.current_month == datetime.datetime.now().month and 
                               self.current_year == datetime.datetime.now().year)
                     
+                    # Saturday (6) and Sunday (0) get weekend styling
+                    is_weekend = day_index == 0 or day_index == 6
+                    
+                    if is_today:
+                        name = "calendar-day-today"
+                    elif is_weekend:
+                        name = "calendar-day-weekend"
+                    else:
+                        name = "calendar-day"
+                    
                     day_label = Label(
-                        name="calendar-day-today" if is_today else "calendar-day",
+                        name=name,
                         label=str(day),
                         h_align="center",
                         h_expand=True
