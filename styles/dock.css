@@ -1,5 +1,5 @@
 #dock {
-  background-color: alpha(var(--shadow), 0.4);
+  background-color: alpha(#fff, 0.05);
   padding: 8px;
   margin: 8px 8px 5px 8px;
   border-radius: 16px;
@@ -7,6 +7,16 @@
   /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
 }
 
+#dock-app-overlay {
+}
+#dock-app-overlay label {
+  background-color: alpha(#000, 0.5);
+  font-size: 12px;
+  font-family: "SF Pro Rounded";
+  margin-top: 20px;
+  min-width: 17px;
+  border-radius: 8px;
+}
 #dock.vertical {
   margin: 8px 0 8px 8px;
   border-radius: 20px 0 0 20px;

@@ -2,6 +2,7 @@ import json
 import logging
 
 import cairo
+from fabric.widgets.widget import Widget
 from gi.repository import Gdk, GLib, Gtk
 
 import config.data as data
@@ -17,7 +18,9 @@ from fabric.utils.helpers import get_desktop_applications
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
+from fabric.widgets.overlay import Overlay
 from fabric.widgets.image import Image
+from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from modules.corners import MyCorner
 from utils.icon_resolver import IconResolver
@@ -351,8 +354,9 @@ class Dock(Window):
         self.app_map = {app.name: app for app in self._all_apps if app.name}
         self.app_identifiers = self._build_app_identifiers_map()
 
-    def create_button(self, app_identifier, instances):
+    def create_button(self, app_identifier, instances, workspace: str):
         desktop_app = self.find_app(app_identifier)
+        # print("Creating button for app identifier:", app_identifier)
         icon_img = None
         display_name = None
 
@@ -425,7 +429,18 @@ class Dock(Window):
         button.connect("drag-data-get", self.on_drag_data_get)
         button.connect("drag-data-received", self.on_drag_data_received)
         button.connect("enter-notify-event", self._on_child_enter)
-        return button
+        overlay = Overlay(
+            overlays=Label(
+                label=workspace,
+                name="dock-app-overlay-label",
+                h_align="end",
+                v_align="start",
+                visible=bool(workspace),
+            ),
+            child=button,
+            name="dock-app-overlay",
+        )
+        return overlay
 
     def handle_app(self, app_identifier, instances, desktop_app=None):
         if not instances:
@@ -613,10 +628,23 @@ class Dock(Window):
                 used_window_classes.add(matched_class)
                 used_window_classes.add(self._normalize_window_class(matched_class))
 
-            pinned_buttons.append(self.create_button(app_data_item, instances))
+            workspace = (
+                str(instances[0].get("workspace", {}).get("id", ""))
+                if instances
+                else ""
+            )
+            pinned_buttons.append(
+                self.create_button(app_data_item, instances, workspace)
+            )
 
         open_buttons = []
         for class_name, instances in running_windows.items():
+            # print(class_name, instances)
+            workspace = (
+                str(instances[0].get("workspace", {}).get("id", ""))
+                if instances
+                else ""
+            )
             if class_name not in used_window_classes:
                 app = None
                 app = self.app_identifiers.get(class_name)
@@ -642,7 +670,9 @@ class Dock(Window):
                     identifier = app_data_obj
                 else:
                     identifier = class_name
-                open_buttons.append(self.create_button(identifier, instances))
+                open_buttons.append(
+                    self.create_button(identifier, instances, workspace)
+                )
 
         children = pinned_buttons
         separator_orientation = (
