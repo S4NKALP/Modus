@@ -37,12 +37,12 @@
 - [x] Control Center
 - [x] Music Player
 - [x] Desktop Widgets
-- [ ] New Launcher (maybe like Spotlight)
+- [x] New Launcher (maybe like Spotlight)
 - [ ] Settings
 - [ ] New Dock with zoom effect on hover
 - [ ] New Application Switcher
 - [ ] Panel Widget
-- [ ] Calendar Widget
+- [x] Calendar Widget
 
 ## Bug Fixes (the bug found till now)
 
