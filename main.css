@@ -97,7 +97,7 @@ menu > menuitem:hover > label {
 
 #city {
     margin-top: 10px;
-    color: #68A7B5;
+    color: #8b92ff;
     font-weight: 600;
     font-size: 20px;
 
@@ -140,7 +140,7 @@ menu > menuitem:hover > label {
 #calendar-month {
     font-size: 16px;
     font-weight: 600;
-    color: #68A7B5;
+    color: #8b92ff;
     margin-bottom: 8px;
 }
 
@@ -184,7 +184,7 @@ menu > menuitem:hover > label {
     font-size: 12px;
     font-weight: 700;
     color: #191919;
-    background-color: #6AABBB;
+    background-color: #8b92ff;
     border-radius: 50%;
     min-width: 18px;
     min-height: 16px;
@@ -239,7 +239,7 @@ menu > menuitem:hover > label {
 }
 #day label{
 
-    color: alpha(#72BBCC, 0.9);
+    color: alpha(#8b92ff, 0.9);
 }
 #box-widget{
     /* background-color: alpha(#232323, 1); */
@@ -272,7 +272,7 @@ menu > menuitem:hover > label {
 }
 #progress{
     font-family: "SF Pro Rounded";
-    border: solid 8px #0984FF;
+    border: solid 8px #8b92ff;
 
         /* border-radius: 100px; */
     color: alpha(#AAAAAA, 0.7);
