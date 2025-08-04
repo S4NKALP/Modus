@@ -160,7 +160,7 @@ class Sysinfo(Box):
                             tooltip_text="",
                             overlays=[
                                 self.bake_progress_icon(
-                                    label="",
+                                    label="",
                                     name="progress-icon-cpu",
                                 )
                             ],
@@ -541,7 +541,7 @@ class RamInfo(Box):
         free_gb = mem.available / (1024**3)
 
         self.ram_info_label.set_markup(
-            f"<span foreground='#8E8E8E'>Used</span> {round(used_gb, 1):>5}GB\n<span foreground='#8E8E8E'>Free</span> {round(free_gb, 1):>5}GB"
+            f"<span foreground='#8E8E8E'>Used</span>      {round(used_gb, 1)}GB\n<span foreground='#8E8E8E'>Free</span>      {round(free_gb, 1)}GB"
         )
         GLib.idle_add(self.ram_progress.set_value, mem.percent)
         # executor.submit(update)
@@ -645,7 +645,7 @@ class CpuInfo(Box):
         self.cpu_label.set_label(f" {round(cpu):<2} %\nCPU")
 
         self.cpu_info_label.set_markup(
-            f"<span foreground='#8E8E8E'>Temp</span>   {self.get_cpu_temp()}°C"
+            f"<span foreground='#8E8E8E'>Temp</span>      {self.get_cpu_temp()}°C"
         )
         GLib.idle_add(self.cpu_progress.set_value, cpu)
         # executor.submit(update)
