@@ -486,7 +486,7 @@ class Calendar(Box):
             name="calendar-month",
             label=f"{calendar.month_name[self.current_month]}",
             h_align="start",
-            justification="left"
+            justification="left",
         )
 
         # Day abbreviations
@@ -494,18 +494,22 @@ class Calendar(Box):
             name="calendar-days-header",
             orientation="h",
             h_expand=True,
-            spacing=4
+            # spacing=4
         )
-        
+
         day_names = ["S", "M", "T", "W", "T", "F", "S"]
         for i, day_name in enumerate(day_names):
             # Saturday (6) and Sunday (0) get weekend styling
             is_weekend = i == 0 or i == 6
             day_label = Label(
-                name="calendar-day-header-weekend" if is_weekend else "calendar-day-header",
+                name=(
+                    "calendar-day-header-weekend"
+                    if is_weekend
+                    else "calendar-day-header"
+                ),
                 label=day_name,
                 h_align="center",
-                h_expand=True
+                h_expand=True,
             )
             days_header.add(day_label)
 
@@ -513,11 +517,11 @@ class Calendar(Box):
         self.calendar_grid = Box(
             name="calendar-grid",
             orientation="v",
-            spacing=3
+            # spacing=3
         )
 
         self.update_calendar()
-        
+
         self.add(self.month_label)
         self.add(days_header)
         self.add(self.calendar_grid)
@@ -528,7 +532,11 @@ class Calendar(Box):
     def update_calendar_if_needed(self):
         """Check if date changed and update calendar if needed."""
         now = datetime.datetime.now()
-        if now.month != self.current_month or now.year != self.current_year or now.day != self.current_day:
+        if (
+            now.month != self.current_month
+            or now.year != self.current_year
+            or now.day != self.current_day
+        ):
             self.current_month = now.month
             self.current_year = now.year
             self.current_day = now.day
@@ -548,12 +556,8 @@ class Calendar(Box):
         cal = calendar.monthcalendar(self.current_year, self.current_month)
 
         for week in cal:
-            week_box = Box(
-                orientation="h",
-                spacing=4,
-                h_expand=True
-            )
-            
+            week_box = Box(orientation="h", spacing=4, h_expand=True)
+
             for day_index, day in enumerate(week):
                 if day == 0:
                     # Empty day
@@ -561,33 +565,32 @@ class Calendar(Box):
                         name="calendar-day-empty",
                         label="",
                         h_align="center",
-                        h_expand=True
+                        h_expand=True,
                     )
                 else:
                     # Regular day
-                    is_today = (day == self.current_day and 
-                              self.current_month == datetime.datetime.now().month and 
-                              self.current_year == datetime.datetime.now().year)
-                    
+                    is_today = (
+                        day == self.current_day
+                        and self.current_month == datetime.datetime.now().month
+                        and self.current_year == datetime.datetime.now().year
+                    )
+
                     # Saturday (6) and Sunday (0) get weekend styling
                     is_weekend = day_index == 0 or day_index == 6
-                    
+
                     if is_today:
                         name = "calendar-day-today"
                     elif is_weekend:
                         name = "calendar-day-weekend"
                     else:
                         name = "calendar-day"
-                    
+
                     day_label = Label(
-                        name=name,
-                        label=str(day),
-                        h_align="center",
-                        h_expand=True
+                        name=name, label=str(day), h_align="center", h_expand=True
                     )
-                
+
                 week_box.add(day_label)
-            
+
             self.calendar_grid.add(week_box)
 
 
