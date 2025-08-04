@@ -381,9 +381,50 @@ class RamInfo(Box):
             label="15%\nRam", justification="center", name="progress-label"
         )
 
-        self.ram_info_label = Label(
-            label="ram info", name="info", justification="center", h_align="center"
+        # Create info with color indicators
+        self.used_indicator = Label(label="■", name="used-color-indicator")
+        self.free_indicator = Label(label="■", name="free-color-indicator")
+        
+        # Create the info labels
+        self.used_info = Label(label="Used", name="info-text")
+        self.used_value = Label(label="0.0GB", name="info-value")
+        self.free_info = Label(label="Free", name="info-text")
+        self.free_value = Label(label="0.0GB", name="info-value")
+        
+        # Create horizontal boxes for each info line
+        self.used_line = Box(
+            orientation="h",
+            spacing=4,
+            h_align="start",
+            children=[
+                self.used_indicator,
+                self.used_info,
+                self.used_value,
+            ]
         )
+        
+        self.free_line = Box(
+            orientation="h", 
+            spacing=4,
+            h_align="start",
+            children=[
+                self.free_indicator,
+                self.free_info,
+                self.free_value,
+            ]
+        )
+
+        self.ram_info_container = Box(
+            name="info-container",
+            orientation="v",
+            spacing=2,
+            h_align="center",
+            children=[
+                self.used_line,
+                self.free_line,
+            ]
+        )
+
         self.progress_container = Box(
             name="progress-bar-container",
             h_expand=True,
@@ -407,7 +448,7 @@ class RamInfo(Box):
                     justification="centre",
                     orientation="v",
                     children=[
-                        self.ram_info_label,
+                        self.ram_info_container,
                     ],
                 ),
             ],
@@ -422,9 +463,9 @@ class RamInfo(Box):
         used_gb = mem.used / (1024**3)
         free_gb = mem.available / (1024**3)
 
-        self.ram_info_label.set_markup(
-            f"<span foreground='#8E8E8E'>Used</span>      {round(used_gb, 1)}GB\n<span foreground='#8E8E8E'>Free</span>      {round(free_gb, 1)}GB"
-        )
+        self.used_value.set_label(f"{round(used_gb, 1)}GB")
+        self.free_value.set_label(f"{round(free_gb, 1)}GB")
+        
         GLib.idle_add(self.ram_progress.set_value, mem.percent)
         # executor.submit(update)
         return True
@@ -465,8 +506,29 @@ class CpuInfo(Box):
             label="15%\nCPU", justification="center", name="progress-label"
         )
 
-        self.cpu_info_label = Label(
-            label="CPU Info", name="info", justification="center", h_align="center"
+        # Create temp info with color indicator  
+        self.temp_indicator = Label(label="■", name="temp-color-indicator")
+        self.temp_info = Label(label="Temp", name="info-text")
+        self.temp_value = Label(label="0°C", name="info-value")
+        
+        self.temp_line = Box(
+            orientation="h",
+            spacing=4,
+            h_align="start", 
+            children=[
+                self.temp_indicator,
+                self.temp_info,
+                self.temp_value,
+            ]
+        )
+
+        self.cpu_info_container = Box(
+            name="info-container",
+            orientation="v",
+            h_align="center",
+            children=[
+                self.temp_line,
+            ]
         )
 
         self.progress_container = Box(
@@ -492,7 +554,7 @@ class CpuInfo(Box):
                     justification="centre",
                     orientation="v",
                     children=[
-                        self.cpu_info_label,
+                        self.cpu_info_container,
                     ],
                 ),
             ],
@@ -526,9 +588,12 @@ class CpuInfo(Box):
         cpu = psutil.cpu_percent()
         self.cpu_label.set_label(f" {round(cpu):<2} %\nCPU")
 
-        self.cpu_info_label.set_markup(
-            f"<span foreground='#8E8E8E'>Temp</span>      {self.get_cpu_temp()}°C"
-        )
+        temp = self.get_cpu_temp()
+        if temp is not None:
+            self.temp_value.set_label(f"{temp}°C")
+        else:
+            self.temp_value.set_label("N/A")
+            
         GLib.idle_add(self.cpu_progress.set_value, cpu)
         # executor.submit(update)
         return True

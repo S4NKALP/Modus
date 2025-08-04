@@ -284,6 +284,47 @@ menu > menuitem:hover > label {
         /* border-radius: 100px; */
     color: alpha(#AAAAAA, 0.7);
 }
+
+/* Color indicators for memory usage */
+#used-color-indicator {
+    color: #8b92ff;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+#free-color-indicator {
+    color: #333333;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+#temp-color-indicator {
+    color: #8b92ff;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+/* Info text styling */
+#info-text {
+    font-family: "SF Pro Rounded";
+    font-size: 12px;
+    font-weight: 500;
+    color: #8E8E8E;
+    min-width: 32px;
+}
+
+#info-value {
+    font-family: "SF Pro Rounded";
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+#info-container {
+    margin-left: -8px;
+    margin-top: 5px;
+}
+
 #info {
 
 
