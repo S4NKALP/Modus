@@ -1,7 +1,6 @@
 certifi==2025.8.3
 charset-normalizer==3.4.2
 click==8.2.1
-fabric @ git+https://github.com/Fabric-Development/fabric.git@02be1e1ea7e99e3cd0d70bed510ceb95813d4a67
 idna==3.10
 loguru==0.7.3
 pillow==11.3.0
