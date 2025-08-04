@@ -1,7 +1,7 @@
 #panel {
-  background-color: alpha(#fff, 0.05);
+  background-color: alpha(#fff, 0.07);
 
-  border-bottom: 1px solid alpha(#010101, 0.025);
+  /* border-bottom: 1px solid alpha(#010101, 0.025); */
   margin-top: -4px;
   margin-bottom: -4px;
   transition: all 120ms ease-in-out;
@@ -11,7 +11,7 @@
   font-size: 18px;
 }
 #global-title-button {
-  font-weight: 700;
+  font-weight: bold;
 }
 
 #panel-button {
