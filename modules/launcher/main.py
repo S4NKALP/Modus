@@ -13,7 +13,7 @@ from widgets.smartscrolled import SmartScrolledBox
 from widgets.wayland import WaylandWindow as Window
 
 # Constants
-SEARCH_DEBOUNCE_MS = 150
+SEARCH_DEBOUNCE_MS = 50
 TRIGGER_SEARCH_DEBOUNCE_MS = 50
 CURSOR_POSITION_DELAY_MS = 10
 SCROLL_PADDING = 10
