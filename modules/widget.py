@@ -415,6 +415,7 @@ class WeatherContainer(Box):
             name="box-widget-2",
             v_expand=True,
             v_align="center",
+            size=(170, 170),
             visible=True,
             h_align="center",
             children=[
@@ -455,6 +456,7 @@ class DateContainer(Box):
             orientation="v",
             name="box-widget",
             v_expand=True,
+            size=(170, 170),
             v_align="center",
             h_align="center",
             children=[Date()],
@@ -485,6 +487,7 @@ class RamInfo(Box):
             title="sysinfo",
             name="info-box-widget",
             visible=True,
+            size=(170, 170),
             h_expand=True,
             v_expand=True,
             all_visible=True,
@@ -568,6 +571,7 @@ class CpuInfo(Box):
             title="sysinfo",
             name="info-box-widget",
             visible=True,
+            size=(170, 170),
             h_expand=True,
             v_expand=True,
             all_visible=True,
@@ -669,7 +673,7 @@ class Deskwidgets(Window):
         )
 
         bottom_left = Window(
-            anchor="top right",
+            anchor="bottom right",
             orientation="h",
             layer="bottom",
             child=Box(
