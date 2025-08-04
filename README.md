@@ -53,7 +53,7 @@
 ## Team
 
 - [SANKALP](https://github.com/S4NKALP/)
-- [Tr1xem](https://github.com/tr1xem)
+- [tr1x_em](https://github.com/tr1xem)
 
 ## Special Thanks
 
