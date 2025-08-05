@@ -54,7 +54,9 @@ class BluetoothDeviceSlot(CenterBox):
 
 
 class BluetoothConnections(Box):
-    def __init__(self, parent, show_hidden_devices: bool = False, show_back_button=True, **kwargs):
+    def __init__(
+        self, parent, show_hidden_devices: bool = False, show_back_button=True, **kwargs
+    ):
         super().__init__(
             spacing=4,
             orientation="vertical",
@@ -139,13 +141,6 @@ class BluetoothConnections(Box):
         self.client.notify("scanning")
         self.client.notify("enabled")
 
-        # Connect cleanup on destroy
-        self.connect("destroy", self.on_destroy)
-
-    def on_destroy(self, widget):
-        """Cleanup animations when widget is destroyed"""
-        self.stop_bounce_animation()
-
     def setup_pull_to_refresh(self):
         """Setup pull-to-refresh gesture for the scrolled window"""
         # Get the scrolled window's vertical adjustment
@@ -155,12 +150,6 @@ class BluetoothConnections(Box):
         self.pull_start_y = 0
         self.is_pulling = False
         self.pull_threshold = 50  # pixels to trigger refresh
-
-        # Animation state
-        self.bounce_timeout_id = None
-        self.bounce_frame = 0
-        self.bounce_duration = 60  # Total frames for animation
-        self.bounce_amplitude = 15  # Maximum bounce height in pixels
 
         # Connect to scroll events
         self.scrolled_window.connect("scroll-event", self.on_scroll_event)
@@ -183,8 +172,6 @@ class BluetoothConnections(Box):
             if event.direction == Gdk.ScrollDirection.UP:
                 # Scrolling up at the top - toggle scan (start or stop)
                 self.client.toggle_scan()
-                # Trigger smooth bounce animation for scroll
-                self.start_bounce_animation()
                 return True  # Consume the event
         return False  # Let normal scrolling continue
 
@@ -202,11 +189,6 @@ class BluetoothConnections(Box):
             if pull_distance > self.pull_threshold:
                 # Toggle scan (start or stop)
                 self.client.toggle_scan()
-                # Trigger elastic animation for pull gesture (most satisfying)
-                self.start_elastic_animation()
-            else:
-                # Stop any ongoing animation
-                self.stop_bounce_animation()
             # Hide refresh indicator
             self.refresh_indicator.set_visible(False)
             self.refresh_indicator.remove_style_class("ready-to-refresh")
@@ -235,99 +217,6 @@ class BluetoothConnections(Box):
             else:
                 self.refresh_indicator.set_visible(False)
         return False
-
-    def ease_out_bounce(self, t):
-        """Smooth bounce easing function (0 to 1)"""
-        if t < 1 / 2.75:
-            return 7.5625 * t * t
-        elif t < 2 / 2.75:
-            t -= 1.5 / 2.75
-            return 7.5625 * t * t + 0.75
-        elif t < 2.5 / 2.75:
-            t -= 2.25 / 2.75
-            return 7.5625 * t * t + 0.9375
-        else:
-            t -= 2.625 / 2.75
-            return 7.5625 * t * t + 0.984375
-
-    def ease_out_elastic(self, t):
-        """Elastic easing function for smoother bounce"""
-        import math
-
-        if t == 0 or t == 1:
-            return t
-
-        p = 0.3
-        s = p / 4
-        return math.pow(2, -10 * t) * math.sin((t - s) * (2 * math.pi) / p) + 1
-
-    def start_bounce_animation(self):
-        """Start smooth bounce animation for the refresh indicator"""
-        if self.bounce_timeout_id:
-            GLib.source_remove(self.bounce_timeout_id)
-
-        self.bounce_frame = 0
-        # Higher frame rate for smoother animation (16ms = ~60fps)
-        self.bounce_timeout_id = GLib.timeout_add(16, self.animate_bounce)
-
-    def animate_bounce(self):
-        """Animate smooth bounce effect with easing"""
-        if self.bounce_frame >= self.bounce_duration:
-            # Animation finished
-            self.refresh_indicator.set_margin_top(0)
-            self.bounce_timeout_id = None
-            return False
-
-        # Calculate progress (0 to 1)
-        progress = self.bounce_frame / self.bounce_duration
-
-        # Apply easing function for smooth bounce
-        eased_progress = self.ease_out_bounce(progress)
-
-        # Calculate bounce offset (starts high, bounces down to 0)
-        bounce_offset = int(self.bounce_amplitude * (1 - eased_progress))
-        self.refresh_indicator.set_margin_top(max(0, bounce_offset))
-
-        self.bounce_frame += 1
-        return True
-
-    def start_elastic_animation(self):
-        """Start elastic animation for more dramatic effect"""
-        if self.bounce_timeout_id:
-            GLib.source_remove(self.bounce_timeout_id)
-
-        self.bounce_frame = 0
-        self.bounce_duration = 80  # Longer for elastic effect
-        self.bounce_amplitude = 20  # Higher amplitude
-        self.bounce_timeout_id = GLib.timeout_add(16, self.animate_elastic)
-
-    def animate_elastic(self):
-        """Animate elastic bounce effect"""
-        if self.bounce_frame >= self.bounce_duration:
-            # Animation finished
-            self.refresh_indicator.set_margin_top(0)
-            self.bounce_timeout_id = None
-            return False
-
-        # Calculate progress (0 to 1)
-        progress = self.bounce_frame / self.bounce_duration
-
-        # Apply elastic easing
-        eased_progress = self.ease_out_elastic(progress)
-
-        # Calculate bounce offset
-        bounce_offset = int(self.bounce_amplitude * (1 - eased_progress))
-        self.refresh_indicator.set_margin_top(max(0, bounce_offset))
-
-        self.bounce_frame += 1
-        return True
-
-    def stop_bounce_animation(self):
-        """Stop any ongoing animations"""
-        if self.bounce_timeout_id:
-            GLib.source_remove(self.bounce_timeout_id)
-            self.bounce_timeout_id = None
-        self.refresh_indicator.set_margin_top(0)
 
     def update_scan_label(self):
         """Update scanning state appearance"""
