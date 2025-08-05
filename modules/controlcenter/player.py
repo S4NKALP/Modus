@@ -184,6 +184,33 @@ class PlayerBoxStack(Box):
 
         return no_media_box
 
+    def _find_playing_player_index(self):
+        """Find the index of the currently playing player."""
+        players: List[PlayerBox] = self.player_stack.get_children()
+        for i, player_box in enumerate(players):
+            if hasattr(player_box, 'player') and player_box.player.playback_status == "playing":
+                return i
+        return None
+
+    def _switch_to_playing_player(self):
+        """Switch to the currently playing player if one exists."""
+        playing_index = self._find_playing_player_index()
+        if playing_index is not None and playing_index != self.current_stack_pos:
+            logger.info(f"[PlayerBoxStack] Auto-switching to playing player at index {playing_index}")
+            self.on_player_clicked_by_index(playing_index)
+
+    def on_player_playback_changed(self, player_box, status):
+        """Called when a player's playback status changes."""
+        if status == "playing":
+            # Find this player's index and switch to it
+            players: List[PlayerBox] = self.player_stack.get_children()
+            for i, pb in enumerate(players):
+                if pb == player_box:
+                    if i != self.current_stack_pos:
+                        logger.info(f"[PlayerBoxStack] Switching to playing player: {player_box.player.player_name}")
+                        self.on_player_clicked_by_index(i)
+                    break
+
     def on_player_clicked(self, type):
         # unset active from prev active button
         self.player_buttons[self.current_stack_pos].remove_style_class("active")
@@ -253,6 +280,9 @@ class PlayerBoxStack(Box):
         # Update all player boxes with current button state
         self._update_all_player_buttons()
 
+        # Check if this new player is playing and switch to it
+        self._switch_to_playing_player()
+
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
@@ -282,6 +312,9 @@ class PlayerBoxStack(Box):
 
         # Update all player boxes with current button state
         self._update_all_player_buttons()
+
+        # After a player is removed, check if we should switch to a playing player
+        self._switch_to_playing_player()
 
     def make_new_player_button(self, player_box):
         new_button = Button(name="player-stack-button")
@@ -635,10 +668,13 @@ class PlayerBox(Box):
         status = player.get_property("playback-status")
 
         if status == "paused":
-            self.play_pause_icon.set_from_icon_name("media-playback-start")
+            self.play_pause_icon.set_from_icon_name("media-playbook-start")
 
         if status == "playing":
             self.play_pause_icon.set_from_icon_name("media-playback-pause")
+            # Notify the player stack that this player started playing
+            if self.player_stack and hasattr(self.player_stack, 'on_player_playback_changed'):
+                self.player_stack.on_player_playback_changed(self, status)
 
     def _update_image(self, image_path):
         if image_path and os.path.isfile(image_path):
