@@ -57,8 +57,8 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 
 ## Bug Fixes (the bug found till now)
 
-- [ ] WiFi
-- [ ] wifi off button looks bigger
+- [x] WiFi
+- [x] wifi off button looks bigger
 - [ ] Metadata Changes delay in Media Player
 
 ## Team
