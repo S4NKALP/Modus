@@ -472,15 +472,13 @@ class Dock(Window):
                 if cmd_to_run:
                     exec_shell_command_async(f"nohup {cmd_to_run} &")
         else:
-            focused = self.get_focused()
-            idx = next(
-                (i for i, inst in enumerate(instances) if inst["address"] == focused),
-                -1,
-            )
-            next_inst = instances[(idx + 1) % len(instances)]
-            exec_shell_command(
-                f"hyprctl dispatch focuswindow address:{next_inst['address']}"
-            )
+            # Since we now have individual buttons for each instance,
+            # directly focus the specific instance instead of cycling
+            if instances and len(instances) == 1:
+                instance = instances[0]
+                exec_shell_command(
+                    f"hyprctl dispatch focuswindow address:{instance['address']}"
+                )
 
     def _on_child_enter(self, widget, event):
         self.is_mouse_over_dock_area = True
@@ -570,6 +568,7 @@ class Dock(Window):
 
         pinned_buttons = []
         used_window_classes = set()
+        used_instances = set()
 
         for app_data_item in self.pinned:
             app = self.find_app(app_data_item)
@@ -628,23 +627,20 @@ class Dock(Window):
                 used_window_classes.add(matched_class)
                 used_window_classes.add(self._normalize_window_class(matched_class))
 
-            workspace = (
-                str(instances[0].get("workspace", {}).get("id", ""))
-                if instances
-                else ""
-            )
-            pinned_buttons.append(
-                self.create_button(app_data_item, instances, workspace)
-            )
+            # Create separate buttons for each instance of pinned apps
+            if instances:
+                for instance in instances:
+                    used_instances.add(instance.get("address"))
+                    workspace = str(instance.get("workspace", {}).get("id", ""))
+                    pinned_buttons.append(
+                        self.create_button(app_data_item, [instance], workspace)
+                    )
+            else:
+                # No instances running, create button without instances
+                pinned_buttons.append(self.create_button(app_data_item, [], ""))
 
         open_buttons = []
         for class_name, instances in running_windows.items():
-            # print(class_name, instances)
-            workspace = (
-                str(instances[0].get("workspace", {}).get("id", ""))
-                if instances
-                else ""
-            )
             if class_name not in used_window_classes:
                 app = None
                 app = self.app_identifiers.get(class_name)
@@ -670,9 +666,14 @@ class Dock(Window):
                     identifier = app_data_obj
                 else:
                     identifier = class_name
-                open_buttons.append(
-                    self.create_button(identifier, instances, workspace)
-                )
+
+                # Create separate buttons for each instance of unpinned apps
+                for instance in instances:
+                    if instance.get("address") not in used_instances:
+                        workspace = str(instance.get("workspace", {}).get("id", ""))
+                        open_buttons.append(
+                            self.create_button(identifier, [instance], workspace)
+                        )
 
         children = pinned_buttons
         separator_orientation = (
