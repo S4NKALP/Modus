@@ -54,7 +54,7 @@ class BluetoothDeviceSlot(CenterBox):
 
 
 class BluetoothConnections(Box):
-    def __init__(self, parent, show_hidden_devices: bool = False, **kwargs):
+    def __init__(self, parent, show_hidden_devices: bool = False, show_back_button=True, **kwargs):
         super().__init__(
             spacing=4,
             orientation="vertical",
@@ -67,15 +67,20 @@ class BluetoothConnections(Box):
 
         self.client = BluetoothClient(on_device_added=self.on_device_added)
 
-        self.title = Box(
-            orientation="h",
-            children=[
+        # Create title with optional back button
+        title_children = []
+        if show_back_button:
+            title_children.append(
                 Button(
                     image=Image(icon_name="back", size=10),
                     on_clicked=lambda *_: self.parent.close_bluetooth(),
-                ),
-                Label("Bluetooth"),
-            ],
+                )
+            )
+        title_children.append(Label("Bluetooth"))
+
+        self.title = Box(
+            orientation="h",
+            children=title_children,
         )
 
         self.toggle_button = Gtk.Switch(visible=True, name="toggle-button")
