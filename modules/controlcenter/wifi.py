@@ -82,16 +82,29 @@ class WifiNetworkSlot(CenterBox):
                 )
                 self.dimage.add_style_class("connecting")
 
-                success = self.wifi_service.connect_to_wifi(self.access_point)
-                if success:
-                    self.is_connected = True
-                    # Remove connecting state after a short delay
-                    from gi.repository import GLib
+                def on_open_connection_result(success, message):
+                    """Handle the connection result for open networks"""
+                    if success:
+                        self.is_connected = True
+                        # Remove connecting state after a short delay
+                        from gi.repository import GLib
 
-                    GLib.timeout_add(500, lambda: self._reset_connect_state())
-                else:
-                    # Connection failed
+                        GLib.timeout_add(500, lambda: self._reset_connect_state())
+                    else:
+                        # Connection failed
+                        self._reset_connect_state()
+
+                    # Update display after connection attempt
+                    self.on_changed()
+
+                try:
+                    self.wifi_service.connect_to_wifi(
+                        self.access_point, callback=on_open_connection_result
+                    )
+                except Exception:
+                    # Handle any connection errors gracefully
                     self._reset_connect_state()
+                    self.on_changed()
 
         # Update display after connection attempt
         self.on_changed()
@@ -145,30 +158,43 @@ class WifiNetworkSlot(CenterBox):
             self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
             self.dimage.add_style_class("connecting")
 
-            # Try to connect with password
-            try:
-                success = self.wifi_service.connect_to_wifi(self.access_point, password)
+            # Try to connect with password using callback
+            def on_connection_result(success, message):
+                """Handle the connection result"""
                 if success:
                     self.is_connected = True
                     # Remove connecting state after a short delay
                     from gi.repository import GLib
 
                     GLib.timeout_add(500, lambda: self._reset_connect_state())
+
+                    # Clear any timeout in the password dialog
+                    if (
+                        self.password_dialog
+                        and self.password_dialog.connection_timeout_id
+                    ):
+                        GLib.source_remove(self.password_dialog.connection_timeout_id)
+                        self.password_dialog.connection_timeout_id = None
+                        self.password_dialog.is_connecting = False
                 else:
-                    # Connection failed - show error in dialog immediately
+                    # Connection failed - show error in dialog
                     self._reset_connect_state()
                     if self.password_dialog:
-                        # Show error immediately without delay
-                        self._show_connection_error()
-            except Exception:
+                        self._show_connection_error(message)
+
+                # Update display after connection attempt
+                self.on_changed()
+
+            try:
+                self.wifi_service.connect_to_wifi(
+                    self.access_point, password, callback=on_connection_result
+                )
+            except Exception as e:
                 # Handle any connection errors gracefully
                 self._reset_connect_state()
                 if self.password_dialog:
-                    # Show error immediately
                     self._show_connection_error("Connection failed. Please try again.")
-
-            # Update display after connection attempt
-            self.on_changed()
+                self.on_changed()
 
     def _show_connection_error(self, message="Incorrect password. Please try again."):
         """Show connection error in a separate thread to prevent UI blocking"""
