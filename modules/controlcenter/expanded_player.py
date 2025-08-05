@@ -1,3 +1,9 @@
+from widgets.wayland import WaylandWindow as Window
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+from fabric.widgets.box import Box
+from services.mpris import MprisPlayer, MprisPlayerManager
+
 import os
 import re
 import tempfile
@@ -8,17 +14,13 @@ from typing import List
 from fabric.utils import (
     bulk_connect,
 )
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
-from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
 from gi.repository import GLib, GObject
 from loguru import logger
 
-from services.mpris import MprisPlayer, MprisPlayerManager
 import config.data as data
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
@@ -716,3 +718,42 @@ class PlayerBox(Box):
 
         GLib.idle_add(self._update_image, local_arturl)
         return None
+
+
+class Thing(Box):
+    def __init__(self, **kwargs):
+        super().__init__(
+            name="thing",
+            size=(600, 200),
+            orientation="vertical",
+            spacing=0,
+            children=[
+                Label(
+                    name="thing-label",
+                    label="This is a thing",
+                    style="font-size: 16px; padding: 10px;",
+                ),
+            ],
+            **kwargs,
+        )
+
+
+class ExpandedPlayer(Window):
+    def __init__(self, **kwargs):
+        super().__init__(
+            name="expanded-player",
+            title="modus",
+            anchor="top right",
+            layer="top",
+            exclusivity="auto",
+            child=PlayerBoxStack(MprisPlayerManager()),
+            visible=False,
+        )
+        self.add_keybinding("Escape", self.set_child_visible(False))
+
+    def _init_mousecapture(self, mousecapture):
+        self._mousecapture_parent = mousecapture
+
+    def hide_controlcenter(self, *_):
+        # self._mousecapture_parent.toggle_mousecapture()
+        self.set_visible(False)
