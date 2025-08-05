@@ -4,8 +4,12 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.svg import Svg
 from services.battery import Battery
-from services.network import NetworkService
+from services.network import NetworkClient
 from utils.roam import modus_service
+from modules.controlcenter.wifi import WifiConnections
+from modules.controlcenter.bluetooth import BluetoothConnections
+from widgets.mousecapture import DropDownMouseCapture
+from widgets.wayland import WaylandWindow as Window
 
 
 class BluetoothIndicator(Box):
@@ -21,9 +25,31 @@ class BluetoothIndicator(Box):
             ),
         )
 
-        self.bt_button = Button(name="bt-button", child=self.bt_icon)
+        self.bt_button = Button(
+            name="bt-button", child=self.bt_icon, on_clicked=self.on_bluetooth_clicked
+        )
 
         self.add(self.bt_button)
+
+        # Create Bluetooth control center widget
+        self.bluetooth_window = Window(
+            layer="overlay",
+            title="modus",
+            anchor="top right",
+            margin="2px 10px 0px 0px",
+            exclusivity="auto",
+            keyboard_mode="on-demand",
+            name="bluetooth-control-window",
+            visible=False,
+        )
+
+        self.bluetooth_widget = BluetoothConnections(self, show_back_button=False)
+        self.bluetooth_window.children = [self.bluetooth_widget]
+
+        # Create mouse capture for Bluetooth widget
+        self.bluetooth_mousecapture = DropDownMouseCapture(
+            layer="top", child_window=self.bluetooth_window
+        )
 
         modus_service.connect("bluetooth-changed", self.on_bluetooth_changed)
         self.bluetooth.connect("changed", self.on_bluetooth_direct_changed)
@@ -107,12 +133,24 @@ class BluetoothIndicator(Box):
 
         modus_service.bluetooth = bluetooth_state
 
+    def on_bluetooth_clicked(self, *args):
+        """Handle Bluetooth indicator click"""
+        self.bluetooth_mousecapture.toggle_mousecapture()
+
+    def close_bluetooth(self, *args):
+        """Close Bluetooth control center"""
+        self.bluetooth_mousecapture.hide_child_window()
+
+    def hide_controlcenter(self, *args):
+        """Hide Bluetooth control center"""
+        self.bluetooth_mousecapture.hide_child_window()
+
 
 class NetworkIndicator(Box):
     def __init__(self, **kwargs):
         super().__init__(name="network-indicator", orientation="h", **kwargs)
 
-        self.network_service = NetworkService()
+        self.network_service = NetworkClient()
 
         self.network_icon = Svg(
             name="network-icon",
@@ -122,11 +160,40 @@ class NetworkIndicator(Box):
             ),
         )
 
-        self.network_button = Button(name="network-button", child=self.network_icon)
+        self.network_button = Button(
+            name="network-button",
+            child=self.network_icon,
+            on_clicked=self.on_wifi_clicked,
+        )
 
         self.add(self.network_button)
+
+        # Create WiFi control center widget
+        self.wifi_window = Window(
+            layer="overlay",
+            title="modus",
+            anchor="top right",
+            margin="2px 10px 0px 0px",
+            exclusivity="auto",
+            keyboard_mode="on-demand",
+            name="wifi-control-window",
+            visible=False,
+        )
+
+        self.wifi_widget = WifiConnections(self, show_back_button=False)
+        self.wifi_window.children = [self.wifi_widget]
+
+        # Create mouse capture for WiFi widget
+        self.wifi_mousecapture = DropDownMouseCapture(
+            layer="top", child_window=self.wifi_window
+        )
+
         modus_service.connect("wlan-changed", self.on_wlan_changed)
-        self.network_service.connect("device-ready", self.on_device_ready)
+        self.network_service.connect("wifi-device-added", self.on_wifi_device_added)
+        self.network_service.connect(
+            "ethernet-device-added", self.on_ethernet_device_added
+        )
+        self.network_service.connect("changed", self.on_network_changed)
 
         self.update_modus_service_wlan_state()
         self.update_state()
@@ -134,17 +201,21 @@ class NetworkIndicator(Box):
     def on_wlan_changed(self, service, new_wlan_state):
         self.update_state()
 
-    def on_device_ready(self, *args):
+    def on_wifi_device_added(self, *args):
+        """Called when WiFi device is added"""
         if self.network_service.wifi_device:
             self.network_service.wifi_device.connect(
                 "changed", self.on_network_direct_changed
             )
+        self.update_modus_service_wlan_state()
+        self.update_state()
 
+    def on_ethernet_device_added(self, *args):
+        """Called when Ethernet device is added"""
         if self.network_service.ethernet_device:
             self.network_service.ethernet_device.connect(
                 "changed", self.on_network_direct_changed
             )
-
         self.update_modus_service_wlan_state()
         self.update_state()
 
@@ -157,30 +228,28 @@ class NetworkIndicator(Box):
         self.update_state()
 
     def update_modus_service_wlan_state(self):
-        primary_device = self.network_service.primary_device
         wlan_state = "disconnected"
 
-        if primary_device == "wifi" and self.network_service.wifi_device:
+        # Check WiFi first (prioritize WiFi over Ethernet)
+        if self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
-            if not wifi.enabled:
+            if not wifi.wireless_enabled:
                 wlan_state = "disabled"
-            elif wifi.internet == "activated":
-                wlan_state = f"connected:{wifi.ssid}"
-                if wifi.strength >= 0:
-                    wlan_state += f":{wifi.strength}%"
-            elif wifi.internet == "activating":
-                wlan_state = f"connecting:{wifi.ssid}"
-            elif wifi.internet in ["deactivating", "deactivated", "disconnected"]:
-                wlan_state = "No Connection"
+            elif wifi.active_access_point:
+                ap = wifi.active_access_point
+                wlan_state = f"connected:{ap.ssid}"
+                if ap.strength >= 0:
+                    wlan_state += f":{ap.strength}%"
             else:
                 wlan_state = "enabled"
 
-        elif primary_device == "wired" and self.network_service.ethernet_device:
+        # Check Ethernet if WiFi is not connected
+        elif self.network_service.ethernet_device:
             ethernet = self.network_service.ethernet_device
             if ethernet.internet == "activated":
                 wlan_state = "ethernet:connected"
-                if hasattr(ethernet, "speed") and ethernet.speed > 0:
-                    wlan_state += f":{ethernet.speed}Mbps"
+                if hasattr(ethernet, "speed") and ethernet.speed:
+                    wlan_state += f":{ethernet.speed}"
             elif ethernet.internet == "activating":
                 wlan_state = "ethernet:connecting"
             else:
@@ -189,37 +258,33 @@ class NetworkIndicator(Box):
         modus_service.wlan = wlan_state
 
     def update_state(self):
-        primary_device = self.network_service.primary_device
         tooltip = "No network connection"
         icon_file = "wifi-off-clear.svg"
 
-        if primary_device == "wifi" and self.network_service.wifi_device:
+        # Check WiFi first (prioritize WiFi over Ethernet)
+        if self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
-            if not wifi.enabled:
+            if not wifi.wireless_enabled:
                 icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disabled"
-            elif wifi.internet == "activated":
+            elif wifi.active_access_point:
+                ap = wifi.active_access_point
                 icon_file = "wifi-clear.svg"
-                tooltip = f"Connected to {wifi.ssid}"
-                if wifi.strength >= 0:
-                    tooltip += f" ({wifi.strength}%)"
-            elif wifi.internet == "activating":
-                icon_file = "wifi-clear.svg"
-                tooltip = f"Connecting to {wifi.ssid}..."
-            elif wifi.internet in ["deactivating", "deactivated", "disconnected"]:
-                icon_file = "wifi-off-clear.svg"
-                tooltip = "WiFi disconnected"
+                tooltip = f"Connected to {ap.ssid}"
+                if ap.strength >= 0:
+                    tooltip += f" ({ap.strength}%)"
             else:
                 icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disconnected"
 
-        elif primary_device == "wired" and self.network_service.ethernet_device:
+        # Check Ethernet if WiFi is not connected
+        elif self.network_service.ethernet_device:
             ethernet = self.network_service.ethernet_device
             if ethernet.internet == "activated":
                 icon_file = "network-wired.svg"
                 tooltip = "Ethernet connected"
-                if hasattr(ethernet, "speed") and ethernet.speed > 0:
-                    tooltip += f" ({ethernet.speed} Mbps)"
+                if hasattr(ethernet, "speed") and ethernet.speed:
+                    tooltip += f" ({ethernet.speed})"
             elif ethernet.internet == "activating":
                 icon_file = "network-wired.svg"
                 tooltip = "Ethernet connecting..."
@@ -231,6 +296,18 @@ class NetworkIndicator(Box):
             get_relative_path(f"../../../config/assets/icons/applets/{icon_file}")
         )
         self.network_button.set_tooltip_text(tooltip)
+
+    def on_wifi_clicked(self, *args):
+        """Handle WiFi indicator click"""
+        self.wifi_mousecapture.toggle_mousecapture()
+
+    def close_wifi(self, *args):
+        """Close WiFi control center"""
+        self.wifi_mousecapture.hide_child_window()
+
+    def hide_controlcenter(self, *args):
+        """Hide WiFi control center"""
+        self.wifi_mousecapture.hide_child_window()
 
 
 class BatteryIndicator(Box):

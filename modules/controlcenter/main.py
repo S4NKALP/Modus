@@ -104,6 +104,7 @@ class ModusControlCenter(Window):
             # Disable brightness scale if no backlight device available
             self.brightness_scale.set_sensitive(False)
 
+        # Create music widget with ultra-lazy player container
         self.music_widget = Box(
             name="music-widget",
             children=[PlayerBoxStack(MprisPlayerManager())],

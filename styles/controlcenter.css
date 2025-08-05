@@ -5,6 +5,15 @@
   margin: 0;
 }
 
+#bluetooth-control-window,
+#wifi-control-window {
+  margin: 6px;
+  background-color: alpha(#fff, 0.09);
+  border: 1px solid alpha(#111, 0.3);
+  box-shadow: inset 0 0 200px 0 alpha(#111, 0.3);
+  border-radius: 16px;
+}
+
 #control-center-widgets {
   background-color: alpha(#fff, 0.09);
   box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
