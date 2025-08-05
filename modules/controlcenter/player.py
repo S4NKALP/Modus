@@ -188,7 +188,10 @@ class PlayerBoxStack(Box):
         """Find the index of the currently playing player."""
         players: List[PlayerBox] = self.player_stack.get_children()
         for i, player_box in enumerate(players):
-            if hasattr(player_box, 'player') and player_box.player.playback_status == "playing":
+            if (
+                hasattr(player_box, "player")
+                and player_box.player.playback_status == "playing"
+            ):
                 return i
         return None
 
@@ -196,7 +199,9 @@ class PlayerBoxStack(Box):
         """Switch to the currently playing player if one exists."""
         playing_index = self._find_playing_player_index()
         if playing_index is not None and playing_index != self.current_stack_pos:
-            logger.info(f"[PlayerBoxStack] Auto-switching to playing player at index {playing_index}")
+            logger.info(
+                f"[PlayerBoxStack] Auto-switching to playing player at index {playing_index}"
+            )
             self.on_player_clicked_by_index(playing_index)
 
     def on_player_playback_changed(self, player_box, status):
@@ -207,7 +212,9 @@ class PlayerBoxStack(Box):
             for i, pb in enumerate(players):
                 if pb == player_box:
                     if i != self.current_stack_pos:
-                        logger.info(f"[PlayerBoxStack] Switching to playing player: {player_box.player.player_name}")
+                        logger.info(
+                            f"[PlayerBoxStack] Switching to playing player: {player_box.player.player_name}"
+                        )
                         self.on_player_clicked_by_index(i)
                     break
 
@@ -673,7 +680,9 @@ class PlayerBox(Box):
         if status == "playing":
             self.play_pause_icon.set_from_icon_name("media-playback-pause")
             # Notify the player stack that this player started playing
-            if self.player_stack and hasattr(self.player_stack, 'on_player_playback_changed'):
+            if self.player_stack and hasattr(
+                self.player_stack, "on_player_playback_changed"
+            ):
                 self.player_stack.on_player_playback_changed(self, status)
 
     def _update_image(self, image_path):
