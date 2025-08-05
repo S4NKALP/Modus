@@ -200,6 +200,7 @@ class PlayerBoxStack(Box):
                 else len(self.player_stack.get_children()) - 1
             )
         # set new active button
+        print(f"[PlayerBoxStack] Switching to player at index {self.current_stack_pos}")
         self.player_buttons[self.current_stack_pos].add_style_class("active")
         self.player_stack.set_visible_child(
             self.player_stack.get_children()[self.current_stack_pos],
@@ -544,56 +545,57 @@ class PlayerBox(Box):
             pass  # Ignore errors during cleanup in destructor
 
     def update_buttons(self, player_buttons, show_buttons):
-        """Update the stack switcher buttons in this player box"""
-        logger.info(
-            f"[PlayerBox] update_buttons called: show_buttons={
-                show_buttons
-            }, num_buttons={len(player_buttons)}"
-        )
-
-        # Clear existing buttons
-        for child in self.stack_buttons_box.get_children():
-            child.destroy()
-
-        if show_buttons and len(player_buttons) > 1:
-            logger.info(f"[PlayerBox] Creating {len(player_buttons)} stack buttons")
-            # Create simple dot indicators for each player
-            for i, button in enumerate(player_buttons):
-                # Create a more visible dot button
-                dot_button = Button(
-                    name="player-stack-button",
-                    style="min-width: 16px; min-height: 16px; border-radius: 8px; margin: 4px; background-color: #666; border: 1px solid #999;",
-                )
-
-                # Set active state based on original button
-                if button.get_style_context().has_class("active"):
-                    dot_button.add_style_class("active")
-                    dot_button.set_style(
-                        "min-width: 16px; min-height: 16px; border-radius: 8px; margin: 4px; background-color: #fff; border: 1px solid #ccc;"
-                    )
-
-                # Connect click handler to switch to this player
-                def make_click_handler(index):
-                    return lambda *_: self.player_stack.on_player_clicked_by_index(
-                        index
-                    )
-
-                dot_button.connect("clicked", make_click_handler(i))
-                self.stack_buttons_box.children = [
-                    *self.stack_buttons_box.children,
-                    dot_button,
-                ]
-                logger.info(
-                    f"[PlayerBox] Added dot button {i}, total children: {
-                        len(self.stack_buttons_box.get_children())
-                    }"
-                )
-
-            self.stack_buttons_box.show_all()
-            logger.info("[PlayerBox] Stack buttons box shown")
-        else:
-            self.stack_buttons_box.hide()
-            logger.info("[PlayerBox] Stack buttons box hidden")
+        # """Update the stack switcher buttons in this player box"""
+        pass
+        # logger.info(
+        #     f"[PlayerBox] update_buttons called: show_buttons={
+        #         show_buttons
+        #     }, num_buttons={len(player_buttons)}"
+        # )
+        #
+        # # Clear existing buttons
+        # for child in self.stack_buttons_box.get_children():
+        #     child.destroy()
+        #
+        # if show_buttons and len(player_buttons) > 1:
+        #     logger.info(f"[PlayerBox] Creating {len(player_buttons)} stack buttons")
+        #     # Create simple dot indicators for each player
+        #     for i, button in enumerate(player_buttons):
+        #         # Create a more visible dot button
+        #         dot_button = Button(
+        #             name="player-stack-button",
+        #             style="min-width: 16px; min-height: 16px; border-radius: 8px; margin: 4px; background-color: #666; border: 1px solid #999;",
+        #         )
+        #
+        #         # Set active state based on original button
+        #         if button.get_style_context().has_class("active"):
+        #             dot_button.add_style_class("active")
+        #             dot_button.set_style(
+        #                 "min-width: 16px; min-height: 16px; border-radius: 8px; margin: 4px; background-color: #fff; border: 1px solid #ccc;"
+        #             )
+        #
+        #         # Connect click handler to switch to this player
+        #         def make_click_handler(index):
+        #             return lambda *_: self.player_stack.on_player_clicked_by_index(
+        #                 index
+        #             )
+        #
+        #         dot_button.connect("clicked", make_click_handler(i))
+        #         self.stack_buttons_box.children = [
+        #             *self.stack_buttons_box.children,
+        #             dot_button,
+        #         ]
+        #         logger.info(
+        #             f"[PlayerBox] Added dot button {i}, total children: {
+        #                 len(self.stack_buttons_box.get_children())
+        #             }"
+        #         )
+        #
+        #     self.stack_buttons_box.show_all()
+        #     logger.info("[PlayerBox] Stack buttons box shown")
+        # else:
+        #     self.stack_buttons_box.hide()
+        #     logger.info("[PlayerBox] Stack buttons box hidden")
 
     def _on_metadata(self, *_):
         self._set_image()
