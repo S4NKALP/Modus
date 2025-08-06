@@ -138,13 +138,7 @@ class NotificationWidget(Box):
                 Box(
                     name="notification-image",
                     children=CustomImage(
-                        pixbuf=(
-                            notification.image_pixbuf.scale_simple(
-                                35, 35, GdkPixbuf.InterpType.BILINEAR
-                            )
-                            if notification.image_pixbuf
-                            else self.get_pixbuf(notification.app_icon, 35, 35)
-                        )
+                        pixbuf=self._get_notification_pixbuf(notification)
                     ),
                 ),
                 Box(
@@ -231,6 +225,19 @@ class NotificationWidget(Box):
         except Exception as e:
             logger.error(f"Failed to load or scale icon: {e}")
             return None
+
+    def _get_notification_pixbuf(self, notification):
+        """Safely get notification pixbuf, fallback to app icon if needed"""
+        try:
+            if hasattr(notification, 'image_pixbuf') and notification.image_pixbuf:
+                return notification.image_pixbuf.scale_simple(
+                    35, 35, GdkPixbuf.InterpType.BILINEAR
+                )
+        except Exception as e:
+            logger.warning(f"Failed to get notification image: {e}")
+        
+        # Fallback to app icon
+        return self.get_pixbuf(notification.app_icon, 35, 35)
 
     def create_action_buttons(self, notification):
         return Box(

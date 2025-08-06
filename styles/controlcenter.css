@@ -320,3 +320,161 @@
   background-image: none;
   color: alpha(#fff, 0.2);
 }
+
+/* Per-app volume control styles */
+#per-app-volume-control {
+  margin: 5px;
+  background-color: alpha(#999, 0.1);
+  border: 0.5px solid alpha(#000, 0.4);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+#back-button {
+  padding: 8px 12px;
+  background-color: alpha(#fff, 0.1);
+  border-radius: 8px;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+#back-button:hover {
+  background-color: alpha(#fff, 0.18);
+}
+
+/* Apple-style app volume items */
+.apple-app-volume-item {
+  margin: 12px 0;
+  padding: 16px;
+  background-color: alpha(#fff, 0.08);
+  border-radius: 12px;
+  border: 1px solid alpha(#fff, 0.12);
+  transition: background-color 0.2s ease;
+}
+
+.apple-app-volume-item:hover {
+  background-color: alpha(#fff, 0.12);
+}
+
+.apple-app-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+/* Apple-style volume slider */
+#apple-volume-slider {
+  background-color: transparent;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  min-height: 32px;
+}
+
+#apple-volume-slider trough {
+  min-width: 28px;
+  min-height: 6px;
+  border-radius: 3px;
+  background-color: alpha(#fff, 0.25);
+  border: none;
+  box-shadow: inset 0 1px 2px alpha(#000, 0.2);
+}
+
+#apple-volume-slider highlight {
+  background: linear-gradient(90deg, #007aff 0%, #0051d0 100%);
+  border-radius: 3px;
+  border: none;
+  box-shadow: 0 1px 3px alpha(#007aff, 0.3);
+}
+
+#apple-volume-slider slider {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid alpha(#007aff, 0.8);
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+  margin: -7px;
+  box-shadow: 
+    0 2px 8px alpha(#000, 0.15),
+    0 1px 3px alpha(#000, 0.2);
+  transition: all 0.15s ease;
+}
+
+#apple-volume-slider slider:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
+  border-color: #007aff;
+  box-shadow: 
+    0 4px 12px alpha(#000, 0.2),
+    0 2px 6px alpha(#007aff, 0.3);
+  min-width: 22px;
+  min-height: 22px;
+  margin: -8px;
+}
+
+#apple-volume-slider slider:active {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  min-width: 21px;
+  min-height: 21px;
+  margin: -7.5px;
+  box-shadow: 
+    0 2px 6px alpha(#000, 0.25),
+    0 1px 3px alpha(#007aff, 0.4);
+}
+
+/* Legacy app volume styles (fallback) */
+.app-volume-item {
+  margin: 8px 0;
+  padding: 8px;
+  background-color: alpha(#fff, 0.05);
+  border-radius: 6px;
+  border: 1px solid alpha(#fff, 0.1);
+}
+
+.app-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+#app-volume-slider {
+  background-color: transparent;
+  margin-top: 5px;
+}
+
+#app-volume-slider trough {
+  min-width: 20px;
+  border-radius: 99px;
+  background-color: alpha(#666, 0.5);
+  border: 1px solid alpha(#444, 0.3);
+}
+
+#app-volume-slider highlight {
+  background: alpha(#0078d4, 0.8);
+  border-radius: 99px;
+}
+
+#app-volume-slider slider {
+  background-image: none;
+  background-color: #fff;
+  padding: 2px;
+  min-width: 4px;
+  min-height: 18px;
+  border-radius: 20px;
+}
+
+#volume-widget-button {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+#volume-widget-button:hover {
+  background-color: alpha(#fff, 0.05);
+}

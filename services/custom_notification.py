@@ -1,7 +1,9 @@
+# Standard library imports
 import json
 import os
 from typing import List
 
+# Fabric imports  
 import gi
 from gi.repository import GdkPixbuf
 
@@ -84,8 +86,12 @@ class CachedNotification(Service):
     def image_pixbuf(self) -> GdkPixbuf.Pixbuf:
         if self.image_pixmap:
             return self.image_pixmap.as_pixbuf()
-        if self.image_file:
-            return GdkPixbuf.Pixbuf.new_from_file(self.image_file)
+        if self.image_file and os.path.exists(self.image_file):
+            try:
+                return GdkPixbuf.Pixbuf.new_from_file(self.image_file)
+            except Exception:
+                # If file can't be loaded, return None
+                pass
         return None  # type: ignore
 
     @Property(dict, "readable")
