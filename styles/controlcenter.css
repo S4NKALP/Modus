@@ -312,3 +312,13 @@
   background-image: none;
   color: alpha(#fff, 0.2);
 }
+#thing {
+  background-color: alpha(#999, 0.9);
+  min-height: 200px;
+  min-width: 600px;
+}
+#thing-label {
+  color: #000;
+  font-size: 14px;
+  font-weight: 500;
+}
