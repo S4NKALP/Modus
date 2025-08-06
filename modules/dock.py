@@ -429,6 +429,8 @@ class Dock(Window):
         button.connect("drag-data-get", self.on_drag_data_get)
         button.connect("drag-data-received", self.on_drag_data_received)
         button.connect("enter-notify-event", self._on_child_enter)
+        button.connect("enter-notify-event", self._on_icon_hover_enter)
+        button.connect("leave-notify-event", self._on_icon_hover_leave)
         overlay = Overlay(
             overlays=Label(
                 label=workspace,
@@ -479,6 +481,69 @@ class Dock(Window):
                 exec_shell_command(
                     f"hyprctl dispatch focuswindow address:{instance['address']}"
                 )
+
+    def _on_icon_hover_enter(self, widget, event):
+        """Handle icon hover enter - enlarge the icon"""
+        widget.add_style_class("dock-icon-hover")
+        # Find the image widget inside the button and scale it
+        dock_icon = self._find_dock_icon_image(widget)
+        if dock_icon:
+            # Create a larger version of the icon
+            enlarged_size = int(self.icon_size * 1.3)  # 30% larger
+            if hasattr(widget, 'desktop_app') and widget.desktop_app:
+                enlarged_pixbuf = widget.desktop_app.get_icon_pixbuf(size=enlarged_size)
+                if enlarged_pixbuf:
+                    dock_icon.set_from_pixbuf(enlarged_pixbuf)
+            elif hasattr(widget, 'app_identifier'):
+                id_value = (
+                    widget.app_identifier["name"]
+                    if isinstance(widget.app_identifier, dict)
+                    else widget.app_identifier
+                )
+                enlarged_pixbuf = self.icon_resolver.get_icon_pixbuf(id_value, enlarged_size)
+                if enlarged_pixbuf:
+                    dock_icon.set_from_pixbuf(enlarged_pixbuf)
+        return False
+    
+    def _on_icon_hover_leave(self, widget, event):
+        """Handle icon hover leave - restore original icon size"""
+        widget.remove_style_class("dock-icon-hover")
+        # Find the image widget inside the button and restore normal size
+        dock_icon = self._find_dock_icon_image(widget)
+        if dock_icon:
+            # Restore original size icon
+            if hasattr(widget, 'desktop_app') and widget.desktop_app:
+                normal_pixbuf = widget.desktop_app.get_icon_pixbuf(size=self.icon_size)
+                if normal_pixbuf:
+                    dock_icon.set_from_pixbuf(normal_pixbuf)
+            elif hasattr(widget, 'app_identifier'):
+                id_value = (
+                    widget.app_identifier["name"]
+                    if isinstance(widget.app_identifier, dict)
+                    else widget.app_identifier
+                )
+                normal_pixbuf = self.icon_resolver.get_icon_pixbuf(id_value, self.icon_size)
+                if normal_pixbuf:
+                    dock_icon.set_from_pixbuf(normal_pixbuf)
+        return False
+
+    def _find_dock_icon_image(self, button_widget):
+        """Find the Image widget inside a dock button"""
+        def find_image_recursive(widget):
+            if isinstance(widget, Image):
+                return widget
+            if hasattr(widget, 'get_children'):
+                for child in widget.get_children():
+                    result = find_image_recursive(child)
+                    if result:
+                        return result
+            elif hasattr(widget, 'get_child'):
+                child = widget.get_child()
+                if child:
+                    return find_image_recursive(child)
+            return None
+        
+        return find_image_recursive(button_widget)
 
     def _on_child_enter(self, widget, event):
         self.is_mouse_over_dock_area = True

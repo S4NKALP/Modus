@@ -226,9 +226,7 @@
   border-radius: 16px;
   min-width: 16px;
   min-height: 8px;
-  transition:
-    background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25),
-    transform 0.25s cubic-bezier(0.5, 0.25, 0, 1.25);
+  transition: background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25);
 }
 
 #toggle-button:checked {
@@ -553,4 +551,155 @@
   box-shadow: 
     0 1px 3px alpha(#000, 0.3),
     0 0 0 2px alpha(#007aff, 0.5);
+}
+
+/* macOS-style expanded player - more compact */
+#macos-outer-player-box {
+  min-height: 110px;  /* Reduced height */
+  min-width: 380px;
+  border-radius: 12px;
+  margin: 10px;
+  padding: 15px;  /* Reduced padding */
+  background-color: alpha(#000, 0.4);
+  box-shadow: 
+    0 4px 16px alpha(#000, 0.25),
+    inset 0 0 0 1px alpha(#fff, 0.1);
+}
+
+#macos-main-section {
+  margin-left: 5px;
+}
+
+#macos-album-image {
+  min-width: 80px;
+  min-height: 80px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px alpha(#000, 0.3);
+}
+
+#macos-album-cover-image {
+  min-width: 80px;
+  min-height: 80px;
+  border-radius: 8px;
+}
+
+#macos-player-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+#macos-player-artist {
+  font-weight: 400;
+  font-size: 13px;
+  color: alpha(#fff, 0.8);
+  margin-bottom: 8px;
+}
+
+/* macOS seek bar styling */
+#macos-seek-bar {
+  background-color: transparent;
+  margin: 8px 0 4px 0;
+  min-height: 20px;
+}
+
+#macos-seek-bar trough {
+  min-width: 200px;
+  min-height: 4px;
+  border-radius: 2px;
+  background-color: alpha(#fff, 0.25);
+  border: none;
+}
+
+#macos-seek-bar highlight {
+  background: #ffffff;
+  border-radius: 2px;
+  border: none;
+}
+
+#macos-seek-bar slider {
+  background: #ffffff;
+  border: none;
+  border-radius: 50%;
+  min-width: 12px;
+  min-height: 12px;
+  margin: -4px;
+  box-shadow: 0 1px 3px alpha(#000, 0.3);
+  transition: all 0.1s ease;
+}
+
+#macos-seek-bar slider:hover {
+  min-width: 14px;
+  min-height: 14px;
+  margin: -5px;
+  box-shadow: 0 2px 6px alpha(#000, 0.4);
+}
+
+#macos-position-label,
+#macos-length-label {
+  font-size: 11px;
+  color: alpha(#fff, 0.7);
+  font-weight: 400;
+}
+
+/* macOS control buttons - more compact */
+#macos-button-box {
+  margin-top: 6px;  /* Reduced top margin */
+}
+
+#macos-control-button {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  min-width: 28px;  /* Slightly smaller */
+  min-height: 28px;
+  padding: 5px;    /* Reduced padding */
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+#macos-control-button:hover {
+  background: alpha(#fff, 0.1);
+  box-shadow: 0 0 0 1px alpha(#fff, 0.2);
+}
+
+#macos-play-button {
+  background: transparent;
+  border: none; 
+  border-radius: 50%;
+  min-width: 36px;  /* Slightly smaller */
+  min-height: 36px;
+  padding: 7px;    /* Reduced padding */
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+#macos-play-button:hover {
+  background: alpha(#fff, 0.15);
+  box-shadow: 0 0 0 1px alpha(#fff, 0.25);
+}
+
+/* macOS player switcher dots - compact horizontal layout */
+#macos-stack-buttons-box {
+  margin: 2px 5px;  /* Minimal margins */
+}
+
+.macos-switcher-dot {
+  background: alpha(#fff, 0.3);
+  border: none;
+  border-radius: 50%;
+  min-width: 6px;   /* Smaller dots */
+  min-height: 6px;
+  margin: 2px;      /* Reduced margins */
+  transition: all 0.2s ease;
+}
+
+.macos-switcher-dot:hover {
+  background: alpha(#fff, 0.5);
+}
+
+.macos-switcher-dot.active {
+  background: #ffffff;
+  box-shadow: 0 0 0 1px alpha(#fff, 0.3);  /* Smaller glow */
 }
