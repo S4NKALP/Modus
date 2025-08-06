@@ -13,7 +13,6 @@ from fabric.widgets.svg import Svg
 from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
-from utils.exml import exml
 from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
 from modules.controlcenter.player import PlayerBoxStack
@@ -211,52 +210,133 @@ class ModusControlCenter(Window):
             on_clicked=self.set_dont_disturb,
         )
 
-        self.widgets = exml(
-            file=get_relative_path("controlcenter.xml"),
-            root=Box,
-            tags={
-                "Box": Box,
-                "Button": Button,
-                "Label": Label,
-                "Scale": Scale,
-                "Svg": Svg,
-            },
-            refs={
-                "self.wlan_label": self.wlan_label,
-                "self.bluetooth_label": self.bluetooth_label,
-                "self.volume_scale": self.volume_scale,
-                "self.brightness_scale": self.brightness_scale,
-                "self.music_widget": self.music_widget,
-                "self.bluetooth_widget": self.bluetooth_widget,
-                "self.wlan_widget": self.wlan_widget,
-                "self.focus_widget": self.focus_widget,
-            },
+        # Create main widgets directly without XML
+        self.widgets = Box(
+            orientation="vertical",
+            h_expand=True,
+            name="control-center-widgets",
+            children=[
+                Box(
+                    orientation="horizontal",
+                    name="top-widget",
+                    h_expand=True,
+                    children=[
+                        Box(
+                            orientation="vertical",
+                            name="wb-widget",
+                            style_classes="menu",
+                            spacing=5,
+                            children=[
+                                self.wlan_widget,
+                                self.bluetooth_widget,
+                            ],
+                        ),
+                        Box(
+                            orientation="horizontal",
+                            name="dnd-widget",
+                            style_classes="menu",
+                            h_expand=True,
+                            children=[
+                                self.focus_widget,
+                            ],
+                        ),
+                    ],
+                ),
+                Box(
+                    orientation="vertical",
+                    name="brightness-widget",
+                    style_classes="menu",
+                    h_expand=True,
+                    children=[
+                        Label(
+                            label="Display",
+                            style_classes="title",
+                            h_align="start"
+                        ),
+                        self.brightness_scale,
+                        Label(
+                            label="󰖨 ",
+                            name="brightness-widget-icon",
+                            h_align="start"
+                        ),
+                    ],
+                ),
+                Box(
+                    orientation="vertical",
+                    name="volume-widget",
+                    style_classes="menu",
+                    h_expand=True,
+                    children=[
+                        Label(
+                            label="Sound",
+                            style_classes="title",
+                            h_align="start"
+                        ),
+                        self.volume_scale,
+                        Label(
+                            label=" ",
+                            name="brightness-widget-icon",
+                            h_align="start"
+                        ),
+                    ],
+                ),
+                Box(
+                    orientation="vertical",
+                    children=[
+                        self.music_widget,
+                    ],
+                ),
+            ],
         )
 
-        self.bluetooth_widgets = exml(
-            file=get_relative_path("bluetooth.xml"),
-            root=Box,
-            tags={
-                "Box": Box,
-                "Button": Button,
-                "Label": Label,
-                "Scale": Scale,
-                "Svg": Svg,
-            },
-            refs={"self.bluetooth_man": self.bluetooth_man},
+        # Create bluetooth widgets directly without XML
+        self.bluetooth_widgets = Box(
+            orientation="vertical",
+            h_expand=True,
+            name="control-center-widgets",
+            children=[
+                Box(
+                    orientation="horizontal",
+                    name="top-widget",
+                    h_expand=True,
+                    children=[
+                        Box(
+                            orientation="vertical",
+                            name="wb-widget",
+                            style_classes="menu",
+                            spacing=5,
+                            children=[
+                                self.bluetooth_man,
+                            ],
+                        ),
+                    ],
+                ),
+            ],
         )
 
-        self.wifi_widgets = exml(
-            file=get_relative_path("wifi.xml"),
-            root=Box,
-            tags={
-                "Box": Box,
-                "Button": Button,
-                "Label": Label,
-                "Scale": Scale,
-                "Svg": Svg,
-            },
-            refs={"self.wifi_man": self.wifi_man},
+        # Create wifi widgets directly without XML
+        self.wifi_widgets = Box(
+            orientation="vertical",
+            h_expand=True,
+            name="control-center-widgets",
+            children=[
+                Box(
+                    orientation="horizontal",
+                    name="top-widget",
+                    h_expand=True,
+                    children=[
+                        Box(
+                            orientation="vertical",
+                            name="wb-widget",
+                            style_classes="menu",
+                            spacing=5,
+                            children=[
+                                self.wifi_man,
+                            ],
+                        ),
+                    ],
+                ),
+            ],
         )
 
         self.center_box = CenterBox(start_children=[self.widgets])
