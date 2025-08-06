@@ -1,3 +1,4 @@
+from fabric.widgets.scale import Scale
 from widgets.wayland import WaylandWindow as Window
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
@@ -12,9 +13,7 @@ import urllib.request
 from typing import List
 import threading
 
-from fabric.utils import (
-    bulk_connect,
-)
+from fabric.utils import bulk_connect, invoke_repeater, cooldown
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.overlay import Overlay
@@ -68,7 +67,7 @@ class PlayerBoxStack(Box):
 
         # List to store player buttons
         self.player_buttons: list[Button] = []
-        
+
         # Track signal connections for cleanup
         self._signal_connections = []
 
@@ -108,7 +107,7 @@ class PlayerBoxStack(Box):
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
-        
+
         # Clean up player buttons
         for button in self.player_buttons:
             try:
@@ -116,15 +115,15 @@ class PlayerBoxStack(Box):
             except Exception:
                 pass
         self.player_buttons.clear()
-        
+
         # Clean up player boxes
         for child in self.player_stack.get_children():
-            if hasattr(child, 'destroy') and child != self.no_media_box:
+            if hasattr(child, "destroy") and child != self.no_media_box:
                 try:
                     child.destroy()
                 except Exception:
                     pass
-        
+
         super().destroy()
 
     def _create_no_media_box(self):
@@ -224,7 +223,7 @@ class PlayerBoxStack(Box):
         # unset active from prev active button
         if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             self.player_buttons[self.current_stack_pos].remove_style_class("active")
-        
+
         if type == "next":
             self.current_stack_pos = (
                 self.current_stack_pos + 1
@@ -237,7 +236,7 @@ class PlayerBoxStack(Box):
                 if self.current_stack_pos != 0
                 else len(self.player_stack.get_children()) - 1
             )
-        
+
         # set new active button
         if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             self.player_buttons[self.current_stack_pos].add_style_class("active")
@@ -249,12 +248,16 @@ class PlayerBoxStack(Box):
         """Switch to player at given index"""
         if 0 <= index < len(self.player_buttons):
             # unset active from prev active button
-            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            if self.player_buttons and self.current_stack_pos < len(
+                self.player_buttons
+            ):
                 self.player_buttons[self.current_stack_pos].remove_style_class("active")
             # set new position
             self.current_stack_pos = index
             # set new active button
-            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            if self.player_buttons and self.current_stack_pos < len(
+                self.player_buttons
+            ):
                 self.player_buttons[self.current_stack_pos].add_style_class("active")
                 self.player_stack.set_visible_child(
                     self.player_stack.get_children()[self.current_stack_pos],
@@ -302,7 +305,10 @@ class PlayerBoxStack(Box):
         # Find and properly destroy the player box
         player_box_to_remove = None
         for player_box in players:
-            if hasattr(player_box, 'player') and player_box.player.player_name == player_name:
+            if (
+                hasattr(player_box, "player")
+                and player_box.player.player_name == player_name
+            ):
                 player_box_to_remove = player_box
                 break
 
@@ -313,7 +319,9 @@ class PlayerBoxStack(Box):
                 logger.warning(f"Failed to destroy player box: {e}")
 
         # Check if this was the last player
-        remaining_players = [p for p in self.player_stack.get_children() if p != player_box_to_remove]
+        remaining_players = [
+            p for p in self.player_stack.get_children() if p != player_box_to_remove
+        ]
         if len(remaining_players) == 0:
             # Show the no media box instead of hiding
             self.player_stack.children = [self.no_media_box]
@@ -340,7 +348,9 @@ class PlayerBoxStack(Box):
         new_button = Button(name="player-stack-button")
 
         def on_player_button_click(button: Button):
-            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            if self.player_buttons and self.current_stack_pos < len(
+                self.player_buttons
+            ):
                 self.player_buttons[self.current_stack_pos].remove_style_class("active")
             if button in self.player_buttons:
                 self.current_stack_pos = self.player_buttons.index(button)
@@ -449,6 +459,18 @@ class PlayerBox(Box):
             visible=True,
         )
 
+        self.seek_bar = Scale(
+            value=0,
+            min_value=0,
+            max_value=100,
+            increments=(5, 5),
+            name="seek-bar",
+            size=2,
+            h_expand=True,
+        )
+        self.seek_bar.connect("value-changed", self._on_scale_value_changed)
+        self.player.bind("can-seek", "sensitive", self.seek_bar)
+
         self.player.bind_property(
             "title",
             self.track_title,
@@ -478,6 +500,44 @@ class PlayerBox(Box):
             ),  # type: ignore
         )
 
+        # Position and length labels for seek bar
+        self.position_label = Label(
+            label="0:00",
+            name="position-label",
+            justification="left",
+            h_align="start",
+        )
+
+        self.length_label = Label(
+            label="0:00",
+            name="length-label",
+            justification="right",
+            h_align="end",
+        )
+
+        # Labels box for position and length below seek bar
+        self.labels_box = Box(
+            name="labels-box",
+            orientation="h",
+            h_expand=True,
+            children=[
+                self.position_label,
+                Box(h_expand=True),  # Spacer to push labels to ends
+                self.length_label,
+            ],
+        )
+
+        # Seek bar with position labels below
+        self.seek_box = Box(
+            name="seek-box",
+            orientation="v",
+            spacing=2,
+            children=[
+                self.seek_bar,
+                self.labels_box,
+            ],
+        )
+
         self.track_info = Box(
             name="track-info",
             spacing=5,
@@ -488,6 +548,7 @@ class PlayerBox(Box):
                 self.track_title,
                 self.track_artist,
                 self.track_album,
+                self.seek_box,
             ],
         )
 
@@ -500,20 +561,23 @@ class PlayerBox(Box):
 
         # Stack switcher buttons box
         self.stack_buttons_box = Box(
-            name="stack-buttons-box", spacing=4, h_align="center"
+            name="stack-buttons-box",
+            spacing=4,
+            orientation="v",
+            h_align="center",
+            v_align="center",
         )
         self.stack_buttons_box.hide()  # Initially hidden
 
         self.controls_box = CenterBox(
             name="player-controls",
             center_children=self.button_box,
-            end_children=self.stack_buttons_box,
         )
 
-        self.skip_next_icon = Image(icon_name="media-skip-forward")
-        self.skip_prev_icon = Image(icon_name="media-skip-backward")
+        self.skip_next_icon = Image(icon_name="player_fwd")
+        self.skip_prev_icon = Image(icon_name="player_rew")
         self.shuffle_icon = Image(icon_name="shuffle")
-        self.play_pause_icon = Image(icon_name="media-playback-start")
+        self.play_pause_icon = Image(icon_name="player_pause")
 
         self.play_pause_button = Button(
             name="player-button",
@@ -543,7 +607,7 @@ class PlayerBox(Box):
         self.player.bind_property("can_shuffle", self.shuffle_button, "sensitive")
 
         self.button_box.children = (
-            self.shuffle_button,
+            # self.shuffle_button,
             self.prev_button,
             self.play_pause_button,
             self.next_button,
@@ -553,7 +617,7 @@ class PlayerBox(Box):
             v_align="center",
             h_align="start",
             orientation="v",
-            children=[self.track_info, self.controls_box, self.stack_buttons_box],
+            children=[self.track_info, self.controls_box],
         )
 
         self.inner_box = Box(
@@ -580,6 +644,12 @@ class PlayerBox(Box):
                     style="margin-top: 5px; margin-right: 10px;",
                     tooltip_text=self.player.player_name,  # type: ignore
                 ),
+                Box(
+                    children=self.stack_buttons_box,
+                    h_align="end",
+                    v_align="center",
+                    style="margin-right: 15px;",
+                ),
             ],
         )
 
@@ -601,7 +671,7 @@ class PlayerBox(Box):
         """Clean up all resources when the widget is destroyed."""
         # Cancel any ongoing downloads
         self._download_cancelled = True
-        
+
         # Disconnect all signal connections
         for connection in self._signal_connections:
             try:
@@ -609,10 +679,10 @@ class PlayerBox(Box):
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
-        
+
         # Clean up temp files
         self._cleanup_temp_files()
-        
+
         super().destroy()
 
     def __del__(self):
@@ -644,14 +714,14 @@ class PlayerBox(Box):
                 # Create a more visible dot button
                 dot_button = Button(
                     name="player-stack-button",
-                    style="min-width: 16px; min-height: 16px; border-radius: 8px; margin: 4px; background-color: #666; border: 1px solid #999;",
+                    style="min-width: 5px; min-height: 5px; border-radius: 8px; margin: 4px; background-color: #666; border: 1px solid #999;",
                 )
 
                 # Set active state based on original button
                 if button.get_style_context().has_class("active"):
                     dot_button.add_style_class("active")
                     dot_button.set_style(
-                        "min-width: 16px; min-height: 16px; border-radius: 8px; margin: 4px; background-color: #fff; border: 1px solid #ccc;"
+                        "min-width: 5px; min-height: 5px; border-radius: 8px; margin: 4px; background-color: #fff; border: 1px solid #ccc;"
                     )
 
                 # Connect click handler to switch to this player
@@ -677,8 +747,32 @@ class PlayerBox(Box):
             self.stack_buttons_box.hide()
             logger.info("[PlayerBox] Stack buttons box hidden")
 
+    def length_str(self, length):
+        """Convert length in microseconds to MM:SS or H:MM:SS format like real media players."""
+        if length is None or length <= 0:
+            return "0:00"
+
+        # Convert microseconds to seconds
+        length_seconds = length / 1000000
+
+        hours = int(length_seconds // 3600)
+        minutes = int((length_seconds % 3600) // 60)
+        seconds = int(length_seconds % 60)
+
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
+        else:
+            return f"{minutes}:{seconds:02d}"
+
     def _on_metadata(self, *_):
         self._set_image()
+        duration = self.player.length
+
+        if duration:
+            self.length_label.set_label(self.length_str(duration))
+            self.seek_bar.set_range(0, duration)
+
+        invoke_repeater(1000, self._move_seekbar)
 
     def _cleanup_temp_files(self):
         """Clean up temporary artwork files."""
@@ -715,10 +809,10 @@ class PlayerBox(Box):
         status = player.get_property("playback-status")
 
         if status == "paused":
-            self.play_pause_icon.set_from_icon_name("media-playback-start")
+            self.play_pause_icon.set_from_icon_name("player_start")
 
         if status == "playing":
-            self.play_pause_icon.set_from_icon_name("media-playback-pause")
+            self.play_pause_icon.set_from_icon_name("player_pause")
 
     def _update_image(self, image_path):
         if image_path and os.path.isfile(image_path):
@@ -738,17 +832,17 @@ class PlayerBox(Box):
         elif parsed.scheme in ("http", "https"):
             # Cancel any existing download to prevent memory buildup
             self._download_cancelled = True
-            
+
             # Use threading.Thread instead of GLib.Thread for better control
             if self.current_download_thread and self.current_download_thread.is_alive():
                 # Thread will check _download_cancelled flag and exit early
                 pass
-                
+
             self._download_cancelled = False
             self.current_download_thread = threading.Thread(
-                target=self._download_and_set_artwork, 
+                target=self._download_and_set_artwork,
                 args=(art_url,),
-                daemon=True  # Dies with main thread
+                daemon=True,  # Dies with main thread
             )
             self.current_download_thread.start()
         else:
@@ -824,6 +918,28 @@ class PlayerBox(Box):
             GLib.idle_add(self._update_image, local_arturl)
         return None
 
+    def _move_seekbar(self, *_):
+        if self.player is None or self.exit:
+            return False
+
+        self.position_label.set_label(self.length_str(self.player.position))
+        self.seek_bar.set_value(self.player.position)
+
+        return True
+
+    def _on_scale_value_changed(self, scale: Scale):
+        """Handle seek bar value changes."""
+        if self.player and not self.exit:
+            new_position = scale.get_value()
+            self.player.position = new_position
+            self.position_label.set_label(self.length_str(new_position))
+
+    @cooldown(0.1)
+    def _on_scale_move(self, scale: Scale, event, pos: int):
+        self.player.position = pos
+        self.position_label.set_label(self.length_str(pos))
+        self.seek_bar.set_value(pos)
+
 
 class Thing(Box):
     def __init__(self, **kwargs):
@@ -859,12 +975,12 @@ class ExpandedPlayer(Window):
     def destroy(self):
         """Clean up resources when the window is destroyed."""
         # Clean up the child PlayerBoxStack
-        if hasattr(self, 'child') and hasattr(self.child, 'destroy'):
+        if hasattr(self, "child") and hasattr(self.child, "destroy"):
             try:
                 self.child.destroy()
             except Exception as e:
                 logger.warning(f"Failed to destroy child PlayerBoxStack: {e}")
-        
+
         super().destroy()
 
     def _init_mousecapture(self, mousecapture):
