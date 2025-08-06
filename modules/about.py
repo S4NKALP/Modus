@@ -49,7 +49,7 @@ class About(Gtk.Window):
         self.set_default_size(300, 550)
         self.set_size_request(300, 500)
         self.set_resizable(False)
-        self.set_wmclass("modus-about-menu", "modus-about-menu")
+        self.set_title("About PC")
         self.set_name("about-menu")
         self.set_visible(False)
 
