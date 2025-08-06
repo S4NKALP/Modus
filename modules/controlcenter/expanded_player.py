@@ -684,9 +684,9 @@ class PlayerBox(Box):
             v_expand=True,
             name="macos-stack-buttons-box",
             spacing=4,  # Reduced spacing
-            orientation="v",  # Vertical layout for compactness
-            h_align="end",
-            v_align="center",
+            orientation="h",  # Vertical layout for compactness
+            h_align="center",
+            v_align="end",
         )
         self.stack_buttons_box.hide()  # Initially hidden
 
@@ -756,7 +756,7 @@ class PlayerBox(Box):
         # Compact macOS layout: album art on left, expanded track info+controls, minimal switcher
         self.outer_box = Box(
             name="macos-outer-player-box",
-            orientation="h",
+            orientation="v",
             spacing=10,  # Reduced spacing between elements
             h_expand=True,
             v_expand=True,
