@@ -259,7 +259,9 @@ class PlayerBoxStack(Box):
 
     def on_player_clicked(self, type):
         # unset active from prev active button
-        self.player_buttons[self.current_stack_pos].remove_style_class("active")
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            self.player_buttons[self.current_stack_pos].remove_style_class("active")
+        
         if type == "next":
             self.current_stack_pos = (
                 self.current_stack_pos + 1
@@ -272,25 +274,29 @@ class PlayerBoxStack(Box):
                 if self.current_stack_pos != 0
                 else len(self.player_stack.get_children()) - 1
             )
+        
         # set new active button
-        print(f"[PlayerBoxStack] Switching to player at index {self.current_stack_pos}")
-        self.player_buttons[self.current_stack_pos].add_style_class("active")
-        self.player_stack.set_visible_child(
-            self.player_stack.get_children()[self.current_stack_pos],
-        )
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            print(f"[PlayerBoxStack] Switching to player at index {self.current_stack_pos}")
+            self.player_buttons[self.current_stack_pos].add_style_class("active")
+            self.player_stack.set_visible_child(
+                self.player_stack.get_children()[self.current_stack_pos],
+            )
 
     def on_player_clicked_by_index(self, index):
         """Switch to player at given index"""
         if 0 <= index < len(self.player_buttons):
             # unset active from prev active button
-            self.player_buttons[self.current_stack_pos].remove_style_class("active")
+            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+                self.player_buttons[self.current_stack_pos].remove_style_class("active")
             # set new position
             self.current_stack_pos = index
             # set new active button
-            self.player_buttons[self.current_stack_pos].add_style_class("active")
-            self.player_stack.set_visible_child(
-                self.player_stack.get_children()[self.current_stack_pos],
-            )
+            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+                self.player_buttons[self.current_stack_pos].add_style_class("active")
+                self.player_stack.set_visible_child(
+                    self.player_stack.get_children()[self.current_stack_pos],
+                )
             # Update all player boxes with new button state
             self._update_all_player_buttons()
 
@@ -324,7 +330,7 @@ class PlayerBoxStack(Box):
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
         )
-        if self.player_buttons:
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
 
         # Update all player boxes with current button state
@@ -360,20 +366,17 @@ class PlayerBoxStack(Box):
             self.player_buttons = []  # Clear player buttons
             return
 
-        if (
-            players
-            and self.current_stack_pos < len(players)
-            and hasattr(players[self.current_stack_pos], 'player')
-            and players[self.current_stack_pos].player.player_name == player_name
-        ):
-            self.current_stack_pos = max(0, self.current_stack_pos - 1)
+        # Adjust current position if needed
+        if self.current_stack_pos >= len(self.player_stack.get_children()):
+            self.current_stack_pos = max(0, len(self.player_stack.get_children()) - 1)
+
+        # Set active button if we have buttons and a valid position
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
             if self.player_stack.get_children():
                 self.player_stack.set_visible_child(
                     self.player_stack.get_children()[self.current_stack_pos],
                 )
-
-        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
-            self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
 
         # Update all player boxes with current button state
         self._update_all_player_buttons()
@@ -385,10 +388,12 @@ class PlayerBoxStack(Box):
         new_button = Button(name="player-stack-button")
 
         def on_player_button_click(button: Button):
-            self.player_buttons[self.current_stack_pos].remove_style_class("active")
-            self.current_stack_pos = self.player_buttons.index(button)
-            button.add_style_class("active")
-            self.player_stack.set_visible_child(player_box)
+            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+                self.player_buttons[self.current_stack_pos].remove_style_class("active")
+            if button in self.player_buttons:
+                self.current_stack_pos = self.player_buttons.index(button)
+                button.add_style_class("active")
+                self.player_stack.set_visible_child(player_box)
 
         new_button.connect(
             "clicked",
@@ -442,12 +447,12 @@ class PlayerBox(Box):
         self.control_center = control_center
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
-        self.expanded_player = ExpandedPlayer()
-        self.ex_mousecapture = DropDownMouseCapture(
-            layer="top", child_window=self.expanded_player
-        )
+        # Create expanded player and mouse capture with weak references to avoid circular refs
+        self.expanded_player = None
+        self.ex_mousecapture = None
+        self._create_expanded_player()
+        
         self.image_size = 50
-
         self.icon_size = 15
 
         # State
@@ -633,12 +638,7 @@ class PlayerBox(Box):
             name="outer-player-box-c",
             h_expand=True,
             # style="background-color:#fff",
-            on_clicked=lambda *_: (
-                # Close control center if it exists
-                self.control_center.hide_controlcenter(),
-                self.expanded_player.set_visible(True),
-                self.ex_mousecapture.toggle_mousecapture(),
-            ),
+            on_clicked=self._on_outer_box_clicked,
             h_align="start",
             # children=[
             child=self.inner_box,
@@ -677,6 +677,32 @@ class PlayerBox(Box):
         )
         self._signal_connections.extend(connections)
 
+    def _create_expanded_player(self):
+        """Create expanded player components with proper cleanup handling."""
+        try:
+            self.expanded_player = ExpandedPlayer()
+            self.ex_mousecapture = DropDownMouseCapture(
+                layer="top", child_window=self.expanded_player
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create expanded player: {e}")
+            self.expanded_player = None
+            self.ex_mousecapture = None
+
+    def _on_outer_box_clicked(self, *_):
+        """Handle outer box click with proper error handling."""
+        try:
+            # Close control center if it exists
+            if self.control_center and hasattr(self.control_center, "hide_controlcenter"):
+                self.control_center.hide_controlcenter()
+
+            # Open expanded player if available
+            if self.expanded_player and self.ex_mousecapture:
+                self.expanded_player.set_visible(True)
+                self.ex_mousecapture.toggle_mousecapture()
+        except Exception as e:
+            logger.warning(f"Failed to handle outer box click: {e}")
+
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
         # Cancel any ongoing downloads
@@ -695,10 +721,12 @@ class PlayerBox(Box):
         
         # Clean up UI components
         try:
-            if hasattr(self, 'ex_mousecapture'):
+            if self.ex_mousecapture:
                 self.ex_mousecapture.destroy()
-            if hasattr(self, 'expanded_player'):
+                self.ex_mousecapture = None
+            if self.expanded_player:
                 self.expanded_player.destroy()
+                self.expanded_player = None
         except Exception as e:
             logger.warning(f"Failed to cleanup UI components: {e}")
         
@@ -713,13 +741,17 @@ class PlayerBox(Box):
 
     def _on_prev_button_click(self, *_):
         """Handle prev button click: close control center then open expanded player"""
-        # Close control center first
-        if self.control_center and hasattr(self.control_center, "hide_controlcenter"):
-            self.control_center.hide_controlcenter()
+        try:
+            # Close control center first
+            if self.control_center and hasattr(self.control_center, "hide_controlcenter"):
+                self.control_center.hide_controlcenter()
 
-        # Then open expanded player
-        self.expanded_player.set_visible(True)
-        self.ex_mousecapture.toggle_mousecapture()
+            # Then open expanded player
+            if self.expanded_player and self.ex_mousecapture:
+                self.expanded_player.set_visible(True)
+                self.ex_mousecapture.toggle_mousecapture()
+        except Exception as e:
+            logger.warning(f"Failed to handle prev button click: {e}")
 
     def update_buttons(self, player_buttons, show_buttons):
         # """Update the stack switcher buttons in this player box"""
@@ -892,4 +924,5 @@ class PlayerBox(Box):
 
     def close_bluetooth(self, *args):
         """Close Bluetooth control center"""
-        self.ex_mousecapture.hide_child_window()
+        if self.ex_mousecapture:
+            self.ex_mousecapture.hide_child_window()
