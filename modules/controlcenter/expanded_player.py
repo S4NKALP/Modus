@@ -50,6 +50,64 @@ def cleanup_old_cache_files():
         pass  # Ignore all errors in cleanup
 
 
+class EmbeddedExpandedPlayer(Box):
+    """Embedded expanded player widget for use inside control center."""
+
+    def __init__(self, control_center, **kwargs):
+        super().__init__(
+            orientation="vertical",
+            h_expand=True,
+            name="embedded-expanded-player",
+            **kwargs,
+        )
+
+        self.control_center = control_center
+        self.mpris_manager = MprisPlayerManager()
+
+        # Create back button
+        self.back_button = Button(
+            name="back-button",
+            child=Label(label="← Back"),
+            on_clicked=self._on_back_clicked,
+        )
+
+        # Create expanded player content
+        self.player_content = PlayerBoxStack(self.mpris_manager)
+
+        self.children = [
+            Box(
+                orientation="horizontal",
+                h_expand=True,
+                style_classes="menu",
+                children=[
+                    self.back_button,
+                    Box(h_expand=True),  # Spacer
+                    Label(label="Now Playing", style_classes="title"),
+                    Box(h_expand=True),  # Spacer
+                ],
+            ),
+            self.player_content,
+        ]
+
+    def _on_back_clicked(self, *_):
+        """Handle back button click"""
+        if self.control_center and hasattr(
+            self.control_center, "close_expanded_player"
+        ):
+            self.control_center.close_expanded_player()
+
+    def refresh(self):
+        """Refresh the player content"""
+        # This will automatically update as MPRIS players change
+        pass
+
+    def destroy(self):
+        """Clean up resources"""
+        if hasattr(self.player_content, "destroy"):
+            self.player_content.destroy()
+        super().destroy()
+
+
 class PlayerBoxStack(Box):
     """A widget that displays the current player information."""
 
@@ -187,6 +245,7 @@ class PlayerBoxStack(Box):
             v_align="center",
             h_align="start",
             orientation="v",
+            h_expand=True,
             children=[track_info, controls_box],
         )
 
@@ -406,12 +465,13 @@ class PlayerBox(Box):
         self.player_stack = player_stack
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
-        self.image_size = 120
+        self.image_size = 100  # Smaller album art
         self.icon_size = 15
 
         # State
         self.exit = False
         self.skipped = False
+        self._user_seeking = False  # Flag to prevent choppy seeking
 
         # Memory management
         self.temp_artwork_files = []  # Track temp files for cleanup
@@ -434,16 +494,39 @@ class PlayerBox(Box):
             label="No Title",
             name="player-title",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=35,
             ellipsization="end",
             h_align="start",
+            h_expand=True,
         )
 
         self.track_artist = Label(
             label="No Artist",
             name="player-artist",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=35,
+            ellipsization="end",
+            h_align="start",
+            h_expand=True,
+            visible=True,
+        )
+
+        self.track_album = Label(
+            label="No Album",
+            name="player-album",
+            justification="left",
+            max_chars_width=35,
+            ellipsization="end",
+            h_align="start",
+            h_expand=True,
+            visible=True,
+        )
+
+        self.track_artist = Label(
+            label="No Artist",
+            name="player-artist",
+            justification="left",
+            max_chars_width=25,
             ellipsization="end",
             h_align="start",
             visible=True,
@@ -453,22 +536,27 @@ class PlayerBox(Box):
             label="No Album",
             name="player-album",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=25,
             ellipsization="end",
             h_align="start",
             visible=True,
         )
 
+        # Seek bar should not update automatically during user interaction
+        self._user_seeking = False
+        
         self.seek_bar = Scale(
             value=0,
             min_value=0,
             max_value=100,
-            increments=(5, 5),
-            name="seek-bar",
-            size=2,
+            increments=(1, 1),
+            name="apple-seek-bar",
+            size=1,
             h_expand=True,
         )
         self.seek_bar.connect("value-changed", self._on_scale_value_changed)
+        self.seek_bar.connect("button-press-event", self._on_seek_start)
+        self.seek_bar.connect("button-release-event", self._on_seek_end)
         self.player.bind("can-seek", "sensitive", self.seek_bar)
 
         self.player.bind_property(
@@ -519,7 +607,6 @@ class PlayerBox(Box):
         self.labels_box = Box(
             name="labels-box",
             orientation="h",
-            h_expand=True,
             children=[
                 self.position_label,
                 Box(h_expand=True),  # Spacer to push labels to ends
@@ -531,7 +618,7 @@ class PlayerBox(Box):
         self.seek_box = Box(
             name="seek-box",
             orientation="v",
-            spacing=2,
+            spacing=1,
             children=[
                 self.seek_bar,
                 self.labels_box,
@@ -540,10 +627,11 @@ class PlayerBox(Box):
 
         self.track_info = Box(
             name="track-info",
-            spacing=5,
+            spacing=3,
+            h_expand=True,
             orientation="v",
             v_align="start",
-            h_align="start",
+            h_align="fill",
             children=[
                 self.track_title,
                 self.track_artist,
@@ -561,6 +649,8 @@ class PlayerBox(Box):
 
         # Stack switcher buttons box
         self.stack_buttons_box = Box(
+            h_expand=False,
+            v_expand=True,
             name="stack-buttons-box",
             spacing=4,
             orientation="v",
@@ -571,6 +661,7 @@ class PlayerBox(Box):
 
         self.controls_box = CenterBox(
             name="player-controls",
+            h_expand=True,
             center_children=self.button_box,
         )
 
@@ -614,8 +705,9 @@ class PlayerBox(Box):
         )
         self.player_info_box = Box(
             name="player-info-box",
+            h_expand=True,
             v_align="center",
-            h_align="start",
+            h_align="fill",
             orientation="v",
             children=[self.track_info, self.controls_box],
         )
@@ -628,32 +720,39 @@ class PlayerBox(Box):
         # resize the inner box
         self.outer_box = Box(
             name="outer-player-box",
+            h_expand=True,
+            orientation="horizontal",
+            children=[
+                self.image_stack,
+                self.player_info_box,
+                Box(
+                    orientation="v",
+                    children=[
+                        Box(
+                            children=Image(
+                                icon_name=self.player.player_name, icon_size=18
+                            ),
+                            h_align="end",
+                            h_expand=False,
+                            v_align="start",
+                            style="margin-top: 5px; margin-right: 10px;",
+                            tooltip_text=self.player.player_name,  # type: ignore
+                        ),
+                        Box(
+                            children=self.stack_buttons_box,
+                            h_align="end",
+                            v_expand=True,
+                            v_align="center",
+                            h_expand=False,
+                            style="margin-right: 15px;",
+                        ),
+                    ],
+                ),
+            ],
             h_align="start",
         )
 
-        self.overlay_box = Overlay(
-            child=self.outer_box,
-            overlays=[
-                self.inner_box,
-                self.player_info_box,
-                self.image_stack,
-                Box(
-                    children=Image(icon_name=self.player.player_name, icon_size=18),
-                    h_align="end",
-                    v_align="start",
-                    style="margin-top: 5px; margin-right: 10px;",
-                    tooltip_text=self.player.player_name,  # type: ignore
-                ),
-                Box(
-                    children=self.stack_buttons_box,
-                    h_align="end",
-                    v_align="center",
-                    style="margin-right: 15px;",
-                ),
-            ],
-        )
-
-        self.children = [*self.children, self.overlay_box]
+        self.children = [*self.children, self.outer_box]
 
         # Track signal connections for cleanup
         connections = bulk_connect(
@@ -770,7 +869,10 @@ class PlayerBox(Box):
 
         if duration:
             self.length_label.set_label(self.length_str(duration))
-            self.seek_bar.set_range(0, duration)
+            # Clamp duration to avoid 32-bit integer overflow in the scale widget
+            max_int32 = 2147483647  # 2^31 - 1
+            safe_duration = min(max_int32, duration)
+            self.seek_bar.set_range(0, safe_duration)
 
         invoke_repeater(1000, self._move_seekbar)
 
@@ -919,20 +1021,47 @@ class PlayerBox(Box):
         return None
 
     def _move_seekbar(self, *_):
-        if self.player is None or self.exit:
-            return False
+        if self.player is None or self.exit or self._user_seeking:
+            return True  # Continue the timer but don't update while user is seeking
 
-        self.position_label.set_label(self.length_str(self.player.position))
-        self.seek_bar.set_value(self.player.position)
+        position = self.player.position
+        self.position_label.set_label(self.length_str(position))
+        
+        # Only update seek bar if user is not currently seeking
+        if not self._user_seeking:
+            # Clamp position to avoid 32-bit integer overflow
+            max_int32 = 2147483647  # 2^31 - 1
+            safe_position = min(max_int32, position) if position else 0
+            self.seek_bar.set_value(safe_position)
 
         return True
+    def _on_seek_start(self, widget, event):
+        """User started seeking - disable automatic updates"""
+        self._user_seeking = True
+        return False
+
+    def _on_seek_end(self, widget, event):
+        """User finished seeking - re-enable automatic updates"""
+        self._user_seeking = False
+        return False
 
     def _on_scale_value_changed(self, scale: Scale):
-        """Handle seek bar value changes."""
-        if self.player and not self.exit:
-            new_position = scale.get_value()
-            self.player.position = new_position
-            self.position_label.set_label(self.length_str(new_position))
+        """Handle seek bar value changes - only when user is seeking"""
+        if self.player and not self.exit and self._user_seeking:
+            new_position = int(scale.get_value())
+            # Clamp to 32-bit signed integer range to avoid overflow
+            max_int32 = 2147483647  # 2^31 - 1
+            min_int32 = -2147483648  # -2^31
+            new_position = max(min_int32, min(max_int32, new_position))
+            try:
+                self.player.position = new_position
+                self.position_label.set_label(self.length_str(new_position))
+            except Exception as e:
+                # If setting position fails, just update the label
+                self.position_label.set_label(self.length_str(new_position))
+            except Exception:
+                # If setting position fails, just update the label
+                self.position_label.set_label(self.length_str(new_position))
 
     @cooldown(0.1)
     def _on_scale_move(self, scale: Scale, event, pos: int):

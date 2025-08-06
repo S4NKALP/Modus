@@ -57,7 +57,7 @@
   margin-left: 10px;
 }
 #player-info-box {
-  margin-left: 130px;
+  margin-left: 10px;
 }
 
 #player-title-c {
@@ -129,13 +129,13 @@
 #seek-bar slider {
   background-image: none;
   background-color: transparent;
-  padding: 2px;
+  padding: 0px;
 }
 
 #seek-bar scale {
   background-color: transparent;
   margin-top: 10px;
-  border-radius: 20px;
+  border-radius: 10px;
 }
 
 #seek-bar trough {

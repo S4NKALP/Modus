@@ -17,6 +17,7 @@ from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
 from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
+from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from services.mpris import MprisPlayerManager
 
 brightness_service = Brightness.get_initial()
@@ -47,6 +48,7 @@ class ModusControlCenter(Window):
         self._bluetooth_initialized = False
         self._music_initialized = False
         self._per_app_volume_initialized = False
+        self._expanded_player_initialized = False
         
         # Store references for cleanup
         self._signal_connections = []
@@ -54,6 +56,7 @@ class ModusControlCenter(Window):
         self._bluetooth_man = None
         self._music_widget_content = None
         self._per_app_volume_widget = None
+        self._expanded_player_widget = None
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
@@ -132,6 +135,7 @@ class ModusControlCenter(Window):
         self.has_bluetooth_open = False
         self.has_wifi_open = False
         self.has_per_app_volume_open = False
+        self.has_expanded_player_open = False
 
         self.bluetooth_svg = Svg(
             name="bluetooth-icon",
@@ -304,11 +308,13 @@ class ModusControlCenter(Window):
         self.bluetooth_widgets = None
         self.wifi_widgets = None
         self.per_app_volume_widgets = None
+        self.expanded_player_widgets = None
 
         self.center_box = CenterBox(start_children=[self.widgets])
         self.bluetooth_center_box = None
         self.wifi_center_box = None
         self.per_app_volume_center_box = None
+        self.expanded_player_center_box = None
 
         self.widgets.set_size_request(300, -1)
 
@@ -427,6 +433,23 @@ class ModusControlCenter(Window):
             self.per_app_volume_center_box = CenterBox(start_children=[self.per_app_volume_widgets])
             self.per_app_volume_center_box.set_size_request(300, -1)
 
+    def _ensure_expanded_player_widgets(self):
+        """Lazy load expanded player widgets"""
+        if self.expanded_player_widgets is None:
+            if self._expanded_player_widget is None:
+                self._expanded_player_widget = EmbeddedExpandedPlayer(self)
+            
+            self.expanded_player_widgets = Box(
+                orientation="vertical",
+                h_expand=True,
+                name="control-center-widgets",
+                children=[
+                    self._expanded_player_widget,
+                ],
+            )
+            self.expanded_player_center_box = CenterBox(start_children=[self.expanded_player_widgets])
+            self.expanded_player_center_box.set_size_request(300, -1)
+
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
         modus_service.dont_disturb = self.focus_mode
@@ -521,6 +544,18 @@ class ModusControlCenter(Window):
         idle_add(lambda *_: self.set_children(self.center_box))
         self.has_per_app_volume_open = False
 
+    def open_expanded_player(self, *_):
+        self._ensure_expanded_player_widgets()
+        idle_add(lambda *_: self.set_children(self.expanded_player_center_box))
+        self.has_expanded_player_open = True
+        # Refresh the player when opening
+        if self._expanded_player_widget:
+            self._expanded_player_widget.refresh()
+
+    def close_expanded_player(self, *_):
+        idle_add(lambda *_: self.set_children(self.center_box))
+        self.has_expanded_player_open = False
+
     def _set_mousecapture(self, visible: bool):
         if visible:
             # Lazy load music widget when becoming visible
@@ -531,6 +566,7 @@ class ModusControlCenter(Window):
             self.close_bluetooth()
             self.close_wifi()
             self.close_per_app_volume()
+            self.close_expanded_player()
 
     def volume_changed(
         self,
@@ -633,5 +669,7 @@ class ModusControlCenter(Window):
             self._music_widget_content.destroy()
         if self._per_app_volume_widget:
             self._per_app_volume_widget.destroy()
+        if self._expanded_player_widget:
+            self._expanded_player_widget.destroy()
             
         super().destroy()
