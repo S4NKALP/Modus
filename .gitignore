@@ -16,3 +16,4 @@ fabric/
 .aider*
 .venv/*
 .venv/
+AGENTS.md
