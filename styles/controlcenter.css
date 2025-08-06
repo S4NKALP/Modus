@@ -273,13 +273,13 @@
 #volume-widget-icon {
   margin-top: -24px;
   margin-right: -30px;
-  color: var(--shadow);
+  color: #999;
 }
 
 #brightness-widget-icon {
-  margin-top: -24px;
-  margin-right: -25px;
-  color: alpha(#111, 0.6);
+  margin-top: -27px;
+  margin-right: -28px;
+  color: #000;
 }
 
 #control-center-menu slider {
