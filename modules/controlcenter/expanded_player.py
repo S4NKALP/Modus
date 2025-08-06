@@ -10,6 +10,7 @@ import tempfile
 import urllib.parse
 import urllib.request
 from typing import List
+import threading
 
 from fabric.utils import (
     bulk_connect,
@@ -67,6 +68,9 @@ class PlayerBoxStack(Box):
 
         # List to store player buttons
         self.player_buttons: list[Button] = []
+        
+        # Track signal connections for cleanup
+        self._signal_connections = []
 
         # Create a "No media playing" placeholder
         self.no_media_box = self._create_no_media_box()
@@ -79,19 +83,49 @@ class PlayerBoxStack(Box):
 
         self.mpris_manager = mpris_manager
 
-        bulk_connect(
+        # Track connections for cleanup
+        connections = bulk_connect(
             self.mpris_manager,
             {
                 "player-appeared": self.on_new_player,
                 "player-vanished": self.on_lost_player,
             },
         )
+        self._signal_connections.extend(connections)
 
         for player in self.mpris_manager.players:  # type: ignore
             logger.info(
                 f"[PLAYER MANAGER] player found: {player.get_property('player-name')}",
             )
             self.on_new_player(self.mpris_manager, player)
+
+    def destroy(self):
+        """Clean up resources when the widget is destroyed."""
+        # Disconnect all signal connections
+        for connection in self._signal_connections:
+            try:
+                connection.disconnect()
+            except Exception as e:
+                logger.warning(f"Failed to disconnect signal: {e}")
+        self._signal_connections.clear()
+        
+        # Clean up player buttons
+        for button in self.player_buttons:
+            try:
+                button.destroy()
+            except Exception:
+                pass
+        self.player_buttons.clear()
+        
+        # Clean up player boxes
+        for child in self.player_stack.get_children():
+            if hasattr(child, 'destroy') and child != self.no_media_box:
+                try:
+                    child.destroy()
+                except Exception:
+                    pass
+        
+        super().destroy()
 
     def _create_no_media_box(self):
         """Create a placeholder box for when no media is playing."""
@@ -188,7 +222,9 @@ class PlayerBoxStack(Box):
 
     def on_player_clicked(self, type):
         # unset active from prev active button
-        self.player_buttons[self.current_stack_pos].remove_style_class("active")
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            self.player_buttons[self.current_stack_pos].remove_style_class("active")
+        
         if type == "next":
             self.current_stack_pos = (
                 self.current_stack_pos + 1
@@ -201,24 +237,28 @@ class PlayerBoxStack(Box):
                 if self.current_stack_pos != 0
                 else len(self.player_stack.get_children()) - 1
             )
+        
         # set new active button
-        self.player_buttons[self.current_stack_pos].add_style_class("active")
-        self.player_stack.set_visible_child(
-            self.player_stack.get_children()[self.current_stack_pos],
-        )
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            self.player_buttons[self.current_stack_pos].add_style_class("active")
+            self.player_stack.set_visible_child(
+                self.player_stack.get_children()[self.current_stack_pos],
+            )
 
     def on_player_clicked_by_index(self, index):
         """Switch to player at given index"""
         if 0 <= index < len(self.player_buttons):
             # unset active from prev active button
-            self.player_buttons[self.current_stack_pos].remove_style_class("active")
+            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+                self.player_buttons[self.current_stack_pos].remove_style_class("active")
             # set new position
             self.current_stack_pos = index
             # set new active button
-            self.player_buttons[self.current_stack_pos].add_style_class("active")
-            self.player_stack.set_visible_child(
-                self.player_stack.get_children()[self.current_stack_pos],
-            )
+            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+                self.player_buttons[self.current_stack_pos].add_style_class("active")
+                self.player_stack.set_visible_child(
+                    self.player_stack.get_children()[self.current_stack_pos],
+                )
             # Update all player boxes with new button state
             self._update_all_player_buttons()
 
@@ -248,7 +288,7 @@ class PlayerBoxStack(Box):
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
         )
-        if self.player_buttons:
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
 
         # Update all player boxes with current button state
@@ -259,27 +299,39 @@ class PlayerBoxStack(Box):
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
         players: List[PlayerBox] = self.player_stack.get_children()
 
+        # Find and properly destroy the player box
+        player_box_to_remove = None
+        for player_box in players:
+            if hasattr(player_box, 'player') and player_box.player.player_name == player_name:
+                player_box_to_remove = player_box
+                break
+
+        if player_box_to_remove:
+            try:
+                player_box_to_remove.destroy()
+            except Exception as e:
+                logger.warning(f"Failed to destroy player box: {e}")
+
         # Check if this was the last player
-        if len(players) == 1 and player_name == players[0].player.player_name:
+        remaining_players = [p for p in self.player_stack.get_children() if p != player_box_to_remove]
+        if len(remaining_players) == 0:
             # Show the no media box instead of hiding
             self.player_stack.children = [self.no_media_box]
             self.current_stack_pos = 0
             self.player_buttons = []  # Clear player buttons
             return
 
-        if (
-            players
-            and self.current_stack_pos < len(players)
-            and players[self.current_stack_pos].player.player_name == player_name
-        ):
-            self.current_stack_pos = max(0, self.current_stack_pos - 1)
+        # Adjust current position if needed
+        if self.current_stack_pos >= len(self.player_stack.get_children()):
+            self.current_stack_pos = max(0, len(self.player_stack.get_children()) - 1)
+
+        # Set active button if we have buttons and a valid position
+        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
             if self.player_stack.get_children():
                 self.player_stack.set_visible_child(
                     self.player_stack.get_children()[self.current_stack_pos],
                 )
-
-        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
-            self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
 
         # Update all player boxes with current button state
         self._update_all_player_buttons()
@@ -288,10 +340,12 @@ class PlayerBoxStack(Box):
         new_button = Button(name="player-stack-button")
 
         def on_player_button_click(button: Button):
-            self.player_buttons[self.current_stack_pos].remove_style_class("active")
-            self.current_stack_pos = self.player_buttons.index(button)
-            button.add_style_class("active")
-            self.player_stack.set_visible_child(player_box)
+            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+                self.player_buttons[self.current_stack_pos].remove_style_class("active")
+            if button in self.player_buttons:
+                self.current_stack_pos = self.player_buttons.index(button)
+                button.add_style_class("active")
+                self.player_stack.set_visible_child(player_box)
 
         new_button.connect(
             "clicked",
@@ -300,13 +354,15 @@ class PlayerBoxStack(Box):
         self.player_buttons.append(new_button)
 
         # This will automatically destroy our used button
-        player_box.connect(
-            "destroy",
-            lambda *_: [
-                new_button.destroy(),  # type: ignore
-                self.player_buttons.pop(self.player_buttons.index(new_button)),
-            ],
-        )
+        def cleanup_button(*_):
+            try:
+                if new_button in self.player_buttons:
+                    self.player_buttons.remove(new_button)
+                new_button.destroy()
+            except Exception as e:
+                logger.warning(f"Failed to cleanup button: {e}")
+
+        player_box.connect("destroy", cleanup_button)
 
     def _update_all_player_buttons(self):
         """Update all player boxes with the current button state"""
@@ -341,7 +397,6 @@ class PlayerBox(Box):
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
         self.image_size = 120
-
         self.icon_size = 15
 
         # State
@@ -351,6 +406,8 @@ class PlayerBox(Box):
         # Memory management
         self.temp_artwork_files = []  # Track temp files for cleanup
         self.current_download_thread = None  # Track current download thread
+        self._download_cancelled = False  # Flag to cancel downloads
+        self._signal_connections = []  # Track signal connections
 
         self.album_cover = Box(style_classes="album-image")
         self.album_cover.set_style(
@@ -528,7 +585,8 @@ class PlayerBox(Box):
 
         self.children = [*self.children, self.overlay_box]
 
-        bulk_connect(
+        # Track signal connections for cleanup
+        connections = bulk_connect(
             self.player,
             {
                 "exit": self._on_player_exit,
@@ -537,6 +595,25 @@ class PlayerBox(Box):
                 "notify::metadata": self._on_metadata,
             },
         )
+        self._signal_connections.extend(connections)
+
+    def destroy(self):
+        """Clean up all resources when the widget is destroyed."""
+        # Cancel any ongoing downloads
+        self._download_cancelled = True
+        
+        # Disconnect all signal connections
+        for connection in self._signal_connections:
+            try:
+                connection.disconnect()
+            except Exception as e:
+                logger.warning(f"Failed to disconnect signal: {e}")
+        self._signal_connections.clear()
+        
+        # Clean up temp files
+        self._cleanup_temp_files()
+        
+        super().destroy()
 
     def __del__(self):
         """Ensure cleanup happens even if player exits unexpectedly."""
@@ -555,7 +632,10 @@ class PlayerBox(Box):
 
         # Clear existing buttons
         for child in self.stack_buttons_box.get_children():
-            child.destroy()
+            try:
+                child.destroy()
+            except Exception:
+                pass
 
         if show_buttons and len(player_buttons) > 1:
             logger.info(f"[PlayerBox] Creating {len(player_buttons)} stack buttons")
@@ -656,14 +736,21 @@ class PlayerBox(Box):
             local_arturl = urllib.parse.unquote(parsed.path)
             self._update_image(local_arturl)
         elif parsed.scheme in ("http", "https"):
-            # Cancel any existing download thread to prevent memory buildup
-            if self.current_download_thread is not None:
-                # Note: GLib.Thread doesn't have a direct cancel method,
-                # but we can track and ignore old downloads
+            # Cancel any existing download to prevent memory buildup
+            self._download_cancelled = True
+            
+            # Use threading.Thread instead of GLib.Thread for better control
+            if self.current_download_thread and self.current_download_thread.is_alive():
+                # Thread will check _download_cancelled flag and exit early
                 pass
-            self.current_download_thread = GLib.Thread.new(
-                "download-artwork", self._download_and_set_artwork, art_url
+                
+            self._download_cancelled = False
+            self.current_download_thread = threading.Thread(
+                target=self._download_and_set_artwork, 
+                args=(art_url,),
+                daemon=True  # Dies with main thread
             )
+            self.current_download_thread.start()
         else:
             self._update_image(art_url)
 
@@ -676,6 +763,10 @@ class PlayerBox(Box):
         temp_file_path = None
 
         try:
+            # Check if download was cancelled
+            if self._download_cancelled:
+                return
+
             # Clean up old temp files first (keep only last 2 to avoid excessive cleanup)
             if len(self.temp_artwork_files) > 2:
                 old_files = self.temp_artwork_files[:-2]
@@ -687,12 +778,22 @@ class PlayerBox(Box):
                         pass
                 self.temp_artwork_files = self.temp_artwork_files[-2:]
 
+            # Check again if cancelled
+            if self._download_cancelled:
+                return
+
             # Download artwork
             parsed = urllib.parse.urlparse(arturl)
             suffix = os.path.splitext(parsed.path)[1] or ".png"
 
             with urllib.request.urlopen(arturl, timeout=10) as response:  # Add timeout
+                if self._download_cancelled:
+                    return
                 data = response.read()
+
+            # Check one more time if cancelled
+            if self._download_cancelled:
+                return
 
             # Create temp file in cache directory instead of system temp
             os.makedirs(CACHE_DIR, exist_ok=True)
@@ -704,19 +805,23 @@ class PlayerBox(Box):
                 local_arturl = temp_file_path
 
             # Track temp file for cleanup
-            if temp_file_path:
+            if temp_file_path and not self._download_cancelled:
                 self.temp_artwork_files.append(temp_file_path)
 
         except Exception as e:
-            logger.warning(f"Failed to download artwork from {arturl}: {e}")
+            if not self._download_cancelled:
+                logger.warning(f"Failed to download artwork from {arturl}: {e}")
             # Clean up failed temp file
             if temp_file_path and os.path.exists(temp_file_path):
                 try:
                     os.unlink(temp_file_path)
                 except Exception:
                     pass
+            return
 
-        GLib.idle_add(self._update_image, local_arturl)
+        # Only update UI if not cancelled
+        if not self._download_cancelled:
+            GLib.idle_add(self._update_image, local_arturl)
         return None
 
 
@@ -750,6 +855,17 @@ class ExpandedPlayer(Window):
             visible=False,
         )
         self.add_keybinding("Escape", self.set_child_visible(False))
+
+    def destroy(self):
+        """Clean up resources when the window is destroyed."""
+        # Clean up the child PlayerBoxStack
+        if hasattr(self, 'child') and hasattr(self.child, 'destroy'):
+            try:
+                self.child.destroy()
+            except Exception as e:
+                logger.warning(f"Failed to destroy child PlayerBoxStack: {e}")
+        
+        super().destroy()
 
     def _init_mousecapture(self, mousecapture):
         self._mousecapture_parent = mousecapture
