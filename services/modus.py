@@ -6,7 +6,7 @@ from loguru import logger
 from fabric.core.service import Property, Service, Signal
 from fabric.hyprland.service import Hyprland
 from fabric.notifications import Notification
-from services.new_notification import CachedNotifications
+from services.custom_notification import CachedNotifications
 
 notification_service = CachedNotifications()
 
