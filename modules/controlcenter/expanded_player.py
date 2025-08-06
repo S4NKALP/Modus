@@ -12,7 +12,6 @@ import urllib.parse
 import urllib.request
 from typing import List
 import threading
-import weakref  # For memory-efficient references
 
 from fabric.utils import bulk_connect, invoke_repeater, cooldown
 from fabric.widgets.image import Image
@@ -27,6 +26,7 @@ CACHE_DIR = f"{data.CACHE_DIR}/media"
 
 # Shared MPRIS manager to reduce memory usage
 _shared_mpris_manager = None
+
 
 def get_shared_mpris_manager():
     """Get shared MPRIS manager instance to reduce memory usage."""
@@ -208,10 +208,10 @@ class PlayerBoxStack(Box):
             from gi.repository import GdkPixbuf
 
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                fallback_cover_path, 60, 60, True
+                fallback_cover_path, 70, 70, True
             )
             album_cover_image.set_from_pixbuf(pixbuf)
-            album_cover_image.set_size_request(60, 60)
+            album_cover_image.set_size_request(70, 70)
         except Exception as e:
             logger.warning(f"Failed to load fallback image in no-media box: {e}")
 
@@ -219,7 +219,7 @@ class PlayerBoxStack(Box):
             name="macos-album-image",
             children=[album_cover_image],
         )
-        album_cover.set_size_request(60, 60)
+        album_cover.set_size_request(70, 70)
 
         image_stack = Box(h_align="start", v_align="center", name="player-image-stack")
         image_stack.children = [album_cover]
@@ -354,7 +354,6 @@ class PlayerBoxStack(Box):
             self._update_all_player_buttons()
 
     def on_new_player(self, mpris_manager, player):
-        player_name = player.props.player_name
 
         # if player_name in self.config.get("ignore", []):
         #     return
@@ -494,7 +493,7 @@ class PlayerBox(Box):
         self.player_stack = player_stack
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
-        self.image_size = 60  # Smaller album art for compact layout
+        self.image_size = 70  # Medium album art size for expanded player
         self.icon_size = 15
 
         # State
@@ -523,7 +522,7 @@ class PlayerBox(Box):
             label="No Title",
             name="macos-player-title",
             justification="left",
-            max_chars_width=25,
+            max_chars_width=30,
             ellipsization="end",
             h_align="start",
             h_expand=True,
@@ -539,6 +538,15 @@ class PlayerBox(Box):
             h_expand=True,
             visible=True,
         )
+        self.track_album = Label(
+            label="No Album",
+            name="macos-player-album",
+            justification="left",
+            max_chars_width=25,
+            ellipsization="end",
+            h_align="start",
+            visible=True,  # Hide artist and album when no media
+        )
 
         # Use Image widget instead of CSS background for more reliable image display
         self.album_cover_image = Image(
@@ -551,10 +559,10 @@ class PlayerBox(Box):
             from gi.repository import GdkPixbuf
 
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                self.fallback_cover_path, 60, 60, True
+                self.fallback_cover_path, 70, 70, True
             )
             self.album_cover_image.set_from_pixbuf(pixbuf)
-            self.album_cover_image.set_size_request(60, 60)
+            self.album_cover_image.set_size_request(70, 70)
         except Exception as e:
             logger.warning(f"Failed to load fallback image: {e}")
 
@@ -563,7 +571,7 @@ class PlayerBox(Box):
             name="macos-album-image",
             children=[self.album_cover_image],
         )
-        self.album_cover.set_size_request(60, 60)
+        self.album_cover.set_size_request(70, 70)
 
         self.image_stack = Box(
             h_align="start",
@@ -573,6 +581,20 @@ class PlayerBox(Box):
         )
         self.image_stack.children = [*self.image_stack.children, self.album_cover]
 
+        self.app_icon = Box(
+            children=Image(
+                icon_name=self.player.player_name, name="player-app-icon", icon_size=20
+            ),
+            h_align="end",
+            v_align="end",
+            tooltip_text=self.player.player_name,  # type: ignore
+        )
+        self.image = Overlay(
+            child=self.image_stack,
+            overlays=[
+                self.app_icon,
+            ],
+        )
         # Seek bar should not update automatically during user interaction
         self._user_seeking = False
 
@@ -657,8 +679,7 @@ class PlayerBox(Box):
             children=[
                 self.track_title,
                 self.track_artist,
-                self.seek_box,
-                self.controls_box,  # Controls now inline with track info
+                self.track_album,
             ],
         )
 
@@ -681,6 +702,15 @@ class PlayerBox(Box):
                 re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Artist"
             ),  # type: ignore
         )
+        self.player.bind_property(
+            "album",
+            self.track_album,
+            "label",
+            GObject.BindingFlags.DEFAULT,
+            lambda _, x: (
+                re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Album"
+            ),  # type: ignore
+        )
 
         # Player switcher buttons box (compact, minimal space)
         self.stack_buttons_box = Box(
@@ -690,7 +720,7 @@ class PlayerBox(Box):
             spacing=4,  # Reduced spacing
             orientation="v",  # Vertical layout for compactness
             h_align="end",
-            v_align="start",
+            v_align="center",
         )
         self.stack_buttons_box.hide()  # Initially hidden
 
@@ -725,18 +755,34 @@ class PlayerBox(Box):
             self.next_button,
         )
 
+        self.box = Box(
+            orientation="horizontal",
+            children=[
+                self.image,  # Album art on left (fixed width)
+                self.track_info,  # Contains title, artist, seek bar AND controls (expands)
+            ],
+        )
+        self.inner_box = Box(
+            orientation="v",
+            h_expand=True,
+            h_align="fill",  # Fill available space
+            children=[
+                self.box,  # Track info and album art
+                self.seek_box,  # Seek bar with position labels
+                self.controls_box,  # Controls now inline with track info
+            ],
+        )
         # Compact macOS layout: album art on left, expanded track info+controls, minimal switcher
         self.outer_box = Box(
             name="macos-outer-player-box",
-            orientation="horizontal",
+            orientation="h",
             spacing=10,  # Reduced spacing between elements
             h_expand=True,
             v_expand=True,
             v_align="center",
             h_align="fill",  # Fill available space
             children=[
-                self.image_stack,  # Album art on left (fixed width)
-                self.track_info,  # Contains title, artist, seek bar AND controls (expands)
+                self.inner_box,  # Track info and controls
                 self.stack_buttons_box,  # Compact switcher in corner (fixed width)
             ],
         )
@@ -759,7 +805,7 @@ class PlayerBox(Box):
         """Clean up all resources when the widget is destroyed."""
         # Cancel any ongoing downloads immediately
         self._download_cancelled = True
-        
+
         # Wait for download thread to finish (with timeout)
         if self.current_download_thread and self.current_download_thread.is_alive():
             try:
@@ -777,9 +823,9 @@ class PlayerBox(Box):
 
         # Clean up temp files aggressively
         self._cleanup_temp_files()
-        
+
         # Clear image references
-        if hasattr(self, 'album_cover_image'):
+        if hasattr(self, "album_cover_image"):
             try:
                 self.album_cover_image.set_from_pixbuf(None)
             except Exception:
@@ -917,7 +963,7 @@ class PlayerBox(Box):
             if image_path and os.path.isfile(image_path):
                 # Create scaled pixbuf to ensure proper size
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    image_path, 60, 60, True
+                    image_path, 70, 70, True
                 )
                 self.album_cover_image.set_from_pixbuf(pixbuf)
                 # Explicitly clear pixbuf reference to help GC
@@ -925,7 +971,7 @@ class PlayerBox(Box):
             else:
                 # Use fallback image with scaling
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    self.fallback_cover_path, 60, 60, True
+                    self.fallback_cover_path, 70, 70, True
                 )
                 self.album_cover_image.set_from_pixbuf(pixbuf)
                 # Explicitly clear pixbuf reference to help GC
@@ -935,7 +981,7 @@ class PlayerBox(Box):
             # Try simple file setting as last resort
             try:
                 self.album_cover_image.set_from_file(self.fallback_cover_path)
-                self.album_cover_image.set_size_request(60, 60)
+                self.album_cover_image.set_size_request(70, 70)
             except Exception as e2:
                 logger.error(f"Failed to set fallback image: {e2}")
 
