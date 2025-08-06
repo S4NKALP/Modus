@@ -555,10 +555,10 @@ class PlayerBox(Box):
         self.album_cover.set_size_request(80, 80)
 
         self.image_stack = Box(
-            h_align="start", 
-            v_align="start", 
+            h_align="start",
+            v_align="start",
             h_expand=False,  # Fixed width for album art
-            name="macos-player-image-stack"
+            name="macos-player-image-stack",
         )
         self.image_stack.children = [*self.image_stack.children, self.album_cover]
 
@@ -639,10 +639,10 @@ class PlayerBox(Box):
             name="macos-track-info",
             spacing=6,  # Reduced spacing
             orientation="v",
-            v_align="start", 
+            v_align="start",
             h_align="fill",  # Fill all available horizontal space
-            h_expand=True,   # Expand horizontally to take maximum space
-            v_expand=True,   # Also expand vertically
+            h_expand=True,  # Expand horizontally to take maximum space
+            v_expand=True,  # Also expand vertically
             children=[
                 self.track_title,
                 self.track_artist,
