@@ -6,9 +6,10 @@ from loguru import logger
 from fabric.core.service import Property, Service, Signal
 from fabric.hyprland.service import Hyprland
 from fabric.notifications import Notification
-from services.custom_notification import CustomNotifications
+from services.new_notification import CachedNotifications
 
-notification_service = CustomNotifications()
+notification_service = CachedNotifications()
+
 
 class ModusService(Service):
     @Signal
@@ -251,12 +252,16 @@ class ModusService(Service):
             self._hyprland_connection = Hyprland()
 
             # Get initial workspace
-            workspace_data = self._hyprland_connection.send_command("j/activeworkspace").reply
+            workspace_data = self._hyprland_connection.send_command(
+                "j/activeworkspace"
+            ).reply
             active_workspace = json.loads(workspace_data.decode("utf-8"))["name"]
             self._current_workspace = str(active_workspace)
 
             # Connect to workspace change events
-            self._hyprland_connection.connect("event::workspace", self._on_workspace_changed)
+            self._hyprland_connection.connect(
+                "event::workspace", self._on_workspace_changed
+            )
 
         except Exception as e:
             logger.error(f"[ModusService] Failed to setup workspace monitoring: {e}")
@@ -271,27 +276,29 @@ class ModusService(Service):
             logger.error(f"[ModusService] Error processing workspace change: {e}")
 
     def remove_notification(self, id: int):
-        notification_service.remove_notification(id)
-        self.notification_count_changed(self.notification_count)
-
-    def cache_notification(self, data: Notification):
-        widget_config = {"notification": {"per_app_limits": {}}}
-        notification_service.cache_notification(widget_config, data, max_count=100)
+        notification_service.remove_cached_notification(id)
         self.notification_count_changed(self.notification_count)
 
     def clear_all_notifications(self):
-        notification_service.clear_all_notifications()
+        notification_service.clear_all_cached_notifications()
         self.notification_count_changed(self.notification_count)
 
-    def get_deserialized(self) -> List[Notification]:
-        return notification_service.get_deserialized()
+    def get_cached_notifications(self):
+        return notification_service.cached_notifications
 
     def get_deserialized_with_ids(self):
-        return notification_service.get_deserialized_with_ids()
+        return [
+            (notif._notification, notif.cache_id)
+            for notif in notification_service.cached_notifications
+        ]
 
     @property
     def notification_count(self) -> int:
         return notification_service.count
+
+    def toggle_dnd(self):
+        notification_service.toggle_dnd()
+        self.dont_disturb_changed(notification_service.dont_disturb)
 
 
 global modus_service

@@ -5,16 +5,18 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from modules.notification.notification import NotificationWidget
-from utils.roam import modus_service
+from services.modus import notification_service
 from widgets.wayland import WaylandWindow as Window
 from fabric.widgets.image import Image
 
 
 class NotificationCenterWidget(NotificationWidget):
-    def __init__(self, notification, notification_id, **kwargs):
-        self.notification_id = notification_id
+    def __init__(self, notification, **kwargs):
+        self.notification_id = notification.cache_id
 
-        super().__init__(notification, timeout_ms=0, show_close_button=True, **kwargs)
+        super().__init__(
+            notification._notification, timeout_ms=0, show_close_button=True, **kwargs
+        )
 
     def create_close_button(self):
         close_button = Button(
@@ -38,7 +40,7 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _on_close_clicked(self, *args):
         try:
-            modus_service.remove_notification(self.notification_id)
+            notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
             logger.error(f"Error removing notification {self.notification_id}: {e}")
         finally:
@@ -70,26 +72,36 @@ class NotificationCenter(Window):
         NOTIFICATION_CENTER_WIDTH = 410
         self.set_size_request(NOTIFICATION_CENTER_WIDTH, 600)
 
+        notification_service.connect(
+            "cached-notification-added", self.on_notification_added
+        )
+        notification_service.connect(
+            "cached-notification-removed", self.on_notification_removed
+        )
+        notification_service.connect("clear-all", self.on_clear_all)
+        notification_service.connect("notify::count", self.on_count_changed)
+
         main_box = Box(
             orientation="v",
             spacing=5,
             name="noti-center-box",
         )
 
-        # Header
         header = Box(
             orientation="h",
             spacing=10,
             style="margin-bottom: 10px;",
         )
+
         header.add(
             Label(
                 label="Notification Center",
-                h_align="center",
+                h_align="start",
                 h_expand=True,
                 style="font-size: 16px; font-weight: bold; color: #ffffff;",
             )
         )
+
         main_box.add(header)
 
         self.scrolled = ScrolledWindow(h_expand=True, v_expand=True)
@@ -103,79 +115,106 @@ class NotificationCenter(Window):
         self.scrolled.add(self.notifications_box)
         main_box.add(self.scrolled)
 
+        # No notifications label
+        self.not_found_label = Label(
+            label="No notifications",
+            h_align="center",
+            v_align="center",
+            h_expand=True,
+            v_expand=True,
+            style="color: #888888; font-style: italic; margin: 20px;",
+            visible=(notification_service.count == 0),
+        )
+        main_box.add(self.not_found_label)
+
         self.clear_all_button = Button(
             name="noti-clear-button",
             label="Clear All",
             on_clicked=self.clear_all_notifications,
+            visible=(notification_service.count > 0),
         )
         main_box.add(self.clear_all_button)
 
         self.children = main_box
 
-        # Connect service signal
-        modus_service.connect(
-            "notification_count_changed", self._on_notification_count_changed
-        )
+        # Load existing notifications
+        for cached_notification in notification_service.cached_notifications:
+            self.notifications_box.add(
+                NotificationCenterWidget(notification=cached_notification)
+            )
 
         self.add_keybinding("Escape", self._on_escape_pressed)
-
         self.connect("destroy", self._on_destroy)
 
+    def on_notification_added(self, service, cached_notification):
+        try:
+            notification_widget = NotificationCenterWidget(
+                notification=cached_notification
+            )
+            # Insert at the beginning to show newest first
+            self.notifications_box.pack_start(notification_widget, False, False, 0)
+            notification_widget.show_all()
+            logger.debug(
+                f"Added notification widget for {cached_notification.app_name}"
+            )
+        except Exception as e:
+            logger.error(f"Error adding notification widget: {e}")
+
+    def on_notification_removed(self, service, cached_notification):
+        try:
+            # Find and remove the corresponding widget
+            for child in self.notifications_box.get_children():
+                if (
+                    hasattr(child, "notification_id")
+                    and child.notification_id == cached_notification.cache_id
+                ):
+                    child.destroy()
+                    break
+            logger.debug(
+                f"Removed notification widget for {cached_notification.app_name}"
+            )
+        except Exception as e:
+            logger.error(f"Error removing notification widget: {e}")
+
+    def on_clear_all(self, service):
+        try:
+            for child in self.notifications_box.get_children():
+                child.destroy()
+            logger.debug("Cleared all notification widgets")
+        except Exception as e:
+            logger.error(f"Error clearing notification widgets: {e}")
+
+    def on_count_changed(self, service, count=None):
+        current_count = notification_service.count
+        self.not_found_label.set_visible(current_count == 0)
+        self.clear_all_button.set_visible(current_count > 0)
+        self.scrolled.set_visible(current_count > 0)
+
     def clear_all_notifications(self, *_):
-        modus_service.clear_all_notifications()
-        self.refresh_notifications()
-        self.mousecapture.hide_child_window()
+        notification_service.clear_all_cached_notifications()
+        if hasattr(self, "mousecapture"):
+            self.mousecapture.hide_child_window()
 
     def _on_escape_pressed(self, *_):
-        self.mousecapture.hide_child_window()
+        if hasattr(self, "mousecapture"):
+            self.mousecapture.hide_child_window()
 
     def _init_mousecapture(self, mousecapture):
         self.mousecapture = mousecapture
 
     def _set_mousecapture(self, visible):
-        self.refresh_notifications()
-
-    def _on_notification_count_changed(self, *_):
-        self.refresh_notifications()
+        # No need to refresh on visibility change since we use signals
+        pass
 
     def _on_destroy(self, *_):
-        # Disconnect service signal
-        modus_service.disconnect(
-            "notification_count_changed", self._on_notification_count_changed
-        )
-
-    def refresh_notifications(self):
         try:
-            for child in self.notifications_box.get_children():
-                child.destroy()
-
-            notifications_with_ids = modus_service.get_deserialized_with_ids()
-            logger.info(f"Found {len(notifications_with_ids)} notifications to display")
-
-            if not notifications_with_ids:
-                no_notifications_label = Label(
-                    label="No notifications",
-                    h_align="center",
-                    style="color: #888888; font-style: italic; margin: 20px;",
-                )
-                self.notifications_box.add(no_notifications_label)
-                return
-
-            for notification, notification_id in notifications_with_ids:
-                try:
-                    logger.debug(
-                        f"Notification from {notification.app_name}: ID={
-                            notification_id
-                        }"
-                    )
-                    notification_widget = NotificationCenterWidget(
-                        notification=notification, notification_id=notification_id
-                    )
-                    self.notifications_box.add(notification_widget)
-                except Exception as e:
-                    logger.error(f"Error creating notification widget: {e}")
-
-            self.clear_all_button.set_visible(len(notifications_with_ids) > 0)
-
+            notification_service.disconnect(
+                "cached-notification-added", self.on_notification_added
+            )
+            notification_service.disconnect(
+                "cached-notification-removed", self.on_notification_removed
+            )
+            notification_service.disconnect("clear-all", self.on_clear_all)
+            notification_service.disconnect("notify::count", self.on_count_changed)
         except Exception as e:
-            logger.error(f"Error refreshing notifications: {e}")
+            logger.error(f"Error disconnecting signals: {e}")

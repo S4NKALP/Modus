@@ -248,16 +248,10 @@ class ModusControlCenter(Window):
                     style_classes="menu",
                     h_expand=True,
                     children=[
-                        Label(
-                            label="Display",
-                            style_classes="title",
-                            h_align="start"
-                        ),
+                        Label(label="Display", style_classes="title", h_align="start"),
                         self.brightness_scale,
                         Label(
-                            label="󰖨 ",
-                            name="brightness-widget-icon",
-                            h_align="start"
+                            label="󰖨 ", name="brightness-widget-icon", h_align="start"
                         ),
                     ],
                 ),
@@ -267,16 +261,10 @@ class ModusControlCenter(Window):
                     style_classes="menu",
                     h_expand=True,
                     children=[
-                        Label(
-                            label="Sound",
-                            style_classes="title",
-                            h_align="start"
-                        ),
+                        Label(label="Sound", style_classes="title", h_align="start"),
                         self.volume_scale,
                         Label(
-                            label=" ",
-                            name="brightness-widget-icon",
-                            h_align="start"
+                            label=" ", name="brightness-widget-icon", h_align="start"
                         ),
                     ],
                 ),
