@@ -309,7 +309,11 @@ class ModusControlCenter(Window):
         """Clean up resources when widget is hidden"""
         # Clean up music widget content if it exists
         if self._music_widget_content and not self._music_initialized:
-            self.music_widget.remove(self._music_widget_content)
+            # Remove from the parent container
+            current_children = list(self.music_widget.children)
+            if self._music_widget_content in current_children:
+                current_children.remove(self._music_widget_content)
+                self.music_widget.children = current_children
             self._music_widget_content = None
         
         # Reset lazy loading flags to allow re-initialization when shown again
@@ -319,7 +323,10 @@ class ModusControlCenter(Window):
         """Lazy load music widget content"""
         if not self._music_initialized:
             self._music_widget_content = PlayerBoxStack(MprisPlayerManager(), control_center=self)
-            self.music_widget.append(self._music_widget_content)
+            # Add to the music widget's children list
+            current_children = list(self.music_widget.children)
+            current_children.append(self._music_widget_content)
+            self.music_widget.children = current_children
             self._music_initialized = True
 
     def _ensure_bluetooth_widgets(self):
