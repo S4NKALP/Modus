@@ -12,7 +12,6 @@ from fabric.utils import (
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
-from modules.controlcenter.expanded_player import ExpandedPlayer
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
@@ -21,7 +20,6 @@ from loguru import logger
 
 from services.mpris import MprisPlayer, MprisPlayerManager
 import config.data as data
-from widgets.mousecapture import DropDownMouseCapture
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 
@@ -449,11 +447,6 @@ class PlayerBox(Box):
         self.control_center = control_center
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
-        # Create expanded player and mouse capture with weak references to avoid circular refs
-        self.expanded_player = None
-        self.ex_mousecapture = None
-        self._create_expanded_player()
-
         self.image_size = 50
         self.icon_size = 15
 
@@ -658,34 +651,6 @@ class PlayerBox(Box):
         )
         self._signal_connections.extend(connections)
 
-    def _create_expanded_player(self):
-        """Create expanded player components with proper cleanup handling."""
-        try:
-            self.expanded_player = ExpandedPlayer()
-            self.ex_mousecapture = DropDownMouseCapture(
-                layer="top", child_window=self.expanded_player
-            )
-        except Exception as e:
-            logger.warning(f"Failed to create expanded player: {e}")
-            self.expanded_player = None
-            self.ex_mousecapture = None
-
-    def _on_outer_box_clicked(self, *_):
-        """Handle outer box click with proper error handling."""
-        try:
-            # Close control center if it exists
-            if self.control_center and hasattr(
-                self.control_center, "hide_controlcenter"
-            ):
-                self.control_center.hide_controlcenter()
-
-            # Open expanded player if available
-            if self.expanded_player and self.ex_mousecapture:
-                self.expanded_player.set_visible(True)
-                self.ex_mousecapture.toggle_mousecapture()
-        except Exception as e:
-            logger.warning(f"Failed to handle outer box click: {e}")
-
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
         # Cancel any ongoing downloads
@@ -702,17 +667,6 @@ class PlayerBox(Box):
         # Clean up temp files
         self._cleanup_temp_files()
 
-        # Clean up UI components
-        try:
-            if self.ex_mousecapture:
-                self.ex_mousecapture.destroy()
-                self.ex_mousecapture = None
-            if self.expanded_player:
-                self.expanded_player.destroy()
-                self.expanded_player = None
-        except Exception as e:
-            logger.warning(f"Failed to cleanup UI components: {e}")
-
         super().destroy()
 
     def __del__(self):
@@ -723,20 +677,22 @@ class PlayerBox(Box):
             pass  # Ignore errors during cleanup in destructor
 
     def _on_prev_button_click(self, *_):
-        """Handle prev button click: close control center then open expanded player"""
+        """Handle prev button click: open expanded player in control center"""
         try:
-            # Close control center first
-            if self.control_center and hasattr(
-                self.control_center, "hide_controlcenter"
-            ):
-                self.control_center.hide_controlcenter()
-
-            # Then open expanded player
-            if self.expanded_player and self.ex_mousecapture:
-                self.expanded_player.set_visible(True)
-                self.ex_mousecapture.toggle_mousecapture()
+            # Open expanded player in control center instead of new window
+            if self.control_center and hasattr(self.control_center, "open_expanded_player"):
+                self.control_center.open_expanded_player()
         except Exception as e:
             logger.warning(f"Failed to handle prev button click: {e}")
+
+    def _on_outer_box_clicked(self, *_):
+        """Handle outer box click with proper error handling."""
+        try:
+            # Open expanded player in control center instead of new window
+            if self.control_center and hasattr(self.control_center, "open_expanded_player"):
+                self.control_center.open_expanded_player()
+        except Exception as e:
+            logger.warning(f"Failed to handle outer box click: {e}")
 
     def update_buttons(self, player_buttons, show_buttons):
         # """Update the stack switcher buttons in this player box"""
@@ -908,6 +864,5 @@ class PlayerBox(Box):
             GLib.idle_add(self._update_image, local_arturl)
 
     def close_bluetooth(self, *args):
-        """Close Bluetooth control center"""
-        if self.ex_mousecapture:
-            self.ex_mousecapture.hide_child_window()
+        """Placeholder method for compatibility"""
+        pass
