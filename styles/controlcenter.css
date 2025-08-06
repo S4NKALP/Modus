@@ -269,14 +269,16 @@
 }
 
 #volume-widget-icon {
-  margin-top: -24px;
-  margin-right: -30px;
-  color: #999;
+  font-size: 22px;
+  margin-top: -26px;
+  margin-right: -36px;
+  color: #000;
 }
 
 #brightness-widget-icon {
+  font-size: 15px;
   margin-top: -27px;
-  margin-right: -28px;
+  margin-right: -29px;
   color: #000;
 }
 

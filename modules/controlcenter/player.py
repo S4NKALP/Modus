@@ -18,6 +18,7 @@ from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
 from gi.repository import GLib, GObject
+from fabric.widgets.centerbox import CenterBox
 from loguru import logger
 
 from services.mpris import MprisPlayer, MprisPlayerManager
@@ -187,13 +188,12 @@ class PlayerBoxStack(Box):
             children=[track_info, controls_box],
         )
 
-        inner_box = Box(
+        inner_box = CenterBox(
             name="inner-player-box",
-            h_expand=True,
-            v_align="center",
-            h_align="start",
-            children=[
+            start_children=[
                 image_stack,
+            ],
+            center_children=[
                 player_info_box,
             ],
         )
