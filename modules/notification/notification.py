@@ -20,6 +20,7 @@ from utils.roam import modus_service
 from widgets.custom_image import CustomImage
 from widgets.customrevealer import SlideRevealer
 from widgets.wayland import WaylandWindow as Window
+from services.modus import notification_service
 
 NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
@@ -458,7 +459,7 @@ class NotificationState:
 
 class ModusNoti(Window):
     def __init__(self):
-        self._server = modus_service.notification_service
+        self._server = notification_service
 
         self.notifications = Box(
             v_expand=True,
