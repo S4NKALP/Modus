@@ -12,6 +12,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
+from modules.controlcenter.expanded_player import ExpandedPlayer
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
@@ -20,6 +21,7 @@ from loguru import logger
 
 from services.mpris import MprisPlayer, MprisPlayerManager
 import config.data as data
+from widgets.mousecapture import DropDownMouseCapture
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 
@@ -379,6 +381,10 @@ class PlayerBox(Box):
         self.player_stack = player_stack
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
+        self.expanded_player = ExpandedPlayer()
+        self.ex_mousecapture = DropDownMouseCapture(
+            layer="top", child_window=self.expanded_player
+        )
         self.image_size = 120
 
         self.icon_size = 15
@@ -515,7 +521,11 @@ class PlayerBox(Box):
         self.prev_button = Button(
             style_classes=["player-button"],
             child=self.skip_prev_icon,
-            on_clicked=self._on_player_prev,
+            on_clicked=lambda *_: (
+                self.expanded_player.set_visible(True),
+                self.ex_mousecapture.toggle_mousecapture(),
+            ),
+            # on_clicked=self._on_player_prev,
         )
         self.shuffle_button = Button(
             style_classes=["player-button"],
@@ -530,12 +540,16 @@ class PlayerBox(Box):
             self.play_pause_button,
             self.next_button,
         )
+        self.custom = Button(
+            child=self.track_info,
+            on_clicked=lambda *_: self.expanded_player.set_visible(True),
+        )
         self.player_info_box = Box(
             name="player-info-box",
             v_align="center",
             h_align="start",
             orientation="v",
-            children=[self.track_info, self.controls_box, self.stack_buttons_box],
+            children=[self.custom, self.controls_box, self.stack_buttons_box],
         )
 
         self.inner_box = Box(
@@ -763,3 +777,7 @@ class PlayerBox(Box):
 
         GLib.idle_add(self._update_image, local_arturl)
         return None
+
+    def close_bluetooth(self, *args):
+        """Close Bluetooth control center"""
+        self.ex_mousecapture.hide_child_window()
