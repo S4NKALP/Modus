@@ -4,22 +4,23 @@
 - **Technology**: Python desktop environment using Fabric framework (GTK/PyGObject)
 - **Purpose**: Wayland desktop environment with launcher, panel, dock, notifications
 - **Entry Point**: `main.py` - starts all components
+- **Dependencies**: PyGObject, loguru, pillow, psutil, pydbus - see requirements.txt
 
 ## Build/Test Commands
 - **Run Application**: `python main.py`
 - **Test Icon Browser**: `python test.py` 
 - **Install Dependencies**: `pip install -r requirements.txt`
-- **No formal test suite exists** - test by running components directly
+- **No formal test suite exists** - test by running individual modules/components directly
 
 ## Code Style Guidelines
-- **Imports**: Standard library first, third-party second, local modules last with blank lines between groups
-- **Formatting**: Follow PEP 8, use 4 spaces for indentation
-- **Naming**: snake_case for functions/variables, PascalCase for classes, UPPER_CASE for constants
-- **Type Hints**: Use typing imports for List, Optional, Tuple annotations
-- **Error Handling**: Use try/except blocks, log errors with print statements or loguru logger
-- **Comments**: Minimal docstrings for classes, no inline comments unless complex logic
-- **Constants**: Define module-level constants at top (e.g., SEARCH_DEBOUNCE_MS = 50)
-- **Properties**: Use @Property decorator with type hints for Fabric service properties
-- **Signals**: Use @Signal decorator for event handling in services
-- **Widget Structure**: Inherit from appropriate Fabric widgets (Window, Box, Entry, etc.)
-- **GTK Integration**: Use gi.repository imports for GTK, GLib functionality
+- **Import Order**: Standard library first, third-party (gi, fabric), local modules last with blank lines
+- **Import Comments**: Use `# Standard library imports`, `# Fabric imports`, `# Local imports` headers
+- **Formatting**: PEP 8, 4 spaces indentation, line length ~100 chars
+- **Naming**: snake_case functions/variables, PascalCase classes, UPPER_CASE constants
+- **Type Hints**: Use modern typing (list[str] over List[str]), Optional for nullable params
+- **Error Handling**: try/except with contextlib.suppress for optional operations, log with loguru
+- **Documentation**: Brief docstrings for classes, avoid inline comments unless complex
+- **Constants**: Module-level constants at top after imports (APP_NAME, ALLOWED_PLAYERS)
+- **Services**: Use @Property/@Signal decorators, inherit from fabric.core.service.Service
+- **Widgets**: Inherit from fabric.widgets (Window, Box, Entry), use **kwargs forwarding
+- **GTK**: Always use gi.require_version before imports, handle missing dependencies gracefully

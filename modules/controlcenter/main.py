@@ -16,6 +16,7 @@ from services.brightness import Brightness
 from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
 from modules.controlcenter.player import PlayerBoxStack
+from modules.controlcenter.per_app_volume import PerAppVolumeControl
 from services.mpris import MprisPlayerManager
 
 brightness_service = Brightness.get_initial()
@@ -45,12 +46,14 @@ class ModusControlCenter(Window):
         self._wifi_initialized = False
         self._bluetooth_initialized = False
         self._music_initialized = False
+        self._per_app_volume_initialized = False
         
         # Store references for cleanup
         self._signal_connections = []
         self._wifi_man = None
         self._bluetooth_man = None
         self._music_widget_content = None
+        self._per_app_volume_widget = None
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
@@ -128,6 +131,7 @@ class ModusControlCenter(Window):
 
         self.has_bluetooth_open = False
         self.has_wifi_open = False
+        self.has_per_app_volume_open = False
 
         self.bluetooth_svg = Svg(
             name="bluetooth-icon",
@@ -269,10 +273,19 @@ class ModusControlCenter(Window):
                     style_classes="menu",
                     h_expand=True,
                     children=[
-                        Label(label="Sound", style_classes="title", h_align="start"),
-                        self.volume_scale,
-                        Label(
-                            label=" ", name="brightness-widget-icon", h_align="start"
+                        Button(
+                            name="volume-widget-button",
+                            child=Box(
+                                orientation="vertical",
+                                children=[
+                                    Label(label="Sound", style_classes="title", h_align="start"),
+                                    self.volume_scale,
+                                    Label(
+                                        label=" ", name="brightness-widget-icon", h_align="start"
+                                    ),
+                                ]
+                            ),
+                            on_clicked=self.open_per_app_volume,
                         ),
                     ],
                 ),
@@ -288,10 +301,12 @@ class ModusControlCenter(Window):
         # Lazy-loaded widgets - create placeholders
         self.bluetooth_widgets = None
         self.wifi_widgets = None
+        self.per_app_volume_widgets = None
 
         self.center_box = CenterBox(start_children=[self.widgets])
         self.bluetooth_center_box = None
         self.wifi_center_box = None
+        self.per_app_volume_center_box = None
 
         self.widgets.set_size_request(300, -1)
 
@@ -393,6 +408,23 @@ class ModusControlCenter(Window):
             self.wifi_center_box = CenterBox(start_children=[self.wifi_widgets])
             self.wifi_center_box.set_size_request(300, -1)
 
+    def _ensure_per_app_volume_widgets(self):
+        """Lazy load per-app volume widgets"""
+        if self.per_app_volume_widgets is None:
+            if self._per_app_volume_widget is None:
+                self._per_app_volume_widget = PerAppVolumeControl(self)
+            
+            self.per_app_volume_widgets = Box(
+                orientation="vertical",
+                h_expand=True,
+                name="control-center-widgets",
+                children=[
+                    self._per_app_volume_widget,
+                ],
+            )
+            self.per_app_volume_center_box = CenterBox(start_children=[self.per_app_volume_widgets])
+            self.per_app_volume_center_box.set_size_request(300, -1)
+
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
         modus_service.dont_disturb = self.focus_mode
@@ -475,6 +507,18 @@ class ModusControlCenter(Window):
         idle_add(lambda *_: self.set_children(self.center_box))
         self.has_wifi_open = False
 
+    def open_per_app_volume(self, *_):
+        self._ensure_per_app_volume_widgets()
+        idle_add(lambda *_: self.set_children(self.per_app_volume_center_box))
+        self.has_per_app_volume_open = True
+        # Refresh the app list when opening
+        if self._per_app_volume_widget:
+            self._per_app_volume_widget.refresh()
+
+    def close_per_app_volume(self, *_):
+        idle_add(lambda *_: self.set_children(self.center_box))
+        self.has_per_app_volume_open = False
+
     def _set_mousecapture(self, visible: bool):
         if visible:
             # Lazy load music widget when becoming visible
@@ -484,6 +528,7 @@ class ModusControlCenter(Window):
         if not visible:
             self.close_bluetooth()
             self.close_wifi()
+            self.close_per_app_volume()
 
     def volume_changed(
         self,
@@ -584,5 +629,7 @@ class ModusControlCenter(Window):
             self._bluetooth_man.destroy()
         if self._music_widget_content:
             self._music_widget_content.destroy()
+        if self._per_app_volume_widget:
+            self._per_app_volume_widget.destroy()
             
         super().destroy()
