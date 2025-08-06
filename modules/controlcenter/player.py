@@ -150,7 +150,7 @@ class PlayerBoxStack(Box):
 
         track_artist = Label(
             label="",
-            name="player-artist",
+            name="player-artist-c",
             justification="left",
             max_chars_width=15,
             ellipsization="end",
@@ -161,6 +161,7 @@ class PlayerBoxStack(Box):
         track_info = Box(
             name="track-info",
             # spacing=5,
+            h_expand=True,
             orientation="v",
             v_align="start",
             h_align="start",
@@ -174,38 +175,54 @@ class PlayerBoxStack(Box):
         )
 
         player_info_box = Box(
-            name="player-info-box",
+            name="player-info-box-c",
+            h_expand=True,
             v_align="center",
-            h_align="start",
+            h_align="center",
             orientation="v",
             children=[track_info, controls_box],
         )
 
         inner_box = Box(
             name="inner-player-box",
+            h_expand=True,
             v_align="center",
             h_align="start",
-        )
-
-        outer_box = Box(
-            name="outer-player-box",
-            h_align="start",
-        )
-
-        overlay_box = Overlay(
-            child=outer_box,
-            overlays=[
-                inner_box,
-                player_info_box,
+            children=[
                 image_stack,
+                player_info_box,
             ],
         )
+        # resize the inner box
+        outer_box = Box(
+            spacing=5,
+            name="outer-no-player-box-c",
+            h_expand=True,
+            h_align="fill",
+            # children=[
+            v_expand=True,
+            children=inner_box,
+            # inner_box,
+            # player_info_box,
+            # image,
+            # ],
+        )
 
+        box = Box(
+            name="box-c",
+            orientation="h",
+            v_expand=True,
+            h_align="fill",
+            h_expand=True,
+            children=[
+                outer_box,
+            ],
+        )
         no_media_box = Box(
             h_align="center",
             name="player-box",
             h_expand=True,
-            children=[overlay_box],
+            children=[box],
         )
 
         return no_media_box
@@ -588,10 +605,10 @@ class PlayerBox(Box):
             self.play_pause_button,
             self.next_button,
         )
-        
+
         # Assign button_box to controls_box for compatibility
         self.controls_box = self.button_box
-        
+
         self.player_info_box = Box(
             name="player-info-box-c",
             v_align="center",
@@ -687,7 +704,9 @@ class PlayerBox(Box):
         """Handle prev button click: open expanded player in control center"""
         try:
             # Open expanded player in control center instead of new window
-            if self.control_center and hasattr(self.control_center, "open_expanded_player"):
+            if self.control_center and hasattr(
+                self.control_center, "open_expanded_player"
+            ):
                 self.control_center.open_expanded_player()
         except Exception as e:
             logger.warning(f"Failed to handle prev button click: {e}")
@@ -696,11 +715,14 @@ class PlayerBox(Box):
         """Handle outer box click with proper error handling."""
         try:
             # Open expanded player in control center instead of new window
-            if self.control_center and hasattr(self.control_center, "open_expanded_player"):
+            if self.control_center and hasattr(
+                self.control_center, "open_expanded_player"
+            ):
                 self.control_center.open_expanded_player()
         except Exception as e:
             logger.warning(f"Failed to handle outer box click: {e}")
             import traceback
+
             logger.error(f"Full traceback: {traceback.format_exc()}")
 
     def update_buttons(self, player_buttons, show_buttons):

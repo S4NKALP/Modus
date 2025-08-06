@@ -38,6 +38,14 @@
   /* background-color: alpha(#000, 0.3); */
   /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
 }
+#outer-no-player-box-c {
+  min-height: 55px;
+  min-width: 280px;
+  border-radius: 8px;
+  /* margin: 0 6px; */
+  /* background-color: alpha(#000, 0.3); */
+  /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
+}
 #box-c {
   min-height: 50px;
   min-width: 220px;
