@@ -87,17 +87,18 @@ class BluetoothConnections(Box):
 
         self.toggle_button = Gtk.Switch(visible=True, name="toggle-button")
 
+        # Safely set initial state
         self.toggle_button.set_active(self.client.enabled)
         self.toggle_button.connect(
             "notify::active",
             lambda *_: self.client.set_enabled(self.toggle_button.get_active()),
         )
 
+        # Connect client signals
         self.client.connect(
             "notify::enabled",
             lambda *_: self.toggle_button.set_active(self.client.enabled),
         )
-
         # Connect scanning state changes to update scan button
         self.client.connect("notify::scanning", lambda *_: self.update_scan_label())
 

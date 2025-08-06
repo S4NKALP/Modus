@@ -44,16 +44,12 @@ class ModusControlCenter(Window):
         self._updating_volume = False
         
         # Lazy loading flags
-        self._wifi_initialized = False
-        self._bluetooth_initialized = False
         self._music_initialized = False
         self._per_app_volume_initialized = False
         self._expanded_player_initialized = False
         
         # Store references for cleanup
         self._signal_connections = []
-        self._wifi_man = None
-        self._bluetooth_man = None
         self._music_widget_content = None
         self._per_app_volume_widget = None
         self._expanded_player_widget = None
@@ -304,6 +300,13 @@ class ModusControlCenter(Window):
             ],
         )
 
+        # Initialize managers directly like working version
+        self.wifi_man = WifiConnections(self)
+        self.bluetooth_man = BluetoothConnections(self)
+
+        self.has_bluetooth_open = False
+        self.has_wifi_open = False
+
         # Lazy-loaded widgets - create placeholders
         self.bluetooth_widgets = None
         self.wifi_widgets = None
@@ -355,9 +358,6 @@ class ModusControlCenter(Window):
     def _ensure_bluetooth_widgets(self):
         """Lazy load bluetooth widgets"""
         if self.bluetooth_widgets is None:
-            if self._bluetooth_man is None:
-                self._bluetooth_man = BluetoothConnections(self)
-            
             self.bluetooth_widgets = Box(
                 orientation="vertical",
                 h_expand=True,
@@ -374,7 +374,7 @@ class ModusControlCenter(Window):
                                 style_classes="menu",
                                 spacing=5,
                                 children=[
-                                    self._bluetooth_man,
+                                    self.bluetooth_man,
                                 ],
                             ),
                         ],
@@ -387,9 +387,6 @@ class ModusControlCenter(Window):
     def _ensure_wifi_widgets(self):
         """Lazy load wifi widgets"""
         if self.wifi_widgets is None:
-            if self._wifi_man is None:
-                self._wifi_man = WifiConnections(self)
-            
             self.wifi_widgets = Box(
                 orientation="vertical",
                 h_expand=True,
@@ -406,7 +403,7 @@ class ModusControlCenter(Window):
                                 style_classes="menu",
                                 spacing=5,
                                 children=[
-                                    self._wifi_man,
+                                    self.wifi_man,
                                 ],
                             ),
                         ],
