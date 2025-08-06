@@ -288,16 +288,26 @@ class ModusControlCenter(Window):
                         Box(
                             orientation="horizontal",
                             spacing=8,
-                            v_expand=False,
+                            v_expand=True,
+                            h_expand=True,
                             children=[
                                 self.volume_scale,
                                 Button(
                                     name="per-app-volume-button",
-                                    child=Svg(
-                                        svg_file=get_relative_path(
-                                            "../../config/assets/icons/player/audio-switcher.svg"
-                                        ),
-                                        name="per-app-volume-icon",
+                                    child=Box(
+                                        h_align="center",
+                                        v_align="center",
+                                        h_expand=True,
+                                        size=(32, 32),
+                                        v_expand=True,
+                                        children=[
+                                            Svg(
+                                                svg_file=get_relative_path(
+                                                    "../../config/assets/icons/player/audio-switcher.svg"
+                                                ),
+                                                size=34,
+                                            )
+                                        ],
                                     ),
                                     on_clicked=self.open_per_app_volume,
                                 ),

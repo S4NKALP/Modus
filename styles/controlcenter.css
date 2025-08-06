@@ -474,9 +474,8 @@
 /* Circle button for per-app volume */
 #per-app-volume-button {
   background-color: alpha(#fff, 0.15);
-  border: 2px solid alpha(#999, 0.6);
+  border: 1px solid alpha(#999, 0.6);
   border-radius: 50%;
-  min-width: 30px;
 }
 
 #per-app-volume-button:hover {
@@ -678,6 +677,7 @@
   border: none;
   border-radius: 50%;
   min-width: 28px; /* Slightly smaller */
+  opacity: 0.7;
   min-height: 28px;
   padding: 5px; /* Reduced padding */
   color: #ffffff;
@@ -685,8 +685,7 @@
 }
 
 #macos-control-button:hover {
-  background: alpha(#fff, 0.1);
-  box-shadow: 0 0 0 1px alpha(#fff, 0.2);
+  opacity: 1;
 }
 
 #macos-play-button {
@@ -694,6 +693,7 @@
   border: none;
   border-radius: 50%;
   min-width: 36px; /* Slightly smaller */
+  opacity: 0.7;
   min-height: 36px;
   padding: 7px; /* Reduced padding */
   color: #ffffff;
@@ -701,8 +701,7 @@
 }
 
 #macos-play-button:hover {
-  background: alpha(#fff, 0.15);
-  box-shadow: 0 0 0 1px alpha(#fff, 0.25);
+  opacity: 1;
 }
 
 /* macOS player switcher dots - compact horizontal layout */

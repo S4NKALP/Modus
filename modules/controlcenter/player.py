@@ -16,6 +16,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
+from fabric.widgets.svg import Svg
 from gi.repository import GLib, GObject
 from loguru import logger
 
@@ -84,7 +85,7 @@ class PlayerBoxStack(Box):
 
         self.mpris_manager = mpris_manager
 
-        # Track connections for cleanup
+        # Track connections for cleanup - store (object, handler_id) tuples
         connections = bulk_connect(
             self.mpris_manager,
             {
@@ -92,7 +93,9 @@ class PlayerBoxStack(Box):
                 "player-vanished": self.on_lost_player,
             },
         )
-        self._signal_connections.extend(connections)
+        # Store as (object, handler_id) tuples
+        for handler_id in connections:
+            self._signal_connections.append((self.mpris_manager, handler_id))
 
         for player in self.mpris_manager.players:  # type: ignore
             logger.info(
@@ -103,9 +106,9 @@ class PlayerBoxStack(Box):
     def destroy(self):
         """Clean up resources when the widget is destroyed."""
         # Disconnect all signal connections
-        for connection in self._signal_connections:
+        for obj, handler_id in self._signal_connections:
             try:
-                connection.disconnect()
+                obj.disconnect(handler_id)
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
@@ -567,18 +570,15 @@ class PlayerBox(Box):
         )
 
         # Create SVG icons with consistent sizing
-        self.skip_next_icon = Image(
-            image_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
-            icon_size=16
+        self.skip_next_icon = Svg(
+            name="control-buttons",
+            size=(28, 28),
+            svg_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
         )
-        self.skip_prev_icon = Image(
-            image_file=get_relative_path("../../config/assets/icons/player/Rewind.svg"), 
-            icon_size=16
-        )
-        self.shuffle_icon = Image(icon_name="shuffle", icon_size=16)
-        self.play_pause_icon = Image(
-            image_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
-            icon_size=18
+        self.play_pause_icon = Svg(
+            name="control-buttons",
+            size=(28, 28),
+            svg_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
         )
 
         # Fixed size buttons to prevent layout shifts
@@ -588,39 +588,19 @@ class PlayerBox(Box):
             on_clicked=self.player.play_pause,
         )
         # Set consistent button size
-        self.play_pause_button.set_size_request(32, 32)
 
         self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
 
         self.next_button = Button(
-            style_classes=["player-button"],
+            name="player-button",
             child=self.skip_next_icon,
             on_clicked=self._on_player_next,
         )
         # Set consistent button size
-        self.next_button.set_size_request(32, 32)
+        # self.next_button.set_size_request(32, 32)
         self.player.bind_property("can_go_next", self.next_button, "sensitive")
 
-        self.prev_button = Button(
-            style_classes=["player-button"],
-            child=self.skip_prev_icon,
-            on_clicked=self._on_prev_button_click,
-        )
-        # Set consistent button size  
-        self.prev_button.set_size_request(32, 32)
-        
-        self.shuffle_button = Button(
-            style_classes=["player-button"],
-            child=self.shuffle_icon,
-            on_clicked=self.player.toggle_shuffle,
-        )
-        # Set consistent button size
-        self.shuffle_button.set_size_request(32, 32)
-        self.player.bind_property("can_shuffle", self.shuffle_button, "sensitive")
-
         self.button_box.children = (
-            # self.shuffle_button,
-            # self.prev_button,
             self.play_pause_button,
             self.next_button,
         )
@@ -682,7 +662,7 @@ class PlayerBox(Box):
             self.box,
         ]
 
-        # Track signal connections for cleanup
+        # Track signal connections for cleanup - store (object, handler_id) tuples
         connections = bulk_connect(
             self.player,
             {
@@ -692,7 +672,9 @@ class PlayerBox(Box):
                 "notify::metadata": self._on_metadata,
             },
         )
-        self._signal_connections.extend(connections)
+        # Store as (object, handler_id) tuples
+        for handler_id in connections:
+            self._signal_connections.append((self.player, handler_id))
 
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
@@ -700,9 +682,9 @@ class PlayerBox(Box):
         self._download_cancelled = True
 
         # Disconnect all signal connections
-        for connection in self._signal_connections:
+        for obj, handler_id in self._signal_connections:
             try:
-                connection.disconnect()
+                obj.disconnect(handler_id)
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
@@ -781,24 +763,6 @@ class PlayerBox(Box):
         else:
             self.shuffle_icon.style_classes = []
             self.shuffle_icon.add_style_class("shuffle-off")
-
-    def play_pause(self, player, status):
-        status = player.get_property("playback-status")
-
-        if status == "paused":
-            self.play_pause_icon.set_from_file(
-                get_relative_path("../../config/assets/icons/player/play.svg")
-            )
-
-        if status == "playing":
-            self.play_pause_icon.set_from_file(
-                get_relative_path("../../config/assets/icons/player/Pause.svg")
-            )
-            # Notify the player stack that this player started playing
-            if self.player_stack and hasattr(
-                self.player_stack, "on_player_playback_changed"
-            ):
-                self.player_stack.on_player_playback_changed(self, status)
 
     def _on_playback_change(self, player, status):
         status = player.get_property("playback-status")
