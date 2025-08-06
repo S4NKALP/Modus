@@ -213,7 +213,7 @@ class PlayerBoxStack(Box):
         # Album cover with fallback image using Image widget
 
         album_cover = Box(
-            name="macos-album-image",
+            name="macos-album-image-no",
         )
         album_cover.set_style(f"background-image:url('{fallback_cover_path}')")
 
@@ -223,9 +223,9 @@ class PlayerBoxStack(Box):
         # Track info showing "No media playing"
         track_title = Label(
             label="No media playing",
-            name="player-title",
+            name="player-title-no",
             justification="left",
-            max_chars_width=12,
+            max_chars_width=30,
             ellipsization="end",
             h_align="start",
         )

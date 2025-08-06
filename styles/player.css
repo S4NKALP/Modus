@@ -78,6 +78,11 @@
   font-weight: 700;
   font-size: 16px;
 }
+#player-title-no {
+  font-weight: 700;
+  margin-left: 120px;
+  font-size: 16px;
+}
 #player-app-icon {
   /* margin-bottom: 2px; */
 }

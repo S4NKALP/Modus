@@ -587,6 +587,15 @@
   box-shadow: 0 2px 8px alpha(#000, 0.3);
 }
 
+#macos-album-image-no {
+  min-width: 90px;
+  min-height: 90px;
+  border-radius: 9px;
+  margin-left: 12px;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 2px 8px alpha(#000, 0.3);
+}
 #macos-album-image image {
   min-width: 70px;
   min-height: 70px;
