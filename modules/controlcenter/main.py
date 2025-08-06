@@ -113,7 +113,7 @@ class ModusControlCenter(Window):
             #     self.expanded_player.set_visible(True),
             #     self.ex_mousecapture.toggle_mousecapture(),
             # ),
-            children=PlayerBoxStack(MprisPlayerManager()),
+            children=PlayerBoxStack(MprisPlayerManager(), control_center=self),
         )
 
         self.wifi_man = WifiConnections(self)
