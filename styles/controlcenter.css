@@ -396,7 +396,7 @@
   min-width: 20px;
   min-height: 20px;
   margin: -7px;
-  box-shadow: 
+  box-shadow:
     0 2px 8px alpha(#000, 0.15),
     0 1px 3px alpha(#000, 0.2);
   transition: all 0.15s ease;
@@ -405,7 +405,7 @@
 #apple-volume-slider slider:hover {
   background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
   border-color: #007aff;
-  box-shadow: 
+  box-shadow:
     0 4px 12px alpha(#000, 0.2),
     0 2px 6px alpha(#007aff, 0.3);
   min-width: 22px;
@@ -418,7 +418,7 @@
   min-width: 21px;
   min-height: 21px;
   margin: -7.5px;
-  box-shadow: 
+  box-shadow:
     0 2px 6px alpha(#000, 0.25),
     0 1px 3px alpha(#007aff, 0.4);
 }
@@ -500,7 +500,7 @@
   background-color: transparent;
   margin-top: 8px;
   margin-bottom: 4px;
-  min-height: 20px;
+  min-height: 10px;
 }
 
 #apple-seek-bar trough {
@@ -526,7 +526,7 @@
   min-width: 12px;
   min-height: 12px;
   margin: -4.5px;
-  box-shadow: 
+  box-shadow:
     0 1px 3px alpha(#000, 0.2),
     0 0 0 1px alpha(#fff, 0.8);
   transition: all 0.1s ease;
@@ -538,7 +538,7 @@
   min-width: 14px;
   min-height: 14px;
   margin: -5.5px;
-  box-shadow: 
+  box-shadow:
     0 2px 6px alpha(#000, 0.25),
     0 0 0 2px alpha(#007aff, 0.3);
 }
@@ -548,20 +548,20 @@
   min-width: 13px;
   min-height: 13px;
   margin: -5px;
-  box-shadow: 
+  box-shadow:
     0 1px 3px alpha(#000, 0.3),
     0 0 0 2px alpha(#007aff, 0.5);
 }
 
 /* macOS-style expanded player - more compact */
 #macos-outer-player-box {
-  min-height: 110px;  /* Reduced height */
-  min-width: 380px;
+  min-height: 110px; /* Reduced height */
+  min-width: 420px;  /* Slightly wider to accommodate expanded track info */
   border-radius: 12px;
   margin: 10px;
-  padding: 15px;  /* Reduced padding */
+  padding: 15px; /* Reduced padding */
   background-color: alpha(#000, 0.4);
-  box-shadow: 
+  box-shadow:
     0 4px 16px alpha(#000, 0.25),
     inset 0 0 0 1px alpha(#fff, 0.1);
 }
@@ -583,6 +583,12 @@
   border-radius: 8px;
 }
 
+/* Track info container that expands to fill available space */
+#macos-track-info {
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
 #macos-player-title {
   font-weight: 600;
   font-size: 16px;
@@ -601,12 +607,12 @@
 #macos-seek-bar {
   background-color: transparent;
   margin: 8px 0 4px 0;
-  min-height: 20px;
+  min-height: 10px;
 }
 
 #macos-seek-bar trough {
   min-width: 200px;
-  min-height: 4px;
+  min-height: 2px;
   border-radius: 2px;
   background-color: alpha(#fff, 0.25);
   border: none;
@@ -645,16 +651,16 @@
 
 /* macOS control buttons - more compact */
 #macos-button-box {
-  margin-top: 6px;  /* Reduced top margin */
+  margin-top: 6px; /* Reduced top margin */
 }
 
 #macos-control-button {
   background: transparent;
   border: none;
   border-radius: 50%;
-  min-width: 28px;  /* Slightly smaller */
+  min-width: 28px; /* Slightly smaller */
   min-height: 28px;
-  padding: 5px;    /* Reduced padding */
+  padding: 5px; /* Reduced padding */
   color: #ffffff;
   transition: all 0.15s ease;
 }
@@ -666,11 +672,11 @@
 
 #macos-play-button {
   background: transparent;
-  border: none; 
+  border: none;
   border-radius: 50%;
-  min-width: 36px;  /* Slightly smaller */
+  min-width: 36px; /* Slightly smaller */
   min-height: 36px;
-  padding: 7px;    /* Reduced padding */
+  padding: 7px; /* Reduced padding */
   color: #ffffff;
   transition: all 0.15s ease;
 }
@@ -682,16 +688,16 @@
 
 /* macOS player switcher dots - compact horizontal layout */
 #macos-stack-buttons-box {
-  margin: 2px 5px;  /* Minimal margins */
+  margin: 2px 5px; /* Minimal margins */
 }
 
 .macos-switcher-dot {
   background: alpha(#fff, 0.3);
   border: none;
   border-radius: 50%;
-  min-width: 6px;   /* Smaller dots */
+  min-width: 6px; /* Smaller dots */
   min-height: 6px;
-  margin: 2px;      /* Reduced margins */
+  margin: 2px; /* Reduced margins */
   transition: all 0.2s ease;
 }
 
@@ -701,5 +707,5 @@
 
 .macos-switcher-dot.active {
   background: #ffffff;
-  box-shadow: 0 0 0 1px alpha(#fff, 0.3);  /* Smaller glow */
+  box-shadow: 0 0 0 1px alpha(#fff, 0.3); /* Smaller glow */
 }

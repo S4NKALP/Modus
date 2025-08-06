@@ -14,7 +14,6 @@ from typing import List
 import threading
 
 from fabric.utils import bulk_connect, invoke_repeater, cooldown
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
@@ -193,9 +192,10 @@ class PlayerBoxStack(Box):
             name="macos-album-cover-image",
             pixbuf=None,
         )
-        
+
         try:
             from gi.repository import GdkPixbuf
+
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                 fallback_cover_path, 80, 80, True
             )
@@ -203,7 +203,7 @@ class PlayerBoxStack(Box):
             album_cover_image.set_size_request(80, 80)
         except Exception as e:
             logger.warning(f"Failed to load fallback image in no-media box: {e}")
-        
+
         album_cover = Box(
             name="macos-album-image",
             children=[album_cover_image],
@@ -520,7 +520,7 @@ class PlayerBox(Box):
 
         self.track_artist = Label(
             label="No Artist",
-            name="macos-player-artist", 
+            name="macos-player-artist",
             justification="left",
             max_chars_width=30,
             ellipsization="end",
@@ -534,10 +534,11 @@ class PlayerBox(Box):
             name="macos-album-cover-image",
             pixbuf=None,
         )
-        
+
         # Set fallback image immediately with proper scaling
         try:
             from gi.repository import GdkPixbuf
+
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                 self.fallback_cover_path, 80, 80, True
             )
@@ -545,7 +546,7 @@ class PlayerBox(Box):
             self.album_cover_image.set_size_request(80, 80)
         except Exception as e:
             logger.warning(f"Failed to load fallback image: {e}")
-        
+
         # Container box for styling with fixed size
         self.album_cover = Box(
             name="macos-album-image",
@@ -554,13 +555,16 @@ class PlayerBox(Box):
         self.album_cover.set_size_request(80, 80)
 
         self.image_stack = Box(
-            h_align="start", v_align="start", name="macos-player-image-stack"
+            h_align="start", 
+            v_align="start", 
+            h_expand=False,  # Fixed width for album art
+            name="macos-player-image-stack"
         )
         self.image_stack.children = [*self.image_stack.children, self.album_cover]
 
         # Seek bar should not update automatically during user interaction
         self._user_seeking = False
-        
+
         self.seek_bar = Scale(
             value=0,
             min_value=0,
@@ -585,7 +589,7 @@ class PlayerBox(Box):
 
         self.length_label = Label(
             label="0:00",
-            name="macos-length-label", 
+            name="macos-length-label",
             justification="right",
             h_align="end",
         )
@@ -616,26 +620,29 @@ class PlayerBox(Box):
         self.button_box = Box(
             name="macos-button-box",
             h_align="center",
+            h_expand=True,
             spacing=15,  # Wider spacing for macOS look
         )
 
         # Define controls_box BEFORE using it in track_info
         self.controls_box = Box(
-            name="macos-player-controls", 
+            name="macos-player-controls",
             orientation="v",
+            h_expand=True,
             spacing=8,
             h_align="center",
             children=[self.button_box],
         )
 
-        # Track info with inline controls - more compact layout
+        # Track info with inline controls - expands to fill available space
         self.track_info = Box(
             name="macos-track-info",
             spacing=6,  # Reduced spacing
             orientation="v",
             v_align="start", 
-            h_align="start",
-            h_expand=True,
+            h_align="fill",  # Fill all available horizontal space
+            h_expand=True,   # Expand horizontally to take maximum space
+            v_expand=True,   # Also expand vertically
             children=[
                 self.track_title,
                 self.track_artist,
@@ -666,11 +673,11 @@ class PlayerBox(Box):
 
         # Player switcher buttons box (compact, minimal space)
         self.stack_buttons_box = Box(
-            h_expand=False,
-            v_expand=False,
+            h_expand=False,  # Fixed width, don't expand
+            v_expand=True,
             name="macos-stack-buttons-box",
             spacing=4,  # Reduced spacing
-            orientation="h",  # Horizontal layout for compactness
+            orientation="v",  # Vertical layout for compactness
             h_align="end",
             v_align="start",
         )
@@ -690,7 +697,7 @@ class PlayerBox(Box):
         self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
 
         self.next_button = Button(
-            name="macos-control-button", 
+            name="macos-control-button",
             child=self.skip_next_icon,
             on_clicked=self._on_player_next,
         )
@@ -711,30 +718,15 @@ class PlayerBox(Box):
         self.outer_box = Box(
             name="macos-outer-player-box",
             orientation="horizontal",
-            spacing=15,
-            h_align="start",
+            spacing=15,  # Good spacing between elements
+            h_expand=True,
+            v_expand=True,
+            v_align="center",
+            h_align="fill",  # Fill available space
             children=[
-                self.image_stack,  # Album art on left
-                Box(
-                    name="macos-main-section",
-                    orientation="v",
-                    spacing=0,
-                    h_expand=True,
-                    v_align="center",
-                    children=[
-                        # Header with player switcher in corner
-                        Box(
-                            orientation="h",
-                            h_expand=True,
-                            children=[
-                                Box(h_expand=True),  # Spacer
-                                self.stack_buttons_box,  # Compact switcher in corner
-                            ],
-                        ),
-                        # Main content area
-                        self.track_info,  # Contains title, artist, seek bar AND controls now
-                    ],
-                ),
+                self.image_stack,  # Album art on left (fixed width)
+                self.track_info,  # Contains title, artist, seek bar AND controls (expands)
+                self.stack_buttons_box,  # Compact switcher in corner (fixed width)
             ],
         )
 
@@ -806,7 +798,9 @@ class PlayerBox(Box):
 
                 # Connect click handler to switch to this player
                 def make_click_handler(index):
-                    return lambda *_: self.player_stack.on_player_clicked_by_index(index)
+                    return lambda *_: self.player_stack.on_player_clicked_by_index(
+                        index
+                    )
 
                 dot_button.connect("clicked", make_click_handler(i))
                 self.stack_buttons_box.children = [
@@ -894,7 +888,7 @@ class PlayerBox(Box):
     def _update_image(self, image_path):
         try:
             from gi.repository import GdkPixbuf
-            
+
             if image_path and os.path.isfile(image_path):
                 # Create scaled pixbuf to ensure proper size
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
@@ -918,7 +912,7 @@ class PlayerBox(Box):
 
     def _set_image(self, *_):
         art_url = self.player.arturl
-        
+
         # If no art URL or empty/None, use fallback
         if not art_url:
             self._update_image(None)
@@ -1023,7 +1017,7 @@ class PlayerBox(Box):
 
         position = self.player.position
         self.position_label.set_label(self.length_str(position))
-        
+
         # Only update seek bar if user is not currently seeking
         if not self._user_seeking:
             # Clamp position to avoid 32-bit integer overflow
@@ -1032,6 +1026,7 @@ class PlayerBox(Box):
             self.seek_bar.set_value(safe_position)
 
         return True
+
     def _on_seek_start(self, widget, event):
         """User started seeking - disable automatic updates"""
         self._user_seeking = True
@@ -1053,7 +1048,7 @@ class PlayerBox(Box):
             try:
                 self.player.position = new_position
                 self.position_label.set_label(self.length_str(new_position))
-            except Exception as e:
+            except Exception:
                 # If setting position fails, just update the label
                 self.position_label.set_label(self.length_str(new_position))
             except Exception:
