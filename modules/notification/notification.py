@@ -16,7 +16,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from utils.roam import modus_service, notification_service
+from utils.roam import modus_service
 from widgets.custom_image import CustomImage
 from widgets.customrevealer import SlideRevealer
 from widgets.wayland import WaylandWindow as Window
@@ -458,7 +458,8 @@ class NotificationState:
 
 class ModusNoti(Window):
     def __init__(self):
-        self._server = notification_service
+        self._server = modus_service.notification_service
+
         self.notifications = Box(
             v_expand=True,
             h_expand=True,
@@ -490,21 +491,12 @@ class ModusNoti(Window):
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
 
-        # Cache the notification to the modus service for persistence
-        try:
-            modus_service.cache_notification(notification)
-            logger.debug(
-                f"Cached notification: {notification.app_name} - {notification.summary}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to cache notification: {e}")
-
-        # Check if the notification is in the "do not disturb" mode, hacky way
-        if self._server.dont_disturb or notification.app_name in self.ignored_apps:
+        # Check if the notification should be ignored completely (ignored apps)
+        if notification.app_name in self.ignored_apps:
             return
 
-        if modus_service.dont_disturb:
-            notification.close("dismissed-by-user")
+        if self._server.dont_disturb or modus_service.dont_disturb:
+            # Notification is already cached by the service, just don't show popup
             return
 
         # Clear any pending notifications in queue (except the current one being shown)
@@ -528,7 +520,6 @@ class ModusNoti(Window):
             and self.current_notification
             and self.notification_queue
         ):
-
             # Start hiding the current notification to make room for the new one
             self._start_hiding_current_notification()
 
@@ -545,7 +536,6 @@ class ModusNoti(Window):
             and self.notification_state == NotificationState.SHOWING
             and not self.current_notification._is_closing
         ):
-
             self.notification_state = NotificationState.HIDING
 
             # Force close the current notification to trigger hiding animation

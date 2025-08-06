@@ -1,52 +1,149 @@
 import json
 import os
-import threading
-from typing import Dict, List
+from typing import List
 
-from fabric import Signal
-from fabric.notifications import Notification, Notifications, NotificationSerializedData
-from loguru import logger
+import gi
+from gi.repository import GdkPixbuf
 
 import config.data as data
+from fabric.core.service import Property, Service, Signal
+from fabric.notifications import (
+    Notification,
+    NotificationAction,
+    NotificationImagePixmap,
+    Notifications,
+)
 
-PERSISTENT_DIR = f"/tmp/{data.APP_NAME}/notifications"
-NOTIFICATION_CACHE_FILE = os.path.join(PERSISTENT_DIR, "notification_history.json")
+gi.require_version("Gtk", "3.0")
 
-
-def write_json_file(data: Dict, path: str):
-    try:
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        logger.warning(f"Failed to write json: {e}")
+NOTIFICATION_CACHE_FILE = f"{data.CACHE_DIR}/notification"
 
 
-class CustomNotifications(Notifications):
-    """A service to manage the notifications."""
+class CachedNotification(Service):
+    @classmethod
+    def create_from_dict(cls, data, **kwargs):
+        data["timeout"] = 0
+        self = cls.__new__(cls)
+        Service.__init__(self, **kwargs)
+        self._notification = Notification.deserialize(data)
+        self.cache_id = data["cached-id"]
+        return self
 
     @Signal
-    def clear_all(self, value: bool) -> None:
+    def removed_from_cache(self) -> None: ...
+
+    @Property(int, "read-write")
+    def cache_id(self) -> int:
+        return self._cache_id
+
+    @cache_id.setter
+    def cache_id(self, cache_id: int):
+        self._cache_id = cache_id
+
+    @Property(str, "readable")
+    def app_name(self) -> str:
+        return self._notification.app_name
+
+    @Property(str, "readable")
+    def app_icon(self) -> str:
+        return self._notification.app_icon
+
+    @Property(str, "readable")
+    def summary(self) -> str:
+        return self._notification.summary
+
+    @Property(str, "readable")
+    def body(self) -> str:
+        return self._notification.body
+
+    @Property(int, "readable")
+    def id(self) -> int:
+        return self._notification.id
+
+    @Property(int, "readable")
+    def replaces_id(self) -> int:
+        return self._notification.replaces_id
+
+    @Property(int, "readable")
+    def urgency(self) -> int:
+        return self._notification.urgency
+
+    @Property(list[NotificationAction], "readable")
+    def actions(self) -> list[NotificationAction]:
+        return self._notification.actions
+
+    @Property(NotificationImagePixmap, "readable")
+    def image_pixmap(self) -> NotificationImagePixmap:
+        return self._notification.image_pixmap  # type: ignore
+
+    @Property(str, "readable")
+    def image_file(self) -> str:
+        return self._notification.image_file  # type: ignore
+
+    @Property(GdkPixbuf.Pixbuf, "readable")
+    def image_pixbuf(self) -> GdkPixbuf.Pixbuf:
+        if self.image_pixmap:
+            return self.image_pixmap.as_pixbuf()
+        if self.image_file:
+            return GdkPixbuf.Pixbuf.new_from_file(self.image_file)
+        return None  # type: ignore
+
+    @Property(dict, "readable")
+    def serialized(self) -> dict:
+        return {
+            "cached-id": self.cache_id,
+            "id": self.id,
+            "replaces-id": self.replaces_id,
+            "app-name": self.app_name,
+            "app-icon": self.app_icon,
+            "summary": self.summary,
+            "body": self.body,
+            "urgency": self.urgency,
+            "actions": [(action.identifier, action.label) for action in self.actions],
+            "image-file": self.image_file,
+            "image-pixmap": (
+                self.image_pixmap.serialize() if self.image_pixmap else None
+            ),
+        }
+
+    def __init__(self, notification: Notification, cache_id: int, **kwargs):
+        super().__init__()
+        self._notification: Notification = notification
+        self._cache_id = cache_id
+
+    def remove_from_cache(self):
+        self.removed_from_cache.emit()
+
+
+class CachedNotifications(Notifications):
+    """A service to manage the cached notifications."""
+
+    @Signal
+    def clear_all(self) -> None:
         """Signal emitted when notifications are emptied."""
-        # Implement as needed for your application
+        pass
 
     @Signal
-    def notification_count(self, value: int) -> None:
-        """Signal emitted when a new notification is added."""
-        # Implement as needed for your application
+    def cached_notification_added(self, notification: CachedNotification) -> None:
+        """Signal emitted when a notification is cached."""
+        pass
 
     @Signal
-    def dnd(self, value: bool) -> None:
-        """Signal emitted when dnd is toggled."""
-        # Implement as needed for your application
+    def cached_notification_removed(self, notification: CachedNotification) -> None:
+        """Signal emitted when a notification is removed from cache."""
+        pass
 
-    @property
+    @Property(List[CachedNotification], "readable")
+    def cached_notifications(self) -> List[CachedNotification]:
+        """Return the cached notifications."""
+        return list(self._cached_notifications.values())
+
+    @Property(int, "readable")
     def count(self) -> int:
         """Return the count of notifications."""
-        return len(self.all_notifications)
+        return self._count
 
-    @property
+    @Property(bool, "read-write", default_value=False)
     def dont_disturb(self) -> bool:
         """Return the pause status."""
         return self._dont_disturb
@@ -55,227 +152,106 @@ class CustomNotifications(Notifications):
     def dont_disturb(self, value: bool):
         """Set the pause status."""
         self._dont_disturb = value
-        self.emit("dnd", value)
+        self.notify("dont-disturb")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.all_notifications = []
-        self._count = 0  # Will be updated to highest ID when loading
-        self.deserialized_notifications = []
+    def __init__(self, **kwargs):
+        super().__init__()
+        self._cached_notifications: dict[int, CachedNotification] = {}
+        self._signal_handlers = {}  # Store signal handlers by notification_id
         self._dont_disturb = False
-        self._lock = threading.Lock()  # Add missing lock for thread safety
-        self._load_notifications()
+        self._count = 0
 
-    def _load_notifications(self):
-        """Read and validate notifications from the cache file."""
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(NOTIFICATION_CACHE_FILE), exist_ok=True)
+        self.load_cached_notifications()
 
-        if not os.path.exists(NOTIFICATION_CACHE_FILE):
-            return
-
+    def load_cached_notifications(self) -> dict[int, CachedNotification]:
+        """Load cached notifications from a JSON file (deserialization)."""
         try:
             with open(NOTIFICATION_CACHE_FILE, "r") as file:
-                original_data = json.load(file)
+                data = json.load(file)  # Load list of serialized notifications
+        except (FileNotFoundError, json.JSONDecodeError):
+            # If file doesn't exist or is corrupted, start with empty list
+            data = []
 
-            original_data.reverse()
+        for notification in data:
+            cached_notification = CachedNotification.create_from_dict(notification)
+            handler_id = cached_notification.connect(
+                "removed-from-cache",
+                lambda *args: self.remove_cached_notification(
+                    notification_id=cached_notification.cache_id
+                ),
+            )
+            self._signal_handlers[cached_notification.cache_id] = handler_id
+            self._cached_notifications[cached_notification.cache_id] = (
+                cached_notification
+            )
+            self._count += 1
 
-            valid_notifications = []
-            highest_id = self._count
+        self.notify("count")
 
-            for notification in original_data:
-                try:
-                    self._deserialize_notification(notification)
-                    valid_notifications.append(notification)
-                    highest_id = max(highest_id, notification.get("id", 0))
-                except Exception as e:
-                    msg = f"[Notification] Invalid: {str(e)[:50]}"
-                    logger.exception(f"{msg}")
+    def cache_notifications(self) -> None:
+        """Save cached notifications to a JSON file."""
+        # Ensure cache directory exists
+        os.makedirs(os.path.dirname(NOTIFICATION_CACHE_FILE), exist_ok=True)
 
-            # Write only if the validated data differs from what was originally loaded
-            if valid_notifications != original_data:
-                write_json_file(valid_notifications, NOTIFICATION_CACHE_FILE)
-                logger.info("[Notification] Notifications written successfully.")
+        serialized_data = [
+            notif.serialized for notif in self._cached_notifications.values()
+        ]  # Convert to serializable format
+        with open(NOTIFICATION_CACHE_FILE, "w") as file:
+            json.dump(serialized_data, file, indent=4)
 
-            self.all_notifications = valid_notifications
-            self._count = highest_id
-
-            del valid_notifications
-            del original_data
-
-        except (json.JSONDecodeError, KeyError, ValueError, IndexError) as e:
-            logger.exception(f"[Notification] {e}")
-
-    def remove_notification(self, id: int):
-        """Remove a notification by ID, ensuring thread safety."""
-        with self._lock:
-            item = next((p for p in self.all_notifications if p["id"] == id), None)
-            if item:
-                self.all_notifications.remove(item)
-                self._persist_and_emit()
-
-                if len(self.all_notifications) == 0:
-                    self.emit("clear_all", True)
-
-    def cache_notification(self, widget_config, data: Notification, max_count: int):
-        """Cache a notification, ensuring thread safety."""
-        with self._lock:
-            self._cleanup_invalid_notifications()
-            new_notification = self._create_serialized_notification(data)
-            self._enforce_per_app_limit(widget_config, new_notification, max_count)
-            self.all_notifications.append(new_notification)
-            self._enforce_global_limit(max_count)
-            self._persist_and_emit()
-
-    def _cleanup_invalid_notifications(self):
-        """Remove any invalid notifications."""
-
-        valid_notifications = []
-        invalid_count = 0
-
-        for notification in self.all_notifications:
-            try:
-                self._deserialize_notification(notification)
-                valid_notifications.append(notification)
-            except Exception as e:
-                msg = f"[Notification] Removing invalid: {str(e)[:50]}"
-                logger.debug(msg)
-                invalid_id = notification.get("id", 0)
-                self.emit("notification-closed", invalid_id, "dismissed-by-limit")
-                invalid_count += 1
-
-        if invalid_count > 0:
-            self.all_notifications = valid_notifications
-            self._persist_and_emit()
-            del valid_notifications
-            logger.info(f"[Notification] Cleaned {invalid_count} invalid notifications")
-
-    def _create_serialized_notification(self, data: Notification) -> dict:
-        """Generate a new notification with a unique ID."""
-        self._count += 1
-        serialized = data.serialize()
-        serialized.update(
-            {
-                "id": self._count,
-                "app-name": data.app_name,
-            }
-        )
-        return serialized
-
-    def _enforce_global_limit(self, max_count: int):
-        """Remove oldest notifications if total count exceeds global limit."""
-        while len(self.all_notifications) > max_count:
-            oldest = self.all_notifications.pop(0)
-            self.emit("notification-closed", oldest["id"], "dismissed-by-limit")
-
-    def _enforce_per_app_limit(
-        self, widget_config, new_notification: dict, max_count: int
-    ):
-        """Ensure per-app limits are respected."""
-        app_name = new_notification["app-name"]
-        per_app_limits = widget_config.get("notification", {}).get("per_app_limits", {})
-        app_limit = per_app_limits.get(app_name, max_count)
-
-        app_notifications = [
-            n for n in self.all_notifications if n["app-name"] == app_name
-        ]
-
-        if len(app_notifications) >= app_limit:
-            app_notifications.sort(key=lambda x: x["id"])  # Oldest first
-            to_remove = len(app_notifications) - app_limit + 1
-            for old in app_notifications[:to_remove]:
-                self.all_notifications.remove(old)
-                self.emit("notification-closed", old["id"], "dismissed-by-limit")
-
-    def _deserialize_notification(self, notification: NotificationSerializedData):
-        """Deserialize a notification."""
-        return Notification.deserialize(notification)
-
-    def _persist_and_emit(self):
-        """Persist notifications and emit relevant signals."""
-        write_json_file(self.all_notifications, NOTIFICATION_CACHE_FILE)
-        self.emit("notification_count", len(self.all_notifications))
-
-    def clear_all_notifications(self):
+    def clear_all_cached_notifications(self):
         """Empty the notifications."""
-        logger.info("[Notification] Clearing all notifications")
+        for cached_notification in self._cached_notifications.values():
+            handler_id = self._signal_handlers.pop(cached_notification.cache_id, None)
+            if handler_id:
+                cached_notification.disconnect(handler_id)
+        self._cached_notifications = {}
+        self.cache_notifications()
+        self._count = 0
+        self.notify("count")
+        self.clear_all.emit()
 
-        # Clear notifications but preserve the highest ID we've seen
-        highest_id = self._count
+    def notification_added(self, notification_id: int) -> None:
+        """Handle notification added and cache it."""
+        super().notification_added(notification_id)
 
-        self.all_notifications.clear()
+        notification = self.get_notification_from_id(notification_id)
 
-        self._persist_and_emit()
+        if notification:
+            # Always cache notifications, regardless of DND status
+            # DND only affects popup display, not caching
+            self._count += 1
+            cache_id = self._count
 
-        logger.info("[Notification] Notifications written successfully.")
+            cached_notification = CachedNotification(
+                notification=notification, cache_id=cache_id
+            )
+            handler_id = cached_notification.connect(
+                "removed-from-cache",
+                lambda *args: self.remove_cached_notification(notification_id=cache_id),
+            )
 
-        self.emit("clear_all", True)
+            self._signal_handlers[cache_id] = handler_id
+            self._cached_notifications[cache_id] = cached_notification
+            self.cache_notifications()
 
-        # Restore the ID counter so new notifications get unique IDs
-        self._count = highest_id
+            self.notify("count")
+            self.emit("cached-notification-added", cached_notification)
 
-    def get_deserialized(self) -> List[Notification]:
-        """Return the notifications."""
+    def remove_cached_notification(self, notification_id: int):
+        """Remove the notification of given id."""
+        if notification_id in self._cached_notifications:
+            cached_notification = self._cached_notifications.pop(
+                notification_id
+            )  # Remove from cache
+            self.cache_notifications()  # Update JSON
+            self._count -= 1
+            self.notify("count")
+            # Get the stored signal handler ID and disconnect it
+            handler_id = self._signal_handlers.pop(notification_id, None)
+            if handler_id:
+                # Disconnect the signal handler
+                cached_notification.disconnect(handler_id)
 
-        def deserialize_with_id(notification):
-            """Helper to deserialize and return result with ID."""
-            try:
-                return (self._deserialize_notification(notification), None)
-            except Exception as e:
-                msg = f"[Notification] Deserialize failed: {str(e)[:50]}"
-                logger.exception(f"{msg}")
-                return (None, notification.get("id"))
-
-        # Process all notifications at once
-        results = [
-            deserialize_with_id(notification) for notification in self.all_notifications
-        ]
-
-        # Split into successful and failed
-        deserialized = []
-        invalid_ids = []
-        for result, error_id in results:
-            if result is not None:
-                deserialized.append(result)
-            elif error_id is not None:
-                invalid_ids.append(error_id)
-
-        # Clean up invalid notifications
-        for invalid_id in invalid_ids:
-            self.remove_notification(invalid_id)
-
-        return deserialized
-
-    def get_deserialized_with_ids(self) -> List[tuple[Notification, int]]:
-        """Return the notifications with their IDs as tuples."""
-
-        def deserialize_with_id(notification):
-            """Helper to deserialize and return result with ID."""
-            try:
-                deserialized = self._deserialize_notification(notification)
-                notification_id = notification.get("id")
-                return (deserialized, notification_id, None)
-            except Exception as e:
-                msg = f"[Notification] Deserialize failed: {str(e)[:50]}"
-                logger.exception(f"{msg}")
-                return (None, notification.get("id"), notification.get("id"))
-
-        # Process all notifications at once
-        results = [
-            deserialize_with_id(notification) for notification in self.all_notifications
-        ]
-
-        # Split into successful and failed
-        deserialized_with_ids = []
-        invalid_ids = []
-        for result, notification_id, error_id in results:
-            if result is not None:
-                deserialized_with_ids.append((result, notification_id))
-            elif error_id is not None:
-                invalid_ids.append(error_id)
-
-        # Clean up invalid notifications
-        for invalid_id in invalid_ids:
-            self.remove_notification(invalid_id)
-
-        return deserialized_with_ids
+    def toggle_dnd(self):
+        self.dont_disturb = not self.dont_disturb
