@@ -11,7 +11,7 @@
   background-color: alpha(#fff, 0.09);
   border: 1px solid alpha(#111, 0.3);
   box-shadow: inset 0 0 200px 0 alpha(#111, 0.3);
-  border-radius: 16px;
+  border-radius: 15px;
 }
 
 #control-center-widgets {
@@ -36,10 +36,10 @@
 
 #bluetooth-widget-label,
 #wifi-widget-label {
-  font-size: 10px;
+  font-size: 12px;
   margin-left: 5px;
-  /* font-weight: 400; */
-  color: #aaa;
+  font-weight: 500;
+  color: #999;
 }
 
 /* WiFi Password Dialog */
@@ -245,10 +245,11 @@
 
 .menu {
   margin: 5px;
-  background-color: alpha(#000, 0.3);
-  border: 0.5px solid alpha(#888, 0.4);
-  box-shadow: inset 0 0 200px 0 alpha(#111, 0.3);
-  border-radius: 12px;
+  /* background-color: alpha(#000, 0.3); */
+  background-color: alpha(#999, 0.1);
+  /* box-shadow: inset 0 0 200px 0 alpha(#111, 0.3); */
+  border: 0.5px solid alpha(#000, 0.4);
+  border-radius: 8px;
   padding: 1rem;
 }
 
@@ -256,6 +257,13 @@
   padding: 0;
   font-weight: 500;
   font-size: 12px;
+}
+
+#bluetooth-widget-name,
+#wifi-widget-name {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 .ct {
@@ -311,14 +319,4 @@
   background: none;
   background-image: none;
   color: alpha(#fff, 0.2);
-}
-#thing {
-  background-color: alpha(#999, 0.9);
-  min-height: 200px;
-  min-width: 600px;
-}
-#thing-label {
-  color: #000;
-  font-size: 14px;
-  font-weight: 500;
 }

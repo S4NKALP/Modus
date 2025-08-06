@@ -445,7 +445,7 @@ class PlayerBox(Box):
 
         self.track_artist = Label(
             label="No Artist",
-            name="player-artist",
+            name="player-artist-c",
             justification="left",
             max_chars_width=15,
             ellipsization="end",
@@ -501,7 +501,7 @@ class PlayerBox(Box):
             children=[
                 self.track_title,
                 self.track_artist,
-                self.track_album,
+                # self.track_album,
             ],
         )
 
@@ -514,10 +514,10 @@ class PlayerBox(Box):
             spacing=2,
         )
 
-        self.skip_next_icon = Image(icon_name="media-skip-forward")
+        self.skip_next_icon = Image(icon_name="player_fwd")
         self.skip_prev_icon = Image(icon_name="media-skip-backward")
         self.shuffle_icon = Image(icon_name="shuffle")
-        self.play_pause_icon = Image(icon_name="media-playback-start")
+        self.play_pause_icon = Image(icon_name="player_pause")
 
         self.play_pause_button = Button(
             name="player-button",
@@ -740,14 +740,28 @@ class PlayerBox(Box):
             self.shuffle_icon.style_classes = []
             self.shuffle_icon.add_style_class("shuffle-off")
 
+    def play_pause(self, player, status):
+        status = player.get_property("playback-status")
+
+        if status == "paused":
+            self.play_pause_icon.set_from_icon_name("player_play")
+
+        if status == "playing":
+            self.play_pause_icon.set_from_icon_name("player_pause")
+            # Notify the player stack that this player started playing
+            if self.player_stack and hasattr(
+                self.player_stack, "on_player_playback_changed"
+            ):
+                self.player_stack.on_player_playback_changed(self, status)
+
     def _on_playback_change(self, player, status):
         status = player.get_property("playback-status")
 
         if status == "paused":
-            self.play_pause_icon.set_from_icon_name("media-playbook-start")
+            self.play_pause_icon.set_from_icon_name("player_play")
 
         if status == "playing":
-            self.play_pause_icon.set_from_icon_name("media-playback-pause")
+            self.play_pause_icon.set_from_icon_name("player_pause")
             # Notify the player stack that this player started playing
             if self.player_stack and hasattr(
                 self.player_stack, "on_player_playback_changed"

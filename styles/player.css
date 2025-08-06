@@ -6,7 +6,9 @@
 }
 
 #button-box-c {
-  margin-left: -10px;
+  /* margin-left: -10px; */
+
+  margin-right: 4px;
 }
 
 #player-stack-button:hover {
@@ -29,9 +31,9 @@
 }
 
 #outer-player-box-c {
-  min-height: 60px;
+  min-height: 70px;
   min-width: 263px;
-  border-radius: 10px;
+  border-radius: 8px;
   /* margin: 0 6px; */
   /* background-color: alpha(#000, 0.3); */
   /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
@@ -39,9 +41,10 @@
 #box-c {
   min-height: 60px;
   min-width: 263px;
-  border-radius: 10px;
-  margin: 0 6px;
-  background-color: alpha(#000, 0.3);
+  border-radius: 8px;
+  margin: 0 6px 10px;
+  border: 0.5px solid alpha(#000, 0.4);
+  background-color: alpha(#999, 0.1);
   /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
 }
 #player-box:disabled highlight,
@@ -59,8 +62,8 @@
 
 #player-title-c {
   /* margin-top: 18px; */
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: bold;
+  font-size: 14px;
 }
 #player-title {
   margin-top: 18px;
@@ -68,9 +71,14 @@
   font-size: 16px;
 }
 #player-app-icon {
-  margin-bottom: 4px;
+  /* margin-bottom: 2px; */
 }
 
+#player-artist-c {
+  margin-top: -5px;
+  color: #999;
+  font-size: 12px;
+}
 #player-artist,
 #player-album {
   font-weight: 500;
@@ -102,12 +110,12 @@
 }
 
 .album-image-c {
-  min-width: 55px;
-  min-height: 55px;
+  min-width: 50px;
+  min-height: 50px;
   background-position: center;
   background-size: cover;
-  /* margin-left: 12px; */
-  border-radius: 10px;
+  margin-left: 5px;
+  border-radius: 5px;
 }
 .album-image {
   min-width: 100px;
@@ -115,5 +123,5 @@
   background-position: center;
   background-size: cover;
   margin-left: 12px;
-  border-radius: 10px;
+  border-radius: 5px;
 }
