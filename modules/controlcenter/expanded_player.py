@@ -18,6 +18,7 @@ from fabric.utils.helpers import get_relative_path
 from fabric.widgets.image import Image
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
+from fabric.widgets.svg import Svg
 from gi.repository import GLib, GObject
 from loguru import logger
 
@@ -159,7 +160,7 @@ class PlayerBoxStack(Box):
 
         self.mpris_manager = mpris_manager
 
-        # Track connections for cleanup
+        # Track connections for cleanup - store (object, handler_id) tuples
         connections = bulk_connect(
             self.mpris_manager,
             {
@@ -167,7 +168,9 @@ class PlayerBoxStack(Box):
                 "player-vanished": self.on_lost_player,
             },
         )
-        self._signal_connections.extend(connections)
+        # Store as (object, handler_id) tuples
+        for handler_id in connections:
+            self._signal_connections.append((self.mpris_manager, handler_id))
 
         for player in self.mpris_manager.players:  # type: ignore
             logger.info(
@@ -178,9 +181,9 @@ class PlayerBoxStack(Box):
     def destroy(self):
         """Clean up resources when the widget is destroyed."""
         # Disconnect all signal connections
-        for connection in self._signal_connections:
+        for obj, handler_id in self._signal_connections:
             try:
-                connection.disconnect()
+                obj.disconnect(handler_id)
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
@@ -688,21 +691,24 @@ class PlayerBox(Box):
         self.stack_buttons_box.hide()  # Initially hidden
 
         # Create SVG icons from player directory
-        self.skip_next_icon = Image(
-            image_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
-            icon_size=16,
+        self.skip_next_icon = Svg(
+            name="btn",
+            style_classes=["control-buttons"],
+            svg_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
         )
-        self.skip_prev_icon = Image(
-            image_file=get_relative_path("../../config/assets/icons/player/Rewind.svg"),
-            icon_size=16,
+        self.skip_prev_icon = Svg(
+            name="btn",
+            style_classes=["control-buttons"],
+            svg_file=get_relative_path("../../config/assets/icons/player/Rewind.svg"),
         )
-        self.shuffle_icon = Image(icon_name="shuffle")  # Keep existing shuffle icon
-        self.play_pause_icon = Image(
-            image_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
-            icon_size=20,
+        self.play_pause_icon = Svg(
+            name="btn",
+            style_classes=["control-buttons"],
+            svg_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
         )
 
         self.play_pause_button = Button(
+            style_classes=["control-buttons"],
             name="macos-play-button",
             child=self.play_pause_icon,
             on_clicked=self.player.play_pause,
@@ -711,6 +717,7 @@ class PlayerBox(Box):
         self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
 
         self.next_button = Button(
+            style_classes=["control-buttons"],
             name="macos-control-button",
             child=self.skip_next_icon,
             on_clicked=self._on_player_next,
@@ -720,6 +727,7 @@ class PlayerBox(Box):
         self.prev_button = Button(
             name="macos-control-button",
             child=self.skip_prev_icon,
+            style_classes=["control-buttons"],
             on_clicked=self._on_player_prev,
         )
         self.button_box.children = (
@@ -762,7 +770,7 @@ class PlayerBox(Box):
 
         self.children = [*self.children, self.outer_box]
 
-        # Track signal connections for cleanup
+        # Track signal connections for cleanup - store (object, handler_id) tuples
         connections = bulk_connect(
             self.player,
             {
@@ -772,10 +780,15 @@ class PlayerBox(Box):
                 "notify::metadata": self._on_metadata,
             },
         )
-        self._signal_connections.extend(connections)
+        # Store as (object, handler_id) tuples
+        for handler_id in connections:
+            self._signal_connections.append((self.player, handler_id))
 
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
+        # Set exit flag FIRST to stop any running timers
+        self.exit = True
+
         # Cancel any ongoing downloads immediately
         self._download_cancelled = True
 
@@ -787,9 +800,9 @@ class PlayerBox(Box):
                 pass
 
         # Disconnect all signal connections
-        for connection in self._signal_connections:
+        for obj, handler_id in self._signal_connections:
             try:
-                connection.disconnect()
+                obj.disconnect(handler_id)
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
@@ -1047,15 +1060,29 @@ class PlayerBox(Box):
         if self.player is None or self.exit or self._user_seeking:
             return True  # Continue the timer but don't update while user is seeking
 
-        position = self.player.position
-        self.position_label.set_label(self.length_str(position))
+        # Additional safety checks to prevent GTK errors
+        if not hasattr(self, "seek_bar") or self.seek_bar is None:
+            return False  # Stop the timer
 
-        # Only update seek bar if user is not currently seeking
-        if not self._user_seeking:
-            # Clamp position to avoid 32-bit integer overflow
-            max_int32 = 2147483647  # 2^31 - 1
-            safe_position = min(max_int32, position) if position else 0
-            self.seek_bar.set_value(safe_position)
+        try:
+            # Check if the seek bar widget is still valid
+            if not self.seek_bar.get_realized():
+                return False  # Widget is destroyed, stop timer
+
+            position = self.player.position
+            self.position_label.set_label(self.length_str(position))
+
+            # Only update seek bar if user is not currently seeking
+            if not self._user_seeking:
+                # Clamp position to avoid 32-bit integer overflow
+                max_int32 = 2147483647  # 2^31 - 1
+                safe_position = min(max_int32, position) if position else 0
+                self.seek_bar.set_value(safe_position)
+
+        except Exception as e:
+            # If any error occurs (widget destroyed, etc), stop the timer
+            logger.warning(f"Seek bar update failed, stopping timer: {e}")
+            return False
 
         return True
 
@@ -1072,26 +1099,30 @@ class PlayerBox(Box):
     def _on_scale_value_changed(self, scale: Scale):
         """Handle seek bar value changes - only when user is seeking"""
         if self.player and not self.exit and self._user_seeking:
-            new_position = int(scale.get_value())
-            # Clamp to 32-bit signed integer range to avoid overflow
-            max_int32 = 2147483647  # 2^31 - 1
-            min_int32 = -2147483648  # -2^31
-            new_position = max(min_int32, min(max_int32, new_position))
             try:
+                new_position = int(scale.get_value())
+                # Clamp to 32-bit signed integer range to avoid overflow
+                max_int32 = 2147483647  # 2^31 - 1
+                min_int32 = -2147483648  # -2^31
+                new_position = max(min_int32, min(max_int32, new_position))
                 self.player.position = new_position
                 self.position_label.set_label(self.length_str(new_position))
-            except Exception:
+            except Exception as e:
                 # If setting position fails, just update the label
-                self.position_label.set_label(self.length_str(new_position))
-            except Exception:
-                # If setting position fails, just update the label
-                self.position_label.set_label(self.length_str(new_position))
+                try:
+                    self.position_label.set_label(self.length_str(new_position))
+                except Exception:
+                    logger.warning(f"Failed to update position label: {e}")
 
     @cooldown(0.1)
     def _on_scale_move(self, scale: Scale, event, pos: int):
-        self.player.position = pos
-        self.position_label.set_label(self.length_str(pos))
-        self.seek_bar.set_value(pos)
+        try:
+            if not self.exit and self.player:
+                self.player.position = pos
+                self.position_label.set_label(self.length_str(pos))
+                self.seek_bar.set_value(pos)
+        except Exception as e:
+            logger.warning(f"Failed to update seek position: {e}")
 
 
 class Thing(Box):

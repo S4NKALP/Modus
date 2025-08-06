@@ -103,20 +103,23 @@
 }
 
 .player-button {
-  min-width: 20px;
-  min-height: 20px;
   padding: 1px;
-  border-radius: 100%;
-}
-
-.player-button:hover {
-  box-shadow: inset rgba(255, 255, 255, 0.5) 0 0 10px;
 }
 
 #player-box #player-controls #button-box .player-button:disabled {
   color: #5f5f5f;
 }
 
+#player-button {
+  opacity: 0.5;
+}
+#player-button:hover {
+  opacity: 0.9;
+}
+
+#btn svg {
+  margin: 0 2px;
+}
 .album-image-c {
   min-width: 50px;
   min-height: 50px;
