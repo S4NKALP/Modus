@@ -272,7 +272,7 @@ class WallpaperPlugin(PluginBase):
         return None
 
     def _set_wallpaper(self, filename: str, scheme: str = None):
-        """Set wallpaper with optional matugen integration."""
+        """Set wallpaper and apply matugen color scheme if enabled."""
         full_path = os.path.join(data.WALLPAPERS_DIR, filename)
         current_wall = os.path.expanduser("~/.current.wall")
 
@@ -284,16 +284,17 @@ class WallpaperPlugin(PluginBase):
             os.remove(current_wall)
         os.symlink(full_path, current_wall)
 
-        # Apply wallpaper with or without matugen
+        # Always set the wallpaper image
+        exec_shell_command_async(
+            f'swww img "{
+                full_path
+            }" -t outer --transition-duration 1.5 --transition-step 255 --transition-fps 60 -f Nearest'
+        )
+
+        # If Matugen is enabled, also apply the color scheme
         matugen_enabled = self._get_matugen_state()
         if matugen_enabled:
             exec_shell_command_async(f'matugen image "{full_path}" -t {scheme}')
-        else:
-            exec_shell_command_async(
-                f'swww img "{
-                    full_path
-                }" -t outer --transition-duration 1.5 --transition-step 255 --transition-fps 60 -f Nearest'
-            )
 
     def _set_random_wallpaper(self):
         """Set a random wallpaper."""
