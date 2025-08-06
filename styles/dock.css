@@ -39,10 +39,18 @@
 }
 
 #dock-app-button {
-  padding: 4px;
+  padding: 6px;
   border-radius: 24px;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   /* box-shadow: 0 0 4px alpha(var(--shadow), 0.5); */
   /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
+}
+
+#dock-app-button.dock-icon-hover {
+  padding: 4px;
+  border-radius: 28px;
+  background-color: alpha(#fff, 0.15);
+  box-shadow: 0 4px 12px alpha(#000, 0.2);
 }
 
 #dock-app-button:hover {

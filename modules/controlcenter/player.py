@@ -447,6 +447,9 @@ class PlayerBox(Box):
         self.control_center = control_center
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
+        # Add controls_box attribute early for compatibility
+        self.controls_box = Box(name="temp-controls-box")  # Temporary placeholder
+
         self.image_size = 50
         self.icon_size = 15
 
@@ -585,6 +588,10 @@ class PlayerBox(Box):
             self.play_pause_button,
             self.next_button,
         )
+        
+        # Assign button_box to controls_box for compatibility
+        self.controls_box = self.button_box
+        
         self.player_info_box = Box(
             name="player-info-box-c",
             v_align="center",
@@ -693,6 +700,8 @@ class PlayerBox(Box):
                 self.control_center.open_expanded_player()
         except Exception as e:
             logger.warning(f"Failed to handle outer box click: {e}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
 
     def update_buttons(self, player_buttons, show_buttons):
         # """Update the stack switcher buttons in this player box"""
