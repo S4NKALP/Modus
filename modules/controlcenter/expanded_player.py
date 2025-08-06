@@ -74,7 +74,7 @@ class EmbeddedExpandedPlayer(Box):
         self.control_center = control_center
         self.mpris_manager = get_shared_mpris_manager()
 
-        # Create back button
+        # Create back button (hidden in header)
         self.back_button = Button(
             name="back-button",
             child=Label(label="← Back"),
@@ -84,11 +84,19 @@ class EmbeddedExpandedPlayer(Box):
         # Create expanded player content
         self.player_content = PlayerBoxStack(self.mpris_manager)
 
+        # Add escape key binding for navigation back
+        try:
+            if hasattr(self.control_center, "add_keybinding"):
+                self.control_center.add_keybinding("Escape", self._on_back_clicked)
+        except Exception:
+            pass  # Ignore if keybinding fails
+
         self.children = [
             Box(
                 orientation="horizontal",
                 h_expand=True,
                 style_classes="menu",
+                visible=False,  # Hide header to remove title and back button
                 children=[
                     self.back_button,
                     Box(h_expand=True),  # Spacer

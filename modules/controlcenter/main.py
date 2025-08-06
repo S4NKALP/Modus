@@ -20,11 +20,14 @@ from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
 from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from services.mpris import MprisPlayerManager
+from fabric.widgets.svg import Svg
+from fabric.utils.helpers import get_relative_path
 
 brightness_service = Brightness.get_initial()
 
 # Shared MPRIS manager to reduce memory usage
 _shared_mpris_manager = None
+
 
 def get_shared_mpris_manager():
     """Get shared MPRIS manager instance to reduce memory usage."""
@@ -32,9 +35,6 @@ def get_shared_mpris_manager():
     if _shared_mpris_manager is None:
         _shared_mpris_manager = MprisPlayerManager()
     return _shared_mpris_manager
-
-# FIX: Icon not showing up in control center
-# TODO: Add Player
 
 
 class ModusControlCenter(Window):
@@ -53,12 +53,12 @@ class ModusControlCenter(Window):
         self.focus_mode = modus_service.dont_disturb
         self._updating_brightness = False
         self._updating_volume = False
-        
+
         # Lazy loading flags
         self._music_initialized = False
         self._per_app_volume_initialized = False
         self._expanded_player_initialized = False
-        
+
         # Store references for cleanup
         self._signal_connections = []
         self._music_widget_content = None
@@ -73,11 +73,13 @@ class ModusControlCenter(Window):
         music = modus_service.sc("music-changed", self.audio_changed)
 
         # Store signal connections for cleanup
-        self._signal_connections.extend([
-            audio_service.connect("changed", self.audio_changed),
-            audio_service.connect("changed", self.volume_changed),
-            modus_service.connect("dont-disturb-changed", self.dnd_changed)
-        ])
+        self._signal_connections.extend(
+            [
+                audio_service.connect("changed", self.audio_changed),
+                audio_service.connect("changed", self.volume_changed),
+                modus_service.connect("dont-disturb-changed", self.dnd_changed),
+            ]
+        )
 
         self.wlan_label = Label(wlan, name="wifi-widget-label", h_align="start")
         if bluetooth != "disabled":
@@ -134,9 +136,7 @@ class ModusControlCenter(Window):
 
         # Create placeholder music widget - lazy load content when needed
         self.music_widget = Box(
-            name="music-widget",
-            h_align="start",
-            children=[]  # Empty initially
+            name="music-widget", h_align="start", children=[]  # Empty initially
         )
 
         self.has_bluetooth_open = False
@@ -288,17 +288,23 @@ class ModusControlCenter(Window):
                         Box(
                             orientation="horizontal",
                             spacing=8,
+                            v_expand=False,
                             children=[
                                 self.volume_scale,
                                 Button(
                                     name="per-app-volume-button",
-                                    child=Label(label="⚙", name="per-app-volume-icon"),
+                                    child=Svg(
+                                        svg_file=get_relative_path(
+                                            "../../config/assets/icons/player/audio-switcher.svg"
+                                        ),
+                                        name="per-app-volume-icon",
+                                    ),
                                     on_clicked=self.open_per_app_volume,
                                 ),
-                            ]
+                            ],
                         ),
                         Label(
-                            label=" ", name="brightness-widget-icon", h_align="start"
+                            label=" ", name="brightness-widget-icon", h_align="start"
                         ),
                     ],
                 ),
@@ -333,10 +339,10 @@ class ModusControlCenter(Window):
         self.widgets.set_size_request(300, -1)
 
         self.children = self.center_box
-        
+
         # Connect to visibility changes for cleanup
         self.connect("notify::visible", self._on_visibility_changed)
-        
+
         # Periodic cleanup timer (every 5 minutes when visible)
         GLib.timeout_add_seconds(300, self._periodic_cleanup)
 
@@ -345,33 +351,33 @@ class ModusControlCenter(Window):
         # Disconnect all signal connections
         for connection in self._signal_connections:
             try:
-                if hasattr(connection, 'disconnect'):
+                if hasattr(connection, "disconnect"):
                     connection.disconnect()
-                elif hasattr(connection, 'handler_disconnect'):
+                elif hasattr(connection, "handler_disconnect"):
                     # For GObject connections
                     connection.handler_disconnect()
             except Exception:
                 pass
         self._signal_connections.clear()
-        
+
         # Clean up all widgets
         self._cleanup_when_hidden()
-        
+
         # Clean up managers
-        if hasattr(self, 'wifi_man') and self.wifi_man:
+        if hasattr(self, "wifi_man") and self.wifi_man:
             try:
-                if hasattr(self.wifi_man, 'destroy'):
+                if hasattr(self.wifi_man, "destroy"):
                     self.wifi_man.destroy()
             except Exception:
                 pass
-        
-        if hasattr(self, 'bluetooth_man') and self.bluetooth_man:
+
+        if hasattr(self, "bluetooth_man") and self.bluetooth_man:
             try:
-                if hasattr(self.bluetooth_man, 'destroy'):
+                if hasattr(self.bluetooth_man, "destroy"):
                     self.bluetooth_man.destroy()
             except Exception:
                 pass
-        
+
         super().destroy()
 
     def _on_visibility_changed(self, widget, param):
@@ -382,7 +388,9 @@ class ModusControlCenter(Window):
     def _cleanup_when_hidden(self):
         """Clean up resources when widget is hidden to reduce memory usage"""
         # Clean up music widget content if it exists
-        if self._music_widget_content and hasattr(self._music_widget_content, 'destroy'):
+        if self._music_widget_content and hasattr(
+            self._music_widget_content, "destroy"
+        ):
             try:
                 # Remove from parent container first
                 current_children = list(self.music_widget.children)
@@ -395,57 +403,65 @@ class ModusControlCenter(Window):
                 self._music_initialized = False
             except Exception as e:
                 logger.warning(f"Failed to cleanup music widget content: {e}")
-        
+
         # Clean up per-app volume widget
-        if self._per_app_volume_widget and hasattr(self._per_app_volume_widget, 'destroy'):
+        if self._per_app_volume_widget and hasattr(
+            self._per_app_volume_widget, "destroy"
+        ):
             try:
                 self._per_app_volume_widget.destroy()
                 self._per_app_volume_widget = None
                 self._per_app_volume_initialized = False
             except Exception:
                 pass
-        
-        # Clean up expanded player widget  
-        if self._expanded_player_widget and hasattr(self._expanded_player_widget, 'destroy'):
+
+        # Clean up expanded player widget
+        if self._expanded_player_widget and hasattr(
+            self._expanded_player_widget, "destroy"
+        ):
             try:
                 self._expanded_player_widget.destroy()
                 self._expanded_player_widget = None
                 self._expanded_player_initialized = False
             except Exception:
                 pass
-                
+
         # Reset widget containers to free memory
         self.bluetooth_widgets = None
-        self.wifi_widgets = None 
+        self.wifi_widgets = None
         self.per_app_volume_widgets = None
         self.expanded_player_widgets = None
-        
+
         # Reset center boxes
         self.bluetooth_center_box = None
         self.wifi_center_box = None
         self.per_app_volume_center_box = None
         self.expanded_player_center_box = None
-        
+
         # Force garbage collection
         import gc
+
         gc.collect()
-        
+
     def _periodic_cleanup(self):
         """Periodic cleanup to keep memory usage low"""
         if not self.get_visible():
             # If not visible, do aggressive cleanup
             self._cleanup_when_hidden()
             return True  # Continue timer
-            
+
         # Light cleanup when visible
         import gc
+
         gc.collect()
         return True  # Continue timer
-        
+
     def _ensure_music_widget(self):
         """Lazy load music widget content"""
         if not self._music_initialized:
-            self._music_widget_content = PlayerBoxStack(get_shared_mpris_manager(), control_center=self)
+            self._music_widget_content = PlayerBoxStack(
+                get_shared_mpris_manager(), control_center=self
+            )
             # Add to the music widget's children list
             current_children = list(self.music_widget.children)
             current_children.append(self._music_widget_content)
@@ -478,7 +494,9 @@ class ModusControlCenter(Window):
                     ),
                 ],
             )
-            self.bluetooth_center_box = CenterBox(start_children=[self.bluetooth_widgets])
+            self.bluetooth_center_box = CenterBox(
+                start_children=[self.bluetooth_widgets]
+            )
             self.bluetooth_center_box.set_size_request(300, -1)
 
     def _ensure_wifi_widgets(self):
@@ -515,7 +533,7 @@ class ModusControlCenter(Window):
         if self.per_app_volume_widgets is None:
             if self._per_app_volume_widget is None:
                 self._per_app_volume_widget = PerAppVolumeControl(self)
-            
+
             self.per_app_volume_widgets = Box(
                 orientation="vertical",
                 h_expand=True,
@@ -524,7 +542,9 @@ class ModusControlCenter(Window):
                     self._per_app_volume_widget,
                 ],
             )
-            self.per_app_volume_center_box = CenterBox(start_children=[self.per_app_volume_widgets])
+            self.per_app_volume_center_box = CenterBox(
+                start_children=[self.per_app_volume_widgets]
+            )
             self.per_app_volume_center_box.set_size_request(300, -1)
 
     def _ensure_expanded_player_widgets(self):
@@ -532,7 +552,7 @@ class ModusControlCenter(Window):
         if self.expanded_player_widgets is None:
             if self._expanded_player_widget is None:
                 self._expanded_player_widget = EmbeddedExpandedPlayer(self)
-            
+
             self.expanded_player_widgets = Box(
                 orientation="vertical",
                 h_expand=True,
@@ -541,7 +561,9 @@ class ModusControlCenter(Window):
                     self._expanded_player_widget,
                 ],
             )
-            self.expanded_player_center_box = CenterBox(start_children=[self.expanded_player_widgets])
+            self.expanded_player_center_box = CenterBox(
+                start_children=[self.expanded_player_widgets]
+            )
             self.expanded_player_center_box.set_size_request(300, -1)
 
     def set_dont_disturb(self, *_):
@@ -654,7 +676,7 @@ class ModusControlCenter(Window):
         if visible:
             # Lazy load music widget when becoming visible
             self._ensure_music_widget()
-        
+
         self.set_visible(visible)
         if not visible:
             self.close_bluetooth()
@@ -744,7 +766,7 @@ class ModusControlCenter(Window):
     def hide_controlcenter(self, *_):
         self._mousecapture_parent.toggle_mousecapture()
         self.set_visible(False)
-        
+
     def destroy(self):
         """Clean up resources when widget is destroyed"""
         # Disconnect all signal connections
@@ -753,7 +775,7 @@ class ModusControlCenter(Window):
                 connection.disconnect()
             except:
                 pass
-        
+
         # Clean up heavy components
         if self._wifi_man:
             self._wifi_man.destroy()
@@ -765,5 +787,5 @@ class ModusControlCenter(Window):
             self._per_app_volume_widget.destroy()
         if self._expanded_player_widget:
             self._expanded_player_widget.destroy()
-            
+
         super().destroy()
