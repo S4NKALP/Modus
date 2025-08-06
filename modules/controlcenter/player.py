@@ -5,7 +5,6 @@ import urllib.parse
 import urllib.request
 from typing import List
 import threading
-import weakref
 
 from fabric.utils import (
     bulk_connect,
@@ -71,7 +70,7 @@ class PlayerBoxStack(Box):
 
         # List to store player buttons
         self.player_buttons: list[Button] = []
-        
+
         # Track signal connections for cleanup
         self._signal_connections = []
 
@@ -111,7 +110,7 @@ class PlayerBoxStack(Box):
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
-        
+
         # Clean up player buttons
         for button in self.player_buttons:
             try:
@@ -119,15 +118,15 @@ class PlayerBoxStack(Box):
             except Exception:
                 pass
         self.player_buttons.clear()
-        
+
         # Clean up player boxes
         for child in self.player_stack.get_children():
-            if hasattr(child, 'destroy') and child != self.no_media_box:
+            if hasattr(child, "destroy") and child != self.no_media_box:
                 try:
                     child.destroy()
                 except Exception:
                     pass
-        
+
         super().destroy()
 
     def _create_no_media_box(self):
@@ -146,7 +145,7 @@ class PlayerBoxStack(Box):
             label="No media playing",
             name="player-title-c",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=25,
             ellipsization="end",
             h_align="start",
         )
@@ -161,23 +160,13 @@ class PlayerBoxStack(Box):
             visible=False,  # Hide artist and album when no media
         )
 
-        track_album = Label(
-            label="",
-            name="player-album",
-            justification="left",
-            max_chars_width=15,
-            ellipsization="end",
-            h_align="start",
-            visible=False,  # Hide artist and album when no media
-        )
-
         track_info = Box(
             name="track-info",
             # spacing=5,
             orientation="v",
             v_align="start",
             h_align="start",
-            children=[track_title, track_artist, track_album],
+            children=[track_title, track_artist],
         )
 
         # No control buttons for no media state - just an empty box
@@ -261,7 +250,7 @@ class PlayerBoxStack(Box):
         # unset active from prev active button
         if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             self.player_buttons[self.current_stack_pos].remove_style_class("active")
-        
+
         if type == "next":
             self.current_stack_pos = (
                 self.current_stack_pos + 1
@@ -274,10 +263,12 @@ class PlayerBoxStack(Box):
                 if self.current_stack_pos != 0
                 else len(self.player_stack.get_children()) - 1
             )
-        
+
         # set new active button
         if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
-            print(f"[PlayerBoxStack] Switching to player at index {self.current_stack_pos}")
+            print(
+                f"[PlayerBoxStack] Switching to player at index {self.current_stack_pos}"
+            )
             self.player_buttons[self.current_stack_pos].add_style_class("active")
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos],
@@ -287,12 +278,16 @@ class PlayerBoxStack(Box):
         """Switch to player at given index"""
         if 0 <= index < len(self.player_buttons):
             # unset active from prev active button
-            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            if self.player_buttons and self.current_stack_pos < len(
+                self.player_buttons
+            ):
                 self.player_buttons[self.current_stack_pos].remove_style_class("active")
             # set new position
             self.current_stack_pos = index
             # set new active button
-            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            if self.player_buttons and self.current_stack_pos < len(
+                self.player_buttons
+            ):
                 self.player_buttons[self.current_stack_pos].add_style_class("active")
                 self.player_stack.set_visible_child(
                     self.player_stack.get_children()[self.current_stack_pos],
@@ -347,7 +342,10 @@ class PlayerBoxStack(Box):
         # Find and properly destroy the player box
         player_box_to_remove = None
         for player_box in players:
-            if hasattr(player_box, 'player') and player_box.player.player_name == player_name:
+            if (
+                hasattr(player_box, "player")
+                and player_box.player.player_name == player_name
+            ):
                 player_box_to_remove = player_box
                 break
 
@@ -358,7 +356,9 @@ class PlayerBoxStack(Box):
                 logger.warning(f"Failed to destroy player box: {e}")
 
         # Check if this was the last player
-        remaining_players = [p for p in self.player_stack.get_children() if p != player_box_to_remove]
+        remaining_players = [
+            p for p in self.player_stack.get_children() if p != player_box_to_remove
+        ]
         if len(remaining_players) == 0:
             # Show the no media box instead of hiding
             self.player_stack.children = [self.no_media_box]
@@ -388,7 +388,9 @@ class PlayerBoxStack(Box):
         new_button = Button(name="player-stack-button")
 
         def on_player_button_click(button: Button):
-            if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+            if self.player_buttons and self.current_stack_pos < len(
+                self.player_buttons
+            ):
                 self.player_buttons[self.current_stack_pos].remove_style_class("active")
             if button in self.player_buttons:
                 self.current_stack_pos = self.player_buttons.index(button)
@@ -451,7 +453,7 @@ class PlayerBox(Box):
         self.expanded_player = None
         self.ex_mousecapture = None
         self._create_expanded_player()
-        
+
         self.image_size = 50
         self.icon_size = 15
 
@@ -497,7 +499,7 @@ class PlayerBox(Box):
             label="No Title",
             name="player-title-c",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=25,
             ellipsization="end",
             h_align="start",
         )
@@ -506,17 +508,7 @@ class PlayerBox(Box):
             label="No Artist",
             name="player-artist-c",
             justification="left",
-            max_chars_width=15,
-            ellipsization="end",
-            h_align="start",
-            visible=True,
-        )
-
-        self.track_album = Label(
-            label="No Album",
-            name="player-album",
-            justification="left",
-            max_chars_width=15,
+            max_chars_width=23,
             ellipsization="end",
             h_align="start",
             visible=True,
@@ -541,16 +533,6 @@ class PlayerBox(Box):
             ),  # type: ignore
         )
 
-        self.player.bind_property(
-            "album",
-            self.track_album,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: (
-                re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Album"
-            ),  # type: ignore
-        )
-
         self.track_info = Box(
             name="track-info",
             spacing=5,
@@ -560,7 +542,6 @@ class PlayerBox(Box):
             children=[
                 self.track_title,
                 self.track_artist,
-                # self.track_album,
             ],
         )
 
@@ -693,7 +674,9 @@ class PlayerBox(Box):
         """Handle outer box click with proper error handling."""
         try:
             # Close control center if it exists
-            if self.control_center and hasattr(self.control_center, "hide_controlcenter"):
+            if self.control_center and hasattr(
+                self.control_center, "hide_controlcenter"
+            ):
                 self.control_center.hide_controlcenter()
 
             # Open expanded player if available
@@ -707,7 +690,7 @@ class PlayerBox(Box):
         """Clean up all resources when the widget is destroyed."""
         # Cancel any ongoing downloads
         self._download_cancelled = True
-        
+
         # Disconnect all signal connections
         for connection in self._signal_connections:
             try:
@@ -715,10 +698,10 @@ class PlayerBox(Box):
             except Exception as e:
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
-        
+
         # Clean up temp files
         self._cleanup_temp_files()
-        
+
         # Clean up UI components
         try:
             if self.ex_mousecapture:
@@ -729,7 +712,7 @@ class PlayerBox(Box):
                 self.expanded_player = None
         except Exception as e:
             logger.warning(f"Failed to cleanup UI components: {e}")
-        
+
         super().destroy()
 
     def __del__(self):
@@ -743,7 +726,9 @@ class PlayerBox(Box):
         """Handle prev button click: close control center then open expanded player"""
         try:
             # Close control center first
-            if self.control_center and hasattr(self.control_center, "hide_controlcenter"):
+            if self.control_center and hasattr(
+                self.control_center, "hide_controlcenter"
+            ):
                 self.control_center.hide_controlcenter()
 
             # Then open expanded player
@@ -837,17 +822,17 @@ class PlayerBox(Box):
         elif parsed.scheme in ("http", "https"):
             # Cancel any existing download to prevent memory buildup
             self._download_cancelled = True
-            
+
             # Use threading.Thread instead of GLib.Thread for better control
             if self.current_download_thread and self.current_download_thread.is_alive():
                 # Thread will check _download_cancelled flag and exit early
                 pass
-                
+
             self._download_cancelled = False
             self.current_download_thread = threading.Thread(
-                target=self._download_and_set_artwork, 
+                target=self._download_and_set_artwork,
                 args=(art_url,),
-                daemon=True  # Dies with main thread
+                daemon=True,  # Dies with main thread
             )
             self.current_download_thread.start()
         else:
