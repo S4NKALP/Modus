@@ -273,19 +273,21 @@ class ModusControlCenter(Window):
                     style_classes="menu",
                     h_expand=True,
                     children=[
-                        Button(
-                            name="volume-widget-button",
-                            child=Box(
-                                orientation="vertical",
-                                children=[
-                                    Label(label="Sound", style_classes="title", h_align="start"),
-                                    self.volume_scale,
-                                    Label(
-                                        label=" ", name="brightness-widget-icon", h_align="start"
-                                    ),
-                                ]
-                            ),
-                            on_clicked=self.open_per_app_volume,
+                        Label(label="Sound", style_classes="title", h_align="start"),
+                        Box(
+                            orientation="horizontal",
+                            spacing=8,
+                            children=[
+                                self.volume_scale,
+                                Button(
+                                    name="per-app-volume-button",
+                                    child=Label(label="⚙", name="per-app-volume-icon"),
+                                    on_clicked=self.open_per_app_volume,
+                                ),
+                            ]
+                        ),
+                        Label(
+                            label=" ", name="brightness-widget-icon", h_align="start"
                         ),
                     ],
                 ),
