@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 from typing import List
 import threading
+import weakref  # For memory-efficient references
 
 from fabric.utils import bulk_connect, invoke_repeater, cooldown
 from fabric.widgets.image import Image
@@ -24,9 +25,19 @@ import config.data as data
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 
+# Shared MPRIS manager to reduce memory usage
+_shared_mpris_manager = None
+
+def get_shared_mpris_manager():
+    """Get shared MPRIS manager instance to reduce memory usage."""
+    global _shared_mpris_manager
+    if _shared_mpris_manager is None:
+        _shared_mpris_manager = MprisPlayerManager()
+    return _shared_mpris_manager
+
 
 def cleanup_old_cache_files():
-    """Clean up old artwork cache files (older than 1 day)."""
+    """Clean up old artwork cache files (older than 6 hours for more aggressive cleanup)."""
     try:
         if not os.path.exists(CACHE_DIR):
             return
@@ -34,14 +45,14 @@ def cleanup_old_cache_files():
         import time
 
         current_time = time.time()
-        one_day_ago = current_time - (24 * 60 * 60)  # 24 hours
+        six_hours_ago = current_time - (6 * 60 * 60)  # 6 hours instead of 24
 
         for filename in os.listdir(CACHE_DIR):
             filepath = os.path.join(CACHE_DIR, filename)
             try:
                 if os.path.isfile(filepath):
                     file_mtime = os.path.getmtime(filepath)
-                    if file_mtime < one_day_ago:
+                    if file_mtime < six_hours_ago:
                         os.unlink(filepath)
             except Exception:
                 pass  # Ignore individual file errors
@@ -61,7 +72,7 @@ class EmbeddedExpandedPlayer(Box):
         )
 
         self.control_center = control_center
-        self.mpris_manager = MprisPlayerManager()
+        self.mpris_manager = get_shared_mpris_manager()
 
         # Create back button
         self.back_button = Button(
@@ -197,10 +208,10 @@ class PlayerBoxStack(Box):
             from gi.repository import GdkPixbuf
 
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                fallback_cover_path, 80, 80, True
+                fallback_cover_path, 60, 60, True
             )
             album_cover_image.set_from_pixbuf(pixbuf)
-            album_cover_image.set_size_request(80, 80)
+            album_cover_image.set_size_request(60, 60)
         except Exception as e:
             logger.warning(f"Failed to load fallback image in no-media box: {e}")
 
@@ -208,7 +219,7 @@ class PlayerBoxStack(Box):
             name="macos-album-image",
             children=[album_cover_image],
         )
-        album_cover.set_size_request(80, 80)
+        album_cover.set_size_request(60, 60)
 
         image_stack = Box(h_align="start", v_align="center", name="player-image-stack")
         image_stack.children = [album_cover]
@@ -218,7 +229,7 @@ class PlayerBoxStack(Box):
             label="No media playing",
             name="player-title",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=12,
             ellipsization="end",
             h_align="start",
         )
@@ -227,7 +238,7 @@ class PlayerBoxStack(Box):
             label="",
             name="player-artist",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=12,
             ellipsization="end",
             h_align="start",
             visible=False,  # Hide artist and album when no media
@@ -237,7 +248,7 @@ class PlayerBoxStack(Box):
             label="",
             name="player-album",
             justification="left",
-            max_chars_width=15,
+            max_chars_width=12,
             ellipsization="end",
             h_align="start",
             visible=False,  # Hide artist and album when no media
@@ -483,7 +494,7 @@ class PlayerBox(Box):
         self.player_stack = player_stack
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
-        self.image_size = 80  # Large album art for macOS style
+        self.image_size = 60  # Smaller album art for compact layout
         self.icon_size = 15
 
         # State
@@ -512,7 +523,7 @@ class PlayerBox(Box):
             label="No Title",
             name="macos-player-title",
             justification="left",
-            max_chars_width=30,
+            max_chars_width=25,
             ellipsization="end",
             h_align="start",
             h_expand=True,
@@ -522,7 +533,7 @@ class PlayerBox(Box):
             label="No Artist",
             name="macos-player-artist",
             justification="left",
-            max_chars_width=30,
+            max_chars_width=25,
             ellipsization="end",
             h_align="start",
             h_expand=True,
@@ -540,10 +551,10 @@ class PlayerBox(Box):
             from gi.repository import GdkPixbuf
 
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                self.fallback_cover_path, 80, 80, True
+                self.fallback_cover_path, 60, 60, True
             )
             self.album_cover_image.set_from_pixbuf(pixbuf)
-            self.album_cover_image.set_size_request(80, 80)
+            self.album_cover_image.set_size_request(60, 60)
         except Exception as e:
             logger.warning(f"Failed to load fallback image: {e}")
 
@@ -552,7 +563,7 @@ class PlayerBox(Box):
             name="macos-album-image",
             children=[self.album_cover_image],
         )
-        self.album_cover.set_size_request(80, 80)
+        self.album_cover.set_size_request(60, 60)
 
         self.image_stack = Box(
             h_align="start",
@@ -621,7 +632,7 @@ class PlayerBox(Box):
             name="macos-button-box",
             h_align="center",
             h_expand=True,
-            spacing=15,  # Wider spacing for macOS look
+            spacing=10,  # Reduced spacing for macOS look
         )
 
         # Define controls_box BEFORE using it in track_info
@@ -629,7 +640,7 @@ class PlayerBox(Box):
             name="macos-player-controls",
             orientation="v",
             h_expand=True,
-            spacing=8,
+            spacing=6,
             h_align="center",
             children=[self.button_box],
         )
@@ -637,7 +648,7 @@ class PlayerBox(Box):
         # Track info with inline controls - expands to fill available space
         self.track_info = Box(
             name="macos-track-info",
-            spacing=6,  # Reduced spacing
+            spacing=4,  # Reduced spacing
             orientation="v",
             v_align="start",
             h_align="fill",  # Fill all available horizontal space
@@ -718,7 +729,7 @@ class PlayerBox(Box):
         self.outer_box = Box(
             name="macos-outer-player-box",
             orientation="horizontal",
-            spacing=15,  # Good spacing between elements
+            spacing=10,  # Reduced spacing between elements
             h_expand=True,
             v_expand=True,
             v_align="center",
@@ -746,8 +757,15 @@ class PlayerBox(Box):
 
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
-        # Cancel any ongoing downloads
+        # Cancel any ongoing downloads immediately
         self._download_cancelled = True
+        
+        # Wait for download thread to finish (with timeout)
+        if self.current_download_thread and self.current_download_thread.is_alive():
+            try:
+                self.current_download_thread.join(timeout=1.0)  # 1 second timeout
+            except Exception:
+                pass
 
         # Disconnect all signal connections
         for connection in self._signal_connections:
@@ -757,8 +775,15 @@ class PlayerBox(Box):
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
 
-        # Clean up temp files
+        # Clean up temp files aggressively
         self._cleanup_temp_files()
+        
+        # Clear image references
+        if hasattr(self, 'album_cover_image'):
+            try:
+                self.album_cover_image.set_from_pixbuf(None)
+            except Exception:
+                pass
 
         super().destroy()
 
@@ -892,21 +917,25 @@ class PlayerBox(Box):
             if image_path and os.path.isfile(image_path):
                 # Create scaled pixbuf to ensure proper size
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    image_path, 80, 80, True
+                    image_path, 60, 60, True
                 )
                 self.album_cover_image.set_from_pixbuf(pixbuf)
+                # Explicitly clear pixbuf reference to help GC
+                del pixbuf
             else:
                 # Use fallback image with scaling
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    self.fallback_cover_path, 80, 80, True
+                    self.fallback_cover_path, 60, 60, True
                 )
                 self.album_cover_image.set_from_pixbuf(pixbuf)
+                # Explicitly clear pixbuf reference to help GC
+                del pixbuf
         except Exception as e:
             logger.warning(f"Failed to update album cover image: {e}")
             # Try simple file setting as last resort
             try:
                 self.album_cover_image.set_from_file(self.fallback_cover_path)
-                self.album_cover_image.set_size_request(80, 80)
+                self.album_cover_image.set_size_request(60, 60)
             except Exception as e2:
                 logger.error(f"Failed to set fallback image: {e2}")
 
@@ -954,16 +983,16 @@ class PlayerBox(Box):
             if self._download_cancelled:
                 return
 
-            # Clean up old temp files first (keep only last 2 to avoid excessive cleanup)
-            if len(self.temp_artwork_files) > 2:
-                old_files = self.temp_artwork_files[:-2]
+            # Clean up old temp files first (keep only last 1 to reduce memory)
+            if len(self.temp_artwork_files) > 1:
+                old_files = self.temp_artwork_files[:-1]
                 for old_file in old_files:
                     try:
                         if os.path.exists(old_file):
                             os.unlink(old_file)
                     except Exception:
                         pass
-                self.temp_artwork_files = self.temp_artwork_files[-2:]
+                self.temp_artwork_files = self.temp_artwork_files[-1:]
 
             # Check again if cancelled
             if self._download_cancelled:
@@ -1066,7 +1095,7 @@ class Thing(Box):
     def __init__(self, **kwargs):
         super().__init__(
             name="thing",
-            size=(600, 200),
+            size=(480, 160),
             orientation="vertical",
             spacing=0,
             children=[
@@ -1088,7 +1117,7 @@ class ExpandedPlayer(Window):
             anchor="top right",
             layer="top",
             exclusivity="auto",
-            child=PlayerBoxStack(MprisPlayerManager()),
+            child=PlayerBoxStack(get_shared_mpris_manager()),
             visible=False,
         )
         self.add_keybinding("Escape", self.set_child_visible(False))

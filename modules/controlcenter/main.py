@@ -1,4 +1,5 @@
 from gi.repository import Gdk, GLib
+from loguru import logger
 
 from fabric.utils import idle_add
 from fabric.utils.helpers import (
@@ -21,6 +22,16 @@ from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from services.mpris import MprisPlayerManager
 
 brightness_service = Brightness.get_initial()
+
+# Shared MPRIS manager to reduce memory usage
+_shared_mpris_manager = None
+
+def get_shared_mpris_manager():
+    """Get shared MPRIS manager instance to reduce memory usage."""
+    global _shared_mpris_manager
+    if _shared_mpris_manager is None:
+        _shared_mpris_manager = MprisPlayerManager()
+    return _shared_mpris_manager
 
 # FIX: Icon not showing up in control center
 # TODO: Add Player
@@ -325,6 +336,43 @@ class ModusControlCenter(Window):
         
         # Connect to visibility changes for cleanup
         self.connect("notify::visible", self._on_visibility_changed)
+        
+        # Periodic cleanup timer (every 5 minutes when visible)
+        GLib.timeout_add_seconds(300, self._periodic_cleanup)
+
+    def destroy(self):
+        """Proper cleanup when control center is destroyed"""
+        # Disconnect all signal connections
+        for connection in self._signal_connections:
+            try:
+                if hasattr(connection, 'disconnect'):
+                    connection.disconnect()
+                elif hasattr(connection, 'handler_disconnect'):
+                    # For GObject connections
+                    connection.handler_disconnect()
+            except Exception:
+                pass
+        self._signal_connections.clear()
+        
+        # Clean up all widgets
+        self._cleanup_when_hidden()
+        
+        # Clean up managers
+        if hasattr(self, 'wifi_man') and self.wifi_man:
+            try:
+                if hasattr(self.wifi_man, 'destroy'):
+                    self.wifi_man.destroy()
+            except Exception:
+                pass
+        
+        if hasattr(self, 'bluetooth_man') and self.bluetooth_man:
+            try:
+                if hasattr(self.bluetooth_man, 'destroy'):
+                    self.bluetooth_man.destroy()
+            except Exception:
+                pass
+        
+        super().destroy()
 
     def _on_visibility_changed(self, widget, param):
         """Handle visibility changes for memory management"""
@@ -332,23 +380,72 @@ class ModusControlCenter(Window):
             self._cleanup_when_hidden()
 
     def _cleanup_when_hidden(self):
-        """Clean up resources when widget is hidden"""
+        """Clean up resources when widget is hidden to reduce memory usage"""
         # Clean up music widget content if it exists
-        if self._music_widget_content and not self._music_initialized:
-            # Remove from the parent container
-            current_children = list(self.music_widget.children)
-            if self._music_widget_content in current_children:
-                current_children.remove(self._music_widget_content)
-                self.music_widget.children = current_children
-            self._music_widget_content = None
+        if self._music_widget_content and hasattr(self._music_widget_content, 'destroy'):
+            try:
+                # Remove from parent container first
+                current_children = list(self.music_widget.children)
+                if self._music_widget_content in current_children:
+                    current_children.remove(self._music_widget_content)
+                    self.music_widget.children = current_children
+                # Destroy the content to free memory
+                self._music_widget_content.destroy()
+                self._music_widget_content = None
+                self._music_initialized = False
+            except Exception as e:
+                logger.warning(f"Failed to cleanup music widget content: {e}")
         
-        # Reset lazy loading flags to allow re-initialization when shown again
-        # Keep initialized flags to avoid recreating heavy components unnecessarily
+        # Clean up per-app volume widget
+        if self._per_app_volume_widget and hasattr(self._per_app_volume_widget, 'destroy'):
+            try:
+                self._per_app_volume_widget.destroy()
+                self._per_app_volume_widget = None
+                self._per_app_volume_initialized = False
+            except Exception:
+                pass
+        
+        # Clean up expanded player widget  
+        if self._expanded_player_widget and hasattr(self._expanded_player_widget, 'destroy'):
+            try:
+                self._expanded_player_widget.destroy()
+                self._expanded_player_widget = None
+                self._expanded_player_initialized = False
+            except Exception:
+                pass
+                
+        # Reset widget containers to free memory
+        self.bluetooth_widgets = None
+        self.wifi_widgets = None 
+        self.per_app_volume_widgets = None
+        self.expanded_player_widgets = None
+        
+        # Reset center boxes
+        self.bluetooth_center_box = None
+        self.wifi_center_box = None
+        self.per_app_volume_center_box = None
+        self.expanded_player_center_box = None
+        
+        # Force garbage collection
+        import gc
+        gc.collect()
+        
+    def _periodic_cleanup(self):
+        """Periodic cleanup to keep memory usage low"""
+        if not self.get_visible():
+            # If not visible, do aggressive cleanup
+            self._cleanup_when_hidden()
+            return True  # Continue timer
+            
+        # Light cleanup when visible
+        import gc
+        gc.collect()
+        return True  # Continue timer
         
     def _ensure_music_widget(self):
         """Lazy load music widget content"""
         if not self._music_initialized:
-            self._music_widget_content = PlayerBoxStack(MprisPlayerManager(), control_center=self)
+            self._music_widget_content = PlayerBoxStack(get_shared_mpris_manager(), control_center=self)
             # Add to the music widget's children list
             current_children = list(self.music_widget.children)
             current_children.append(self._music_widget_content)

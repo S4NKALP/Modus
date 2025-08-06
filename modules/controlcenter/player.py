@@ -816,16 +816,16 @@ class PlayerBox(Box):
             if self._download_cancelled:
                 return
 
-            # Clean up old temp files first (keep only last 2 to avoid excessive cleanup)
-            if len(self.temp_artwork_files) > 2:
-                old_files = self.temp_artwork_files[:-2]
+            # Clean up old temp files first (keep only last 1 to reduce memory)
+            if len(self.temp_artwork_files) > 1:
+                old_files = self.temp_artwork_files[:-1]
                 for old_file in old_files:
                     try:
                         if os.path.exists(old_file):
                             os.unlink(old_file)
                     except Exception:
                         pass
-                self.temp_artwork_files = self.temp_artwork_files[-2:]
+                self.temp_artwork_files = self.temp_artwork_files[-1:]
 
             # Check again if cancelled
             if self._download_cancelled:
