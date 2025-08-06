@@ -14,11 +14,9 @@ from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
 from utils.exml import exml
-from widgets.mousecapture import DropDownMouseCapture
 from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
 from modules.controlcenter.player import PlayerBoxStack
-from modules.controlcenter.expanded_player import ExpandedPlayer
 from services.mpris import MprisPlayerManager
 
 brightness_service = Brightness.get_initial()
@@ -44,10 +42,6 @@ class ModusControlCenter(Window):
         self._updating_brightness = False
         self._updating_volume = False
 
-        self.expanded_player = ExpandedPlayer()
-        self.ex_mousecapture = DropDownMouseCapture(
-            layer="top", child_window=self.expanded_player
-        )
         self.add_keybinding("Escape", self.hide_controlcenter)
 
         volume = 100
@@ -111,14 +105,15 @@ class ModusControlCenter(Window):
             self.brightness_scale.set_sensitive(False)
 
         # Create music widget with ultra-lazy player container
-        self.music_widget = Button(
+        self.music_widget = Box(
             name="music-widget",
-            on_clicked=lambda *_: (
-                self.hide_controlcenter(),
-                self.expanded_player.set_visible(True),
-                self.ex_mousecapture.toggle_mousecapture(),
-            ),
-            child=PlayerBoxStack(MprisPlayerManager()),
+            h_align="start",
+            # on_clicked=lambda *_: (
+            #     self.hide_controlcenter(),
+            #     self.expanded_player.set_visible(True),
+            #     self.ex_mousecapture.toggle_mousecapture(),
+            # ),
+            children=PlayerBoxStack(MprisPlayerManager()),
         )
 
         self.wifi_man = WifiConnections(self)
@@ -440,7 +435,3 @@ class ModusControlCenter(Window):
     def hide_controlcenter(self, *_):
         self._mousecapture_parent.toggle_mousecapture()
         self.set_visible(False)
-
-    def close_bluetooth(self, *args):
-        """Close Bluetooth control center"""
-        self.ex_mousecapture.hide_child_window()
