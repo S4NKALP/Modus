@@ -40,6 +40,17 @@ class ModusControlCenter(Window):
         self.focus_mode = modus_service.dont_disturb
         self._updating_brightness = False
         self._updating_volume = False
+        
+        # Lazy loading flags
+        self._wifi_initialized = False
+        self._bluetooth_initialized = False
+        self._music_initialized = False
+        
+        # Store references for cleanup
+        self._signal_connections = []
+        self._wifi_man = None
+        self._bluetooth_man = None
+        self._music_widget_content = None
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
@@ -48,9 +59,12 @@ class ModusControlCenter(Window):
         bluetooth = modus_service.sc("bluetooth-changed", self.bluetooth_changed)
         music = modus_service.sc("music-changed", self.audio_changed)
 
-        audio_service.connect("changed", self.audio_changed)
-        audio_service.connect("changed", self.volume_changed)
-        modus_service.connect("dont-disturb-changed", self.dnd_changed)
+        # Store signal connections for cleanup
+        self._signal_connections.extend([
+            audio_service.connect("changed", self.audio_changed),
+            audio_service.connect("changed", self.volume_changed),
+            modus_service.connect("dont-disturb-changed", self.dnd_changed)
+        ])
 
         self.wlan_label = Label(wlan, name="wifi-widget-label", h_align="start")
         if bluetooth != "disabled":
@@ -98,25 +112,19 @@ class ModusControlCenter(Window):
         if brightness_service.max_screen > 0:
             self.brightness_scale.connect("change-value", self.set_brightness)
             self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
-            brightness_service.connect("screen", self.brightness_changed)
+            self._signal_connections.append(
+                brightness_service.connect("screen", self.brightness_changed)
+            )
         else:
             # Disable brightness scale if no backlight device available
             self.brightness_scale.set_sensitive(False)
 
-        # Create music widget with ultra-lazy player container
+        # Create placeholder music widget - lazy load content when needed
         self.music_widget = Box(
             name="music-widget",
             h_align="start",
-            # on_clicked=lambda *_: (
-            #     self.hide_controlcenter(),
-            #     self.expanded_player.set_visible(True),
-            #     self.ex_mousecapture.toggle_mousecapture(),
-            # ),
-            children=PlayerBoxStack(MprisPlayerManager(), control_center=self),
+            children=[]  # Empty initially
         )
-
-        self.wifi_man = WifiConnections(self)
-        self.bluetooth_man = BluetoothConnections(self)
 
         self.has_bluetooth_open = False
         self.has_wifi_open = False
@@ -277,67 +285,106 @@ class ModusControlCenter(Window):
             ],
         )
 
-        # Create bluetooth widgets directly without XML
-        self.bluetooth_widgets = Box(
-            orientation="vertical",
-            h_expand=True,
-            name="control-center-widgets",
-            children=[
-                Box(
-                    orientation="horizontal",
-                    name="top-widget",
-                    h_expand=True,
-                    children=[
-                        Box(
-                            orientation="vertical",
-                            name="wb-widget",
-                            style_classes="menu",
-                            spacing=5,
-                            children=[
-                                self.bluetooth_man,
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-        # Create wifi widgets directly without XML
-        self.wifi_widgets = Box(
-            orientation="vertical",
-            h_expand=True,
-            name="control-center-widgets",
-            children=[
-                Box(
-                    orientation="horizontal",
-                    name="top-widget",
-                    h_expand=True,
-                    children=[
-                        Box(
-                            orientation="vertical",
-                            name="wb-widget",
-                            style_classes="menu",
-                            spacing=5,
-                            children=[
-                                self.wifi_man,
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        )
+        # Lazy-loaded widgets - create placeholders
+        self.bluetooth_widgets = None
+        self.wifi_widgets = None
 
         self.center_box = CenterBox(start_children=[self.widgets])
-
-        self.bluetooth_center_box = CenterBox(start_children=[self.bluetooth_widgets])
-
-        self.wifi_center_box = CenterBox(start_children=[self.wifi_widgets])
+        self.bluetooth_center_box = None
+        self.wifi_center_box = None
 
         self.widgets.set_size_request(300, -1)
-        self.bluetooth_center_box.set_size_request(300, -1)
-        self.wifi_center_box.set_size_request(300, -1)
 
         self.children = self.center_box
+        
+        # Connect to visibility changes for cleanup
+        self.connect("notify::visible", self._on_visibility_changed)
+
+    def _on_visibility_changed(self, widget, param):
+        """Handle visibility changes for memory management"""
+        if not self.get_visible():
+            self._cleanup_when_hidden()
+
+    def _cleanup_when_hidden(self):
+        """Clean up resources when widget is hidden"""
+        # Clean up music widget content if it exists
+        if self._music_widget_content and not self._music_initialized:
+            self.music_widget.remove(self._music_widget_content)
+            self._music_widget_content = None
+        
+        # Reset lazy loading flags to allow re-initialization when shown again
+        # Keep initialized flags to avoid recreating heavy components unnecessarily
+        
+    def _ensure_music_widget(self):
+        """Lazy load music widget content"""
+        if not self._music_initialized:
+            self._music_widget_content = PlayerBoxStack(MprisPlayerManager(), control_center=self)
+            self.music_widget.append(self._music_widget_content)
+            self._music_initialized = True
+
+    def _ensure_bluetooth_widgets(self):
+        """Lazy load bluetooth widgets"""
+        if self.bluetooth_widgets is None:
+            if self._bluetooth_man is None:
+                self._bluetooth_man = BluetoothConnections(self)
+            
+            self.bluetooth_widgets = Box(
+                orientation="vertical",
+                h_expand=True,
+                name="control-center-widgets",
+                children=[
+                    Box(
+                        orientation="horizontal",
+                        name="top-widget",
+                        h_expand=True,
+                        children=[
+                            Box(
+                                orientation="vertical",
+                                name="wb-widget",
+                                style_classes="menu",
+                                spacing=5,
+                                children=[
+                                    self._bluetooth_man,
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            )
+            self.bluetooth_center_box = CenterBox(start_children=[self.bluetooth_widgets])
+            self.bluetooth_center_box.set_size_request(300, -1)
+
+    def _ensure_wifi_widgets(self):
+        """Lazy load wifi widgets"""
+        if self.wifi_widgets is None:
+            if self._wifi_man is None:
+                self._wifi_man = WifiConnections(self)
+            
+            self.wifi_widgets = Box(
+                orientation="vertical",
+                h_expand=True,
+                name="control-center-widgets",
+                children=[
+                    Box(
+                        orientation="horizontal",
+                        name="top-widget",
+                        h_expand=True,
+                        children=[
+                            Box(
+                                orientation="vertical",
+                                name="wb-widget",
+                                style_classes="menu",
+                                spacing=5,
+                                children=[
+                                    self._wifi_man,
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            )
+            self.wifi_center_box = CenterBox(start_children=[self.wifi_widgets])
+            self.wifi_center_box.set_size_request(300, -1)
 
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
@@ -404,10 +451,12 @@ class ModusControlCenter(Window):
         self.children = children
 
     def open_bluetooth(self, *_):
+        self._ensure_bluetooth_widgets()
         idle_add(lambda *_: self.set_children(self.bluetooth_center_box))
         self.has_bluetooth_open = True
 
     def open_wifi(self, *_):
+        self._ensure_wifi_widgets()
         idle_add(lambda *_: self.set_children(self.wifi_center_box))
         self.has_wifi_open = True
 
@@ -420,6 +469,10 @@ class ModusControlCenter(Window):
         self.has_wifi_open = False
 
     def _set_mousecapture(self, visible: bool):
+        if visible:
+            # Lazy load music widget when becoming visible
+            self._ensure_music_widget()
+        
         self.set_visible(visible)
         if not visible:
             self.close_bluetooth()
@@ -507,3 +560,22 @@ class ModusControlCenter(Window):
     def hide_controlcenter(self, *_):
         self._mousecapture_parent.toggle_mousecapture()
         self.set_visible(False)
+        
+    def destroy(self):
+        """Clean up resources when widget is destroyed"""
+        # Disconnect all signal connections
+        for connection in self._signal_connections:
+            try:
+                connection.disconnect()
+            except:
+                pass
+        
+        # Clean up heavy components
+        if self._wifi_man:
+            self._wifi_man.destroy()
+        if self._bluetooth_man:
+            self._bluetooth_man.destroy()
+        if self._music_widget_content:
+            self._music_widget_content.destroy()
+            
+        super().destroy()
