@@ -53,7 +53,7 @@ def cleanup_old_cache_files():
 class PlayerBoxStack(Box):
     """A widget that displays the current player information."""
 
-    def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
+    def __init__(self, mpris_manager: MprisPlayerManager, control_center=None, **kwargs):
         # Clean up old cache files on startup
         cleanup_old_cache_files()
 
@@ -64,6 +64,7 @@ class PlayerBoxStack(Box):
             name="player-stack",
         )
         self.current_stack_pos = 0
+        self.control_center = control_center
 
         # List to store player buttons
         self.player_buttons: list[Button] = []
@@ -273,7 +274,7 @@ class PlayerBoxStack(Box):
 
         self.set_visible(True)
 
-        new_player_box = PlayerBox(player=MprisPlayer(player), player_stack=self)
+        new_player_box = PlayerBox(player=MprisPlayer(player), player_stack=self, control_center=self.control_center)
         self.player_stack.children = [
             *self.player_stack.children,
             new_player_box,
@@ -369,7 +370,7 @@ class PlayerBoxStack(Box):
 class PlayerBox(Box):
     """A widget that displays the current player information."""
 
-    def __init__(self, player: MprisPlayer, player_stack=None, **kwargs):
+    def __init__(self, player: MprisPlayer, player_stack=None, control_center=None, **kwargs):
         super().__init__(
             h_align="center",
             name="player-box",
@@ -379,6 +380,7 @@ class PlayerBox(Box):
         # Setup
         self.player: MprisPlayer = player
         self.player_stack = player_stack
+        self.control_center = control_center
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
         self.expanded_player = ExpandedPlayer()
@@ -521,11 +523,7 @@ class PlayerBox(Box):
         self.prev_button = Button(
             style_classes=["player-button"],
             child=self.skip_prev_icon,
-            on_clicked=lambda *_: (
-                self.expanded_player.set_visible(True),
-                self.ex_mousecapture.toggle_mousecapture(),
-            ),
-            # on_clicked=self._on_player_prev,
+            on_clicked=self._on_prev_button_click,
         )
         self.shuffle_button = Button(
             style_classes=["player-button"],
@@ -597,6 +595,16 @@ class PlayerBox(Box):
             self._cleanup_temp_files()
         except Exception:
             pass  # Ignore errors during cleanup in destructor
+
+    def _on_prev_button_click(self, *_):
+        """Handle prev button click: close control center then open expanded player"""
+        # Close control center first
+        if self.control_center and hasattr(self.control_center, 'hide_controlcenter'):
+            self.control_center.hide_controlcenter()
+        
+        # Then open expanded player
+        self.expanded_player.set_visible(True)
+        self.ex_mousecapture.toggle_mousecapture()
 
     def update_buttons(self, player_buttons, show_buttons):
         # """Update the stack switcher buttons in this player box"""
