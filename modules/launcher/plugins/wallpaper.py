@@ -536,8 +536,9 @@ class WallpaperPlugin(PluginBase):
                                         status_text
                                     }",
                                     icon_name="color-picker-symbolic",
-                                    action=lambda c=hex_color,
-                                    s=scheme: self._apply_hex_color_direct(c, s),
+                                    action=lambda c=hex_color, s=scheme: self._apply_hex_color_direct(
+                                        c, s
+                                    ),
                                     relevance=1.0,
                                     plugin_name=self.display_name,
                                     data={
