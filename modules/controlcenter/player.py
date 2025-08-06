@@ -10,7 +10,6 @@ from fabric.utils import (
 )
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from modules.controlcenter.expanded_player import ExpandedPlayer
 from fabric.widgets.label import Label
@@ -53,7 +52,9 @@ def cleanup_old_cache_files():
 class PlayerBoxStack(Box):
     """A widget that displays the current player information."""
 
-    def __init__(self, mpris_manager: MprisPlayerManager, control_center=None, **kwargs):
+    def __init__(
+        self, mpris_manager: MprisPlayerManager, control_center=None, **kwargs
+    ):
         # Clean up old cache files on startup
         cleanup_old_cache_files()
 
@@ -99,7 +100,7 @@ class PlayerBoxStack(Box):
         fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
         # Album cover with fallback image
-        album_cover = Box(style_classes="album-image")
+        album_cover = Box(style_classes="album-image-c")
         album_cover.set_style(f"background-image:url('{fallback_cover_path}')")
 
         image_stack = Box(h_align="start", v_align="center", name="player-image-stack")
@@ -108,7 +109,7 @@ class PlayerBoxStack(Box):
         # Track info showing "No media playing"
         track_title = Label(
             label="No media playing",
-            name="player-title",
+            name="player-title-c",
             justification="left",
             max_chars_width=15,
             ellipsization="end",
@@ -137,7 +138,7 @@ class PlayerBoxStack(Box):
 
         track_info = Box(
             name="track-info",
-            spacing=5,
+            # spacing=5,
             orientation="v",
             v_align="start",
             h_align="start",
@@ -274,7 +275,11 @@ class PlayerBoxStack(Box):
 
         self.set_visible(True)
 
-        new_player_box = PlayerBox(player=MprisPlayer(player), player_stack=self, control_center=self.control_center)
+        new_player_box = PlayerBox(
+            player=MprisPlayer(player),
+            player_stack=self,
+            control_center=self.control_center,
+        )
         self.player_stack.children = [
             *self.player_stack.children,
             new_player_box,
@@ -370,7 +375,9 @@ class PlayerBoxStack(Box):
 class PlayerBox(Box):
     """A widget that displays the current player information."""
 
-    def __init__(self, player: MprisPlayer, player_stack=None, control_center=None, **kwargs):
+    def __init__(
+        self, player: MprisPlayer, player_stack=None, control_center=None, **kwargs
+    ):
         super().__init__(
             h_align="center",
             name="player-box",
@@ -387,7 +394,7 @@ class PlayerBox(Box):
         self.ex_mousecapture = DropDownMouseCapture(
             layer="top", child_window=self.expanded_player
         )
-        self.image_size = 120
+        self.image_size = 50
 
         self.icon_size = 15
 
@@ -399,20 +406,37 @@ class PlayerBox(Box):
         self.temp_artwork_files = []  # Track temp files for cleanup
         self.current_download_thread = None  # Track current download thread
 
-        self.album_cover = Box(style_classes="album-image")
+        self.album_cover = Box(style_classes="album-image-c")
         self.album_cover.set_style(
             f"background-image:url('{self.fallback_cover_path}')"
         )
 
         self.image_stack = Box(
-            h_align="start", v_align="center", name="player-image-stack"
+            h_align="start",
+            v_align="center",
+            name="player-image-stack",
         )
         self.image_stack.children = [*self.image_stack.children, self.album_cover]
 
+        self.app_icon = Box(
+            children=Image(
+                icon_name=self.player.player_name, name="player-app-icon", icon_size=20
+            ),
+            h_align="end",
+            v_align="end",
+            tooltip_text=self.player.player_name,  # type: ignore
+        )
+        self.image = Overlay(
+            child=self.image_stack,
+            overlays=[
+                self.app_icon,
+            ],
+        )
         # Track Info
+
         self.track_title = Label(
             label="No Title",
-            name="player-title",
+            name="player-title-c",
             justification="left",
             max_chars_width=15,
             ellipsization="end",
@@ -483,21 +507,11 @@ class PlayerBox(Box):
 
         # Buttons
         self.button_box = Box(
-            name="button-box",
-            h_align="center",
+            name="button-box-c",
+            # h_align="end",
+            # visible=False,
+            h_expand=False,
             spacing=2,
-        )
-
-        # Stack switcher buttons box
-        self.stack_buttons_box = Box(
-            name="stack-buttons-box", spacing=4, h_align="center"
-        )
-        self.stack_buttons_box.hide()  # Initially hidden
-
-        self.controls_box = CenterBox(
-            name="player-controls",
-            center_children=self.button_box,
-            end_children=self.stack_buttons_box,
         )
 
         self.skip_next_icon = Image(icon_name="media-skip-forward")
@@ -533,51 +547,84 @@ class PlayerBox(Box):
         self.player.bind_property("can_shuffle", self.shuffle_button, "sensitive")
 
         self.button_box.children = (
-            self.shuffle_button,
-            self.prev_button,
+            # self.shuffle_button,
+            # self.prev_button,
             self.play_pause_button,
             self.next_button,
         )
-        self.custom = Button(
-            child=self.track_info,
-            on_clicked=lambda *_: self.expanded_player.set_visible(True),
-        )
         self.player_info_box = Box(
-            name="player-info-box",
+            name="player-info-box-c",
             v_align="center",
+            h_expand=True,
             h_align="start",
             orientation="v",
-            children=[self.custom, self.controls_box, self.stack_buttons_box],
+            children=[
+                self.track_info,
+            ],
         )
 
         self.inner_box = Box(
             name="inner-player-box",
+            h_expand=True,
             v_align="center",
             h_align="start",
-        )
-        # resize the inner box
-        self.outer_box = Box(
-            name="outer-player-box",
-            h_align="start",
-        )
-
-        self.overlay_box = Overlay(
-            child=self.outer_box,
-            overlays=[
-                self.inner_box,
+            children=[
+                self.image,
                 self.player_info_box,
-                self.image_stack,
-                Box(
-                    children=Image(icon_name=self.player.player_name, icon_size=18),
-                    h_align="end",
-                    v_align="start",
-                    style="margin-top: 5px; margin-right: 10px;",
-                    tooltip_text=self.player.player_name,  # type: ignore
-                ),
             ],
         )
+        # resize the inner box
+        self.outer_box = Button(
+            spacing=5,
+            name="outer-player-box-c",
+            h_expand=True,
+            # style="background-color:#fff",
+            on_clicked=lambda *_: (
+                # Close control center if it exists
+                self.control_center.hide_controlcenter(),
+                self.expanded_player.set_visible(True),
+                self.ex_mousecapture.toggle_mousecapture(),
+            ),
+            h_align="start",
+            # children=[
+            child=self.inner_box,
+            # self.inner_box,
+            # self.player_info_box,
+            # self.image,
+            # ],
+        )
 
-        self.children = [*self.children, self.overlay_box]
+        self.box = Box(
+            name="box-c",
+            orientation="h",
+            h_align="center",
+            h_expand=True,
+            children=[
+                self.outer_box,
+                self.button_box,
+                # self.stack_buttons_box,
+            ],
+        )
+        # self.overlay_box = Overlay(
+        #     child=self.outer_box,
+        #     overlays=[
+        #         # self.inner_box,
+        #         self.player_info_box,
+        #         self.image_stack,
+        #         Box(
+        #             children=Image(icon_name=self.player.player_name, icon_size=18),
+        #             h_align="end",
+        #             v_align="start",
+        #             style="margin-top: 5px; margin-right: 10px;",
+        #             tooltip_text=self.player.player_name,  # type: ignore
+        #         ),
+        #     ],
+        # )
+
+        self.children = [
+            *self.children,
+            self.box,
+        ]
 
         bulk_connect(
             self.player,
@@ -599,9 +646,9 @@ class PlayerBox(Box):
     def _on_prev_button_click(self, *_):
         """Handle prev button click: close control center then open expanded player"""
         # Close control center first
-        if self.control_center and hasattr(self.control_center, 'hide_controlcenter'):
+        if self.control_center and hasattr(self.control_center, "hide_controlcenter"):
             self.control_center.hide_controlcenter()
-        
+
         # Then open expanded player
         self.expanded_player.set_visible(True)
         self.ex_mousecapture.toggle_mousecapture()
