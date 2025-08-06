@@ -14,6 +14,7 @@ from typing import List
 import threading
 
 from fabric.utils import bulk_connect, invoke_repeater, cooldown
+from fabric.utils.helpers import get_relative_path
 from fabric.widgets.image import Image
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
@@ -207,27 +208,11 @@ class PlayerBoxStack(Box):
         fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
         # Album cover with fallback image using Image widget
-        album_cover_image = Image(
-            name="macos-album-cover-image",
-            pixbuf=None,
-        )
-
-        try:
-            from gi.repository import GdkPixbuf
-
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                fallback_cover_path, 70, 70, True
-            )
-            album_cover_image.set_from_pixbuf(pixbuf)
-            album_cover_image.set_size_request(70, 70)
-        except Exception as e:
-            logger.warning(f"Failed to load fallback image in no-media box: {e}")
 
         album_cover = Box(
             name="macos-album-image",
-            children=[album_cover_image],
         )
-        album_cover.set_size_request(70, 70)
+        album_cover.set_style(f"background-image:url('{fallback_cover_path}')")
 
         image_stack = Box(h_align="start", v_align="center", name="player-image-stack")
         image_stack.children = [album_cover]
@@ -501,7 +486,6 @@ class PlayerBox(Box):
         self.player_stack = player_stack
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
-        self.image_size = 70  # Medium album art size for expanded player
         self.icon_size = 15
 
         # State
@@ -515,10 +499,14 @@ class PlayerBox(Box):
         self._download_cancelled = False  # Flag to cancel downloads
         self._signal_connections = []  # Track signal connections
 
-        self.album_cover = Box(style_classes="macos-album-image")
+        # Use same CSS background approach as small player for consistency
+        self.album_cover = Box(
+            name="macos-album-image",
+        )
         self.album_cover.set_style(
             f"background-image:url('{self.fallback_cover_path}')"
         )
+        self.album_cover.set_size_request(70, 70)
 
         self.image_stack = Box(
             h_align="start", v_align="center", name="player-image-stack"
@@ -555,39 +543,6 @@ class PlayerBox(Box):
             h_align="start",
             visible=True,  # Hide artist and album when no media
         )
-
-        # Use Image widget instead of CSS background for more reliable image display
-        self.album_cover_image = Image(
-            name="macos-album-cover-image",
-            pixbuf=None,
-        )
-
-        # Set fallback image immediately with proper scaling
-        try:
-            from gi.repository import GdkPixbuf
-
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                self.fallback_cover_path, 70, 70, True
-            )
-            self.album_cover_image.set_from_pixbuf(pixbuf)
-            self.album_cover_image.set_size_request(70, 70)
-        except Exception as e:
-            logger.warning(f"Failed to load fallback image: {e}")
-
-        # Container box for styling with fixed size
-        self.album_cover = Box(
-            name="macos-album-image",
-            children=[self.album_cover_image],
-        )
-        self.album_cover.set_size_request(70, 70)
-
-        self.image_stack = Box(
-            h_align="start",
-            v_align="start",
-            h_expand=False,  # Fixed width for album art
-            name="macos-player-image-stack",
-        )
-        self.image_stack.children = [*self.image_stack.children, self.album_cover]
 
         self.app_icon = Box(
             children=Image(
@@ -732,10 +687,20 @@ class PlayerBox(Box):
         )
         self.stack_buttons_box.hide()  # Initially hidden
 
-        self.skip_next_icon = Image(icon_name="player_fwd")
-        self.skip_prev_icon = Image(icon_name="player_rew")
-        self.shuffle_icon = Image(icon_name="shuffle")
-        self.play_pause_icon = Image(icon_name="player_pause")
+        # Create SVG icons from player directory
+        self.skip_next_icon = Image(
+            image_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
+            icon_size=16,
+        )
+        self.skip_prev_icon = Image(
+            image_file=get_relative_path("../../config/assets/icons/player/Rewind.svg"),
+            icon_size=16,
+        )
+        self.shuffle_icon = Image(icon_name="shuffle")  # Keep existing shuffle icon
+        self.play_pause_icon = Image(
+            image_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
+            icon_size=20,
+        )
 
         self.play_pause_button = Button(
             name="macos-play-button",
@@ -959,39 +924,22 @@ class PlayerBox(Box):
         status = player.get_property("playback-status")
 
         if status == "paused":
-            self.play_pause_icon.set_from_icon_name("player_start")
+            self.play_pause_icon.set_from_file(
+                get_relative_path("../../config/assets/icons/player/play.svg")
+            )
 
         if status == "playing":
-            self.play_pause_icon.set_from_icon_name("player_pause")
+            self.play_pause_icon.set_from_file(
+                get_relative_path("../../config/assets/icons/player/Pause.svg")
+            )
 
     def _update_image(self, image_path):
-        try:
-            from gi.repository import GdkPixbuf
-
-            if image_path and os.path.isfile(image_path):
-                # Create scaled pixbuf to ensure proper size
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    image_path, 70, 70, True
-                )
-                self.album_cover_image.set_from_pixbuf(pixbuf)
-                # Explicitly clear pixbuf reference to help GC
-                del pixbuf
-            else:
-                # Use fallback image with scaling
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    self.fallback_cover_path, 70, 70, True
-                )
-                self.album_cover_image.set_from_pixbuf(pixbuf)
-                # Explicitly clear pixbuf reference to help GC
-                del pixbuf
-        except Exception as e:
-            logger.warning(f"Failed to update album cover image: {e}")
-            # Try simple file setting as last resort
-            try:
-                self.album_cover_image.set_from_file(self.fallback_cover_path)
-                self.album_cover_image.set_size_request(70, 70)
-            except Exception as e2:
-                logger.error(f"Failed to set fallback image: {e2}")
+        if image_path and os.path.isfile(image_path):
+            self.album_cover.set_style(f"background-image:url('{image_path}')")
+        else:
+            self.album_cover.set_style(
+                f"background-image:url('{self.fallback_cover_path}')"
+            )
 
     def _set_image(self, *_):
         art_url = self.player.arturl
@@ -1022,6 +970,7 @@ class PlayerBox(Box):
             )
             self.current_download_thread.start()
         else:
+            print(art_url)
             self._update_image(art_url)
 
     def _download_and_set_artwork(self, arturl):

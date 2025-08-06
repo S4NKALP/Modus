@@ -557,11 +557,11 @@
 
 /* macOS-style expanded player - more compact */
 #macos-outer-player-box {
-  min-height: 110px; /* Reduced height */
-  min-width: 420px; /* Slightly wider to accommodate expanded track info */
+  min-height: 80px; /* Reduced height */
+  min-width: 380px; /* Slightly wider to accommodate expanded track info */
   border-radius: 12px;
   /* margin: 10px; */
-  padding: 15px; /* Reduced padding */
+  padding: 15px;
   background-color: alpha(#000, 0.4);
   box-shadow:
     0 4px 16px alpha(#000, 0.25),
@@ -572,17 +572,25 @@
   margin-left: 5px;
 }
 
+#macos-album-cover-image image {
+  min-width: 70px;
+  min-height: 70px;
+  border-radius: 9px;
+}
 #macos-album-image {
   min-width: 70px;
   min-height: 70px;
   border-radius: 9px;
+  background-position: center;
+  background-size: cover;
   box-shadow: 0 2px 8px alpha(#000, 0.3);
 }
 
-#macos-album-cover-image {
+#macos-album-image image {
   min-width: 70px;
   min-height: 70px;
   border-radius: 9px;
+  box-shadow: 0 2px 8px alpha(#000, 0.3);
 }
 
 /* Track info container that expands to fill available space */

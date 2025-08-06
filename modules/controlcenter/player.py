@@ -9,6 +9,7 @@ import threading
 from fabric.utils import (
     bulk_connect,
 )
+from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -558,25 +559,36 @@ class PlayerBox(Box):
             ],
         )
 
-        # Buttons
+        # Buttons with fixed sizing for layout stability
         self.button_box = Box(
             name="button-box-c",
-            # h_align="end",
-            # visible=False,
             h_expand=False,
             spacing=2,
         )
 
-        self.skip_next_icon = Image(icon_name="player_fwd")
-        self.skip_prev_icon = Image(icon_name="media-skip-backward")
-        self.shuffle_icon = Image(icon_name="shuffle")
-        self.play_pause_icon = Image(icon_name="player_pause")
+        # Create SVG icons with consistent sizing
+        self.skip_next_icon = Image(
+            image_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
+            icon_size=16
+        )
+        self.skip_prev_icon = Image(
+            image_file=get_relative_path("../../config/assets/icons/player/Rewind.svg"), 
+            icon_size=16
+        )
+        self.shuffle_icon = Image(icon_name="shuffle", icon_size=16)
+        self.play_pause_icon = Image(
+            image_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
+            icon_size=18
+        )
 
+        # Fixed size buttons to prevent layout shifts
         self.play_pause_button = Button(
             name="player-button",
             child=self.play_pause_icon,
             on_clicked=self.player.play_pause,
         )
+        # Set consistent button size
+        self.play_pause_button.set_size_request(32, 32)
 
         self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
 
@@ -585,6 +597,8 @@ class PlayerBox(Box):
             child=self.skip_next_icon,
             on_clicked=self._on_player_next,
         )
+        # Set consistent button size
+        self.next_button.set_size_request(32, 32)
         self.player.bind_property("can_go_next", self.next_button, "sensitive")
 
         self.prev_button = Button(
@@ -592,11 +606,16 @@ class PlayerBox(Box):
             child=self.skip_prev_icon,
             on_clicked=self._on_prev_button_click,
         )
+        # Set consistent button size  
+        self.prev_button.set_size_request(32, 32)
+        
         self.shuffle_button = Button(
             style_classes=["player-button"],
             child=self.shuffle_icon,
             on_clicked=self.player.toggle_shuffle,
         )
+        # Set consistent button size
+        self.shuffle_button.set_size_request(32, 32)
         self.player.bind_property("can_shuffle", self.shuffle_button, "sensitive")
 
         self.button_box.children = (
@@ -767,10 +786,14 @@ class PlayerBox(Box):
         status = player.get_property("playback-status")
 
         if status == "paused":
-            self.play_pause_icon.set_from_icon_name("player_play")
+            self.play_pause_icon.set_from_file(
+                get_relative_path("../../config/assets/icons/player/play.svg")
+            )
 
         if status == "playing":
-            self.play_pause_icon.set_from_icon_name("player_pause")
+            self.play_pause_icon.set_from_file(
+                get_relative_path("../../config/assets/icons/player/Pause.svg")
+            )
             # Notify the player stack that this player started playing
             if self.player_stack and hasattr(
                 self.player_stack, "on_player_playback_changed"
@@ -781,10 +804,14 @@ class PlayerBox(Box):
         status = player.get_property("playback-status")
 
         if status == "paused":
-            self.play_pause_icon.set_from_icon_name("player_play")
+            self.play_pause_icon.set_from_file(
+                get_relative_path("../../config/assets/icons/player/play.svg")
+            )
 
         if status == "playing":
-            self.play_pause_icon.set_from_icon_name("player_pause")
+            self.play_pause_icon.set_from_file(
+                get_relative_path("../../config/assets/icons/player/Pause.svg")
+            )
             # Notify the player stack that this player started playing
             if self.player_stack and hasattr(
                 self.player_stack, "on_player_playback_changed"
