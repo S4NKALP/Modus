@@ -152,8 +152,9 @@ class ModusControlCenter(Window):
                         orientation="vertical",
                         children=[
                             Label(
+                                name="bluetooth-widget-name",
                                 label="Bluetooth",
-                                style_classes="title ct",
+                                style_classes="ct",
                                 h_align="start",
                             ),
                             self.bluetooth_label,
@@ -175,7 +176,10 @@ class ModusControlCenter(Window):
                         orientation="vertical",
                         children=[
                             Label(
-                                label="Wi-Fi", style_classes="title ct", h_align="start"
+                                name="wifi-widget-name",
+                                label="Wi-Fi",
+                                style_classes="ct",
+                                h_align="start",
                             ),
                             self.wlan_label,
                         ],
