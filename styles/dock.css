@@ -1,95 +1,39 @@
 #dock {
-  background-color: alpha(#fff, 0.05);
-  padding: 8px;
-  margin: 8px 8px 5px 8px;
+  background-color: alpha(#fff, 0.07);
+  padding: 4px 4px;
+  margin: 4px 4px;
+  border: none;
   border-radius: 16px;
-  /* border: 2px solid var(--surface); */
-  /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
-}
-
-#dock-app-overlay {
-}
-#dock-app-overlay label {
-  background-color: alpha(#000, 0.5);
-  font-size: 12px;
-  font-family: "SF Pro Rounded";
-  margin-top: 20px;
-  min-width: 17px;
-  border-radius: 8px;
-}
-#dock.vertical {
-  margin: 8px 0 8px 8px;
-  border-radius: 20px 0 0 20px;
-}
-
-#dock.vertical.left {
-  margin: 8px 8px 8px 0;
-  border-radius: 0 20px 20px 0;
-}
-
-#dock-full {
-  /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
-  opacity: 1;
-}
-
-#dock-separator {
-  padding: 2px;
-  border-radius: 16px;
-  background-color: var(--surface-bright);
+  transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
 #dock-app-button {
-  padding: 6px;
-  border-radius: 24px;
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  /* box-shadow: 0 0 4px alpha(var(--shadow), 0.5); */
-  /* transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
+  border-radius: 16px;
 }
 
-#dock-app-button.dock-icon-hover {
-  padding: 4px;
-  border-radius: 28px;
-  background-color: alpha(#fff, 0.15);
-  box-shadow: 0 4px 12px alpha(#000, 0.2);
+#dock-separator {
+  min-width: 3px;
+  margin: 2px 0;
+  background-color: var(--surface-bright);
+  border-radius: 8px;
 }
 
 #dock-app-button:hover {
-  background-color: var(--surface-bright);
+  margin-top: -55px;
+  margin-bottom: 4px;
+  transition: all 0.15s ease-out;
 }
 
-#dock-app-button:hover.instance {
-  background-color: var(--outline);
+#dock-app-button.semi_hovered {
+  margin-top: -20px;
+  margin-bottom: 2px;
+  transition: all 0.15s ease-out;
 }
 
-#dock-app-button:active,
-#dock-app-button:active.instance {
-  background-color: var(--primary);
-}
-
-#dock-app-button.instance {
-  border-radius: 12px;
-}
-
-#dock-app-dot {
-  background-color: var(--primary);
-  border-radius: 50%;
-  margin-top: 4px;
-  min-width: 4px;
-  min-height: 4px;
-}
-
-#dock-corner-left {
-  margin: 0 -8px 0 0;
-}
-
-#dock-corner-right {
-  margin: 0 0 0 -8px;
-}
-
-#dock-corner-top {
-  margin: 0 0 -8px 0;
-}
-
-#dock-corner-bottom {
-  margin: -8px 0 0 0;
+#dock-app-overlay label {
+  background-color: alpha(#000, 0.5);
+  font-size: 12px;
+  margin-top: 20px;
+  min-width: 15px;
+  border-radius: 8px;
 }

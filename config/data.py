@@ -56,7 +56,7 @@ CURRENT_WIDTH = screen.get_width()
 CURRENT_HEIGHT = screen.get_height()
 
 
-WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")
+WALLPAPERS_DIR_DEFAULT = os.path.expanduser(f"~/Pictures/wallpapers/")
 CONFIG_FILE = get_relative_path("../config/assets/config.json")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
@@ -91,8 +91,7 @@ if os.path.exists(CONFIG_FILE):
     DOCK_ENABLED = config.get("dock_enabled", True)
     DOCK_AUTO_HIDE = config.get("dock_auto_hide", True)
     DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", False)
-    DOCK_THEME = config.get("dock_theme", "Pills")
-    DOCK_ICON_SIZE = config.get("dock_icon_size", 28)
+    DOCK_ICON_SIZE = config.get("dock_icon_size", 60)
     WORKSPACE_NUMS = config.get("workspace_nums", False)
     WORKSPACE_USE_CHINESE_NUMERAL = config.get("workspace_use_chinese_numerals", False)
     WORKSPACE_DOTS = config.get("workspace_dots", False)
@@ -101,6 +100,7 @@ if os.path.exists(CONFIG_FILE):
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get(
         "dock_hide_special_workspace_apps", True
     )
+    DOCK_PREVIEW_APPS = config.get("dock_preview_apps", False)
 
     NOTIFICATION_TIMEOUT_STR = config.get("notification_timeout", "5s")
     NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
@@ -133,10 +133,11 @@ else:
     DOCK_AUTO_HIDE = True
     TERMINAL_COMMAND = "kitty -e"
     DOCK_THEME = "Pills"
-    DOCK_ICON_SIZE = 30
+    DOCK_ICON_SIZE = 60
     WINDOW_SWITCHER_ITEMS_PER_ROW = 13
     DOCK_HIDE_SPECIAL_WORKSPACE = True
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = True
+    DOCK_PREVIEW_APPS = False
 
     NOTIFICATION_TIMEOUT_STR = "5s"
     NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
