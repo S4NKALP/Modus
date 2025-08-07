@@ -599,7 +599,19 @@ class Deskwidgets(Window):
     config = load_config()
 
     def __init__(self, **kwargs):
-        top_left = Window(
+        # Create the main invisible window that manages the widgets
+        super().__init__(
+            name="desktop-widget-manager",
+            layer="bottom",
+            title="modus-desktop-widget-manager",
+            visible=False,  # This window is invisible - just manages the others
+            size=(1, 1),  # Minimal size
+            anchor="top left",
+            **kwargs,
+        )
+        
+        # Create separate independent windows as attributes
+        self.top_left = Window(
             anchor="top left",
             title="modus-widgets-topleft",
             orientation="h",
@@ -615,7 +627,7 @@ class Deskwidgets(Window):
             ),
         )
 
-        bottom_left = Window(
+        self.bottom_left = Window(
             anchor="bottom right",
             title="modus-widgets-bottomright",
             orientation="h",
@@ -629,27 +641,7 @@ class Deskwidgets(Window):
                 ],
             ),
         )
-
-        container = Box(
-            orientation="v",
-            children=[
-                top_left,
-                bottom_left,
-            ],
-        )
-
-        super().__init__(
-            name="desktop",
-            layer="bottom",
-            title="modus-desktop-widgets",
-            orientation="v",
-            exclusivity="none",
-            visible=False,  # Start hidden until content ready
-            child=container,
-            **kwargs,
-        )
         
         # Show widgets after initialization is complete
-        self.set_visible(True)
-        top_left.set_visible(True)
-        bottom_left.set_visible(True)
+        self.top_left.set_visible(True)
+        self.bottom_left.set_visible(True)
