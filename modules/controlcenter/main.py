@@ -154,13 +154,18 @@ class ModusControlCenter(Window):
             size=46,
         )
 
-        self.bluetooth_widget = Button(
+        self.bluetooth_widget = Box(
             name="bluetooth-widget",
-            child=Box(
-                orientation="h",
-                children=[
-                    self.bluetooth_svg,
-                    Box(
+            orientation="h",
+            children=[
+                Button(
+                    name="bluetooth-icon-button",
+                    child=self.bluetooth_svg,
+                    on_clicked=self.toggle_bluetooth,
+                ),
+                Button(
+                    name="bluetooth-info-button",
+                    child=Box(
                         name="bluetooth-widget-info",
                         orientation="vertical",
                         children=[
@@ -173,18 +178,23 @@ class ModusControlCenter(Window):
                             self.bluetooth_label,
                         ],
                     ),
-                ],
-            ),
-            on_clicked=self.open_bluetooth,
+                    on_clicked=self.open_bluetooth,
+                ),
+            ],
         )
 
-        self.wlan_widget = Button(
+        self.wlan_widget = Box(
             name="wifi-widget",
-            child=Box(
-                orientation="h",
-                children=[
-                    self.wifi_svg,
-                    Box(
+            orientation="h",
+            children=[
+                Button(
+                    name="wifi-icon-button",
+                    child=self.wifi_svg,
+                    on_clicked=self.toggle_wifi,
+                ),
+                Button(
+                    name="wifi-info-button",
+                    child=Box(
                         name="wifi-widget-info",
                         orientation="vertical",
                         children=[
@@ -197,9 +207,9 @@ class ModusControlCenter(Window):
                             self.wlan_label,
                         ],
                     ),
-                ],
-            ),
-            on_clicked=self.open_wifi,
+                    on_clicked=self.open_wifi,
+                ),
+            ],
         )
 
         self.focus_icon = Svg(
@@ -523,6 +533,31 @@ class ModusControlCenter(Window):
 
         self.brightness_scale.set_value(new_value)
         return True
+
+    def toggle_bluetooth(self, *_):
+        """Toggle bluetooth on/off"""
+        try:
+            # Access the bluetooth client from the bluetooth manager
+            if hasattr(self, 'bluetooth_man') and hasattr(self.bluetooth_man, 'client'):
+                current_state = self.bluetooth_man.client.enabled
+                self.bluetooth_man.client.set_enabled(not current_state)
+            else:
+                logger.warning("Bluetooth client not available for toggling")
+        except Exception as e:
+            logger.warning(f"Failed to toggle bluetooth: {e}")
+
+    def toggle_wifi(self, *_):
+        """Toggle wifi on/off"""
+        try:
+            # Import and use the network service
+            from services.network import WiFiDevice
+            wifi_device = WiFiDevice.get_default()
+            if wifi_device:
+                wifi_device.toggle_wifi()
+            else:
+                logger.warning("WiFi device not available for toggling")
+        except Exception as e:
+            logger.warning(f"Failed to toggle wifi: {e}")
 
     def set_children(self, children):
         self.children = children
