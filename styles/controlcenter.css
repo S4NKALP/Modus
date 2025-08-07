@@ -216,14 +216,14 @@
 #toggle-button {
   min-width: 40px;
   min-height: 20px;
-  background-color: #888;
+  background-color: #bababa;
   border-radius: 15px;
   padding: 2px;
   transition: background-color 0.3s ease;
 }
 
 #toggle-button slider {
-  background-color: var(--primary);
+  background-color: #fff;
   border-radius: 50%;
   min-width: 16px;
   min-height: 8px;
@@ -234,14 +234,13 @@
   background-color: #4487f6;
 }
 
-#toggle-button:checked slider {
-  background-color: #bababa;
-}
-
-#toggle-button:checked image {
-  color: var(--shadow);
-  opacity: 0;
-}
+/* #toggle-button:checked slider { */
+/*   background-color: #fff; */
+/* } */
+/**/
+/* #toggle-button:checked image { */
+/*   opacity: 0; */
+/* } */
 
 .menu {
   margin: 5px;

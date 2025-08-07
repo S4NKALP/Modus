@@ -36,11 +36,11 @@ for log in [
     "fabric.bluetooth.service",
     "services.network",
     "utils.wayland",
-    "modules.notification.notification",
-    "modules.notification.notification_center",
-    "modules.controlcenter.player",
-    "services.brightness",
-    "modules.controlcenter.expanded_player",
+    # "modules.notification.notification",
+    # "modules.notification.notification_center",
+    # "modules.controlcenter.player",
+    # "services.brightness",
+    # "modules.controlcenter.expanded_player",
 ]:
     logger.disable(log)
 

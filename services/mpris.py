@@ -252,15 +252,36 @@ class MprisPlayerManager(Service):
         **kwargs,
     ):
         self._manager = Playerctl.PlayerManager.new()
-        bulk_connect(
+        self._signal_connections = []
+        
+        # Track signal connections for cleanup
+        connections = bulk_connect(
             self._manager,
             {
                 "name-appeared": self.on_name_appeared,
                 "name-vanished": self.on_name_vanished,
             },
         )
+        # Store as (object, handler_id) tuples
+        for handler_id in connections:
+            self._signal_connections.append((self._manager, handler_id))
+            
         self.add_players()
         super().__init__(**kwargs)
+
+    def destroy(self):
+        """Clean up resources when the manager is destroyed."""
+        # Disconnect all signal connections
+        for obj, handler_id in self._signal_connections:
+            try:
+                obj.disconnect(handler_id)
+            except Exception as e:
+                logger.warning(f"Failed to disconnect manager signal: {e}")
+        self._signal_connections.clear()
+        
+        # Clean up the manager
+        if hasattr(self, '_manager'):
+            del self._manager
 
     def on_name_appeared(self, manager, player_name: Playerctl.PlayerName):
         logger.info(f"[MprisPlayer] {player_name.name} appeared")
