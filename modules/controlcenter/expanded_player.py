@@ -63,6 +63,7 @@ def cleanup_old_cache_files():
             return
 
         import time
+
         current_time = time.time()
         # Clean files older than 2 hours (more aggressive)
         two_hours_ago = current_time - (2 * 60 * 60)
@@ -86,37 +87,40 @@ def get_artwork_cached(url: str) -> Optional[str]:
     """Get artwork with memory-efficient caching."""
     if not url:
         return None
-    
+
     # Check memory cache first
     if url in _artwork_cache:
         return _artwork_cache[url]
-    
+
     # Clean cache if too large
     cleanup_artwork_cache()
-    
+
     try:
         # Create cache directory if it doesn't exist
         os.makedirs(CACHE_DIR, exist_ok=True)
-        
+
         # Generate cache filename
-        safe_filename = re.sub(r'[^\w\-_.]', '_', urllib.parse.urlparse(url).path.split('/')[-1])
+        safe_filename = re.sub(
+            r"[^\w\-_.]", "_", urllib.parse.urlparse(url).path.split("/")[-1]
+        )
         if not safe_filename:
             safe_filename = f"artwork_{hash(url)}"
-        
+
         cache_file = os.path.join(CACHE_DIR, safe_filename)
-        
+
         # Check if cached file exists and is recent (within 2 hours)
         if os.path.exists(cache_file):
             import time
+
             if time.time() - os.path.getmtime(cache_file) < 7200:  # 2 hours
                 _artwork_cache[url] = cache_file
                 return cache_file
-        
+
         # Download and cache
         urllib.request.urlretrieve(url, cache_file)
         _artwork_cache[url] = cache_file
         return cache_file
-        
+
     except Exception as e:
         logger.warning(f"Failed to cache artwork from {url}: {e}")
         return None
@@ -198,47 +202,49 @@ class EmbeddedExpandedPlayer(Box):
     def destroy(self):
         """Clean up resources and prevent memory leaks"""
         logger.debug("🗑️ EmbeddedExpandedPlayer cleanup starting")
-        
+
         try:
             # Destroy player content (PlayerBoxStack)
-            if hasattr(self, 'player_content') and hasattr(self.player_content, "destroy"):
+            if hasattr(self, "player_content") and hasattr(
+                self.player_content, "destroy"
+            ):
                 self.player_content.destroy()
-                
+
             # Clean up back button
-            if hasattr(self, 'back_button') and hasattr(self.back_button, "destroy"):
+            if hasattr(self, "back_button") and hasattr(self.back_button, "destroy"):
                 self.back_button.destroy()
-                
+
             # Clean up any other widgets we might have
             for child in list(self.get_children()):
                 try:
                     child.destroy()
                 except Exception as e:
                     logger.warning(f"Failed to destroy child widget: {e}")
-            
+
             # Clean up keybinding if it was added
-            if hasattr(self, '_keybinding_added') and self._keybinding_added:
+            if hasattr(self, "_keybinding_added") and self._keybinding_added:
                 try:
                     if hasattr(self.control_center, "remove_keybinding"):
                         self.control_center.remove_keybinding("Escape")
                 except Exception as e:
                     logger.warning(f"Failed to remove keybinding: {e}")
-            
+
             # Aggressively clean global caches
             global _widget_cache, _artwork_cache
             _widget_cache.clear()
             _artwork_cache.clear()
             logger.debug("🗑️ Cleared global widget and artwork caches")
-            
+
             # Clear references
-            if hasattr(self, 'control_center'):
+            if hasattr(self, "control_center"):
                 self.control_center = None
-            if hasattr(self, 'mpris_manager'):
+            if hasattr(self, "mpris_manager"):
                 self.mpris_manager = None
-                
+
             # Force garbage collection
             gc.collect()
             logger.debug("🗑️ EmbeddedExpandedPlayer cleanup completed")
-            
+
         except Exception as e:
             logger.error(f"Error during EmbeddedExpandedPlayer cleanup: {e}")
         finally:
@@ -248,20 +254,22 @@ class EmbeddedExpandedPlayer(Box):
         """Light cleanup for EmbeddedExpandedPlayer reuse"""
         try:
             logger.debug("🧹 EmbeddedExpandedPlayer light cleanup starting")
-            
+
             # Only clean up the player content lightly
-            if hasattr(self, 'player_content') and hasattr(self.player_content, '_periodic_cleanup'):
+            if hasattr(self, "player_content") and hasattr(
+                self.player_content, "_periodic_cleanup"
+            ):
                 self.player_content._periodic_cleanup()
-            
+
             # Clean global caches but don't destroy core functionality
             global _artwork_cache
             _artwork_cache.clear()
-            
+
             # Light garbage collection
             gc.collect()
-            
+
             logger.debug("🧹 EmbeddedExpandedPlayer light cleanup completed")
-            
+
         except Exception as e:
             logger.warning(f"Error during EmbeddedExpandedPlayer light cleanup: {e}")
 
@@ -312,20 +320,24 @@ class PlayerBoxStack(Box):
 
         # Process existing players
         for player in self.mpris_manager.players:  # type: ignore
-            logger.info(f"[PLAYER MANAGER] player found: {player.get_property('player-name')}")
+            logger.info(
+                f"[PLAYER MANAGER] player found: {player.get_property('player-name')}"
+            )
             self.on_new_player(self.mpris_manager, player)
 
         # Schedule periodic memory cleanup and store source ID
-        self._cleanup_source_id = GLib.timeout_add_seconds(300, self._periodic_cleanup)  # Every 5 minutes
+        self._cleanup_source_id = GLib.timeout_add_seconds(
+            300, self._periodic_cleanup
+        )  # Every 5 minutes
 
     def _periodic_cleanup(self):
         """Light cleanup for widget reuse - preserve functionality."""
         try:
             logger.debug("Starting light expanded player cleanup for reuse")
-            
+
             # Clean artwork cache to reduce memory
             cleanup_artwork_cache()
-            
+
             # Reset visual state but preserve connections and core functionality
             # Only clear the player widgets that can be recreated
             for widget in list(self._player_widgets.values()):
@@ -336,39 +348,39 @@ class PlayerBoxStack(Box):
                 except Exception:
                     pass
             # Don't clear the _player_widgets dict - just let them be recreated
-            
+
             # Reset stack to show no_media_box without destroying children
             try:
-                if hasattr(self, 'player_stack') and hasattr(self, 'no_media_box'):
+                if hasattr(self, "player_stack") and hasattr(self, "no_media_box"):
                     self.player_stack.set_visible_child(self.no_media_box)
                     self.current_stack_pos = 0
             except Exception:
                 pass
-            
+
             # Light garbage collection
             gc.collect()
-            
+
             logger.debug("Light expanded player cleanup completed")
-            
+
         except Exception as e:
             logger.warning(f"Error during light cleanup: {e}")
-        
+
         return True  # Continue timer
 
     def destroy(self):
         """Clean up resources when the widget is destroyed."""
         try:
             # Cancel any pending cleanup timer
-            if hasattr(self, '_cleanup_source_id') and self._cleanup_source_id:
+            if hasattr(self, "_cleanup_source_id") and self._cleanup_source_id:
                 try:
                     GLib.source_remove(self._cleanup_source_id)
                 except Exception:
                     pass  # Timer may have already been removed
-            
+
             # Disconnect all signal connections
             for obj, handler_id in self._signal_connections:
                 try:
-                    if obj and hasattr(obj, 'disconnect'):
+                    if obj and hasattr(obj, "disconnect"):
                         obj.disconnect(handler_id)
                 except Exception as e:
                     logger.warning(f"Failed to disconnect signal: {e}")
@@ -770,7 +782,7 @@ class PlayerBox(Box):
             min_value=0,
             max_value=100,
             increments=(1, 1),
-            name="macos-seek-bar",
+            name="expanded-seek-bar",
             size=1,
             h_expand=True,
         )
@@ -993,11 +1005,12 @@ class PlayerBox(Box):
 
         # Cancel any ongoing downloads immediately
         self._download_cancelled = True
-        
+
         # Cancel seek bar timer
         if self._seekbar_timer_id:
             try:
                 from gi.repository import GLib
+
                 GLib.source_remove(self._seekbar_timer_id)
             except:
                 pass
@@ -1117,11 +1130,12 @@ class PlayerBox(Box):
         if self._seekbar_timer_id:
             try:
                 from gi.repository import GLib
+
                 GLib.source_remove(self._seekbar_timer_id)
             except:
                 pass
             self._seekbar_timer_id = None
-        
+
         # Start new timer and store its ID
         self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
 
