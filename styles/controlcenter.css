@@ -286,8 +286,8 @@
 #control-center-menu slider {
   background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
   border-color: #000;
-  /* min-width: 28px; */
-  /* min-height: 28px; */
+  min-width: 28px;
+  min-height: 28px;
   margin: -2px;
   border-radius: 50%;
   /* background-image: none; */
@@ -657,7 +657,6 @@
   margin-bottom: 8px;
 }
 /* macOS seek bar styling */
-
 #macos-seek-bar {
   background-color: transparent;
   margin: 8px 0 4px 0;
@@ -684,7 +683,7 @@
   border: none;
   border-radius: 20%;
   min-width: 1px;
-  min-height: 10px;
+  min-height: 8px;
   margin: -3px;
   box-shadow: 0 1px 3px alpha(#000, 0.3);
   transition: all 0.1s ease;
@@ -784,4 +783,43 @@
 #compact-app-volume-slider scale {
   margin-right: 8px;
   padding-right: 8px;
+}
+
+#expanded-seek-bar {
+  background-color: transparent;
+  margin: 8px 0 4px 0;
+  min-height: 10px;
+}
+
+#expanded-seek-bar trough {
+  min-width: 200px;
+
+  min-height: 2px;
+  border-radius: 2px;
+  background-color: alpha(#fff, 0.25);
+  border: none;
+}
+
+#expanded-seek-bar highlight {
+  background: #ffffff;
+  border-radius: 2px;
+  border: none;
+}
+
+#expanded-seek-bar slider {
+  background: #ffffff;
+  border: none;
+  border-radius: 20%;
+  min-width: 1px;
+  min-height: 10px;
+  margin: -3px;
+  box-shadow: 0 1px 3px alpha(#000, 0.3);
+  transition: all 0.1s ease;
+}
+
+#expanded-seek-bar slider:hover {
+  min-width: 4px;
+  min-height: 14px;
+  margin: -5px;
+  box-shadow: 0 2px 6px alpha(#000, 0.4);
 }
