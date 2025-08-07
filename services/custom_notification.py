@@ -258,6 +258,9 @@ class CachedNotifications(Notifications):
             if handler_id:
                 # Disconnect the signal handler
                 cached_notification.disconnect(handler_id)
+            
+            # Emit signal to notify UI that notification was removed
+            self.emit("cached-notification-removed", cached_notification)
 
     def toggle_dnd(self):
         self.dont_disturb = not self.dont_disturb
