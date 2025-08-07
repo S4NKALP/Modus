@@ -247,7 +247,9 @@ class PlayerBoxStack(Box):
         playing_index = self._find_playing_player_index()
         if playing_index is not None and playing_index != self.current_stack_pos:
             logger.info(
-                f"[PlayerBoxStack] Auto-switching to playing player at index {playing_index}"
+                f"[PlayerBoxStack] Auto-switching to playing player at index {
+                    playing_index
+                }"
             )
             self.on_player_clicked_by_index(playing_index)
 
@@ -260,7 +262,9 @@ class PlayerBoxStack(Box):
                 if pb == player_box:
                     if i != self.current_stack_pos:
                         logger.info(
-                            f"[PlayerBoxStack] Switching to playing player: {player_box.player.player_name}"
+                            f"[PlayerBoxStack] Switching to playing player: {
+                                player_box.player.player_name
+                            }"
                         )
                         self.on_player_clicked_by_index(i)
                     break
@@ -286,7 +290,9 @@ class PlayerBoxStack(Box):
         # set new active button
         if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             print(
-                f"[PlayerBoxStack] Switching to player at index {self.current_stack_pos}"
+                f"[PlayerBoxStack] Switching to player at index {
+                    self.current_stack_pos
+                }"
             )
             self.player_buttons[self.current_stack_pos].add_style_class("active")
             self.player_stack.set_visible_child(
@@ -469,7 +475,8 @@ class PlayerBox(Box):
         self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
 
         # Add controls_box attribute early for compatibility
-        self.controls_box = Box(name="temp-controls-box")  # Temporary placeholder
+        # Temporary placeholder
+        self.controls_box = Box(name="temp-controls-box")
 
         self.image_size = 50
         self.icon_size = 15
@@ -668,7 +675,6 @@ class PlayerBox(Box):
             {
                 "exit": self._on_player_exit,
                 "notify::playback-status": self._on_playback_change,
-                "notify::shuffle": self._on_shuffle_update,
                 "notify::metadata": self._on_metadata,
             },
         )
@@ -753,16 +759,6 @@ class PlayerBox(Box):
 
     def _on_player_prev(self, *_):
         self.player.previous()
-
-    def _on_shuffle_update(self, *_):
-        if self.player.shuffle is None:
-            return
-        if self.player.shuffle is True:
-            self.shuffle_icon.style_classes = []
-            self.shuffle_icon.add_style_class("shuffle-on")
-        else:
-            self.shuffle_icon.style_classes = []
-            self.shuffle_icon.add_style_class("shuffle-off")
 
     def _on_playback_change(self, player, status):
         status = player.get_property("playback-status")

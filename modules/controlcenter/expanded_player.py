@@ -350,7 +350,6 @@ class PlayerBoxStack(Box):
             self._update_all_player_buttons()
 
     def on_new_player(self, mpris_manager, player):
-
         # if player_name in self.config.get("ignore", []):
         #     return
 
@@ -740,7 +739,8 @@ class PlayerBox(Box):
             orientation="horizontal",
             children=[
                 self.image,  # Album art on left (fixed width)
-                self.track_info,  # Contains title, artist, seek bar AND controls (expands)
+                # Contains title, artist, seek bar AND controls (expands)
+                self.track_info,
             ],
         )
         self.inner_box = Box(
@@ -764,7 +764,8 @@ class PlayerBox(Box):
             h_align="fill",  # Fill available space
             children=[
                 self.inner_box,  # Track info and controls
-                self.stack_buttons_box,  # Compact switcher in corner (fixed width)
+                # Compact switcher in corner (fixed width)
+                self.stack_buttons_box,
             ],
         )
 
@@ -776,7 +777,6 @@ class PlayerBox(Box):
             {
                 "exit": self._on_player_exit,
                 "notify::playback-status": self._on_playback_change,
-                "notify::shuffle": self._on_shuffle_update,
                 "notify::metadata": self._on_metadata,
             },
         )
@@ -829,7 +829,9 @@ class PlayerBox(Box):
     def update_buttons(self, player_buttons, show_buttons):
         """Update the stack switcher buttons in this player box"""
         logger.info(
-            f"[PlayerBox] update_buttons called: show_buttons={show_buttons}, num_buttons={len(player_buttons)}"
+            f"[PlayerBox] update_buttons called: show_buttons={
+                show_buttons
+            }, num_buttons={len(player_buttons)}"
         )
 
         # Clear existing buttons
@@ -922,16 +924,6 @@ class PlayerBox(Box):
 
     def _on_player_prev(self, *_):
         self.player.previous()
-
-    def _on_shuffle_update(self, *_):
-        if self.player.shuffle is None:
-            return
-        if self.player.shuffle is True:
-            self.shuffle_icon.style_classes = []
-            self.shuffle_icon.add_style_class("shuffle-on")
-        else:
-            self.shuffle_icon.style_classes = []
-            self.shuffle_icon.add_style_class("shuffle-off")
 
     def _on_playback_change(self, player, status):
         status = player.get_property("playback-status")
