@@ -309,9 +309,7 @@ class ModusControlCenter(Window):
                                 ),
                             ],
                         ),
-                        Label(
-                            label=" ", name="brightness-widget-icon", h_align="start"
-                        ),
+                        Label(label=" ", name="volume-widget-icon", h_align="start"),
                     ],
                 ),
                 Box(
