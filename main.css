@@ -12,6 +12,7 @@
 @import url("./styles/player.css");
 @import url("./styles/widgets.css");
 @import url("./styles/tray.css");
+@import url("./styles/battery-widget.css");
 
 * {
   all: unset;

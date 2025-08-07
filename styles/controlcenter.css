@@ -6,7 +6,8 @@
 }
 
 #bluetooth-control-window,
-#wifi-control-window {
+#wifi-control-window,
+#battery-control-window {
   margin: 6px;
   background-color: alpha(#fff, 0.09);
   border: 1px solid alpha(#111, 0.3);
