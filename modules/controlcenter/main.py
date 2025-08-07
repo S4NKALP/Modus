@@ -72,7 +72,9 @@ class ModusControlCenter(Window):
             ]
         )
 
-        self.wlan_label = Label(wlan, name="wifi-widget-label", h_align="start")
+        self.wlan_label = Label(
+            label=wlan, name="wifi-widget-label", max_chars_width=20, h_align="start"
+        )
         if bluetooth != "disabled":
             if bluetooth.startswith("connected:"):
                 parts = bluetooth.split(":")
@@ -83,7 +85,10 @@ class ModusControlCenter(Window):
             bluetooth_display = "Off"
 
         self.bluetooth_label = Label(
-            bluetooth_display, name="bluetooth-widget-label", h_align="start"
+            label=bluetooth_display,
+            name="bluetooth-widget-label",
+            max_chars_width=20,
+            h_align="start",
         )
         self.volume_scale = Scale(
             value=volume,
@@ -538,7 +543,7 @@ class ModusControlCenter(Window):
         """Toggle bluetooth on/off"""
         try:
             # Access the bluetooth client from the bluetooth manager
-            if hasattr(self, 'bluetooth_man') and hasattr(self.bluetooth_man, 'client'):
+            if hasattr(self, "bluetooth_man") and hasattr(self.bluetooth_man, "client"):
                 current_state = self.bluetooth_man.client.enabled
                 self.bluetooth_man.client.set_enabled(not current_state)
             else:
@@ -551,6 +556,7 @@ class ModusControlCenter(Window):
         try:
             # Import and use the network service
             from services.network import WiFiDevice
+
             wifi_device = WiFiDevice.get_default()
             if wifi_device:
                 wifi_device.toggle_wifi()
@@ -640,17 +646,13 @@ class ModusControlCenter(Window):
                 parts = wlan.split(":")
                 if len(parts) >= 2:
                     wifi_name = parts[1]
-                    GLib.idle_add(
-                        lambda: self.wlan_label.set_property("label", wifi_name)
-                    )
+                    GLib.idle_add(lambda: self.wlan_label.set_label(wifi_name))
                 else:
-                    GLib.idle_add(
-                        lambda: self.wlan_label.set_property("label", "Connected")
-                    )
+                    GLib.idle_add(lambda: self.wlan_label.set_label("Connected"))
             else:
-                GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
+                GLib.idle_add(lambda: self.wlan_label.set_label(wlan))
         else:
-            GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
+            GLib.idle_add(lambda: self.wlan_label.set_label(wlan))
 
     def bluetooth_changed(self, _, bluetooth):
         self.bluetooth_svg.set_from_file(
@@ -665,19 +667,15 @@ class ModusControlCenter(Window):
                 parts = bluetooth.split(":")
                 if len(parts) >= 2:
                     device_name = parts[1]
-                    GLib.idle_add(
-                        lambda: self.bluetooth_label.set_property("label", device_name)
-                    )
+                    GLib.idle_add(lambda: self.bluetooth_label.set_label(device_name))
                 else:
-                    GLib.idle_add(
-                        lambda: self.bluetooth_label.set_property("label", "Connected")
-                    )
+                    GLib.idle_add(lambda: self.bluetooth_label.set_label("Connected"))
             elif bluetooth == "enabled":
-                GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "On"))
+                GLib.idle_add(lambda: self.bluetooth_label.set_label("On"))
             else:
-                GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "On"))
+                GLib.idle_add(lambda: self.bluetooth_label.set_label("On"))
         else:
-            GLib.idle_add(lambda: self.bluetooth_label.set_property("label", "Off"))
+            GLib.idle_add(lambda: self.bluetooth_label.set_label("Off"))
 
     def audio_changed(self, *_):
         pass
