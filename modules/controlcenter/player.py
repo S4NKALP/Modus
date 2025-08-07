@@ -28,7 +28,7 @@ CACHE_DIR = f"{data.CACHE_DIR}/media"
 
 
 def cleanup_old_cache_files():
-    """Clean up old artwork cache files (older than 1 day)."""
+    """Clean up old artwork cache files (older than 1 day) and limit total cache size."""
     try:
         if not os.path.exists(CACHE_DIR):
             return
@@ -37,16 +37,46 @@ def cleanup_old_cache_files():
 
         current_time = time.time()
         one_day_ago = current_time - (24 * 60 * 60)  # 24 hours
+        cache_files = []
 
+        # Collect all cache files with their modification times
         for filename in os.listdir(CACHE_DIR):
             filepath = os.path.join(CACHE_DIR, filename)
             try:
                 if os.path.isfile(filepath):
                     file_mtime = os.path.getmtime(filepath)
-                    if file_mtime < one_day_ago:
-                        os.unlink(filepath)
+                    file_size = os.path.getsize(filepath)
+                    cache_files.append((filepath, file_mtime, file_size))
             except Exception:
                 pass  # Ignore individual file errors
+
+        # Remove files older than 1 day
+        total_size = 0
+        recent_files = []
+        for filepath, file_mtime, file_size in cache_files:
+            if file_mtime < one_day_ago:
+                try:
+                    os.unlink(filepath)
+                except Exception:
+                    pass
+            else:
+                recent_files.append((filepath, file_mtime, file_size))
+                total_size += file_size
+
+        # If cache is still too large (>50MB), remove oldest files
+        MAX_CACHE_SIZE = 50 * 1024 * 1024  # 50MB
+        if total_size > MAX_CACHE_SIZE:
+            # Sort by modification time (oldest first)
+            recent_files.sort(key=lambda x: x[1])
+            for filepath, _, file_size in recent_files:
+                if total_size <= MAX_CACHE_SIZE:
+                    break
+                try:
+                    os.unlink(filepath)
+                    total_size -= file_size
+                except Exception:
+                    pass
+
     except Exception:
         pass  # Ignore all errors in cleanup
 
@@ -133,20 +163,41 @@ class PlayerBoxStack(Box):
         super().destroy()
 
     def _periodic_cleanup(self):
-        """Light cleanup for reuse - clean internal state but preserve widget"""
+        """Enhanced cleanup for reuse - clean internal state and free memory"""
         try:
+            # Destroy all player boxes properly to free their resources
+            current_children = list(self.player_stack.get_children())
+            for child in current_children:
+                if hasattr(child, "destroy") and child != self.no_media_box:
+                    try:
+                        child.destroy()
+                    except Exception as e:
+                        logger.warning(f"Failed to destroy player child: {e}")
+            
             # Reset to no media state
             self.player_stack.children = [self.no_media_box]
             
-            # Clear player buttons but don't destroy them
+            # Clear player buttons
+            for button in self.player_buttons:
+                try:
+                    button.destroy()
+                except Exception:
+                    pass
             self.player_buttons.clear()
             
             # Reset stack position
             self.current_stack_pos = 0
             
-            logger.debug("PlayerBoxStack periodic cleanup completed")
+            # Clean up old cache files more aggressively
+            cleanup_old_cache_files()
+            
+            # Force garbage collection
+            import gc
+            gc.collect()
+            
+            logger.debug("PlayerBoxStack enhanced cleanup completed")
         except Exception as e:
-            logger.warning(f"PlayerBoxStack periodic cleanup failed: {e}")
+            logger.warning(f"PlayerBoxStack enhanced cleanup failed: {e}")
 
     def _create_no_media_box(self):
         """Create a placeholder box for when no media is playing."""

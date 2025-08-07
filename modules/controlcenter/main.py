@@ -6,6 +6,7 @@ from fabric.utils.helpers import (
 )
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from loguru import logger
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
@@ -50,11 +51,12 @@ class ModusControlCenter(Window):
         self._per_app_volume_initialized = False
         self._expanded_player_initialized = False
 
-        # Store references for cleanup
+        # Store references for cleanup - initialize all as None
         self._signal_connections = []
         self._music_widget_content = None
         self._per_app_volume_widget = None
         self._expanded_player_widget = None
+        self._mpris_manager = None  # Shared MPRIS manager instance
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
@@ -358,24 +360,59 @@ class ModusControlCenter(Window):
             self._cleanup_when_hidden()
 
     def _cleanup_when_hidden(self):
-        """Clean up resources when widget is hidden"""
-        # Clean up music widget content if it exists
-        if self._music_widget_content and not self._music_initialized:
-            # Remove from the parent container
-            current_children = list(self.music_widget.children)
-            if self._music_widget_content in current_children:
-                current_children.remove(self._music_widget_content)
-                self.music_widget.children = current_children
-            self._music_widget_content = None
+        """Aggressively clean up resources when widget is hidden to reduce memory usage"""
+        try:
+            # Clean up music widget content if it exists
+            if self._music_widget_content:
+                # Remove from the parent container
+                current_children = list(self.music_widget.children)
+                if self._music_widget_content in current_children:
+                    current_children.remove(self._music_widget_content)
+                    self.music_widget.children = current_children
 
-        # Reset lazy loading flags to allow re-initialization when shown again
-        # Keep initialized flags to avoid recreating heavy components unnecessarily
+                # Trigger periodic cleanup before destroying
+                if hasattr(self._music_widget_content, "_periodic_cleanup"):
+                    self._music_widget_content._periodic_cleanup()
+
+                # Properly destroy the music widget content
+                try:
+                    self._music_widget_content.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy music widget content: {e}")
+                self._music_widget_content = None
+
+            # Clean up shared MPRIS manager when hidden to free memory
+            if self._mpris_manager:
+                try:
+                    self._mpris_manager.destroy()
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to destroy MPRIS manager during cleanup: {e}"
+                    )
+                self._mpris_manager = None
+
+            # Reset initialization flags to force recreation next time
+            self._music_initialized = False
+
+            # Force garbage collection
+            import gc
+
+            gc.collect()
+
+            logger.debug("Control center aggressive cleanup completed")
+
+        except Exception as e:
+            logger.warning(f"Control center cleanup failed: {e}")
 
     def _ensure_music_widget(self):
-        """Lazy load music widget content"""
+        """Lazy load music widget content - reuse MPRIS manager"""
         if not self._music_initialized:
+            # Create shared MPRIS manager if it doesn't exist
+            if self._mpris_manager is None:
+                self._mpris_manager = MprisPlayerManager()
+
             self._music_widget_content = PlayerBoxStack(
-                MprisPlayerManager(), control_center=self
+                self._mpris_manager, control_center=self
             )
             # Add to the music widget's children list
             current_children = list(self.music_widget.children)
@@ -422,22 +459,7 @@ class ModusControlCenter(Window):
                 h_expand=True,
                 name="control-center-widgets",
                 children=[
-                    Box(
-                        orientation="horizontal",
-                        name="top-widget",
-                        h_expand=True,
-                        children=[
-                            Box(
-                                orientation="vertical",
-                                name="wb-widget",
-                                style_classes="menu",
-                                spacing=5,
-                                children=[
-                                    self.wifi_man,
-                                ],
-                            ),
-                        ],
-                    ),
+                    self.wifi_man,
                 ],
             )
             self.wifi_center_box = CenterBox(start_children=[self.wifi_widgets])
@@ -710,15 +732,23 @@ class ModusControlCenter(Window):
                 pass
 
         # Clean up heavy components
-        if self._wifi_man:
-            self._wifi_man.destroy()
-        if self._bluetooth_man:
-            self._bluetooth_man.destroy()
+        if hasattr(self, "wifi_man") and self.wifi_man:
+            self.wifi_man.destroy()
+        if hasattr(self, "bluetooth_man") and self.bluetooth_man:
+            self.bluetooth_man.destroy()
         if self._music_widget_content:
             self._music_widget_content.destroy()
         if self._per_app_volume_widget:
             self._per_app_volume_widget.destroy()
         if self._expanded_player_widget:
             self._expanded_player_widget.destroy()
+
+        # Clean up shared MPRIS manager
+        if self._mpris_manager:
+            try:
+                self._mpris_manager.destroy()
+            except Exception as e:
+                logger.warning(f"Failed to destroy MPRIS manager: {e}")
+            self._mpris_manager = None
 
         super().destroy()
