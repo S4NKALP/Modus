@@ -1,11 +1,13 @@
 import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('Gdk', '3.0')
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk
 
 # Initialize fontconfig early to prevent warnings
 try:
     import ctypes
+
     libfontconfig = ctypes.CDLL("libfontconfig.so.1")
     libfontconfig.FcInit()
 except:
@@ -31,11 +33,14 @@ from modules.switcher import ApplicationSwitcher
 for log in [
     "fabric.hyprland.widgets",
     "fabric.audio.service",
-    "fabric.bluetooth.service", 
+    "fabric.bluetooth.service",
     "services.network",
     "utils.wayland",
     "modules.notification.notification",
     "modules.notification.notification_center",
+    "modules.controlcenter.player",
+    "services.brightness",
+    "modules.controlcenter.expanded_player",
 ]:
     logger.disable(log)
 
