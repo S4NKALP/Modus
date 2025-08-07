@@ -18,7 +18,7 @@ from modules.switcher import ApplicationSwitcher
 for log in [
     "fabric.hyprland.widgets",
     "fabric.audio.service",
-    "fabric.bluetooth.service",
+    "fabric.bluetooth.service", 
     "services.network",
     "utils.wayland",
     "modules.notification.notification",

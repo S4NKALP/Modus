@@ -601,8 +601,10 @@ class Deskwidgets(Window):
     def __init__(self, **kwargs):
         top_left = Window(
             anchor="top left",
+            title="modus-widgets-topleft",
             orientation="h",
             layer="bottom",
+            visible=False,  # Start hidden until content ready
             child=Box(
                 name="desktop-widgets-container",
                 children=[
@@ -615,8 +617,10 @@ class Deskwidgets(Window):
 
         bottom_left = Window(
             anchor="bottom right",
+            title="modus-widgets-bottomright",
             orientation="h",
             layer="bottom",
+            visible=False,  # Start hidden until content ready
             child=Box(
                 name="desktop-widgets-container",
                 children=[
@@ -637,9 +641,15 @@ class Deskwidgets(Window):
         super().__init__(
             name="desktop",
             layer="bottom",
-            title="desktop-widgets",
+            title="modus-desktop-widgets",
             orientation="v",
             exclusivity="none",
+            visible=False,  # Start hidden until content ready
             child=container,
             **kwargs,
         )
+        
+        # Show widgets after initialization is complete
+        self.set_visible(True)
+        top_left.set_visible(True)
+        bottom_left.set_visible(True)

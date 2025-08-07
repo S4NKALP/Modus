@@ -37,11 +37,12 @@ class Launcher(Window):
     def __init__(self, **kwargs):
         super().__init__(
             name="launcher-window",
-            title="launcher",
+            title="modus-launcher",
             layer="top",
             anchor="center",
             exclusivity="none",
             keyboard_mode="exclusive",
+            visible=False,  # Start hidden until explicitly shown
             **kwargs,
         )
         self._initializing = True

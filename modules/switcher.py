@@ -16,10 +16,12 @@ class ApplicationSwitcher(Window):
     def __init__(self, **kwargs):
         super().__init__(
             name="application-switcher",
+            title="modus-switcher",
             layer="top",
             anchor="center",
             exclusivity="auto",
             keyboard_mode="exclusive",
+            visible=False,  # Start hidden until explicitly shown
             **kwargs,
         )
 

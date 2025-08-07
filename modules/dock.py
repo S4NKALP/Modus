@@ -541,8 +541,9 @@ class Dock(Window):
 
         super().__init__(
             layer="top",
-            title="modus",
+            title="modus-dock",
             anchor=anchor,
+            visible=False,  # Start hidden until content is ready
         )
         if data.DOCK_POSITION == "Left":
             transition_type = "slide-right"
@@ -583,6 +584,7 @@ class Dock(Window):
         if not data.DOCK_ENABLED:
             self.set_visible(False)
         else:
+            # Show dock now that content is ready
             self.set_visible(True)
 
         # Set up occlusion checking
