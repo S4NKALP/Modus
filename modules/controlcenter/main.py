@@ -17,6 +17,7 @@ from fabric.widgets.scale import Scale
 from fabric.widgets.revealer import Revealer
 from fabric.utils import idle_add, get_relative_path, invoke_repeater
 from fabric.widgets.image import Image
+from fabric.widgets.svg import Svg
 
 # Gi imports  
 import gi
@@ -29,32 +30,13 @@ from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
 from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
-from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
+from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer, get_shared_mpris_manager
 from services.modus import modus_service
+from services.brightness import Brightness
+from services.mpris import MprisPlayerManager
+from utils.roam import audio_service
 from widgets.wayland import WaylandWindow as Window
 from loguru import logger
-
-# Memory monitoring
-from debug_memory import set_memory_baseline, log_memory
-from fabric.utils import idle_add
-from fabric.utils.helpers import get_relative_path
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.label import Label
-from fabric.widgets.scale import Scale
-from fabric.widgets.svg import Svg
-from widgets.wayland import WaylandWindow as Window
-
-# Local imports
-from modules.controlcenter.bluetooth import BluetoothConnections
-from modules.controlcenter.wifi import WifiConnections
-from services.brightness import Brightness
-from utils.roam import audio_service, modus_service
-from modules.controlcenter.player import PlayerBoxStack
-from modules.controlcenter.per_app_volume import PerAppVolumeControl
-from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer, get_shared_mpris_manager
-from services.mpris import MprisPlayerManager
 
 brightness_service = Brightness.get_initial()
 
@@ -375,7 +357,6 @@ class ModusControlCenter(Window):
         self.children = self.center_box
 
         # Set memory baseline for monitoring
-        set_memory_baseline("Control Center Initialized")
 
         # Connect to visibility changes for cleanup
         self.connect("notify::visible", self._on_visibility_changed)
@@ -393,7 +374,6 @@ class ModusControlCenter(Window):
 
     def _cleanup_when_hidden(self):
         """Clean up resources when widget is hidden to reduce memory usage"""
-        log_memory("🧹 BEFORE cleanup when hidden")
         logger.debug("Starting hidden cleanup - freeing widget memory")
         # Clean up music widget content properly
         if self._music_widget_content:
@@ -460,7 +440,6 @@ class ModusControlCenter(Window):
         import gc
 
         gc.collect()
-        log_memory("🧹 AFTER cleanup when hidden")
 
     def _periodic_cleanup(self):
         """Periodic cleanup to keep memory usage low"""
@@ -478,22 +457,18 @@ class ModusControlCenter(Window):
     def _ensure_music_widget(self):
         """Lazy load music widget content"""
         if not self._music_initialized:
-            log_memory("🎼 BEFORE creating music widget content")
             logger.debug("Creating new PlayerBoxStack instance")
             self._music_widget_content = PlayerBoxStack(
                 get_shared_mpris_manager(), control_center=self
             )
-            log_memory("🎼 AFTER creating PlayerBoxStack")
             
             # Add to the music widget's children list
             current_children = list(self.music_widget.children)
             current_children.append(self._music_widget_content)
             self.music_widget.children = current_children
             self._music_initialized = True
-            log_memory("🎼 AFTER adding to music widget container")
         else:
             logger.debug("Music widget already initialized")
-            log_memory("♻️ REUSING existing music widget")
 
     def _ensure_bluetooth_widgets(self):
         """Lazy load bluetooth widgets"""
@@ -577,12 +552,10 @@ class ModusControlCenter(Window):
     def _ensure_expanded_player_widgets(self):
         """Lazy load expanded player widgets with reuse optimization"""
         if self.expanded_player_widgets is None:
-            log_memory("🔧 BEFORE creating expanded player widgets")
             logger.debug("Creating new expanded player widgets")
             if self._expanded_player_widget is None:
                 logger.debug("Creating new EmbeddedExpandedPlayer instance")
                 self._expanded_player_widget = EmbeddedExpandedPlayer(self)
-                log_memory("🔧 AFTER creating EmbeddedExpandedPlayer")
             else:
                 logger.debug("Reusing existing EmbeddedExpandedPlayer instance")
 
@@ -598,10 +571,8 @@ class ModusControlCenter(Window):
                 start_children=[self.expanded_player_widgets]
             )
             self.expanded_player_center_box.set_size_request(300, -1)
-            log_memory("🔧 AFTER creating expanded player containers")
         else:
             logger.debug("Reusing existing expanded player widgets")
-            log_memory("♻️ REUSING existing expanded player widgets")
 
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
@@ -698,20 +669,16 @@ class ModusControlCenter(Window):
         self.has_per_app_volume_open = False
 
     def open_expanded_player(self, *_):
-        log_memory("🎵 BEFORE opening expanded player")
         self._ensure_expanded_player_widgets()
         idle_add(lambda *_: self.set_children(self.expanded_player_center_box))
         self.has_expanded_player_open = True
         # Refresh the player when opening
         if self._expanded_player_widget:
             self._expanded_player_widget.refresh()
-        log_memory("🎵 AFTER opening expanded player")
 
     def close_expanded_player(self, *_):
-        log_memory("🔒 BEFORE closing expanded player")
         idle_add(lambda *_: self.set_children(self.center_box))
         self.has_expanded_player_open = False
-        log_memory("🔒 AFTER closing expanded player")
 
     def _set_mousecapture(self, visible: bool):
         if visible:
