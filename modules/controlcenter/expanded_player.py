@@ -244,6 +244,27 @@ class EmbeddedExpandedPlayer(Box):
         finally:
             super().destroy()
 
+    def _periodic_cleanup(self):
+        """Light cleanup for EmbeddedExpandedPlayer reuse"""
+        try:
+            logger.debug("🧹 EmbeddedExpandedPlayer light cleanup starting")
+            
+            # Only clean up the player content lightly
+            if hasattr(self, 'player_content') and hasattr(self.player_content, '_periodic_cleanup'):
+                self.player_content._periodic_cleanup()
+            
+            # Clean global caches but don't destroy core functionality
+            global _artwork_cache
+            _artwork_cache.clear()
+            
+            # Light garbage collection
+            gc.collect()
+            
+            logger.debug("🧹 EmbeddedExpandedPlayer light cleanup completed")
+            
+        except Exception as e:
+            logger.warning(f"Error during EmbeddedExpandedPlayer light cleanup: {e}")
+
 
 class PlayerBoxStack(Box):
     """Memory-optimized widget that displays current player information."""
@@ -298,26 +319,39 @@ class PlayerBoxStack(Box):
         self._cleanup_source_id = GLib.timeout_add_seconds(300, self._periodic_cleanup)  # Every 5 minutes
 
     def _periodic_cleanup(self):
-        """Periodic cleanup to prevent memory leaks."""
+        """Light cleanup for widget reuse - preserve functionality."""
         try:
-            # Clean artwork cache
+            logger.debug("Starting light expanded player cleanup for reuse")
+            
+            # Clean artwork cache to reduce memory
             cleanup_artwork_cache()
             
-            # Remove destroyed widgets from tracking
-            destroyed_keys = []
-            for key, widget in self._player_widgets.items():
-                if not widget or not widget.get_parent():
-                    destroyed_keys.append(key)
+            # Reset visual state but preserve connections and core functionality
+            # Only clear the player widgets that can be recreated
+            for widget in list(self._player_widgets.values()):
+                try:
+                    if widget and hasattr(widget, "get_parent") and widget.get_parent():
+                        # Only remove from parent, don't destroy (let GTK handle it)
+                        widget.get_parent().remove(widget)
+                except Exception:
+                    pass
+            # Don't clear the _player_widgets dict - just let them be recreated
             
-            for key in destroyed_keys:
-                if key in self._player_widgets:
-                    del self._player_widgets[key]
+            # Reset stack to show no_media_box without destroying children
+            try:
+                if hasattr(self, 'player_stack') and hasattr(self, 'no_media_box'):
+                    self.player_stack.set_visible_child(self.no_media_box)
+                    self.current_stack_pos = 0
+            except Exception:
+                pass
             
-            # Force garbage collection
+            # Light garbage collection
             gc.collect()
             
+            logger.debug("Light expanded player cleanup completed")
+            
         except Exception as e:
-            logger.warning(f"Error during periodic cleanup: {e}")
+            logger.warning(f"Error during light cleanup: {e}")
         
         return True  # Continue timer
 

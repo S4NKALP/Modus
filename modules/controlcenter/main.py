@@ -425,21 +425,20 @@ class ModusControlCenter(Window):
             except Exception:
                 pass
 
-        # Clean up expanded player widget - BUT preserve for reuse
-        if self._expanded_player_widget and hasattr(
-            self._expanded_player_widget, "destroy"
-        ):
+        # Clean up expanded player widget - aggressive cleanup for reuse
+        if self._expanded_player_widget:
             try:
-                # DON'T destroy the widget, just clean its internal state
-                if hasattr(self._expanded_player_widget, 'player_content'):
-                    # Clean up only the player content, keep the widget shell
-                    if hasattr(self._expanded_player_widget.player_content, '_periodic_cleanup'):
-                        self._expanded_player_widget.player_content._periodic_cleanup()
+                # Call cleanup directly on the player content (PlayerBoxStack)
+                if hasattr(self._expanded_player_widget, 'player_content') and \
+                   hasattr(self._expanded_player_widget.player_content, '_periodic_cleanup'):
+                    self._expanded_player_widget.player_content._periodic_cleanup()
+                
+                # Also clean any EmbeddedExpandedPlayer specific state
+                if hasattr(self._expanded_player_widget, '_periodic_cleanup'):
+                    self._expanded_player_widget._periodic_cleanup()
+                    
                 logger.debug("Cleaned expanded player internal state (preserved for reuse)")
-                # DON'T set to None - keep for reuse!
-                # self._expanded_player_widget = None
-                # self.expanded_player_widgets = None  
-                # self.expanded_player_center_box = None
+                # DON'T destroy or set to None - keep for reuse!
             except Exception as e:
                 logger.warning(f"Failed to clean expanded player state: {e}")
 
