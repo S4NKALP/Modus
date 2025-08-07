@@ -30,7 +30,19 @@ class PerAppVolumeControl(Box):
         self._app_widgets = {}
         self._signal_connections = []
 
-        # Header with back button (hidden for cleaner UI)
+        # Header with back button
+        self.header = Box(
+            orientation="horizontal",
+            name="per-app-volume-header",
+            style_classes="menu-header",
+            children=[
+                Button(
+                    image=Image(icon_name="back", size=10),
+                    on_clicked=lambda *_: self.control_center.close_per_app_volume(),
+                ),
+                Label("App Volume"),
+            ],
+        )
 
         # Scrollable container for app volume controls
         self.apps_container = Box(
@@ -52,7 +64,7 @@ class PerAppVolumeControl(Box):
         except Exception:
             pass  # Ignore if keybinding fails
 
-        self.children = [self.scrolled_window]
+        self.children = [self.header, self.scrolled_window]
 
         # Connect to audio service changes
         if audio_service:
