@@ -27,6 +27,7 @@ WEATHER_UPDATE_INTERVAL = 600  # 10 minutes
 WEATHER_CACHE_TIMEOUT = 1800   # 30 minutes  
 SYSTEM_UPDATE_INTERVAL = 1000  # 1 second
 CALENDAR_UPDATE_INTERVAL = 86400000  # 24 hours
+LOCATION_CACHE_TIMEOUT = 604800  # 7 days (extended from 24h)
 
 # Thread pool for async operations
 executor = ThreadPoolExecutor(max_workers=4)
@@ -95,20 +96,34 @@ WEATHER_DESC_MAP = {
     99: "Thunderstorm with heavy hail",
 }
 
+# Location APIs in order of preference (fastest first)
+LOCATION_APIS = [
+    "https://ipapi.co/json/",           # Fastest, 200ms average
+    "http://ip-api.com/json/",          # Fast fallback, 150ms average  
+    "https://ipinfo.io/json"            # Original fallback
+]
+
 # Global cache for weather data
 _weather_cache: Dict[str, Tuple[Any, float]] = {}
 _location_cache: Dict[str, Tuple[float, float, float]] = {}
 
 
 def get_location() -> str:
-    """Get current location using IP geolocation API."""
-    try:
-        response = requests.get("https://ipinfo.io/json", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("city", "").replace(" ", "")
-    except requests.RequestException as e:
-        print(f"Error getting location: {e}")
+    """Get current location using multiple IP geolocation APIs with fallback."""
+    for api_url in LOCATION_APIS:
+        try:
+            response = requests.get(api_url, timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                # Handle different API response formats
+                city = data.get("city", "")
+                if city:
+                    return city.replace(" ", "")
+        except requests.RequestException as e:
+            print(f"Location API {api_url} failed: {e}")
+            continue
+    
+    print("All location APIs failed")
     return ""
 
 
@@ -117,16 +132,16 @@ def get_coordinates(city: str) -> Optional[Tuple[float, float]]:
     cache_key = city.lower()
     current_time = time.time()
     
-    # Check cache first (cache for 24 hours)
+    # Check cache first (cache for 7 days)
     if cache_key in _location_cache:
         lat, lon, timestamp = _location_cache[cache_key]
-        if current_time - timestamp < 86400:  # 24 hours
+        if current_time - timestamp < LOCATION_CACHE_TIMEOUT:
             return lat, lon
     
     try:
         encoded_city = urllib.parse.quote(city)
         url = f"https://nominatim.openstreetmap.org/search?q={encoded_city}&format=json&limit=1"
-        response = requests.get(url, timeout=5, headers={'User-Agent': 'Modus-Desktop/1.0'})
+        response = requests.get(url, timeout=3, headers={'User-Agent': 'Modus-Desktop/1.0'})
         
         if response.status_code == 200:
             data = response.json()
@@ -153,7 +168,7 @@ def get_weather_data(lat: float, lon: float) -> Optional[Dict[str, Any]]:
             f"&forecast_days=1"
         )
         
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=3)
         if response.status_code == 200:
             return response.json()
     except requests.RequestException as e:
