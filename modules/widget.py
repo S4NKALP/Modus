@@ -387,7 +387,6 @@ class Weather(Box):
             label.set_label(text)
         
         # Apply gradient background based on weather condition
-        self.parent.apply_weather_gradient(gradient_class)
         self.parent.set_visible(True)
 
 
@@ -406,22 +405,6 @@ class WeatherContainer(Box):
             children=[Weather(self)],
             **kwargs,
         )
-        
-        # Track current gradient class for smooth transitions
-        self.current_gradient_class = None
-    
-    def apply_weather_gradient(self, gradient_class: str):
-        """Apply weather-specific gradient background."""
-        if self.current_gradient_class == gradient_class:
-            return  # No change needed
-        
-        # Remove previous gradient class
-        if self.current_gradient_class:
-            self.remove_style_class(self.current_gradient_class)
-        
-        # Add new gradient class
-        self.add_style_class(gradient_class)
-        self.current_gradient_class = gradient_class
 
 
 class Date(Box):
