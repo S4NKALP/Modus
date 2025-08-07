@@ -1,5 +1,4 @@
 # Standard library imports
-import subprocess
 from gi.repository import GLib
 
 # Fabric imports
@@ -66,7 +65,7 @@ class PerAppVolumeControl(Box):
         # Initial population
         self._populate_apps()
 
-        # Set up auto-refresh timer for PulseAudio sinks
+        # Set up auto-refresh timer for audio streams
         self._refresh_timer = GLib.timeout_add_seconds(2, self._auto_refresh)
 
     def _auto_refresh(self):
@@ -77,47 +76,6 @@ class PerAppVolumeControl(Box):
     def _go_back(self, *_):
         """Return to main control center view"""
         self.control_center.close_per_app_volume()
-
-    def _get_pulse_sinks(self):
-        """Get PulseAudio sink inputs (application audio streams)"""
-        try:
-            result = subprocess.run(
-                ["pactl", "list", "sink-inputs"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            sinks = []
-            current_sink = {}
-
-            for line in result.stdout.split("\n"):
-                line = line.strip()
-
-                if line.startswith("Sink Input #"):
-                    if current_sink:
-                        sinks.append(current_sink)
-                    current_sink = {
-                        "index": line.split("#")[1],
-                        "name": "Unknown",
-                        "volume_raw": 100,
-                    }
-                elif "application.name = " in line:
-                    current_sink["name"] = line.split("= ")[1].strip('"')
-                elif "Volume:" in line and "front-left:" in line:
-                    parts = line.split()
-                    for part in parts:
-                        if part.endswith("%"):
-                            current_sink["volume_raw"] = int(part.replace("%", ""))
-                            break
-
-            if current_sink:
-                sinks.append(current_sink)
-
-            return sinks
-
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return []
 
     def _format_app_name(self, name):
         """Format application name with proper capitalization"""
@@ -151,25 +109,13 @@ class PerAppVolumeControl(Box):
         self.apps_container.children = []
         self._app_widgets.clear()
 
-        # Try Fabric audio service first
-        applications = []
-        if audio_service and hasattr(audio_service, "applications"):
-            applications = audio_service.applications
+        # Use fabric audio service for applications
+        if not audio_service:
+            self._show_no_apps_message()
+            return
 
-        # If no Fabric applications, try PulseAudio directly
-        if not applications:
-            pulse_sinks = self._get_pulse_sinks()
-
-            if pulse_sinks:
-                for sink in pulse_sinks:
-                    app_widget = self._create_pulse_app_control(sink)
-                    self.apps_container.children = list(
-                        self.apps_container.children
-                    ) + [app_widget]
-                    self._app_widgets[sink["name"]] = (app_widget, sink)
-                return
-
-        # Use Fabric applications if available
+        applications = getattr(audio_service, "applications", [])
+        
         if applications:
             for app in applications:
                 if hasattr(app, "name") and hasattr(app, "volume"):
@@ -191,77 +137,27 @@ class PerAppVolumeControl(Box):
         )
         self.apps_container.children = [message]
 
-    def _create_pulse_app_control(self, sink):
-        """Create volume control for a PulseAudio sink input"""
-        # Format and truncate app name
-        app_name = self._format_app_name(sink["name"])
-        if len(app_name) > 20:
-            app_name = app_name[:17] + "..."
-
-        # Volume scale with Apple-like styling
-        volume_scale = Scale(
-            value=sink["volume_raw"],
-            min_value=0,
-            max_value=150,
-            increments=(5, 5),
-            name="apple-volume-slider",
-            size=28,
-            h_expand=True,
-        )
-
-        # Connect volume change handler
-        volume_scale.connect(
-            "change-value",
-            lambda scale, scroll_type, value, sink_data=sink: self._set_pulse_volume(
-                sink_data, value
-            ),
-        )
-
-        # Create the app control widget
-        app_control = Box(
-            orientation="vertical",
-            spacing=8,
-            style_classes="apple-app-volume-item",
-            children=[
-                Label(
-                    label=app_name,
-                    style_classes="apple-app-name",
-                    h_align="start",
-                ),
-                volume_scale,
-            ],
-        )
-
-        return app_control
-
     def _create_app_control(self, app):
-        """Create volume control for a single application (Fabric)"""
+        """Create volume control for a single application"""
         # Format and truncate app name
         app_name = self._format_app_name(app.name)
         if len(app_name) > 20:
             app_name = app_name[:17] + "..."
 
-        # Handle different volume formats
-        volume_value = app.volume
-        if isinstance(volume_value, float):
-            if 0.0 <= volume_value <= 1.0:
-                volume_percent = volume_value * 100
-            else:
-                volume_percent = min(max(volume_value, 0), 100)
-        elif isinstance(volume_value, int):
-            if volume_value <= 1:
-                volume_percent = volume_value * 100
-            else:
-                volume_percent = min(max(volume_value, 0), 100)
-        else:
-            volume_percent = 50
+        # Get current volume from fabric audio service
+        # Fabric returns volume as a float, typically 0.0 to max_volume (default 100)
+        current_volume = getattr(app, "volume", 0.0)
+        max_vol = getattr(audio_service, "max_volume", 100) if audio_service else 100
+        
+        # Ensure volume is in valid range
+        volume_percent = max(0, min(current_volume, max_vol))
 
-        # Volume scale with Apple-like styling
+        # Volume scale - use fabric's max_volume as range
         volume_scale = Scale(
             value=volume_percent,
             min_value=0,
-            max_value=100,
-            increments=(5, 5),
+            max_value=max_vol,
+            increments=(1, 5),
             name="apple-volume-slider",
             size=28,
             h_expand=True,
@@ -290,54 +186,25 @@ class PerAppVolumeControl(Box):
 
         return app_control
 
-    def _set_pulse_volume(self, sink, volume_percent):
-        """Set volume for a PulseAudio sink input"""
-        if sink["name"] in self._updating_volumes:
-            return
-
-        self._updating_volumes.add(sink["name"])
-
-        try:
-            subprocess.run(
-                [
-                    "pactl",
-                    "set-sink-input-volume",
-                    sink["index"],
-                    f"{int(volume_percent)}%",
-                ],
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            pass
-        finally:
-            GLib.timeout_add(100, lambda: self._updating_volumes.discard(sink["name"]))
-
-    def _set_app_volume(self, app, volume_percent):
-        """Set volume for a specific application (Fabric)"""
+    def _set_app_volume(self, app, volume_value):
+        """Set volume for a specific application using fabric audio service"""
         if app.name in self._updating_volumes:
             return
 
         self._updating_volumes.add(app.name)
 
         try:
-            current_volume = app.volume
-
-            if isinstance(current_volume, float):
-                if 0.0 <= current_volume <= 1.0:
-                    volume_value = volume_percent / 100.0
-                else:
-                    volume_value = volume_percent
-            elif isinstance(current_volume, int):
-                if current_volume <= 1:
-                    volume_value = int(volume_percent / 100.0)
-                else:
-                    volume_value = int(volume_percent)
-            else:
-                volume_value = volume_percent
-
+            # Get max volume from audio service
+            max_vol = getattr(audio_service, "max_volume", 100) if audio_service else 100
+            
+            # Ensure volume is within bounds
+            volume_value = max(0, min(volume_value, max_vol))
+            
+            # Set volume directly - fabric expects the actual volume value, not percentage
             app.volume = volume_value
-        except Exception:
-            pass
+            
+        except Exception as e:
+            print(f"Error setting volume for {app.name}: {e}")
         finally:
             GLib.timeout_add(100, lambda: self._updating_volumes.discard(app.name))
 
@@ -354,11 +221,13 @@ class PerAppVolumeControl(Box):
         if hasattr(self, "_refresh_timer"):
             GLib.source_remove(self._refresh_timer)
 
-        for connection in self._signal_connections:
-            try:
-                connection.disconnect()
-            except:
-                pass
+        # Disconnect fabric audio service signals
+        if audio_service:
+            for connection in self._signal_connections:
+                try:
+                    audio_service.disconnect(connection)
+                except:
+                    pass
 
         self._signal_connections.clear()
         self._app_widgets.clear()
