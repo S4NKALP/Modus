@@ -73,7 +73,11 @@ class ModusControlCenter(Window):
         )
 
         self.wlan_label = Label(
-            label=wlan, name="wifi-widget-label", max_chars_width=20, h_align="start"
+            label=wlan,
+            name="wifi-widget-label",
+            max_chars_width=15,
+            h_align="start",
+            ellipsization="end",
         )
         if bluetooth != "disabled":
             if bluetooth.startswith("connected:"):
@@ -87,7 +91,8 @@ class ModusControlCenter(Window):
         self.bluetooth_label = Label(
             label=bluetooth_display,
             name="bluetooth-widget-label",
-            max_chars_width=20,
+            max_chars_width=15,
+            ellipsization="end",
             h_align="start",
         )
         self.volume_scale = Scale(

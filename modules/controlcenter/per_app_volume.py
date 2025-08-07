@@ -7,6 +7,8 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.image import Image
+from fabric.widgets.separator import Separator
 
 # Local imports
 from utils.roam import audio_service
@@ -19,7 +21,6 @@ class PerAppVolumeControl(Box):
         super().__init__(
             orientation="vertical",
             name="per-app-volume-control",
-            style_classes="menu",
             spacing=5,
             **kwargs,
         )
@@ -35,7 +36,7 @@ class PerAppVolumeControl(Box):
         self.apps_container = Box(
             orientation="vertical",
             name="apps-scrolled-container",
-            spacing=5,
+            spacing=2,
         )
 
         self.scrolled_window = ScrolledWindow(
@@ -77,6 +78,57 @@ class PerAppVolumeControl(Box):
         """Return to main control center view"""
         self.control_center.close_per_app_volume()
 
+    def _get_app_icon(self, app):
+        """Get icon for application"""
+        # Don't use fabric's generic audio icon, use description/name for better detection
+        fabric_icon = getattr(app, "icon_name", "")
+        if fabric_icon and fabric_icon != "audio":
+            return fabric_icon
+
+        # Use description first (more accurate), then name
+        app_description = getattr(app, "description", "").lower()
+        app_name = app.name.lower()
+
+        # Check description first as it's more reliable
+        search_text = app_description if app_description else app_name
+
+        icon_mapping = {
+            "spotify": "spotify",
+            "firefox": "firefox",
+            "chromium": "chromium-browser",
+            "chrome": "google-chrome",
+            "vlc": "vlc",
+            "discord": "discord",
+            "steam": "steam",
+            "zen": "zen-browser",
+            "code": "vscode",
+            "visual studio code": "vscode",
+            "telegram": "telegram-desktop",
+            "pulse": "audio-card",
+            "zen": "zen-browser",
+            "pipewire": "audio-card",
+            "alsa": "audio-card",
+            "sink": "audio-speakers",
+            "source": "audio-input-microphone",
+            "youtube": "youtube",
+            "music": "rhythmbox",
+            "media": "multimedia-player",
+        }
+
+        # Check if any key in mapping is contained in search text
+        for key, icon in icon_mapping.items():
+            if key in search_text:
+                return icon
+
+        # Also check app name as fallback
+        if search_text != app_name:
+            for key, icon in icon_mapping.items():
+                if key in app_name:
+                    return icon
+
+        # Default audio icon for unknown apps
+        return "audio-volume-high"
+
     def _format_app_name(self, name):
         """Format application name with proper capitalization"""
         if not name:
@@ -115,14 +167,25 @@ class PerAppVolumeControl(Box):
             return
 
         applications = getattr(audio_service, "applications", [])
-        
+
         if applications:
-            for app in applications:
+            for i, app in enumerate(applications):
                 if hasattr(app, "name") and hasattr(app, "volume"):
                     app_widget = self._create_app_control(app)
                     self.apps_container.children = list(
                         self.apps_container.children
                     ) + [app_widget]
+
+                    # Add separator between apps (except for last one)
+                    if i < len(applications) - 1:
+                        separator = Separator(
+                            orientation="horizontal",
+                            style_classes="app-volume-separator",
+                        )
+                        self.apps_container.children = list(
+                            self.apps_container.children
+                        ) + [separator]
+
                     self._app_widgets[app.name] = (app_widget, app)
         else:
             self._show_no_apps_message()
@@ -138,28 +201,43 @@ class PerAppVolumeControl(Box):
         self.apps_container.children = [message]
 
     def _create_app_control(self, app):
-        """Create volume control for a single application"""
-        # Format and truncate app name
+        """Create compact volume control for a single application"""
+        # Format app name (shorter for compact layout)
         app_name = self._format_app_name(app.name)
-        if len(app_name) > 20:
-            app_name = app_name[:17] + "..."
-
         # Get current volume from fabric audio service
-        # Fabric returns volume as a float, typically 0.0 to max_volume (default 100)
         current_volume = getattr(app, "volume", 0.0)
         max_vol = getattr(audio_service, "max_volume", 100) if audio_service else 100
-        
+
         # Ensure volume is in valid range
         volume_percent = max(0, min(current_volume, max_vol))
 
-        # Volume scale - use fabric's max_volume as range
+        # App icon - use the same approach as expanded player
+        icon_name = self._get_app_icon(app)
+        app_icon = Image(
+            icon_name=icon_name,
+            name="app-icon",
+            icon_size=16,
+            style_classes="app-icon",
+        )
+
+        # App name label
+        name_label = Label(
+            label=app_name,
+            style_classes="app-name-compact",
+            justification="left",
+            h_align="start",
+            max_chars_width=10,
+            ellipsization="end",
+        )
+
+        # Volume scale (smaller and horizontal)
         volume_scale = Scale(
             value=volume_percent,
             min_value=0,
             max_value=max_vol,
             increments=(1, 5),
-            name="apple-volume-slider",
-            size=28,
+            name="compact-volume-slider",
+            size=20,
             h_expand=True,
         )
 
@@ -169,20 +247,19 @@ class PerAppVolumeControl(Box):
             lambda scale, scroll_type, value, app=app: self._set_app_volume(app, value),
         )
 
-        # Create the app control widget
+        # Create horizontal compact layout
         app_control = Box(
-            orientation="vertical",
-            spacing=8,
-            style_classes="apple-app-volume-item",
+            orientation="horizontal",
+            spacing=5,
+            h_expand=True,
+            style_classes="compact-app-volume-item",
             children=[
-                Label(
-                    label=app_name,
-                    style_classes="apple-app-name",
-                    h_align="start",
-                ),
+                app_icon,
+                name_label,
                 volume_scale,
             ],
         )
+        # Add separator after the control
 
         return app_control
 
@@ -195,14 +272,16 @@ class PerAppVolumeControl(Box):
 
         try:
             # Get max volume from audio service
-            max_vol = getattr(audio_service, "max_volume", 100) if audio_service else 100
-            
+            max_vol = (
+                getattr(audio_service, "max_volume", 100) if audio_service else 100
+            )
+
             # Ensure volume is within bounds
             volume_value = max(0, min(volume_value, max_vol))
-            
+
             # Set volume directly - fabric expects the actual volume value, not percentage
             app.volume = volume_value
-            
+
         except Exception as e:
             print(f"Error setting volume for {app.name}: {e}")
         finally:
@@ -234,4 +313,3 @@ class PerAppVolumeControl(Box):
         self._updating_volumes.clear()
 
         super().destroy()
-
