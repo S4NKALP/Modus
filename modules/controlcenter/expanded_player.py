@@ -695,6 +695,7 @@ class PlayerBox(Box):
         self.exit = False
         self.skipped = False
         self._user_seeking = False  # Flag to prevent choppy seeking
+        self._seekbar_timer_id = None  # Track timer ID for cleanup
 
         # Memory management
         self.temp_artwork_files = []  # Track temp files for cleanup
@@ -992,6 +993,15 @@ class PlayerBox(Box):
 
         # Cancel any ongoing downloads immediately
         self._download_cancelled = True
+        
+        # Cancel seek bar timer
+        if self._seekbar_timer_id:
+            try:
+                from gi.repository import GLib
+                GLib.source_remove(self._seekbar_timer_id)
+            except:
+                pass
+            self._seekbar_timer_id = None
 
         # Wait for download thread to finish (with timeout)
         if self.current_download_thread and self.current_download_thread.is_alive():
@@ -1103,7 +1113,17 @@ class PlayerBox(Box):
             safe_duration = min(max_int32, duration)
             self.seek_bar.set_range(0, safe_duration)
 
-        invoke_repeater(1000, self._move_seekbar)
+        # Cancel existing timer before starting a new one
+        if self._seekbar_timer_id:
+            try:
+                from gi.repository import GLib
+                GLib.source_remove(self._seekbar_timer_id)
+            except:
+                pass
+            self._seekbar_timer_id = None
+        
+        # Start new timer and store its ID
+        self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
 
     def _cleanup_temp_files(self):
         """Clean up temporary artwork files."""
@@ -1258,10 +1278,6 @@ class PlayerBox(Box):
             return False  # Stop the timer
 
         try:
-            # Check if the seek bar widget is still valid
-            if not self.seek_bar.get_realized():
-                return False  # Widget is destroyed, stop timer
-
             position = self.player.position
             self.position_label.set_label(self.length_str(position))
 
