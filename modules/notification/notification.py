@@ -882,9 +882,9 @@ class ModusNoti(Window):
             anchor="top right",
             child=self.notifications,
             layer="overlay",
-            title="noti",
+            title="modus-notifications",  # More specific title for debugging
             all_visible=True,
-            visible=True,
+            visible=False,  # Start hidden, show only when we have content
             exclusive=False,
         )
 
@@ -992,6 +992,10 @@ class ModusNoti(Window):
                 pass
 
         self.notifications.children = [new_box]
+        
+        # Show the window now that we have content to display
+        self.set_visible(True)
+        
         new_box.show_all()
         self.notifications.queue_resize()
 
@@ -1029,6 +1033,9 @@ class ModusNoti(Window):
                 self.TRANSITION_DELAY,  # Consistent smooth timing
                 lambda: self._show_next_notification() or False,
             )
+        else:
+            # Hide window when no more notifications to show
+            self.set_visible(False)
 
     def show_next_notification(self):
         # Legacy method for compatibility - redirect to new implementation
