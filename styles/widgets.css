@@ -4,6 +4,159 @@
   min-width: 170px;
   min-height: 170px;
   border-radius: 16px;
+  transition: background 0.8s ease-in-out;
+}
+
+/* Dynamic Weather Gradient Backgrounds (Clean 2-Color Design) */
+
+/* ☀️ Clear Sky - Brightest, most vibrant blue */
+#weather-container.weather-clear.weather-clear {
+  background: linear-gradient(135deg, #1e90ff 0%, #87ceeb 100%);
+}
+
+/* 🌤️ Mostly Clear - Slightly less bright */
+#weather-container.weather-mostly-clear.weather-mostly-clear {
+  background: linear-gradient(135deg, #4169e1 0%, #b0e0e6 100%);
+}
+
+/* ⛅ Partly Cloudy - Muted blue to grey (darker than clear) */
+#weather-container.weather-partly-cloudy.weather-partly-cloudy {
+  background: linear-gradient(135deg, #4682b4 0%, #b8c6db 100%);
+}
+
+/* ☁️ Overcast - Grey gradient */
+#weather-container.weather-overcast.weather-overcast {
+  background: linear-gradient(135deg, #485563 0%, #8fa0ad 100%);
+}
+
+/* 🌫️ Fog - Misty grey */
+#weather-container.weather-fog.weather-fog {
+  background: linear-gradient(135deg, #606c88 0%, #c1d3dd 100%);
+}
+
+/* 🌦️ Light Rain - Light blue */
+#weather-container.weather-light-rain.weather-light-rain {
+  background: linear-gradient(135deg, #2c5aa0 0%, #92a8d1 100%);
+}
+
+/* 🌧️ Rain - Deep blue */
+#weather-container.weather-rain.weather-rain {
+  background: linear-gradient(135deg, #1a365d 0%, #4299e1 100%);
+}
+
+/* ⛈️ Heavy Rain/Storm - Dark dramatic */
+#weather-container.weather-heavy-rain.weather-heavy-rain,
+#weather-container.weather-storm.weather-storm {
+  background: linear-gradient(135deg, #0f172a 0%, #64748b 100%);
+}
+
+/* 🌨️ Snow - Winter blue to white */
+#weather-container.weather-snow.weather-snow {
+  background: linear-gradient(135deg, #a8c8ec 0%, #ffffff 100%);
+}
+
+/* ❄️ Heavy Snow - Bright winter */
+#weather-container.weather-heavy-snow.weather-heavy-snow {
+  background: linear-gradient(135deg, #9fb3d3 0%, #f8fbff 100%);
+}
+
+/* Text color adjustments for better readability on photorealistic gradients */
+
+/* Light/Bright Gradients - Dark Text */
+#weather-container.weather-clear #city,
+#weather-container.weather-mostly-clear #city,
+#weather-container.weather-snow #city,
+#weather-container.weather-heavy-snow #city {
+  color: #1a202c;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.6);
+  font-weight: 700;
+}
+
+#weather-container.weather-clear #temperature,
+#weather-container.weather-mostly-clear #temperature,
+#weather-container.weather-snow #temperature,
+#weather-container.weather-heavy-snow #temperature {
+  color: #2d3748;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.6);
+  font-weight: 400;
+}
+
+#weather-container.weather-clear #condition,
+#weather-container.weather-mostly-clear #condition,
+#weather-container.weather-snow #condition,
+#weather-container.weather-heavy-snow #condition {
+  color: #4a5568;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+  font-weight: 600;
+}
+
+#weather-container.weather-clear #feels-like,
+#weather-container.weather-mostly-clear #feels-like,
+#weather-container.weather-snow #feels-like,
+#weather-container.weather-heavy-snow #feels-like {
+  color: #4a5568;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+  font-weight: 600;
+}
+
+/* Medium Gradients - Semi-dark Text */
+#weather-container.weather-partly-cloudy #city,
+#weather-container.weather-fog #city,
+#weather-container.weather-light-rain #city {
+  color: #2d3748;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+  font-weight: 700;
+}
+
+#weather-container.weather-partly-cloudy #temperature,
+#weather-container.weather-fog #temperature,
+#weather-container.weather-light-rain #temperature {
+  color: #2d3748;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+  font-weight: 400;
+}
+
+#weather-container.weather-partly-cloudy #condition,
+#weather-container.weather-partly-cloudy #feels-like,
+#weather-container.weather-fog #condition,
+#weather-container.weather-fog #feels-like,
+#weather-container.weather-light-rain #condition,
+#weather-container.weather-light-rain #feels-like {
+  color: #4a5568;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+  font-weight: 600;
+}
+
+/* Dark Gradients - Light Text */
+#weather-container.weather-overcast #city,
+#weather-container.weather-rain #city,
+#weather-container.weather-heavy-rain #city,
+#weather-container.weather-storm #city {
+  color: #f7fafc;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  font-weight: 700;
+}
+
+#weather-container.weather-overcast #temperature,
+#weather-container.weather-rain #temperature,
+#weather-container.weather-heavy-rain #temperature,
+#weather-container.weather-storm #temperature {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  font-weight: 400;
+}
+
+#weather-container.weather-overcast #condition,
+#weather-container.weather-overcast #feels-like,
+#weather-container.weather-rain #condition,
+#weather-container.weather-rain #feels-like,
+#weather-container.weather-heavy-rain #condition,
+#weather-container.weather-heavy-rain #feels-like,
+#weather-container.weather-storm #condition,
+#weather-container.weather-storm #feels-like {
+  color: #e2e8f0;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.5);
+  font-weight: 600;
 }
 
 #weather-widget label {

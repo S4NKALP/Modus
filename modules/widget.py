@@ -32,6 +32,51 @@ LOCATION_CACHE_TIMEOUT = 604800  # 7 days (extended from 24h)
 # Thread pool for async operations
 executor = ThreadPoolExecutor(max_workers=4)
 
+# Weather condition to CSS class mapping (iOS-style gradients)
+WEATHER_GRADIENT_MAP = {
+    # Clear/Sunny conditions - bright blue to lighter blue
+    0: "weather-clear",           # Clear sky
+    1: "weather-mostly-clear",    # Mainly clear
+    
+    # Cloudy conditions - grey gradients
+    2: "weather-partly-cloudy",   # Partly cloudy
+    3: "weather-overcast",        # Overcast
+    
+    # Fog conditions - muted grey/blue
+    45: "weather-fog",            # Fog
+    48: "weather-fog",            # Depositing rime fog
+    
+    # Light rain/drizzle - blue-grey gradients
+    51: "weather-light-rain",     # Light drizzle
+    53: "weather-rain",           # Moderate drizzle
+    55: "weather-rain",           # Dense drizzle
+    61: "weather-light-rain",     # Slight rain
+    80: "weather-light-rain",     # Slight rain showers
+    
+    # Heavy rain - darker blue-grey
+    63: "weather-heavy-rain",     # Moderate rain
+    65: "weather-heavy-rain",     # Heavy rain
+    81: "weather-heavy-rain",     # Moderate rain showers
+    82: "weather-storm",          # Violent rain showers
+    
+    # Snow conditions - blue-white gradients
+    56: "weather-snow",           # Light freezing drizzle
+    57: "weather-snow",           # Dense freezing drizzle
+    66: "weather-snow",           # Light freezing rain
+    67: "weather-snow",           # Heavy freezing rain
+    71: "weather-snow",           # Slight snow fall
+    73: "weather-heavy-snow",     # Moderate snow fall
+    75: "weather-heavy-snow",     # Heavy snow fall
+    77: "weather-snow",           # Snow grains
+    85: "weather-snow",           # Slight snow showers
+    86: "weather-heavy-snow",     # Heavy snow showers
+    
+    # Storm conditions - dark dramatic gradients
+    95: "weather-storm",          # Thunderstorm
+    96: "weather-storm",          # Thunderstorm with slight hail
+    99: "weather-storm",          # Thunderstorm with heavy hail
+}
+
 # Weather condition to emoji mapping
 WEATHER_EMOJI_MAP = {
     0: "☀️",    # Clear sky
@@ -187,6 +232,7 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
         weather_code = current['weathercode']
         emoji = WEATHER_EMOJI_MAP.get(weather_code, "🌤️")
         condition = WEATHER_DESC_MAP.get(weather_code, "Unknown")
+        gradient_class = WEATHER_GRADIENT_MAP.get(weather_code, "weather-clear")
         
         # Temperature
         temp = f"{round(current['temperature'])}°"
@@ -195,7 +241,7 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
         max_temp = f"{round(daily['temperature_2m_max'][0])}°"
         min_temp = f"{round(daily['temperature_2m_min'][0])}°"
         
-        return [emoji, temp, condition, city, max_temp, min_temp]
+        return [emoji, temp, condition, city, max_temp, min_temp, gradient_class]
         
     except (KeyError, IndexError, TypeError) as e:
         print(f"Error formatting weather data: {e}")
@@ -322,10 +368,10 @@ class Weather(Box):
 
     def update_labels(self, weather_info: List[str]):
         """Update weather labels with new data."""
-        if not weather_info or len(weather_info) != 6:
+        if not weather_info or len(weather_info) != 7:
             return
 
-        emoji, temp, condition, location, maxtemp, mintemp = weather_info
+        emoji, temp, condition, location, maxtemp, mintemp, gradient_class = weather_info
         maxmin = f"H:{maxtemp} L:{mintemp}"
 
         # Batch update labels for better performance
@@ -340,6 +386,8 @@ class Weather(Box):
         for label, text in label_updates:
             label.set_label(text)
         
+        # Apply gradient background based on weather condition
+        self.parent.apply_weather_gradient(gradient_class)
         self.parent.set_visible(True)
 
 
@@ -358,6 +406,22 @@ class WeatherContainer(Box):
             children=[Weather(self)],
             **kwargs,
         )
+        
+        # Track current gradient class for smooth transitions
+        self.current_gradient_class = None
+    
+    def apply_weather_gradient(self, gradient_class: str):
+        """Apply weather-specific gradient background."""
+        if self.current_gradient_class == gradient_class:
+            return  # No change needed
+        
+        # Remove previous gradient class
+        if self.current_gradient_class:
+            self.remove_style_class(self.current_gradient_class)
+        
+        # Add new gradient class
+        self.add_style_class(gradient_class)
+        self.current_gradient_class = gradient_class
 
 
 class Date(Box):
