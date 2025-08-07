@@ -1,48 +1,31 @@
-# Standard library imports
-import contextlib
-import gc
-import weakref
-from pathlib import Path
-from typing import Optional, Dict, Any
+from gi.repository import Gdk, GLib
 
-# Fabric imports
-from fabric.core.service import Service, Signal, Property
-from fabric.widgets.window import Window
-from fabric.widgets.overlay import Overlay
+from fabric.utils import idle_add
+from fabric.utils.helpers import (
+    get_relative_path,
+)
 from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
-from fabric.widgets.revealer import Revealer
-from fabric.utils import idle_add, get_relative_path, invoke_repeater
-from fabric.widgets.image import Image
 from fabric.widgets.svg import Svg
-
-# Gi imports  
-import gi
-gi.require_version("Gtk", "3.0")
-gi.require_version("GLib", "2.0")
-from gi.repository import Gtk, GLib, Gdk
-
-# Local imports
 from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
+from services.brightness import Brightness
+from utils.roam import audio_service, modus_service
+from widgets.wayland import WaylandWindow as Window
 from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
-from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer, get_shared_mpris_manager
-from services.modus import modus_service
-from services.brightness import Brightness
+from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from services.mpris import MprisPlayerManager
-from utils.roam import audio_service
-from widgets.wayland import WaylandWindow as Window
-from loguru import logger
+from fabric.widgets.svg import Svg
+from fabric.utils.helpers import get_relative_path
 
 brightness_service = Brightness.get_initial()
 
-# Memory management globals
-_widget_cache = weakref.WeakValueDictionary()
-_cleanup_timer_id = None
+# FIX: Icon not showing up in control center
+# TODO: Add Player
 
 
 class ModusControlCenter(Window):
@@ -296,32 +279,24 @@ class ModusControlCenter(Window):
                         Box(
                             orientation="horizontal",
                             spacing=8,
-                            v_expand=True,
-                            h_expand=True,
+                            v_expand=False,
                             children=[
                                 self.volume_scale,
                                 Button(
                                     name="per-app-volume-button",
-                                    child=Box(
-                                        h_align="center",
-                                        v_align="center",
-                                        h_expand=True,
-                                        size=(32, 32),
-                                        v_expand=True,
-                                        children=[
-                                            Svg(
-                                                svg_file=get_relative_path(
-                                                    "../../config/assets/icons/player/audio-switcher.svg"
-                                                ),
-                                                size=34,
-                                            )
-                                        ],
+                                    child=Svg(
+                                        svg_file=get_relative_path(
+                                            "../../config/assets/icons/player/audio-switcher.svg"
+                                        ),
+                                        name="per-app-volume-icon",
                                     ),
                                     on_clicked=self.open_per_app_volume,
                                 ),
                             ],
                         ),
-                        Label(label=" ", name="volume-widget-icon", h_align="start"),
+                        Label(
+                            label=" ", name="brightness-widget-icon", h_align="start"
+                        ),
                     ],
                 ),
                 Box(
@@ -356,119 +331,39 @@ class ModusControlCenter(Window):
 
         self.children = self.center_box
 
-        # Set memory baseline for monitoring
-
         # Connect to visibility changes for cleanup
         self.connect("notify::visible", self._on_visibility_changed)
-
-        # Periodic cleanup timer (every 5 minutes when visible)
-        # Start periodic memory cleanup (every 5 minutes)
-        global _cleanup_timer_id
-        _cleanup_timer_id = GLib.timeout_add_seconds(300, self._periodic_cleanup)
 
     def _on_visibility_changed(self, widget, param):
         """Handle visibility changes for memory management"""
         if not self.get_visible():
-            logger.debug("Control center hidden - starting cleanup")
             self._cleanup_when_hidden()
 
     def _cleanup_when_hidden(self):
-        """Clean up resources when widget is hidden to reduce memory usage"""
-        logger.debug("Starting hidden cleanup - freeing widget memory")
-        # Clean up music widget content properly
-        if self._music_widget_content:
-            try:
-                # Remove from parent container first
-                current_children = list(self.music_widget.children)
-                if self._music_widget_content in current_children:
-                    current_children.remove(self._music_widget_content)
-                    self.music_widget.children = current_children
-                
-                # Destroy the content to free memory completely
-                if hasattr(self._music_widget_content, "destroy"):
-                    self._music_widget_content.destroy()
-                    
-                logger.debug("Destroyed music widget content to free memory")
-                self._music_widget_content = None
-                self._music_initialized = False
-            except Exception as e:
-                logger.warning(f"Failed to cleanup music widget content: {e}")
+        """Clean up resources when widget is hidden"""
+        # Clean up music widget content if it exists
+        if self._music_widget_content and not self._music_initialized:
+            # Remove from the parent container
+            current_children = list(self.music_widget.children)
+            if self._music_widget_content in current_children:
+                current_children.remove(self._music_widget_content)
+                self.music_widget.children = current_children
+            self._music_widget_content = None
 
-        # Clean up per-app volume widget
-        if self._per_app_volume_widget and hasattr(
-            self._per_app_volume_widget, "destroy"
-        ):
-            try:
-                self._per_app_volume_widget.destroy()
-                self._per_app_volume_widget = None
-                self._per_app_volume_initialized = False
-            except Exception:
-                pass
-
-        # Clean up expanded player widget - aggressive cleanup for reuse
-        if self._expanded_player_widget:
-            try:
-                # Call cleanup directly on the player content (PlayerBoxStack)
-                if hasattr(self._expanded_player_widget, 'player_content') and \
-                   hasattr(self._expanded_player_widget.player_content, '_periodic_cleanup'):
-                    self._expanded_player_widget.player_content._periodic_cleanup()
-                
-                # Also clean any EmbeddedExpandedPlayer specific state
-                if hasattr(self._expanded_player_widget, '_periodic_cleanup'):
-                    self._expanded_player_widget._periodic_cleanup()
-                    
-                logger.debug("Cleaned expanded player internal state (preserved for reuse)")
-                # DON'T destroy or set to None - keep for reuse!
-            except Exception as e:
-                logger.warning(f"Failed to clean expanded player state: {e}")
-
-        # Reset widget containers to free memory (except expanded player for reuse)
-        self.bluetooth_widgets = None
-        self.wifi_widgets = None
-        self.per_app_volume_widgets = None
-        # Keep expanded_player_widgets for reuse!
-        # self.expanded_player_widgets = None
-
-        # Reset center boxes (except expanded player for reuse)
-        self.bluetooth_center_box = None
-        self.wifi_center_box = None
-        self.per_app_volume_center_box = None
-        # Keep expanded_player_center_box for reuse!
-        # self.expanded_player_center_box = None
-
-        # Force garbage collection
-        import gc
-
-        gc.collect()
-
-    def _periodic_cleanup(self):
-        """Periodic cleanup to keep memory usage low"""
-        if not self.get_visible():
-            # If not visible, do aggressive cleanup
-            self._cleanup_when_hidden()
-            return True  # Continue timer
-
-        # Light cleanup when visible
-        import gc
-
-        gc.collect()
-        return True  # Continue timer
+        # Reset lazy loading flags to allow re-initialization when shown again
+        # Keep initialized flags to avoid recreating heavy components unnecessarily
 
     def _ensure_music_widget(self):
         """Lazy load music widget content"""
         if not self._music_initialized:
-            logger.debug("Creating new PlayerBoxStack instance")
             self._music_widget_content = PlayerBoxStack(
-                get_shared_mpris_manager(), control_center=self
+                MprisPlayerManager(), control_center=self
             )
-            
             # Add to the music widget's children list
             current_children = list(self.music_widget.children)
             current_children.append(self._music_widget_content)
             self.music_widget.children = current_children
             self._music_initialized = True
-        else:
-            logger.debug("Music widget already initialized")
 
     def _ensure_bluetooth_widgets(self):
         """Lazy load bluetooth widgets"""
@@ -550,14 +445,10 @@ class ModusControlCenter(Window):
             self.per_app_volume_center_box.set_size_request(300, -1)
 
     def _ensure_expanded_player_widgets(self):
-        """Lazy load expanded player widgets with reuse optimization"""
+        """Lazy load expanded player widgets"""
         if self.expanded_player_widgets is None:
-            logger.debug("Creating new expanded player widgets")
             if self._expanded_player_widget is None:
-                logger.debug("Creating new EmbeddedExpandedPlayer instance")
                 self._expanded_player_widget = EmbeddedExpandedPlayer(self)
-            else:
-                logger.debug("Reusing existing EmbeddedExpandedPlayer instance")
 
             self.expanded_player_widgets = Box(
                 orientation="vertical",
@@ -571,8 +462,6 @@ class ModusControlCenter(Window):
                 start_children=[self.expanded_player_widgets]
             )
             self.expanded_player_center_box.set_size_request(300, -1)
-        else:
-            logger.debug("Reusing existing expanded player widgets")
 
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
@@ -776,59 +665,24 @@ class ModusControlCenter(Window):
         self.set_visible(False)
 
     def destroy(self):
-        """Enhanced cleanup of resources when widget is destroyed."""
-        try:
-            # Cancel any periodic cleanup timers
-            global _cleanup_timer_id
-            if _cleanup_timer_id:
-                GLib.source_remove(_cleanup_timer_id)
-                _cleanup_timer_id = None
+        """Clean up resources when widget is destroyed"""
+        # Disconnect all signal connections
+        for connection in self._signal_connections:
+            try:
+                connection.disconnect()
+            except:
+                pass
 
-            # Disconnect all signal connections with better error handling
-            for connection in self._signal_connections:
-                try:
-                    if connection and hasattr(connection, 'disconnect'):
-                        connection.disconnect()
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect signal: {e}")
-            self._signal_connections.clear()
+        # Clean up heavy components
+        if self._wifi_man:
+            self._wifi_man.destroy()
+        if self._bluetooth_man:
+            self._bluetooth_man.destroy()
+        if self._music_widget_content:
+            self._music_widget_content.destroy()
+        if self._per_app_volume_widget:
+            self._per_app_volume_widget.destroy()
+        if self._expanded_player_widget:
+            self._expanded_player_widget.destroy()
 
-            # Clean up heavy components with memory optimization
-            components_to_cleanup = [
-                ('wifi_man', getattr(self, 'wifi_man', None)),
-                ('bluetooth_man', getattr(self, 'bluetooth_man', None)), 
-                ('_music_widget_content', self._music_widget_content),
-                ('_per_app_volume_widget', self._per_app_volume_widget),
-                ('_expanded_player_widget', self._expanded_player_widget)
-            ]
-
-            for attr_name, component in components_to_cleanup:
-                if component and hasattr(component, 'destroy'):
-                    try:
-                        component.destroy()
-                        setattr(self, attr_name, None)
-                    except Exception as e:
-                        logger.warning(f"Failed to destroy {attr_name}: {e}")
-
-            # Clean up widget containers and references
-            widget_containers = [
-                'bluetooth_widgets', 'wifi_widgets', 'per_app_volume_widgets',
-                'expanded_player_widgets', 'bluetooth_center_box', 'wifi_center_box',
-                'per_app_volume_center_box', 'expanded_player_center_box'
-            ]
-
-            for container in widget_containers:
-                if hasattr(self, container):
-                    setattr(self, container, None)
-
-            # Clear any cached widgets
-            global _widget_cache
-            _widget_cache.clear()
-
-            # Force garbage collection for immediate memory cleanup
-            gc.collect()
-
-        except Exception as e:
-            logger.error(f"Error during control center destruction: {e}")
-        finally:
-            super().destroy()
+        super().destroy()
