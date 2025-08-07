@@ -1,26 +1,33 @@
+import contextlib
 import gi  # type: ignore
 from gi.repository import Gdk, Gtk, GtkLayerShell  # type: ignore
 
 from widgets.wayland import WaylandWindow
+from utils.monitors import HyprlandWithMonitors
 
 gi.require_version("GtkLayerShell", "0.1")
 
 
 class PopupWindow(WaylandWindow):
+    """A simple popover window that can point to a widget."""
+
     def __init__(
         self,
         parent: WaylandWindow,
         pointing_to: Gtk.Widget | None = None,
         margin: tuple[int, ...] | str = "0px 0px 0px 0px",
+        enable_boundary_checking: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.exclusivity = "none"
-
+        self._is_centered = False
         self._parent = parent
         self._pointing_widget = pointing_to
+        self._hyprland = HyprlandWithMonitors()
         self._base_margin = self.extract_margin(margin)
         self.margin = self._base_margin.values()
+        self._enable_boundary_checking = enable_boundary_checking
 
         self.connect("notify::visible", self.do_update_handlers)
 
@@ -36,10 +43,8 @@ class PopupWindow(WaylandWindow):
 
     def set_pointing_to(self, widget: Gtk.Widget | None):
         if self._pointing_widget:
-            try:
+            with contextlib.suppress(Exception):
                 self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
-            except Exception:
-                pass
         self._pointing_widget = widget
         return self.do_update_handlers()
 
@@ -68,12 +73,15 @@ class PopupWindow(WaylandWindow):
         parent_anchor = self._parent.anchor
 
         if len(parent_anchor) != 3:
+            self.anchor = "left bottom"
+            self._is_centered = True
             return move_axe
 
         if (
             GtkLayerShell.Edge.LEFT in parent_anchor
             and GtkLayerShell.Edge.RIGHT in parent_anchor
         ):
+            # horizontal -> move on x-axies
             move_axe = "x"
             if GtkLayerShell.Edge.TOP in parent_anchor:
                 self.anchor = "left top"
@@ -83,12 +91,14 @@ class PopupWindow(WaylandWindow):
             GtkLayerShell.Edge.TOP in parent_anchor
             and GtkLayerShell.Edge.BOTTOM in parent_anchor
         ):
+            # vertical -> move on y-axies
             move_axe = "y"
             if GtkLayerShell.Edge.RIGHT in parent_anchor:
                 self.anchor = "top right"
             else:
                 self.anchor = "top left"
 
+        self._is_centered = False
         return move_axe
 
     def do_reposition(self, move_axe: str):
@@ -98,48 +108,84 @@ class PopupWindow(WaylandWindow):
         height = self.get_allocated_height()
         width = self.get_allocated_width()
 
-        screen = Gdk.Screen.get_default()
-        screen_width = screen.get_width()
+        # Get monitor geometry for boundary checking
+        current_monitor_id = self._hyprland.get_current_gdk_monitor_id()
+        if current_monitor_id is not None:
+            monitor = self._hyprland.display.get_monitor(current_monitor_id)
+            monitor_geometry = monitor.get_geometry()
+            monitor_x, monitor_y = monitor_geometry.x, monitor_geometry.y
+            monitor_width, monitor_height = monitor_geometry.width, monitor_geometry.height
+        else:
+            # Fallback to default screen
+            screen = Gdk.Screen.get_default()
+            monitor_x, monitor_y = 0, 0
+            monitor_width, monitor_height = screen.get_width(), screen.get_height()
 
         if self._pointing_widget:
             coords = self.get_coords_for_widget(self._pointing_widget)
-            if coords[0] + width > screen_width:
-                coords_centered = (
-                    round(
-                        coords[0]
-                        - (width - self._pointing_widget.get_allocated_width())
-                    ),
-                    round(coords[1] + self._pointing_widget.get_allocated_height() / 2),
-                )
-            else:
-                coords_centered = (
-                    round(coords[0]),
-                    round(coords[1] + self._pointing_widget.get_allocated_height() / 2),
-                )
+            coords_centered = (
+                round(coords[0] + self._pointing_widget.get_allocated_width() / 2),
+                round(coords[1] + self._pointing_widget.get_allocated_height() / 2),
+            )
         else:
             coords_centered = (
                 round(self._parent.get_allocated_width() / 2),
                 round(self._parent.get_allocated_height() / 2),
             )
 
+        if self._is_centered:
+            # Calculate centered position with boundary checking
+            centered_x = (
+                (monitor_width / 2 - self._parent.get_allocated_width() / 2)
+                - width / 2
+            ) + coords_centered[0]
+
+            # Apply boundary checking only if enabled
+            if self._enable_boundary_checking:
+                if centered_x < monitor_x:
+                    centered_x = monitor_x
+                elif centered_x + width > monitor_x + monitor_width:
+                    centered_x = monitor_x + monitor_width - width
+
+            self.margin = tuple(
+                a + b
+                for a, b in zip(
+                    (0, 0, 0, centered_x),
+                    self._base_margin.values(),
+                )
+            )
+            return
+
+        # Calculate position with boundary checking
+        if move_axe == "x":
+            # Horizontal positioning
+            calculated_x = round((parent_x_margin + coords_centered[0]) - (width / 2))
+
+            # Apply boundary checking only if enabled
+            if self._enable_boundary_checking:
+                if calculated_x < monitor_x:
+                    calculated_x = monitor_x
+                elif calculated_x + width > monitor_x + monitor_width:
+                    calculated_x = monitor_x + monitor_width - width
+
+            margin_values = (0, 0, 0, calculated_x)
+        else:
+            # Vertical positioning
+            calculated_y = round((parent_y_margin + coords_centered[1]) - (height / 2))
+
+            # Apply boundary checking only if enabled
+            if self._enable_boundary_checking:
+                if calculated_y < monitor_y:
+                    calculated_y = monitor_y
+                elif calculated_y + height > monitor_y + monitor_height:
+                    calculated_y = monitor_y + monitor_height - height
+
+            margin_values = (calculated_y, 0, 0, 0)
+
         self.margin = tuple(
             a + b
             for a, b in zip(
-                (
-                    (
-                        0,
-                        0,
-                        0,
-                        round((parent_x_margin + coords_centered[0])),
-                    )
-                    if move_axe == "x"
-                    else (
-                        round((parent_y_margin + coords_centered[1]) - (height / 2)),
-                        0,
-                        0,
-                        0,
-                    )
-                ),
+                margin_values,
                 self._base_margin.values(),
             )
         )

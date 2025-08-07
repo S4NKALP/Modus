@@ -5,9 +5,9 @@ import subprocess
 
 from fabric.utils import DesktopApp
 from fabric.utils.helpers import get_desktop_applications, get_relative_path
-from modules.dock import Dock
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
+from utils.roam import modus_service
 
 
 class ApplicationsPlugin(PluginBase):
@@ -24,48 +24,33 @@ class ApplicationsPlugin(PluginBase):
 
     def _pin_application(self, app):
         """Pin an application to the dock."""
-        app_data = {
-            k: v
-            for k, v in {
-                "name": app.name,
-                "display_name": app.display_name,
-                "window_class": app.window_class,
-                "executable": app.executable,
-                "command_line": app.command_line,
-                "icon_name": app.icon_name,
-            }.items()
-            if v is not None
-        }
-
         config_path = get_relative_path("../../../config/assets/dock.json")
         try:
             with open(config_path, "r") as file:
-                data = json.load(file)
+                pinned_apps = json.load(file)
         except (FileNotFoundError, json.JSONDecodeError):
-            data = {"pinned_apps": []}
+            pinned_apps = []
 
-        already_pinned = False
-        for pinned_app in data.get("pinned_apps", []):
-            if (
-                isinstance(pinned_app, dict)
-                and pinned_app.get("name") == app_data["name"]
-            ):
-                already_pinned = True
-                pinned_app.update(app_data)
-                break
-            elif isinstance(pinned_app, str) and pinned_app == app_data["name"]:
-                already_pinned = True
-                data["pinned_apps"].remove(pinned_app)
-                data["pinned_apps"].append(app_data)
-                break
+        # Handle legacy format (dict with "pinned_apps" key) and convert to new format (simple list)
+        if isinstance(pinned_apps, dict):
+            pinned_apps = pinned_apps.get("pinned_apps", [])
 
-        if not already_pinned:
-            data.setdefault("pinned_apps", []).append(app_data)
+        # Check if app is already pinned (by name/app_id)
+        app_id = app.name  # Use app.name as the identifier
+        if app_id not in pinned_apps:
+            pinned_apps.append(app_id)
 
-        with open(config_path, "w") as file:
-            json.dump(data, file, indent=4)
+            # Save the updated list
+            with open(config_path, "w") as file:
+                json.dump(pinned_apps, file, indent=4)
 
-        Dock.notify_config_change()
+            # Notify dock about the change via modus_service
+            if modus_service:
+                try:
+                    dock_apps_json = json.dumps(pinned_apps)
+                    modus_service.dock_apps = dock_apps_json
+                except Exception as e:
+                    print(f"Failed to notify dock about pinned app change: {e}")
 
     def query(self, query_string: str) -> List[Result]:
         """Search applications based on query."""
@@ -155,8 +140,6 @@ class ApplicationsPlugin(PluginBase):
         # Create regex pattern for fuzzy matching
         pattern = ".*".join(re.escape(char) for char in query)
         return bool(re.search(pattern, text, re.IGNORECASE))
-
-        import subprocess
 
     def _launch_application(self, app: DesktopApp):
         print("Original:", app.command_line)
