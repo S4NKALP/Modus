@@ -7,6 +7,7 @@ import re
 import threading
 import time
 from typing import Dict, List, Optional
+from loguru import logger
 
 from gi.repository import GdkPixbuf
 from PIL import Image
@@ -60,9 +61,9 @@ class WallpaperPlugin(PluginBase):
                     [f for f in os.listdir(data.WALLPAPERS_DIR) if self._is_image(f)]
                 )
             else:
-                print(f"Wallpapers directory not found: {data.WALLPAPERS_DIR}")
+                logger.error(f"Wallpapers directory not found: {data.WALLPAPERS_DIR}")
         except Exception as e:
-            print(f"Error loading wallpapers: {e}")
+            logger.error(f"Error loading wallpapers: {e}")
 
     def _is_image(self, filename: str) -> bool:
         """Check if file is a supported image format."""
@@ -81,7 +82,7 @@ class WallpaperPlugin(PluginBase):
             # File doesn't exist, keep default True
             pass
         except Exception as e:
-            print(f"Error reading config file: {e}")
+            logger.error(f"Error reading config file: {e}")
             # Keep default True on error
 
         return self.matugen_enabled
@@ -106,7 +107,7 @@ class WallpaperPlugin(PluginBase):
                 json.dump(config, f, indent=4)
 
         except Exception as e:
-            print(f"Error writing matugen state to config: {e}")
+            logger.error(f"Error writing matugen state to config: {e}")
 
         # Clear the search query after toggling matugen
         self._clear_launcher_query()
@@ -164,7 +165,7 @@ class WallpaperPlugin(PluginBase):
                         return
 
         except Exception as e:
-            print(f"Could not clear launcher query: {e}")
+            logger.error(f"Could not clear launcher query: {e}")
 
     def _get_cache_path(self, filename: str) -> str:
         """Get cache path for wallpaper thumbnail."""
@@ -183,7 +184,7 @@ class WallpaperPlugin(PluginBase):
                     img.thumbnail((32, 32), Image.Resampling.LANCZOS)
                     img.save(cache_path, "PNG", optimize=True)
             except Exception as e:
-                print(f"Error creating thumbnail for {filename}: {e}")
+                logger.error(f"Error creating thumbnail for {filename}: {e}")
                 return None
 
         return cache_path
@@ -205,12 +206,14 @@ class WallpaperPlugin(PluginBase):
                                 )
                                 self.thumbnail_cache[wallpaper] = pixbuf
                             except Exception as e:
-                                print(f"Error loading thumbnail for {wallpaper}: {e}")
+                                logger.error(
+                                    f"Error loading thumbnail for {wallpaper}: {e}"
+                                )
                                 self.thumbnail_cache[wallpaper] = None
                         else:
                             self.thumbnail_cache[wallpaper] = None
                     except Exception as e:
-                        print(f"Error processing thumbnail for {wallpaper}: {e}")
+                        logger.error(f"Error processing thumbnail for {wallpaper}: {e}")
                         self.thumbnail_cache[wallpaper] = None
                     finally:
                         self.thumbnail_loading.discard(wallpaper)
@@ -238,7 +241,7 @@ class WallpaperPlugin(PluginBase):
                 self.thumbnail_cache[filename] = pixbuf
                 return pixbuf
             except Exception as e:
-                print(f"Error loading thumbnail for {filename}: {e}")
+                logger.error(f"Error loading thumbnail for {filename}: {e}")
                 self.thumbnail_cache[filename] = None
                 return None
 
