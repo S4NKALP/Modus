@@ -328,8 +328,8 @@ ensure_notification_cache_dirs()
 cleanup_old_cache_files()
 
 
-def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 350):
-    """Configure revealer for macOS-like smooth animation"""
+def smooth_revealer_animation(revealer: SlideRevealer, duration: int = 280):
+    """Configure revealer for ultra-smooth animation"""
     revealer.duration = duration
 
 
@@ -691,7 +691,7 @@ class NotificationRevealer(SlideRevealer):
         super().__init__(
             child=self.event_box,
             direction="right",
-            duration=600,  # Optimized duration for macOS-like feel
+            duration=280,  # Faster, smoother duration
         )
 
         smooth_revealer_animation(self)
@@ -701,17 +701,48 @@ class NotificationRevealer(SlideRevealer):
 
         self._animation_in_progress = True
 
-    def _ease_out_back(self, t):
-        """Easing function for spring-back animation"""
-        c1 = 1.70158
-        c3 = c1 + 1
-        return 1 + c3 * pow(t - 1, 3) + c1 * pow(t - 1, 2)
+    def _ease_out_cubic(self, t):
+        """Smoother easing function for better animation quality"""
+        return 1 - pow(1 - t, 3)
+    
+    def _ease_out_quart(self, t):
+        """Even smoother easing for ultra-smooth animations"""
+        return 1 - pow(1 - t, 4)
+
+    def _apply_transform(self, offset_x, opacity, scale):
+        """Apply smooth CSS transforms for animation"""
+        try:
+            # Create CSS transformation
+            transform_css = f"""
+                opacity: {opacity};
+                transform: translateX({offset_x}px) scale({scale});
+                transition: none;
+            """
+            
+            # Apply to the notification box
+            if hasattr(self.notif_box, 'get_style_context'):
+                style_context = self.notif_box.get_style_context()
+                if style_context:
+                    # Use CSS provider for smooth transforms
+                    if not hasattr(self, '_css_provider') or not self._css_provider:
+                        from gi.repository import Gtk
+                        self._css_provider = Gtk.CssProvider()
+                        style_context.add_provider(
+                            self._css_provider, 
+                            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                        )
+                    
+                    css_data = f"* {{ {transform_css} }}"
+                    self._css_provider.load_from_data(css_data.encode())
+                    
+        except Exception as e:
+            logger.debug(f"Transform apply failed (non-critical): {e}")
 
     def _animate_dismiss(self, start_offset):
-        """Animate the notification sliding out completely - now much faster"""
-        target_offset = NOTIFICATION_WIDTH + 50  # Slide completely out of view
-        duration = 120  # Much faster dismiss animation (was 250)
-
+        """Animate the notification sliding out with smooth 60fps animation"""
+        target_offset = NOTIFICATION_WIDTH + 50
+        duration = 200  # Slightly longer for smoother feel
+        
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
 
@@ -723,22 +754,19 @@ class NotificationRevealer(SlideRevealer):
             elapsed = current_time - start_time
             progress = min(1.0, elapsed / duration)
 
-            # Use faster easing for snappier exit
-            eased_progress = (
-                progress * progress
-            )  # Quadratic ease out - faster than cubic
+            # Use smoother easing for premium feel
+            eased_progress = self._ease_out_quart(progress)
             current_offset = start_offset + (offset_diff * eased_progress)
 
-            # Fade out and scale down during dismiss
-            opacity = 1.0 - (progress * 1.2)  # Faster fade out
-            scale = 1.0 - (progress * 0.15)  # Slightly more scale change
+            # Smoother fade and scale transitions
+            opacity = max(0.0, 1.0 - (progress * 0.9))  # Gentler fade
+            scale = max(0.9, 1.0 - (progress * 0.1))   # Subtle scale
 
             self._apply_transform(current_offset, opacity, scale)
 
             if progress >= 1.0:
                 # Mark notification for cache cleanup on swipe dismissal
                 self.notif_box._should_cleanup_cache = True
-                # Trigger the actual notification dismissal immediately
                 try:
                     self.notification.close("dismissed-by-user")
                 except:
@@ -747,10 +775,11 @@ class NotificationRevealer(SlideRevealer):
 
             return True
 
+        # Use consistent 60fps timing
         self._animation_in_progress = True
         self._spring_timer_id = GLib.timeout_add(
-            12, animate_step
-        )  # Higher fps for smoother animation
+            16, animate_step  # ~60 FPS
+        )
 
     def _calculate_drag_velocity(self, current_x):
         """Calculate the velocity of the drag gesture"""
@@ -789,20 +818,21 @@ class NotificationRevealer(SlideRevealer):
 
         # Use different slide directions based on dismiss reason
         if reason == "expired":
-            # Left-to-right slide for auto-dismiss (expired)
+            # Gentle fade-out for auto-dismiss
             self.set_slide_direction("left")
+            self.duration = 250  # Slightly slower for natural feel
         elif self._swipe_in_progress:
-            # For swipe dismissals, use immediate hiding without additional slide animation
-            # The swipe animation already handled the visual feedback
-            self.duration = 50  # Very fast transition
+            # Quick slide for swipe dismissals
+            self.duration = 150
             self.set_slide_direction("right")
         else:
-            # Right-to-left slide for manual close (button clicks)
+            # Smooth slide for manual close
             self.set_slide_direction("right")
+            self.duration = 200
 
         self.hide()
-        # Reduced timeout for snappier transitions, especially for swipe dismissals
-        timeout_duration = 80 if self._swipe_in_progress else (self.duration + 30)
+        # Consistent timing for smooth transitions
+        timeout_duration = self.duration + 50
         GLib.timeout_add(timeout_duration, lambda: self._on_animation_complete(True))
 
     def destroy(self):
@@ -816,6 +846,7 @@ class NotificationState:
     IDLE = 0
     SHOWING = 1
     HIDING = 2
+    TRANSITIONING = 3  # New state for smooth transitions
 
 
 class ModusNoti(Window):
@@ -830,11 +861,18 @@ class ModusNoti(Window):
             spacing=5,
         )
 
-        # Enhanced queue system for smooth transitions
+        # Enhanced queue system for ultra-smooth transitions
         self.notification_queue = []
         self.current_notification = None
         self.notification_state = NotificationState.IDLE
         self._transition_timer_id = None
+        self._debounce_timer_id = None
+        self._last_notification_time = 0
+        
+        # Queue management settings for smooth behavior
+        self.MAX_QUEUE_SIZE = 3  # Limit queue to prevent overwhelming
+        self.TRANSITION_DELAY = 100  # Smoother transition timing
+        self.DEBOUNCE_DELAY = 50  # Prevent rapid fire notifications
 
         # Initialize ignored apps list from config
         self.ignored_apps = data.NOTIFICATION_IGNORED_APPS
@@ -861,19 +899,36 @@ class ModusNoti(Window):
             # Notification is already cached by the service, just don't show popup
             return
 
-        # Clear any pending notifications in queue (except the current one being shown)
-        for pending_notification in list(self.notification_queue):
-            try:
-                pending_notification.close("dismissed-by-user")
-            except:
-                pass
-        self.notification_queue.clear()
+        # Implement smart queue management for smooth transitions
+        current_time = GLib.get_monotonic_time() / 1000
+        
+        # If queue is getting full, remove oldest notifications smoothly
+        if len(self.notification_queue) >= self.MAX_QUEUE_SIZE:
+            # Remove oldest notification from queue (not current showing one)
+            if self.notification_queue:
+                oldest = self.notification_queue.pop(0)
+                try:
+                    oldest.close("dismissed-by-user")
+                except:
+                    pass
 
         # Add new notification to queue
         self.notification_queue.append(notification)
+        
+        # Debounce rapid notifications for smoother experience
+        if self._debounce_timer_id:
+            GLib.source_remove(self._debounce_timer_id)
+            
+        self._debounce_timer_id = GLib.timeout_add(
+            self.DEBOUNCE_DELAY, 
+            lambda: self._process_notification_queue_debounced() or False
+        )
 
-        # Process the queue
+    def _process_notification_queue_debounced(self):
+        """Process queue after debounce delay for smooth transitions"""
+        self._debounce_timer_id = None
         self._process_notification_queue()
+        return False
 
     def _process_notification_queue(self):
         # If we're currently showing a notification and there's a new one in queue
@@ -882,8 +937,9 @@ class ModusNoti(Window):
             and self.current_notification
             and self.notification_queue
         ):
-            # Start hiding the current notification to make room for the new one
-            self._start_hiding_current_notification()
+            # Smooth transition: start hiding current notification
+            self.notification_state = NotificationState.TRANSITIONING
+            self._start_smooth_transition()
 
         elif (
             self.notification_state == NotificationState.IDLE
@@ -892,20 +948,21 @@ class ModusNoti(Window):
             # If we're idle and have notifications in queue, show the next one
             self._show_next_notification()
 
-    def _start_hiding_current_notification(self):
+    def _start_smooth_transition(self):
+        """Start smooth transition between notifications"""
         if (
             self.current_notification
-            and self.notification_state == NotificationState.SHOWING
             and not self.current_notification._is_closing
         ):
-            self.notification_state = NotificationState.HIDING
-
-            # Mark for cache cleanup when forcibly hiding for new notification
-            self.current_notification.notif_box._should_cleanup_cache = True
+            # Don't mark for cache cleanup during smooth transitions
+            # to maintain performance
             
-            # Force close the current notification to trigger hiding animation
+            # Use shorter timeout for smooth transitions
+            self.current_notification.notif_box.timeout_ms = 100
+            
+            # Force close current notification with smooth animation
             try:
-                self.current_notification.notification.close("dismissed-by-user")
+                self.current_notification.notification.close("expired")
             except:
                 pass
 
@@ -966,10 +1023,10 @@ class ModusNoti(Window):
         self.current_notification = None
         self.notification_state = NotificationState.IDLE
 
-        # Process next notification with a small delay for smooth transitions
+        # Process next notification with optimized delay for ultra-smooth transitions
         if self.notification_queue:
             self._transition_timer_id = GLib.timeout_add(
-                50,  # Very short delay for seamless transitions
+                self.TRANSITION_DELAY,  # Consistent smooth timing
                 lambda: self._show_next_notification() or False,
             )
 
@@ -982,13 +1039,15 @@ class ModusNoti(Window):
         self._on_notification_finished(notification_box)
 
     def clear_notification_queue(self):
+        """Clear queue with smooth cleanup"""
         queue_length = len(self.notification_queue)
         if queue_length > 0:
+            # Smooth dismissal of queued notifications
             for notification in list(self.notification_queue):
                 try:
                     notification.close("dismissed-by-user")
                 except:
-                    pass  # Ignore errors if notification is already closed
+                    pass
             self.notification_queue.clear()
 
         # Also clean current notification if showing
@@ -996,10 +1055,14 @@ class ModusNoti(Window):
             # Mark for cache cleanup when clearing queue
             self.current_notification.notif_box._should_cleanup_cache = True
 
-        # Cancel any pending transition timer
+        # Clear animation timers
         if self._transition_timer_id:
             GLib.source_remove(self._transition_timer_id)
             self._transition_timer_id = None
+            
+        if self._debounce_timer_id:
+            GLib.source_remove(self._debounce_timer_id)
+            self._debounce_timer_id = None
 
     def get_queue_length(self):
         return len(self.notification_queue)
