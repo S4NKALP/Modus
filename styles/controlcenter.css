@@ -216,7 +216,7 @@
 #toggle-button {
   min-width: 40px;
   min-height: 20px;
-  background-color: var(--surface);
+  background-color: #888;
   border-radius: 15px;
   padding: 2px;
   transition: background-color 0.3s ease;
@@ -224,22 +224,23 @@
 
 #toggle-button slider {
   background-color: var(--primary);
-  border-radius: 16px;
+  border-radius: 50%;
   min-width: 16px;
   min-height: 8px;
   transition: background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25);
 }
 
 #toggle-button:checked {
-  background-color: var(--primary);
+  background-color: #4487f6;
 }
 
 #toggle-button:checked slider {
-  background-color: var(--shadow);
+  background-color: #bababa;
 }
 
 #toggle-button:checked image {
   color: var(--shadow);
+  opacity: 0;
 }
 
 .menu {
