@@ -4,7 +4,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from modules.notification.notification import NotificationWidget
+from modules.notification.notification import NotificationWidget, cleanup_notification_image_cache, cleanup_all_notification_caches, cleanup_notification_specific_caches
 from services.modus import notification_service
 from widgets.wayland import WaylandWindow as Window
 from fabric.widgets.image import Image
@@ -18,21 +18,79 @@ class NotificationCenterWidget(NotificationWidget):
             notification._notification, timeout_ms=0, show_close_button=True, **kwargs
         )
 
-    def create_close_button(self):
-        close_button = Button(
+    def create_content(self, notification):
+        # Create our custom close button for notification center
+        from widgets.custom_image import CustomImage
+        
+        self.close_button = Button(
             name="notif-close-button",
-            child=Image(
-                icon_name="dialog-cancel-symbolic", name="notif-close-label", size=5
-            ),
+            image=CustomImage(icon_name="close-symbolic", icon_size=18),
+            visible=True,  # Always visible in notification center
             on_clicked=self._on_close_clicked,
         )
-        close_button.connect(
-            "enter-notify-event", lambda *_: self.hover_button(close_button)
+        self.close_button.connect(
+            "enter-notify-event", lambda *_: self.hover_button(self.close_button)
         )
-        close_button.connect(
-            "leave-notify-event", lambda *_: self.unhover_button(close_button)
+        self.close_button.connect(
+            "leave-notify-event", lambda *_: self.unhover_button(self.close_button)
         )
-        return close_button
+        
+        # Create the content box manually with our custom close button
+        from fabric.widgets.box import Box
+        from fabric.widgets.label import Label
+        
+        return Box(
+            name="notification-content",
+            spacing=8,
+            children=[
+                Box(
+                    name="notification-image",
+                    children=CustomImage(
+                        pixbuf=self._get_notification_pixbuf(notification)
+                    ),
+                ),
+                Box(
+                    name="notification-text",
+                    orientation="v",
+                    v_align="center",
+                    children=[
+                        Box(
+                            name="notification-summary-box",
+                            orientation="h",
+                            children=[
+                                Label(
+                                    name="notification-summary",
+                                    markup=notification.summary.replace("\n", " "),
+                                    h_align="start",
+                                    ellipsization="end",
+                                ),
+                            ],
+                        ),
+                        (
+                            Label(
+                                markup=notification.body.replace("\n", " "),
+                                h_align="start",
+                                ellipsization="end",
+                            )
+                            if notification.body
+                            else Label(
+                                markup="",
+                                h_align="start",
+                                ellipsization="end",
+                            )
+                        ),
+                    ],
+                ),
+                Box(h_expand=True),
+                Box(
+                    orientation="v",
+                    children=[
+                        self.close_button,  # Use our custom close button
+                        Box(v_expand=True),
+                    ],
+                ),
+            ],
+        )
 
     # Override to disable the action buttons
     def create_action_buttons(self, notification):
@@ -40,11 +98,16 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _on_close_clicked(self, *args):
         try:
+            # Clean up this notification's cached icons AND images
+            cleanup_notification_specific_caches(
+                app_icon_source=getattr(self, 'app_icon_source', None),
+                notification_image_cache_key=getattr(self, 'notification_image_cache_key', None)
+            )
+            logger.debug(f"Cleaned up all caches for notification center: {self.notification_id}")
+            
             notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
             logger.error(f"Error removing notification {self.notification_id}: {e}")
-        finally:
-            self.destroy()
 
     # Override to disable timeout functionality
     def start_timeout(self):
@@ -162,25 +225,35 @@ class NotificationCenter(Window):
 
     def on_notification_removed(self, service, cached_notification):
         try:
-            # Find and remove the corresponding widget
+            # Find and remove the corresponding widget with cache cleanup
             for child in self.notifications_box.get_children():
                 if (
                     hasattr(child, "notification_id")
                     and child.notification_id == cached_notification.cache_id
                 ):
+                    # Clean up the widget's cached icons AND images before destroying
+                    cleanup_notification_specific_caches(
+                        app_icon_source=getattr(child, 'app_icon_source', None),
+                        notification_image_cache_key=getattr(child, 'notification_image_cache_key', None)
+                    )
+                    logger.debug(f"Cleaned up all caches for removed notification: {child.notification_id}")
+                    
                     child.destroy()
                     break
             logger.debug(
-                f"Removed notification widget for {cached_notification.app_name}"
+                f"Removed notification widget and all caches for {cached_notification.app_name}"
             )
         except Exception as e:
             logger.error(f"Error removing notification widget: {e}")
 
     def on_clear_all(self, service):
         try:
+            # Clear all remaining cached notification images AND icons  
+            # Individual notifications clean up their own images, this handles any remaining
+            cleanup_all_notification_caches()
             for child in self.notifications_box.get_children():
                 child.destroy()
-            logger.debug("Cleared all notification widgets")
+            logger.debug("Cleared all notification widgets and remaining cached images")
         except Exception as e:
             logger.error(f"Error clearing notification widgets: {e}")
 
@@ -191,6 +264,9 @@ class NotificationCenter(Window):
         self.scrolled.set_visible(current_count > 0)
 
     def clear_all_notifications(self, *_):
+        # Clear all remaining cached notification images AND icons when clear all is clicked
+        # Individual notifications clean up their own images, this handles any remaining
+        cleanup_all_notification_caches()  # Clear ALL caches (icons + images)
         notification_service.clear_all_cached_notifications()
         if hasattr(self, "mousecapture"):
             self.mousecapture.hide_child_window()
