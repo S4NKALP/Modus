@@ -144,7 +144,7 @@
 
 #date-container {
   background: linear-gradient(to bottom, #202020, #141414);
-  margin: 20px 20px 20px 20px;
+  margin: 20px 10px 20px 5px;
   min-width: 170px;
   min-height: 170px;
   border-radius: 16px;
@@ -153,7 +153,7 @@
 /* System Info Widget CSS  */
 #info-box-widget {
   background: linear-gradient(to bottom, #202020, #141414);
-  margin: 20px 10px 20px 10px;
+  margin: 5px 5px 5px 5px;
   min-width: 170px;
   min-height: 170px;
   border-radius: 16px;
