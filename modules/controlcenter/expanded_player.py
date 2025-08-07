@@ -1,18 +1,20 @@
-from fabric.widgets.scale import Scale
-from widgets.wayland import WaylandWindow as Window
-from fabric.widgets.button import Button
-from fabric.widgets.label import Label
-from fabric.widgets.box import Box
-from services.mpris import MprisPlayer, MprisPlayerManager
-
+# Standard library imports
 import os
 import re
 import tempfile
 import urllib.parse
 import urllib.request
-from typing import List
 import threading
+import weakref
+from typing import List, Optional, Dict, Set
+import gc
 
+# Fabric imports
+from fabric.widgets.scale import Scale
+from widgets.wayland import WaylandWindow as Window
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+from fabric.widgets.box import Box
 from fabric.utils import bulk_connect, invoke_repeater, cooldown
 from fabric.utils.helpers import get_relative_path
 from fabric.widgets.image import Image
@@ -22,12 +24,17 @@ from fabric.widgets.svg import Svg
 from gi.repository import GLib, GObject
 from loguru import logger
 
+# Local imports
+from services.mpris import MprisPlayer, MprisPlayerManager
 import config.data as data
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 
-# Shared MPRIS manager to reduce memory usage
+# Global memory management
 _shared_mpris_manager = None
+_widget_cache = weakref.WeakValueDictionary()
+_artwork_cache = {}
+_max_artwork_cache_size = 10  # Limit artwork cache to prevent memory bloat
 
 
 def get_shared_mpris_manager():
@@ -38,16 +45,81 @@ def get_shared_mpris_manager():
     return _shared_mpris_manager
 
 
+def cleanup_artwork_cache():
+    """Clean up artwork cache to prevent memory leaks."""
+    global _artwork_cache
+    if len(_artwork_cache) > _max_artwork_cache_size:
+        # Keep only the most recent items
+        items = list(_artwork_cache.items())
+        _artwork_cache = dict(items[-_max_artwork_cache_size:])
+        # Force garbage collection
+        gc.collect()
+
+
 def cleanup_old_cache_files():
-    """Clean up old artwork cache files (older than 6 hours for more aggressive cleanup)."""
+    """Clean up old artwork cache files aggressively to save memory."""
     try:
         if not os.path.exists(CACHE_DIR):
             return
 
         import time
-
         current_time = time.time()
-        six_hours_ago = current_time - (6 * 60 * 60)  # 6 hours instead of 24
+        # Clean files older than 2 hours (more aggressive)
+        two_hours_ago = current_time - (2 * 60 * 60)
+
+        for filename in os.listdir(CACHE_DIR):
+            filepath = os.path.join(CACHE_DIR, filename)
+            try:
+                if os.path.isfile(filepath):
+                    file_mod_time = os.path.getmtime(filepath)
+                    if file_mod_time < two_hours_ago:
+                        os.remove(filepath)
+                        logger.debug(f"Cleaned up old cache file: {filename}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up cache file {filename}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error during cache cleanup: {e}")
+
+
+def get_artwork_cached(url: str) -> Optional[str]:
+    """Get artwork with memory-efficient caching."""
+    if not url:
+        return None
+    
+    # Check memory cache first
+    if url in _artwork_cache:
+        return _artwork_cache[url]
+    
+    # Clean cache if too large
+    cleanup_artwork_cache()
+    
+    try:
+        # Create cache directory if it doesn't exist
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        
+        # Generate cache filename
+        safe_filename = re.sub(r'[^\w\-_.]', '_', urllib.parse.urlparse(url).path.split('/')[-1])
+        if not safe_filename:
+            safe_filename = f"artwork_{hash(url)}"
+        
+        cache_file = os.path.join(CACHE_DIR, safe_filename)
+        
+        # Check if cached file exists and is recent (within 2 hours)
+        if os.path.exists(cache_file):
+            import time
+            if time.time() - os.path.getmtime(cache_file) < 7200:  # 2 hours
+                _artwork_cache[url] = cache_file
+                return cache_file
+        
+        # Download and cache
+        urllib.request.urlretrieve(url, cache_file)
+        _artwork_cache[url] = cache_file
+        return cache_file
+        
+    except Exception as e:
+        logger.warning(f"Failed to cache artwork from {url}: {e}")
+        return None
 
         for filename in os.listdir(CACHE_DIR):
             filepath = os.path.join(CACHE_DIR, filename)
@@ -87,9 +159,11 @@ class EmbeddedExpandedPlayer(Box):
         self.player_content = PlayerBoxStack(self.mpris_manager)
 
         # Add escape key binding for navigation back
+        self._keybinding_added = False
         try:
             if hasattr(self.control_center, "add_keybinding"):
                 self.control_center.add_keybinding("Escape", self._on_back_clicked)
+                self._keybinding_added = True
         except Exception:
             pass  # Ignore if keybinding fails
 
@@ -122,34 +196,78 @@ class EmbeddedExpandedPlayer(Box):
         pass
 
     def destroy(self):
-        """Clean up resources"""
-        if hasattr(self.player_content, "destroy"):
-            self.player_content.destroy()
-        super().destroy()
+        """Clean up resources and prevent memory leaks"""
+        logger.debug("🗑️ EmbeddedExpandedPlayer cleanup starting")
+        
+        try:
+            # Destroy player content (PlayerBoxStack)
+            if hasattr(self, 'player_content') and hasattr(self.player_content, "destroy"):
+                self.player_content.destroy()
+                
+            # Clean up back button
+            if hasattr(self, 'back_button') and hasattr(self.back_button, "destroy"):
+                self.back_button.destroy()
+                
+            # Clean up any other widgets we might have
+            for child in list(self.get_children()):
+                try:
+                    child.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy child widget: {e}")
+            
+            # Clean up keybinding if it was added
+            if hasattr(self, '_keybinding_added') and self._keybinding_added:
+                try:
+                    if hasattr(self.control_center, "remove_keybinding"):
+                        self.control_center.remove_keybinding("Escape")
+                except Exception as e:
+                    logger.warning(f"Failed to remove keybinding: {e}")
+            
+            # Aggressively clean global caches
+            global _widget_cache, _artwork_cache
+            _widget_cache.clear()
+            _artwork_cache.clear()
+            logger.debug("🗑️ Cleared global widget and artwork caches")
+            
+            # Clear references
+            if hasattr(self, 'control_center'):
+                self.control_center = None
+            if hasattr(self, 'mpris_manager'):
+                self.mpris_manager = None
+                
+            # Force garbage collection
+            gc.collect()
+            logger.debug("🗑️ EmbeddedExpandedPlayer cleanup completed")
+            
+        except Exception as e:
+            logger.error(f"Error during EmbeddedExpandedPlayer cleanup: {e}")
+        finally:
+            super().destroy()
 
 
 class PlayerBoxStack(Box):
-    """A widget that displays the current player information."""
+    """Memory-optimized widget that displays current player information."""
 
     def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
         # Clean up old cache files on startup
         cleanup_old_cache_files()
 
-        # The player stack
+        # The player stack with memory-efficient settings
         self.player_stack = Stack(
-            # transition_type="slide-left-right",
-            # transition_duration=500,
             name="player-stack",
+            # Disable transitions to reduce memory usage
+            transition_type="none",
         )
         self.current_stack_pos = 0
 
-        # List to store player buttons
+        # Store player buttons - cleaned up via explicit removal
         self.player_buttons: list[Button] = []
+        self._player_widgets: Dict[str, Box] = weakref.WeakValueDictionary()
 
-        # Track signal connections for cleanup
+        # Track signal connections for cleanup using weak references
         self._signal_connections = []
 
-        # Create a "No media playing" placeholder
+        # Create a lightweight "No media playing" placeholder
         self.no_media_box = self._create_no_media_box()
 
         super().__init__(orientation="v", name="media", children=[self.player_stack])
@@ -160,7 +278,7 @@ class PlayerBoxStack(Box):
 
         self.mpris_manager = mpris_manager
 
-        # Track connections for cleanup - store (object, handler_id) tuples
+        # Track connections for cleanup
         connections = bulk_connect(
             self.mpris_manager,
             {
@@ -168,43 +286,92 @@ class PlayerBoxStack(Box):
                 "player-vanished": self.on_lost_player,
             },
         )
-        # Store as (object, handler_id) tuples
         for handler_id in connections:
             self._signal_connections.append((self.mpris_manager, handler_id))
 
+        # Process existing players
         for player in self.mpris_manager.players:  # type: ignore
-            logger.info(
-                f"[PLAYER MANAGER] player found: {player.get_property('player-name')}",
-            )
+            logger.info(f"[PLAYER MANAGER] player found: {player.get_property('player-name')}")
             self.on_new_player(self.mpris_manager, player)
+
+        # Schedule periodic memory cleanup and store source ID
+        self._cleanup_source_id = GLib.timeout_add_seconds(300, self._periodic_cleanup)  # Every 5 minutes
+
+    def _periodic_cleanup(self):
+        """Periodic cleanup to prevent memory leaks."""
+        try:
+            # Clean artwork cache
+            cleanup_artwork_cache()
+            
+            # Remove destroyed widgets from tracking
+            destroyed_keys = []
+            for key, widget in self._player_widgets.items():
+                if not widget or not widget.get_parent():
+                    destroyed_keys.append(key)
+            
+            for key in destroyed_keys:
+                if key in self._player_widgets:
+                    del self._player_widgets[key]
+            
+            # Force garbage collection
+            gc.collect()
+            
+        except Exception as e:
+            logger.warning(f"Error during periodic cleanup: {e}")
+        
+        return True  # Continue timer
 
     def destroy(self):
         """Clean up resources when the widget is destroyed."""
-        # Disconnect all signal connections
-        for obj, handler_id in self._signal_connections:
-            try:
-                obj.disconnect(handler_id)
-            except Exception as e:
-                logger.warning(f"Failed to disconnect signal: {e}")
-        self._signal_connections.clear()
-
-        # Clean up player buttons
-        for button in self.player_buttons:
-            try:
-                button.destroy()
-            except Exception:
-                pass
-        self.player_buttons.clear()
-
-        # Clean up player boxes
-        for child in self.player_stack.get_children():
-            if hasattr(child, "destroy") and child != self.no_media_box:
+        try:
+            # Cancel any pending cleanup timer
+            if hasattr(self, '_cleanup_source_id') and self._cleanup_source_id:
                 try:
-                    child.destroy()
+                    GLib.source_remove(self._cleanup_source_id)
+                except Exception:
+                    pass  # Timer may have already been removed
+            
+            # Disconnect all signal connections
+            for obj, handler_id in self._signal_connections:
+                try:
+                    if obj and hasattr(obj, 'disconnect'):
+                        obj.disconnect(handler_id)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect signal: {e}")
+            self._signal_connections.clear()
+
+            # Clean up player widgets
+            for widget in list(self._player_widgets.values()):
+                try:
+                    if widget and hasattr(widget, "destroy"):
+                        widget.destroy()
+                except Exception:
+                    pass
+            self._player_widgets.clear()
+
+            # Clean up player buttons explicitly
+            for button in list(self.player_buttons):
+                try:
+                    if button and hasattr(button, "destroy"):
+                        button.destroy()
                 except Exception:
                     pass
 
-        super().destroy()
+            # Clean up stack children
+            for child in self.player_stack.get_children():
+                if hasattr(child, "destroy") and child != self.no_media_box:
+                    try:
+                        child.destroy()
+                    except Exception:
+                        pass
+
+            # Force final garbage collection
+            gc.collect()
+
+        except Exception as e:
+            logger.error(f"Error during PlayerBoxStack cleanup: {e}")
+        finally:
+            super().destroy()
 
     def _create_no_media_box(self):
         """Create a placeholder box for when no media is playing."""

@@ -132,6 +132,22 @@ class PlayerBoxStack(Box):
 
         super().destroy()
 
+    def _periodic_cleanup(self):
+        """Light cleanup for reuse - clean internal state but preserve widget"""
+        try:
+            # Reset to no media state
+            self.player_stack.children = [self.no_media_box]
+            
+            # Clear player buttons but don't destroy them
+            self.player_buttons.clear()
+            
+            # Reset stack position
+            self.current_stack_pos = 0
+            
+            logger.debug("PlayerBoxStack periodic cleanup completed")
+        except Exception as e:
+            logger.warning(f"PlayerBoxStack periodic cleanup failed: {e}")
+
     def _create_no_media_box(self):
         """Create a placeholder box for when no media is playing."""
         fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
