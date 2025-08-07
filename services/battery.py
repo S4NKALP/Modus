@@ -22,6 +22,51 @@ class Battery(Service):
         minutes = (seconds % 3600) // 60
         return f"{hours}h {minutes}m" if hours else f"{minutes}m"
 
+    @staticmethod
+    def get_battery_icon_level(percentage):
+        """Get battery icon level based on percentage"""
+        if percentage >= 90:
+            return "100"
+        elif percentage >= 80:
+            return "090"
+        elif percentage >= 70:
+            return "080"
+        elif percentage >= 60:
+            return "070"
+        elif percentage >= 50:
+            return "060"
+        elif percentage >= 40:
+            return "050"
+        elif percentage >= 30:
+            return "040"
+        elif percentage >= 20:
+            return "030"
+        elif percentage >= 10:
+            return "020"
+        else:
+            return "010"
+
+    @staticmethod
+    def get_battery_icon_file(percentage, is_charging, base_path=""):
+        """Get battery icon file path"""
+        level = Battery.get_battery_icon_level(percentage)
+        suffix = "-charging" if is_charging else ""
+        return f"{base_path}battery/battery-{level}{suffix}.svg"
+
+    @staticmethod
+    def get_profile_display_name(profile: str) -> str:
+        """Get user-friendly display name for power profile"""
+        profile_names = {
+            "power-saver": "Power Saver",
+            "powersave": "Power Saver",
+            "power_saver": "Power Saver",
+            "balanced": "Balanced",
+            "balance": "Balanced",
+            "performance": "Performance",
+            "performance-mode": "Performance"
+        }
+        return profile_names.get(profile, profile.title())
+
     @Signal
     def changed(self) -> None: ...
 
@@ -99,11 +144,43 @@ class Battery(Service):
             return self._profile_proxy.ActiveProfile
         return None
 
-    def set_power_profile(self, profile: str) -> bool:
+    @Property(list, "readable")
+    def available_profiles(self):
+        if self._profile_proxy:
+            try:
+                profiles = []
+                for p in self._profile_proxy.Profiles:
+                    if hasattr(p, 'Profile'):
+                        profiles.append(p.Profile)
+                    elif isinstance(p, dict) and 'Profile' in p:
+                        profiles.append(p['Profile'])
+                    elif isinstance(p, str):
+                        profiles.append(p)
+                return profiles
+            except Exception:
+                return []
+        return []
+
+    def change_power_profile(self, profile: str) -> bool:
         if not self._profile_proxy:
             return False
-        if profile not in [p.Profile for p in self._profile_proxy.Profiles]:
+
+        # Get available profiles using the same logic as available_profiles property
+        available_profiles = []
+        try:
+            for p in self._profile_proxy.Profiles:
+                if hasattr(p, 'Profile'):
+                    available_profiles.append(p.Profile)
+                elif isinstance(p, dict) and 'Profile' in p:
+                    available_profiles.append(p['Profile'])
+                elif isinstance(p, str):
+                    available_profiles.append(p)
+        except Exception:
             return False
+
+        if profile not in available_profiles:
+            return False
+
         try:
             self._profile_proxy.ActiveProfile = profile
             self.profile_changed.emit(profile)

@@ -8,6 +8,7 @@ from services.network import NetworkClient
 from utils.roam import modus_service
 from modules.controlcenter.wifi import WifiConnections
 from modules.controlcenter.bluetooth import BluetoothConnections
+from modules.controlcenter.battery import BatteryControl
 from widgets.mousecapture import DropDownMouseCapture
 from widgets.wayland import WaylandWindow as Window
 
@@ -324,9 +325,34 @@ class BatteryIndicator(Box):
             ),
         )
 
-        self.battery_button = Button(name="battery-button", child=self.battery_icon)
+        self.battery_button = Button(
+            name="battery-button",
+            child=self.battery_icon,
+            on_clicked=self.on_battery_clicked
+        )
 
         self.add(self.battery_button)
+
+        # Create Battery control center widget
+        self.battery_window = Window(
+            layer="overlay",
+            title="modus",
+            anchor="top right",
+            margin="2px 200px 0px 0px",
+            exclusivity="auto",
+            keyboard_mode="on-demand",
+            name="battery-control-window",
+            visible=False,
+        )
+
+        self.battery_widget = BatteryControl(self, show_back_button=False)
+        self.battery_window.children = [self.battery_widget]
+
+        # Create mouse capture for Battery widget
+        self.battery_mousecapture = DropDownMouseCapture(
+            layer="top", child_window=self.battery_window
+        )
+
         modus_service.connect("battery-changed", self.on_battery_changed)
         self.battery_service.connect("changed", self.on_battery_direct_changed)
 
@@ -360,32 +386,7 @@ class BatteryIndicator(Box):
 
         modus_service.battery = battery_state
 
-    def get_battery_icon_level(self, percentage):
-        if percentage >= 90:
-            return "100"
-        elif percentage >= 80:
-            return "090"
-        elif percentage >= 70:
-            return "080"
-        elif percentage >= 60:
-            return "070"
-        elif percentage >= 50:
-            return "060"
-        elif percentage >= 40:
-            return "050"
-        elif percentage >= 30:
-            return "040"
-        elif percentage >= 20:
-            return "030"
-        elif percentage >= 10:
-            return "020"
-        else:
-            return "010"
 
-    def get_battery_icon_file(self, percentage, is_charging):
-        level = self.get_battery_icon_level(percentage)
-        suffix = "-charging" if is_charging else ""
-        return f"battery/battery-{level}{suffix}.svg"
 
     def get_battery_tooltip(self, percentage, state):
         tooltip = f"Battery: {percentage}%"
@@ -413,11 +414,25 @@ class BatteryIndicator(Box):
             state = self.battery_service.state
             is_charging = state in ["CHARGING", "FULLY_CHARGED"]
 
-            icon_file = self.get_battery_icon_file(percentage, is_charging)
+            icon_file = Battery.get_battery_icon_file(
+                percentage,
+                is_charging,
+                base_path="../../../config/assets/icons/"
+            )
             tooltip = self.get_battery_tooltip(percentage, state)
 
         # Update icon and tooltip
-        self.battery_icon.set_from_file(
-            get_relative_path(f"../../../config/assets/icons/{icon_file}")
-        )
+        self.battery_icon.set_from_file(get_relative_path(icon_file))
         self.battery_button.set_tooltip_text(tooltip)
+
+    def on_battery_clicked(self, *args):
+        """Handle Battery indicator click"""
+        self.battery_mousecapture.toggle_mousecapture()
+
+    def close_battery(self, *args):
+        """Close Battery control center"""
+        self.battery_mousecapture.hide_child_window()
+
+    def hide_controlcenter(self, *args):
+        """Hide Battery control center"""
+        self.battery_mousecapture.hide_child_window()
