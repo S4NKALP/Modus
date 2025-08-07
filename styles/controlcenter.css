@@ -325,11 +325,17 @@
 /* Per-app volume control styles */
 #per-app-volume-control {
   margin: 0px;
+
   background-color: alpha(#999, 0.1);
+
   min-height: 140px;
+
   min-width: 140px;
+
   border: 0.5px solid alpha(#000, 0.4);
+
   border-radius: 8px;
+
   /* padding: 1rem; */
 }
 
@@ -478,6 +484,8 @@
 #per-app-volume-button {
   background-color: alpha(#fff, 0.15);
   border: 1px solid alpha(#999, 0.6);
+  min-width: 33px;
+  min-height: 30px;
   border-radius: 50%;
 }
 
@@ -493,10 +501,13 @@
 }
 
 #per-app-volume-icon {
-  /* font-size: 14px; */
-  /* font-weight: bold; */
-  /* color: #007aff; */
-  /* text-shadow: none; */
+  background-color: alpha(#fff, 0.15);
+
+  border: 2px solid alpha(#999, 0.6);
+
+  border-radius: 50%;
+
+  min-width: 30px;
 }
 
 /* Apple-style seek bar for expanded player */
