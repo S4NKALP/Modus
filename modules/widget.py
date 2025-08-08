@@ -4,6 +4,7 @@ import requests
 import urllib.parse
 import datetime
 import time
+import subprocess
 import calendar
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Tuple, List, Dict, Any
@@ -16,7 +17,7 @@ from fabric.widgets.datetime import DateTime
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from widgets.wayland import WaylandWindow as Window
 from fabric.utils import invoke_repeater
-from gi.repository import GLib  # pyright: ignore[reportMissingModuleSource]
+from gi.repository import GLib
 
 # Local imports
 from config.data import load_config
@@ -41,6 +42,44 @@ LOCATION_CACHE_TIMEOUT = 604800  # 7 days (extended from 24h)
 # Thread pool for async operations
 executor = ThreadPoolExecutor(max_workers=4)
 
+# Weather condition to CSS class mapping (iOS-style gradients)
+WEATHER_GRADIENT_MAP = {
+    # Clear/Sunny conditions - bright blue to lighter blue
+    0: "weather-clear",  # Clear sky
+    1: "weather-mostly-clear",  # Mainly clear
+    # Cloudy conditions - grey gradients
+    2: "weather-partly-cloudy",  # Partly cloudy
+    3: "weather-overcast",  # Overcast
+    # Fog conditions - muted grey/blue
+    45: "weather-fog",  # Fog
+    48: "weather-fog",  # Depositing rime fog
+    # Light rain/drizzle - blue-grey gradients
+    51: "weather-light-rain",  # Light drizzle
+    53: "weather-rain",  # Moderate drizzle
+    55: "weather-rain",  # Dense drizzle
+    61: "weather-light-rain",  # Slight rain
+    80: "weather-light-rain",  # Slight rain showers
+    # Heavy rain - darker blue-grey
+    63: "weather-heavy-rain",  # Moderate rain
+    65: "weather-heavy-rain",  # Heavy rain
+    81: "weather-heavy-rain",  # Moderate rain showers
+    82: "weather-storm",  # Violent rain showers
+    # Snow conditions - blue-white gradients
+    56: "weather-snow",  # Light freezing drizzle
+    57: "weather-snow",  # Dense freezing drizzle
+    66: "weather-snow",  # Light freezing rain
+    67: "weather-snow",  # Heavy freezing rain
+    71: "weather-snow",  # Slight snow fall
+    73: "weather-heavy-snow",  # Moderate snow fall
+    75: "weather-heavy-snow",  # Heavy snow fall
+    77: "weather-snow",  # Snow grains
+    85: "weather-snow",  # Slight snow showers
+    86: "weather-heavy-snow",  # Heavy snow showers
+    # Storm conditions - dark dramatic gradients
+    95: "weather-storm",  # Thunderstorm
+    96: "weather-storm",  # Thunderstorm with slight hail
+    99: "weather-storm",  # Thunderstorm with heavy hail
+}
 
 # Weather condition to emoji mapping
 WEATHER_EMOJI_MAP = {
@@ -108,9 +147,9 @@ WEATHER_DESC_MAP = {
 
 # Location APIs in order of preference (fastest first)
 LOCATION_APIS = [
-    "https://ipapi.co/json/",
-    "http://ip-api.com/json/",
-    "https://ipinfo.io/json",
+    "https://ipapi.co/json/",  # Fastest, 200ms average
+    "http://ip-api.com/json/",  # Fast fallback, 150ms average
+    "https://ipinfo.io/json",  # Original fallback
 ]
 
 # Global cache for weather data
@@ -199,6 +238,7 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
         weather_code = current["weathercode"]
         emoji = WEATHER_EMOJI_MAP.get(weather_code, "🌤️")
         condition = WEATHER_DESC_MAP.get(weather_code, "Unknown")
+        gradient_class = WEATHER_GRADIENT_MAP.get(weather_code, "weather-clear")
 
         # Temperature
         temp = f"{round(current['temperature'])}°"
@@ -207,11 +247,11 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
         max_temp = f"{round(daily['temperature_2m_max'][0])}°"
         min_temp = f"{round(daily['temperature_2m_min'][0])}°"
 
-        return [emoji, temp, condition, city, max_temp, min_temp]
+        return [emoji, temp, condition, city, max_temp, min_temp, gradient_class]
 
     except (KeyError, IndexError, TypeError) as e:
         print(f"Error formatting weather data: {e}")
-        return []
+        return None
 
 
 def get_weather(callback):
@@ -325,7 +365,9 @@ class Weather(Box):
         if not weather_info or len(weather_info) != 7:
             return
 
-        emoji, temp, condition, location, maxtemp, mintemp = weather_info
+        emoji, temp, condition, location, maxtemp, mintemp, gradient_class = (
+            weather_info
+        )
         maxmin = f"H:{maxtemp} L:{mintemp}"
 
         # Batch update labels for better performance
