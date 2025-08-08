@@ -50,8 +50,8 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [x] Desktop Widgets
 - [x] New Launcher (maybe like Spotlight)
 - [ ] Settings
-- [ ] New Dock with zoom effect on hover
-- [ ] New Application Switcher
+- [ ] Magnifier hover effect on Dock
+- [x] ~~New Application Switcher~~
 - [ ] Panel Widget
 - [x] Calendar Widget
 

@@ -24,6 +24,10 @@
   background-color: var(--surface-bright);
 }
 
+#menubar {
+  margin: 4px 0;
+}
+
 #menubar label {
   font-family: "SF Pro Rounded";
   font-size: 13px;

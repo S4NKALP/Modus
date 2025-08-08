@@ -387,22 +387,8 @@ class MenuBar(Box):
         # Create the dropdown system
         self.dropdown_system = MenuBarDropdowns(parent=parent_window)
 
-        # Create combined workspace and app label
-        self.workspace_label = Label(
-            label=f"{modus_service.current_workspace} -",
-            name="workspace-name",
-            style_classes="workspace-label",
-        )
-
-        # Connect to workspace changes
-        modus_service.connect(
-            "current-workspace-changed",
-            lambda _, value: self.workspace_label.set_label(f"{value} -"),
-        )
-
         # Add all the menu buttons to the menubar
         self.children = [
-            self.workspace_label,
             self.dropdown_system.global_menu_button_title,
             self.dropdown_system.global_menu_button_file,
             self.dropdown_system.global_menu_button_edit,

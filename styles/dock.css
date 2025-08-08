@@ -14,20 +14,8 @@
 #dock-separator {
   min-width: 3px;
   margin: 2px 0;
-  background-color: var(--surface-bright);
+  background-color: var(--shadow);
   border-radius: 8px;
-}
-
-#dock-app-button:hover {
-  margin-top: -55px;
-  margin-bottom: 4px;
-  transition: all 0.15s ease-out;
-}
-
-#dock-app-button.semi_hovered {
-  margin-top: -20px;
-  margin-bottom: 2px;
-  transition: all 0.15s ease-out;
 }
 
 #dock-app-overlay label {
@@ -36,4 +24,14 @@
   margin-top: 20px;
   min-width: 15px;
   border-radius: 8px;
+}
+
+#dock-app-button:hover,
+#dock-app-button:hover.instance {
+  background-color: var(--surface-bright);
+}
+
+#dock-app-button:active,
+#dock-app-button:active.instance {
+  background-color: #89b4fa;
 }
