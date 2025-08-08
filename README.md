@@ -59,7 +59,7 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 
 - [x] WiFi
 - [x] wifi off button looks bigger
-- [ ] Metadata Changes delay in Media Player
+- [x] Metadata Changes delay in Media Player
 
 ## Team
 
