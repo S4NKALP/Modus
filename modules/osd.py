@@ -413,7 +413,7 @@ class OSD(Window):
         super().__init__(
             layer="overlay",
             anchor="bottom",
-            title="modus",
+            title="modus-osd",
             child=self.main_box,
             visible=False,
             pass_through=True,

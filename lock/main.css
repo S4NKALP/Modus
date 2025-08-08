@@ -1,0 +1,37 @@
+/* album_cover.set_style(f"background-image:url('{fallback_cover_path}')") */
+#lockscreen-bg {
+  /* background-color: rgba(225, 225, 225, 0.9); */
+  background-image: url("/home/saumya/.current.wall");
+  background-size: cover;
+}
+* {
+  all: unset;
+  font-family: "SF Pro Rounded";
+}
+#password-entry {
+  background-color: white;
+  border-radius: 20px;
+  min-width: 300px;
+  color: black;
+  min-height: 50px;
+  font-size: 20px;
+  margin-bottom: 80px;
+  font-weight: bold;
+}
+
+#date {
+  background-color: transparent;
+  color: alpha(#fff, 0.5);
+  border: none;
+  font-size: 50px;
+  margin-top: 80px;
+  font-weight: bold;
+}
+#clock {
+  background-color: transparent;
+  color: alpha(#fff, 0.5);
+  border: none;
+  font-size: 150px;
+  margin-top: -20px;
+  font-weight: bold;
+}
