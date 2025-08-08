@@ -1,30 +1,26 @@
+from gi.repository import GLib, Gtk
 import json
 import os
 import re
 import subprocess
 
-from fabric.utils import get_relative_path, bulk_connect
-import gi
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.separator import Separator
-from gi.repository import Glace, GLib, Gtk
+from widgets.wayland import WaylandWindow as Window
+from loguru import logger
 
-from fabric.hyprland.widgets import get_hyprland_connection
-from fabric.utils.helpers import get_desktop_applications, exec_shell_command
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
-from utils.roam import modus_service
-from widgets.wayland import WaylandWindow as Window
-from widgets.popup_window import PopupWindow
-import config.data as data
+from fabric.utils.helpers import get_relative_path, get_desktop_applications
+from services.modus import modus_service
 from utils.functions import read_json_file, write_json_file
-
-gi.require_version("Glace", "0.1")
-
+import config.data as data
 
 # Pinned apps file
 PINNED_APPS_FILE = get_relative_path("../config/assets/dock.json")
@@ -32,373 +28,139 @@ PINNED_APPS_FILE = get_relative_path("../config/assets/dock.json")
 
 class AppBar(Box):
     def __init__(self, parent: Window):
-        self.client_buttons = {}
+        self.client_buttons = {}  # For running app instances
+        self.pinned_buttons = {}  # For pinned apps
         self._parent = parent
 
-        self.icon_size = data.DOCK_ICON_SIZE
-        self.preview_size = [200, 150]  # Default preview size
-        orientation = (
-            "vertical" if data.DOCK_POSITION in ["Left", "Right"] else "horizontal"
-        )
-
+        # Set orientation based on dock position
+        orientation = "vertical" if data.DOCK_POSITION in ["Left", "Right"] else "horizontal"
+        
         super().__init__(
             spacing=10,
             name="dock",
-            children=[],
             orientation=orientation,
+            children=[],
         )
         self.icon_resolver = IconResolver()
+        self._hyprland_connection = modus_service._hyprland_connection
 
-        self._manager = Glace.Manager()
-        self._preview_image = Image()
-
-        # Connect to Glace manager signals to automatically handle running apps
-        self._manager.connect("client-added", self._on_glace_client_added)
-        self._manager.connect("client-removed", self._on_glace_client_removed)
-
-        self.glace_client_buttons = {}
-
-        self.pinned_items_pos = []
-        self.running_items_pos = []
-
-        self.conn = get_hyprland_connection()
-
+        # Initialize GTK menu
         self.menu = Gtk.Menu()
-        self.pinned_apps_container = Box()
+
+        self.pinned_apps = read_json_file(PINNED_APPS_FILE) or []
+        self.pinned_apps_container = Box(name="pinned-apps-container")
         self.add(self.pinned_apps_container)
 
-        self.pinned_apps = read_json_file(PINNED_APPS_FILE)
-        if self.pinned_apps is None:
-            self.pinned_apps = []
-        self._populate_pinned_apps(self.pinned_apps)
+        self.separator = Separator(name="dock-separator")
+        self.add(self.separator)
 
-        self.add(Separator(name="dock-separator"))
-
-        # Container for running apps
         self.running_apps_container = Box(name="running-apps-container")
         self.add(self.running_apps_container)
 
-        # Setup preview popup if enabled
-        if data.DOCK_PREVIEW_APPS:
-            self._setup_preview_popup()
+        self._populate_pinned_apps()
+        self.setup_app_monitoring()
 
-        if not self.pinned_apps:
-            placeholder = Button(
-                name="dock-app-button",
-                image=Image(
-                    icon_name="view-app-grid-symbolic", icon_size=self.icon_size
-                ),
-                tooltip_text="Application Menu",
-            )
-            self.pinned_apps_container.add(placeholder)
+    def setup_app_monitoring(self):
+        def update_running_apps():
+            try:
+                self.update_dock_apps()
+            except Exception as e:
+                logger.error(f"[AppBar] Error updating apps: {e}")
+            return True
 
-        # Connect to modus service signals for dock apps changes
-        if modus_service:
-            modus_service.connect("dock-apps-changed", self._on_dock_apps_changed)
-            modus_service.connect(
-                "current-workspace-changed", self._on_workspace_changed
-            )
-            modus_service.connect(
-                "current-active-app-name-changed", self._on_active_app_changed
-            )
-            self._update_modus_service_dock_apps()
-        GLib.timeout_add(1000, self._delayed_update)
+        GLib.timeout_add(1000, update_running_apps)
+        GLib.idle_add(self.update_dock_apps)
 
-    def _setup_preview_popup(self):
-        self.popup_revealer = Revealer(
-            child=Box(
-                children=self._preview_image,
-                style_classes=["window-basic", "sleek-border"],
-            ),
-            transition_type="crossfade",
-            transition_duration=400,
-        )
+    def _populate_pinned_apps(self):
+        for child in self.pinned_apps_container.get_children():
+            self.pinned_apps_container.remove(child)
 
-        self.popup = PopupWindow(
-            parent=self._parent,
-            margin="0px 0px 80px 0px",
-            visible=False,
-            enable_boundary_checking=False,  # Disable boundary checking for dock previews
-        )
-        self.popup.children = self.popup_revealer
-
-        self.popup_revealer.connect(
-            "notify::child-revealed",
-            lambda *_: (
-                self.popup.set_visible(False)
-                if not self.popup_revealer.child_revealed
-                else None
-            ),
-        )
-
-    def update_preview_image_glace(self, client, client_button: Button):
-        if not hasattr(self, "popup") or not self.popup:
-            return
-
-        self.popup.set_pointing_to(client_button)
-
-        def capture_callback(pbuf, _):
-            self._preview_image.set_from_pixbuf(
-                pbuf.scale_simple(self.preview_size[0], self.preview_size[1], 2)
-            )
-            self.popup.set_visible(True)
-            self.popup_revealer.reveal()
-
-        try:
-            self._manager.capture_client(
-                client=client,
-                overlay_cursor=False,
-                callback=capture_callback,
-                user_data=None,
-            )
-        except Exception as e:
-            pass
-
-    def hide_preview(self):
-        if hasattr(self, "popup_revealer") and self.popup_revealer:
-            self.popup_revealer.unreveal()
-
-    def handle_item_hovered(self, item, is_pinned=False):
-        try:
-            if is_pinned:
-                if item in self.pinned_items_pos:
-                    index = self.pinned_items_pos.index(item)
-                    # Add semi_hovered to previous item
-                    if index > 0:
-                        self.pinned_items_pos[index - 1].add_style_class("semi_hovered")
-                    # Add semi_hovered to next item
-                    if index < len(self.pinned_items_pos) - 1:
-                        self.pinned_items_pos[index + 1].add_style_class("semi_hovered")
-            else:
-                if item in self.running_items_pos:
-                    index = self.running_items_pos.index(item)
-                    # Add semi_hovered to previous item
-                    if index > 0:
-                        self.running_items_pos[index - 1].add_style_class(
-                            "semi_hovered"
-                        )
-                    # Add semi_hovered to next item
-                    if index < len(self.running_items_pos) - 1:
-                        self.running_items_pos[index + 1].add_style_class(
-                            "semi_hovered"
-                        )
-        except (ValueError, IndexError):
-            pass
-
-    def handle_item_unhovered(self, item, is_pinned=False):
-        try:
-            if is_pinned:
-                if item in self.pinned_items_pos:
-                    index = self.pinned_items_pos.index(item)
-                    # Remove semi_hovered from previous item
-                    if index > 0:
-                        self.pinned_items_pos[index - 1].remove_style_class(
-                            "semi_hovered"
-                        )
-                    # Remove semi_hovered from next item
-                    if index < len(self.pinned_items_pos) - 1:
-                        self.pinned_items_pos[index + 1].remove_style_class(
-                            "semi_hovered"
-                        )
-            else:
-                if item in self.running_items_pos:
-                    index = self.running_items_pos.index(item)
-                    # Remove semi_hovered from previous item
-                    if index > 0:
-                        self.running_items_pos[index - 1].remove_style_class(
-                            "semi_hovered"
-                        )
-                    # Remove semi_hovered from next item
-                    if index < len(self.running_items_pos) - 1:
-                        self.running_items_pos[index + 1].remove_style_class(
-                            "semi_hovered"
-                        )
-        except (ValueError, IndexError):
-            pass
-
-    def clear_all_hover_effects(self):
-        try:
-            # Clear semi_hovered from all pinned items
-            for item in self.pinned_items_pos:
-                item.remove_style_class("semi_hovered")
-
-            # Clear semi_hovered from all running items
-            for item in self.running_items_pos:
-                item.remove_style_class("semi_hovered")
-
-            # Hide preview popup if it's showing
-            if hasattr(self, "popup_revealer") and self.popup_revealer:
-                self.popup_revealer.unreveal()
-        except Exception:
-            pass
-
-    def _delayed_update(self):
-        self.update_dock()
-        return False  # Don't repeat the timeout
-
-    def _on_glace_client_added(self, _, client):
-        try:
-            client_image = Image()
-
-            def on_button_press_event(event, client):
-                if event.button == 1:
-                    try:
-                        # Try to use Glace client methods if available
-                        if (
-                            hasattr(client, "get_activated")
-                            and hasattr(client, "get_minimized")
-                            and hasattr(client, "get_maximized")
-                        ):
-                            if not client.get_activated():
-                                client.activate()
-                            elif client.get_minimized():
-                                client.unminimize()
-                            elif client.get_maximized():
-                                client.unmaximize()
-                            else:
-                                client.maximize()
-                        else:
-                            # Fallback to simple activate
-                            client.activate()
-                    except Exception:
-                        # Final fallback to simple activate
-                        try:
-                            client.activate()
-                        except Exception:
-                            pass
-                elif event.button == 2:
-                    # Middle click: Pin the app to dock
-                    app_id = client.get_app_id()
-                    if app_id and not self.check_if_pinned(app_id):
-                        self._pin_app(app_id)
-                elif event.button == 3:
-                    # Show context menu for running app
-                    app_id = client.get_app_id()
-                    self.show_menu(app_id, client)
-                    self.menu.popup_at_pointer(event)
-
-            def on_app_id(*_):
-                app_id = client.get_app_id()
-                if not app_id:
-                    return
-
-                client_image.set_from_pixbuf(
-                    self.icon_resolver.get_icon_pixbuf(app_id, self.icon_size)
-                )
-
-                title = client.get_title()
-                client_button.set_tooltip_text(title if title else app_id)
-
-            def create_glace_hover_handlers(button):
-                def on_enter(*_):
-                    self.handle_item_hovered(button, False)
-                    if data.DOCK_PREVIEW_APPS:
-                        self.update_preview_image_glace(client, button)
-
-                def on_leave(*_):
-                    self.handle_item_unhovered(button, False)
-                    if data.DOCK_PREVIEW_APPS:
-                        self.popup_revealer.unreveal()
-
-                return on_enter, on_leave
-
-            client_button = Button(
-                name="dock-app-button",
-                image=client_image,
-                events=["enter-notify", "leave-notify"],
-                on_button_press_event=lambda _, event: on_button_press_event(
-                    event, client
-                ),
-            )
-
-            # Connect hover handlers after button creation
-            hover_enter, hover_leave = create_glace_hover_handlers(client_button)
-            client_button.connect("enter-notify-event", hover_enter)
-            client_button.connect("leave-notify-event", hover_leave)
-
-            self.glace_client_buttons[client.get_id()] = client_button
-            # Add to running items position tracking
-            self.running_items_pos.append(client_button)
-
-            bulk_connect(
-                client,
-                {
-                    "notify::app-id": on_app_id,
-                    "close": lambda *_: self._remove_glace_client_button(client),
-                },
-            )
-
-            self.running_apps_container.add(client_button)
-
-        except Exception:
-            pass
-
-    def _on_glace_client_removed(self, _, client):
-        self._remove_glace_client_button(client)
-
-    def _remove_glace_client_button(self, client):
-        try:
-            client_id = client.get_id()
-            if client_id in self.glace_client_buttons:
-                button = self.glace_client_buttons[client_id]
-                # Remove from position tracking
-                if button in self.running_items_pos:
-                    self.running_items_pos.remove(button)
-                self.running_apps_container.remove(button)
-                del self.glace_client_buttons[client_id]
-        except Exception:
-            pass
-
-    def _populate_pinned_apps(self, apps):
-        self.pinned_apps_container.children = []
-        # Clear pinned items position tracking
-        self.pinned_items_pos = []
+        self.pinned_buttons = {}
 
         try:
             desktop_apps = get_desktop_applications(include_hidden=False)
         except Exception:
             desktop_apps = []
 
-        for app_id in apps:
-            app = self._find_desktop_app(app_id, desktop_apps)
+        for app_data in self.pinned_apps:
+            self._create_pinned_button(app_data, desktop_apps)
+
+    def _create_pinned_button(self, app_data, desktop_apps):
+        if isinstance(app_data, dict):
+            app_identifier = app_data.get("name", "") or app_data.get(
+                "window_class", ""
+            )
+            display_name = app_data.get("display_name", app_identifier)
+            app = self._find_desktop_app_from_data(app_data, desktop_apps)
+
             if app:
-
-                def on_button_press_event(_, event, app=app, app_id=app_id):
-                    if event.button == 1:  # Left click
-                        self._launch_app(app)
-                    elif event.button == 2:  # Middle click
-                        # Unpin the app from dock
-                        self._unpin_app(app_id)
-                    elif event.button == 3:  # Right click
-                        self.show_menu(app_id)
-                        self.menu.popup_at_pointer(event)
-
-                def create_hover_handlers(button):
-                    return (
-                        lambda *_: self.handle_item_hovered(button, True),
-                        lambda *_: self.handle_item_unhovered(button, True),
-                    )
-
-                pinned_button = Button(
-                    name="dock-app-button",
-                    image=Image(pixbuf=app.get_icon_pixbuf(self.icon_size)),
-                    tooltip_text=app.display_name or app.name,
-                    events=["enter-notify", "leave-notify"],
-                    on_button_press_event=on_button_press_event,
+                icon_pixbuf = app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
+            else:
+                icon_name = app_data.get("window_class", "") or app_data.get("name", "")
+                icon_pixbuf = self.icon_resolver.get_icon_pixbuf(
+                    icon_name, data.DOCK_ICON_SIZE
                 )
+        else:
+            app_identifier = app_data
+            app = self._find_desktop_app_by_id(app_data, desktop_apps)
+            if not app:
+                return
 
-                # Connect hover handlers after button creation
-                hover_enter, hover_leave = create_hover_handlers(pinned_button)
-                pinned_button.connect("enter-notify-event", hover_enter)
-                pinned_button.connect("leave-notify-event", hover_leave)
+            display_name = app.display_name or app.name
+            icon_pixbuf = app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
 
-                # Add to pinned items position tracking
-                self.pinned_items_pos.append(pinned_button)
-                self.pinned_apps_container.add(pinned_button)
+        pinned_image = Image(pixbuf=icon_pixbuf)
 
-    def _find_desktop_app(self, app_id: str, desktop_apps):
+        icon_container = Box(
+            name="dock-icon",
+            orientation="vertical",
+            h_align="center",
+            children=[pinned_image],
+        )
+
+        overlay_container = Overlay(name="dock-app-overlay", child=icon_container)
+
+        pinned_button = Button(
+            name="dock-app-button",
+            child=overlay_container,
+            tooltip_text=display_name,
+            on_button_press_event=lambda _, event: self._handle_pinned_app_click(
+                event, app_data
+            ),
+        )
+
+        self.pinned_buttons[app_identifier] = pinned_button
+        self.pinned_apps_container.add(pinned_button)
+
+    def _find_desktop_app_from_data(self, app_data: dict, desktop_apps):
         for app in desktop_apps:
+            if (
+                (
+                    app_data.get("name")
+                    and app.name
+                    and app.name.lower() == app_data["name"].lower()
+                )
+                or (
+                    app_data.get("window_class")
+                    and hasattr(app, "window_class")
+                    and app.window_class
+                    and app.window_class.lower() == app_data["window_class"].lower()
+                )
+                or (
+                    app_data.get("executable")
+                    and app.executable
+                    and (
+                        app.executable.lower() == app_data["executable"].lower()
+                        or os.path.basename(app.executable).lower()
+                        == os.path.basename(app_data["executable"]).lower()
+                    )
+                )
+            ):
+                return app
+        return None
 
+    def _find_desktop_app_by_id(self, app_id: str, desktop_apps):
+        for app in desktop_apps:
             if (
                 (app.name and app.name.lower() == app_id.lower())
                 or (app.display_name and app.display_name.lower() == app_id.lower())
@@ -407,200 +169,442 @@ class AppBar(Box):
                     and app.window_class
                     and app.window_class.lower() == app_id.lower()
                 )
-                or (app.executable and app.executable.lower() == app_id.lower())
                 or (
                     app.executable
-                    and os.path.basename(app.executable).lower() == app_id.lower()
+                    and (
+                        app.executable.lower() == app_id.lower()
+                        or os.path.basename(app.executable).lower() == app_id.lower()
+                    )
                 )
             ):
                 return app
         return None
+
+    def show_menu(self, app_id: str, client=None, instance_address=None):
+        for item in self.menu.get_children():
+            self.menu.remove(item)
+            item.destroy()
+
+        if client or instance_address:
+            close_item = Gtk.MenuItem(label="Close")
+            if instance_address:
+                close_item.connect(
+                    "activate", lambda *_: self._close_running_app(instance_address)
+                )
+            self.menu.add(close_item)
+
+            if app_id:
+                separator = Gtk.SeparatorMenuItem()
+                self.menu.add(separator)
+
+        if app_id:
+            is_pinned = self._is_app_pinned(app_id)
+            pin_item = Gtk.MenuItem(label="Unpin" if is_pinned else "Pin")
+
+            if is_pinned:
+                pin_item.connect("activate", lambda *_: self._unpin_app(app_id))
+            else:
+                pin_item.connect("activate", lambda *_: self._pin_app(app_id))
+
+            self.menu.add(pin_item)
+
+        self.menu.show_all()
+
+    def _close_running_app(self, instance_address):
+        try:
+            self._hyprland_connection.send_command(
+                f"dispatch closewindow address:{instance_address}"
+            )
+        except Exception as e:
+            logger.error(f"[AppBar] Error closing window: {e}")
+
+    def _handle_pinned_app_click(self, event, app_data):
+        if event.button == 1:  # Left click - launch app
+            self._launch_app_data(app_data)
+        elif event.button == 2:  # Middle click - unpin app
+            app_identifier = self._get_app_identifier(app_data)
+            self._unpin_app(app_identifier)
+        elif event.button == 3:  # Right click - show context menu
+            app_identifier = self._get_app_identifier(app_data)
+            self.show_menu(app_identifier)
+            self.menu.popup_at_pointer(event)
+
+    def _get_app_identifier(self, app_data):
+        if isinstance(app_data, dict):
+            return app_data.get("name", "") or app_data.get("window_class", "")
+        return app_data
+
+    def _launch_app_data(self, app_data):
+        try:
+            desktop_apps = get_desktop_applications(include_hidden=False)
+
+            if isinstance(app_data, dict):
+                app = self._find_desktop_app_from_data(app_data, desktop_apps)
+                if app:
+                    self._launch_app(app)
+                else:
+                    self._launch_app_from_data(app_data)
+            else:
+                app = self._find_desktop_app_by_id(app_data, desktop_apps)
+                if app:
+                    self._launch_app(app)
+        except Exception as e:
+            logger.error(f"[AppBar] Failed to launch app: {e}")
 
     def _launch_app(self, app):
         try:
             cleaned_command = re.sub(r"%\w+", "", app.command_line).strip()
             final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
             subprocess.Popen(final_command, shell=True)
-
-        except Exception as e:
+        except Exception:
             try:
                 app.launch()
             except Exception as fallback_error:
-                pass
+                logger.error(f"[AppBar] Failed to launch app: {fallback_error}")
 
-    def check_if_pinned(self, app_id: str) -> bool:
-        return app_id in self.pinned_apps
-
-    def show_menu(self, app_id: str, client=None, window_address=None):
-        for item in self.menu.get_children():
-            self.menu.remove(item)
-            item.destroy()
-
-        if client or window_address:
-            close_item = Gtk.MenuItem(label="Close")
-            if client:
-                close_item.connect(
-                    "activate", lambda *_: self._close_running_app(client)
+    def _launch_app_from_data(self, app_data):
+        try:
+            command_line = app_data.get("command_line", "")
+            if command_line:
+                cleaned_command = re.sub(r"%\w+", "", command_line).strip()
+                final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
+                subprocess.Popen(final_command, shell=True)
+            elif app_data.get("executable"):
+                final_command = (
+                    f"hyprctl dispatch exec 'uwsm app -- {app_data['executable']}'"
                 )
-            self.menu.add(close_item)
-
-            # Add separator if we have both close and pin options
-            if app_id:
-                separator = Gtk.SeparatorMenuItem()
-                self.menu.add(separator)
-
-        # Add Pin/Unpin option (for both pinned and running apps)
-        if app_id:
-            pin_item = Gtk.MenuItem(label="Pin")
-            if self.check_if_pinned(app_id):
-                pin_item.set_label("Unpin")
-                pin_item.connect("activate", lambda *_: self._unpin_app(app_id))
+                subprocess.Popen(final_command, shell=True)
             else:
-                pin_item.connect("activate", lambda *_: self._pin_app(app_id))
-            self.menu.add(pin_item)
-
-        self.menu.show_all()
-
-    def _close_running_app(self, client):
-        try:
-            # Try to close the client gracefully first
-            client.close()
-        except Exception:
-            # If that fails, try to get the app_id and use hyprctl to kill the window
-            try:
-                app_id = client.get_app_id()
-                if app_id:
-                    # Use hyprctl to kill windows of this application class
-                    exec_shell_command(f"hyprctl dispatch closewindow class:{app_id}")
-            except Exception:
-                # Last resort: kill active window (not ideal but better than nothing)
-                try:
-                    exec_shell_command("hyprctl dispatch killactive")
-                except Exception:
-                    pass
-
-    def _unpin_app(self, app_id: str):
-        if not self.check_if_pinned(app_id):
-            return False
-
-        self.pinned_apps.remove(app_id)
-        write_json_file(self.pinned_apps, PINNED_APPS_FILE)
-        self._populate_pinned_apps(self.pinned_apps)
-        self._update_modus_service_dock_apps()
-        return True
-
-    def _pin_app(self, app_id: str):
-        if self.check_if_pinned(app_id):
-            return False
-
-        self.pinned_apps.append(app_id)
-        write_json_file(self.pinned_apps, PINNED_APPS_FILE)
-        self._populate_pinned_apps(self.pinned_apps)
-        self._update_modus_service_dock_apps()
-        return True
-
-    def update_dock(self, *args):
-        try:
-            if hasattr(self, "running_apps_container"):
-                self.running_apps_container.show_all()
-
+                logger.error(
+                    f"[AppBar] No command or executable found for app: {app_data}"
+                )
         except Exception as e:
-            pass
+            logger.error(f"[AppBar] Failed to launch app from data: {e}")
 
-    def _update_modus_service_dock_apps(self):
-        if modus_service:
-            try:
-                dock_apps_json = json.dumps(self.pinned_apps)
-                modus_service.dock_apps = dock_apps_json
-            except Exception as e:
-                pass
+    def _pin_app(self, app_class: str):
+        if self._is_app_pinned(app_class):
+            return False
 
-    def _on_dock_apps_changed(self, service, new_dock_apps: str):
-        new_pinned_apps = json.loads(new_dock_apps) if new_dock_apps else []
-        if new_pinned_apps != self.pinned_apps:
-            self.pinned_apps = new_pinned_apps
+        try:
+            desktop_apps = get_desktop_applications(include_hidden=False)
+            app = self._find_desktop_app_by_id(app_class, desktop_apps)
+
+            if app:
+                app_data = {
+                    "name": app.name,
+                    "display_name": app.display_name or app.name,
+                    "window_class": getattr(app, "window_class", None) or app_class,
+                    "executable": app.executable,
+                    "command_line": app.command_line,
+                }
+            else:
+                # Fallback: create minimal app data
+                app_data = {
+                    "name": app_class,
+                    "display_name": app_class,
+                    "window_class": app_class,
+                    "executable": app_class,
+                    "command_line": app_class,
+                }
+
+            self.pinned_apps.append(app_data)
+        except Exception:
+            self.pinned_apps.append(app_class)
+
+        write_json_file(self.pinned_apps, PINNED_APPS_FILE)
+        self._populate_pinned_apps()
+        return True
+
+    def _unpin_app(self, app_identifier: str):
+        apps_to_remove = []
+
+        for i, pinned_app in enumerate(self.pinned_apps):
+            if self._matches_app_identifier(pinned_app, app_identifier):
+                apps_to_remove.append(i)
+
+        for i in reversed(apps_to_remove):
+            self.pinned_apps.pop(i)
+
+        if apps_to_remove:
             write_json_file(self.pinned_apps, PINNED_APPS_FILE)
-            self._populate_pinned_apps(self.pinned_apps)
+            self._populate_pinned_apps()
+            return True
+        return False
 
-    def _on_workspace_changed(self, service, new_workspace: str):
-        self.update_dock()
+    def _matches_app_identifier(self, pinned_app, app_identifier):
+        if not app_identifier:
+            return False
 
-    def _on_active_app_changed(self, service, new_active_app: str):
-        self.update_dock()
+        if isinstance(pinned_app, dict):
+            window_class = pinned_app.get("window_class") or ""
+            name = pinned_app.get("name") or ""
+            return (
+                window_class.lower() == app_identifier.lower()
+                or name.lower() == app_identifier.lower()
+            )
+        return (
+            isinstance(pinned_app, str) and pinned_app.lower() == app_identifier.lower()
+        )
+
+    def get_clients(self):
+        try:
+            clients_data = self._hyprland_connection.send_command("j/clients").reply
+            if not clients_data:
+                return []
+            return json.loads(clients_data.decode("utf-8"))
+        except Exception as e:
+            logger.error(f"[AppBar] Error getting clients: {e}")
+            return []
+
+    def get_focused_window(self):
+        try:
+            active_data = self._hyprland_connection.send_command("j/activewindow").reply
+            if not active_data:
+                return None
+            return json.loads(active_data.decode("utf-8"))
+        except Exception as e:
+            logger.error(f"[AppBar] Error getting focused window: {e}")
+            return None
+
+    def update_dock_apps(self):
+        clients = self.get_clients()
+        focused_window = self.get_focused_window()
+        focused_address = focused_window.get("address", "") if focused_window else ""
+
+        current_instance_ids = set()
+
+        for client in clients:
+            if client.get("hidden", False):
+                continue
+
+            instance_address = client.get("address", "")
+            if not instance_address:
+                continue
+
+            current_instance_ids.add(instance_address)
+            app_class = client.get("class", "") or client.get("title", "unknown-app")
+
+            if instance_address not in self.client_buttons:
+                self.create_instance_button(instance_address, client, app_class)
+            else:
+                self.update_instance_button(instance_address, client, app_class)
+
+            button = self.client_buttons[instance_address]
+            if instance_address == focused_address:
+                button.add_style_class("active")
+            else:
+                button.remove_style_class("active")
+
+        self._update_pinned_apps_state(clients)
+        self._update_separator_visibility()
+
+        self._cleanup_removed_instances(current_instance_ids)
+
+    def _update_pinned_apps_state(self, clients):
+        running_app_classes = {
+            client.get("class", "").lower() or client.get("title", "").lower()
+            for client in clients
+            if not client.get("hidden", False)
+            and (client.get("class") or client.get("title"))
+        }
+
+        for app_identifier, button in self.pinned_buttons.items():
+            if app_identifier.lower() in running_app_classes:
+                button.add_style_class("instance")
+            else:
+                button.remove_style_class("instance")
+
+    def _cleanup_removed_instances(self, current_instance_ids):
+        buttons_to_remove = [
+            instance_id
+            for instance_id in self.client_buttons.keys()
+            if instance_id not in current_instance_ids
+        ]
+
+        for instance_id in buttons_to_remove:
+            button = self.client_buttons.pop(instance_id)
+            self.running_apps_container.remove(button)
+
+    def create_instance_button(self, instance_address, client, app_class):
+        client_image = Image()
+
+        try:
+            desktop_apps = get_desktop_applications(include_hidden=False)
+            desktop_app = self._find_desktop_app_by_id(app_class, desktop_apps)
+
+            if desktop_app:
+                pixbuf = desktop_app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
+            else:
+                pixbuf = self.icon_resolver.get_icon_pixbuf(app_class, data.DOCK_ICON_SIZE)
+
+            client_image.set_from_pixbuf(pixbuf)
+        except Exception as e:
+            logger.warning(f"[AppBar] Could not load icon for {app_class}: {e}")
+
+        workspace_id = self._get_workspace_id(client)
+        workspace_label = None
+        if workspace_id is not None:
+            workspace_label = Label(
+                label=str(workspace_id),
+                name="workspace-indicator",
+                h_align="end",
+                v_align="end",
+            )
+
+        image_overlay = Overlay(name="dock-image-overlay", child=client_image)
+        if workspace_label:
+            image_overlay.add_overlay(workspace_label)
+
+        icon_container = Box(
+            name="dock-icon",
+            orientation="vertical",
+            h_align="center",
+            children=[image_overlay],
+        )
+
+        overlay_container = Overlay(name="dock-app-overlay", child=icon_container)
+
+        tooltip_text = client.get("title", app_class)
+        if tooltip_text != app_class:
+            tooltip_text = f"{app_class}: {tooltip_text}"
+
+        client_button = Button(
+            name="dock-app-button",
+            child=overlay_container,
+            tooltip_text=tooltip_text,
+            on_button_press_event=lambda widget, event: self.handle_instance_click(
+                widget, event
+            ),
+        )
+
+        client_button.instance_address = instance_address
+        client_button.client_data = client
+        client_button.app_class = app_class
+        client_button.workspace_label = workspace_label
+
+        self.client_buttons[instance_address] = client_button
+        self.running_apps_container.add(client_button)
+
+    def _get_workspace_id(self, client):
+        workspace_data = client.get("workspace", {})
+        if isinstance(workspace_data, dict):
+            return workspace_data.get("id")
+        elif isinstance(workspace_data, (int, str)):
+            return workspace_data
+        return None
+
+    def update_instance_button(self, instance_address, client, app_class):
+        if instance_address not in self.client_buttons:
+            return
+
+        button = self.client_buttons[instance_address]
+        button.client_data = client
+        button.app_class = app_class
+
+        tooltip_text = client.get("title", app_class)
+        if tooltip_text != app_class:
+            tooltip_text = f"{app_class}: {tooltip_text}"
+        button.set_tooltip_text(tooltip_text)
+
+        workspace_id = self._get_workspace_id(client)
+        existing_label = getattr(button, "workspace_label", None)
+
+        overlay_container = button.get_child()
+        if isinstance(overlay_container, Overlay):
+            icon_container = overlay_container.get_child()
+            if hasattr(icon_container, "get_children"):
+                children = icon_container.get_children()
+                if children:
+                    image_overlay = children[0]
+                    if isinstance(image_overlay, Overlay):
+                        # Remove existing workspace label
+                        if existing_label and existing_label.get_parent():
+                            image_overlay.remove_overlay(existing_label)
+
+                        # Add new workspace label if needed
+                        if workspace_id is not None:
+                            new_label = Label(
+                                label=str(workspace_id),
+                                name="workspace-indicator",
+                                h_align="end",
+                                v_align="end",
+                            )
+                            image_overlay.add_overlay(new_label)
+                            button.workspace_label = new_label
+                        else:
+                            button.workspace_label = None
+
+    def handle_instance_click(self, button_widget, event):
+        instance_address = getattr(button_widget, "instance_address", None)
+        app_class = getattr(button_widget, "app_class", None)
+
+        if event.button == 1:  # Left click - focus window
+            if instance_address:
+                try:
+                    self._hyprland_connection.send_command(
+                        f"dispatch focuswindow address:{instance_address}"
+                    )
+                except Exception as e:
+                    logger.error(f"[AppBar] Error focusing window: {e}")
+
+        elif event.button == 2:  # Middle click - pin/unpin app
+            if app_class and not self._is_app_pinned(app_class):
+                self._pin_app(app_class)
+
+        elif event.button == 3:  # Right click - context menu
+            if app_class:
+                self.show_menu(app_class, instance_address=instance_address)
+                self.menu.popup_at_pointer(event)
+
+    def _is_app_pinned(self, app_class: str) -> bool:
+        return any(
+            self._matches_app_identifier(pinned_app, app_class)
+            for pinned_app in self.pinned_apps
+        )
+
+    def _update_separator_visibility(self):
+        has_pinned_apps = len(self.pinned_buttons) > 0
+        has_running_apps = len(self.client_buttons) > 0
+        self.separator.set_visible(has_pinned_apps and has_running_apps)
 
 
 class Dock(Window):
     def __init__(self):
-        self.dock_enabled = data.DOCK_ENABLED
-        anchor_map = {
-            "Bottom": "bottom center",
-            "Left": "left center",
-            "Right": "right center",
-        }
-        anchor = anchor_map.get(data.DOCK_POSITION, "bottom center")
+        if not data.DOCK_ENABLED:
+            anchor = self._get_anchor_from_position()
+            super().__init__(layer="top", anchor=anchor)
+            self.children = Box()  # Empty dock if disabled
+            return
 
-        super().__init__(
-            layer="top",
-            title="modus-dock",
-            anchor=anchor,
-            visible=False,  # Start hidden until content is ready
-        )
-        if data.DOCK_POSITION == "Left":
-            transition_type = "slide-right"
-            padding_style = "padding: 50px 5px 50px 20px;"
-        elif data.DOCK_POSITION == "Right":
-            transition_type = "slide-left"
-            padding_style = "padding: 50px 20px 50px 5px;"
-        else:  # Bottom
-            transition_type = "slide-up"
-            padding_style = "padding: 20px 50px 5px 50px;"
+        anchor = self._get_anchor_from_position()
+        super().__init__(layer="top", anchor=anchor)
 
         self.app_bar = AppBar(self)
+        
+        transition_type = self._get_transition_type()
+        
         self.revealer = Revealer(
-            child=Box(children=[self.app_bar], style=padding_style),
+            child=Box(children=[self.app_bar], style="padding: 20px 50px 5px 50px;"),
             transition_duration=500,
             transition_type=transition_type,
         )
 
-        if data.DOCK_AUTO_HIDE:
-            self.children = EventBox(
-                events=["enter-notify", "leave-notify"],
-                child=Box(style="min-height: 1px", children=self.revealer),
-                on_enter_notify_event=lambda *_: self.on_hover_enter(),
-                on_leave_notify_event=lambda *_: self.on_hover_leave(),
-            )
-        else:
-            self.children = EventBox(
-                events=["enter-notify", "leave-notify"],
-                child=Box(children=self.revealer, style="min-height: 60px;"),
-                on_leave_notify_event=lambda *_: self.on_hover_leave_no_autohide(),
-            )
+        self.children = EventBox(
+            events=["enter-notify", "leave-notify"],
+            child=Box(style="min-height: 1px", children=self.revealer),
+            on_enter_notify_event=lambda *_: self.on_hover_enter(),
+            on_leave_notify_event=lambda *_: self.on_hover_leave(),
+        )
 
-        if data.DOCK_AUTO_HIDE:
-            self.revealer.set_reveal_child(False)
-        else:
-            self.revealer.set_reveal_child(True)
+        self.revealer.set_reveal_child(True)
 
-        if not data.DOCK_ENABLED:
-            self.set_visible(False)
-        else:
-            # Show dock now that content is ready
-            self.set_visible(True)
-
-        # Set up occlusion checking
         self.dock_height = 100
         self.is_hovered = False
         self.hide_timeout_id = None
-
+        
         # Only setup occlusion monitoring if auto-hide is enabled
         if data.DOCK_AUTO_HIDE:
             self.setup_occlusion_monitoring()
-
-        # Connect to modus service for dock visibility control
-        if modus_service:
-            modus_service.connect("dock-hidden-changed", self._on_dock_hidden_changed)
-            modus_service.connect("dock-width-changed", self._on_dock_width_changed)
-            modus_service.connect("dock-height-changed", self._on_dock_height_changed)
 
     def on_hover_enter(self):
         self.is_hovered = True
@@ -611,90 +615,51 @@ class Dock(Window):
 
     def on_hover_leave(self):
         self.is_hovered = False
-        if hasattr(self, "app_bar"):
-            self.app_bar.clear_all_hover_effects()
 
-    def on_hover_leave_no_autohide(self):
-        if hasattr(self, "app_bar"):
-            self.app_bar.clear_all_hover_effects()
+    def _get_anchor_from_position(self):
+        if data.DOCK_POSITION == "Left":
+            return "left center"
+        elif data.DOCK_POSITION == "Right":
+            return "right center"
+        else:  # Bottom (default)
+            return "bottom center"
+
+    def _get_transition_type(self):
+        if data.DOCK_POSITION == "Left":
+            return "slide-right"
+        elif data.DOCK_POSITION == "Right":
+            return "slide-left"
+        else:  # Bottom (default)
+            return "slide-up"
+
+    def _get_occlusion_position(self):
+        if data.DOCK_POSITION == "Left":
+            return ("left", self.dock_height)
+        elif data.DOCK_POSITION == "Right":
+            return ("right", self.dock_height)
+        else:  # Bottom (default)
+            return ("bottom", self.dock_height)
 
     def setup_occlusion_monitoring(self):
         def check_dock_occlusion():
             try:
-                if data.DOCK_POSITION == "Left":
-                    position = ("left", self.dock_height)
-                elif data.DOCK_POSITION == "Right":
-                    position = ("right", self.dock_height)
-                else:  # Bottom
-                    position = ("bottom", self.dock_height)
-
                 if data.DOCK_ALWAYS_OCCLUDED:
                     is_occluded = True
                 else:
-                    is_occluded = check_occlusion(position)
+                    occlusion_position = self._get_occlusion_position()
+                    is_occluded = check_occlusion(occlusion_position)
 
-                current_visible = self.revealer.get_reveal_child()
-
-                if is_occluded and not self.is_hovered and current_visible:
+                if (
+                    is_occluded
+                    and not self.is_hovered
+                    and self.revealer.get_reveal_child()
+                ):
                     self.revealer.set_reveal_child(False)
-                elif not is_occluded and not current_visible and not self.is_hovered:
+                elif not is_occluded and not self.revealer.get_reveal_child():
                     self.revealer.set_reveal_child(True)
-
             except Exception as e:
-                pass
+                logger.error(f"[Dock] Occlusion check error: {e}")
 
             return True
 
         GLib.timeout_add(250, check_dock_occlusion)
-
-    def _update_size(self):
-        try:
-            if hasattr(self, "revealer") and self.revealer.get_child():
-                app_bar = self.revealer.get_child().get_children()[0]
-                if hasattr(app_bar, "get_preferred_width"):
-                    width, _ = app_bar.get_preferred_width()
-                    height, _ = app_bar.get_preferred_height()
-                    self.set_size_request(width, height)
-        except Exception as e:
-            pass
-        return False
-
-    def _on_dock_hidden_changed(self, service, hidden: bool):
-        try:
-            if hidden:
-                self.revealer.set_reveal_child(False)
-                self.set_visible(False)
-            else:
-                self.set_visible(True)
-                self.revealer.set_reveal_child(True)
-        except Exception as e:
-            pass
-
-    def _on_dock_width_changed(self, service, width: int):
-        try:
-            # Could be used to adjust dock width dynamically
-            # For now, just log the change
-            pass
-        except Exception as e:
-            pass
-
-    def _on_dock_height_changed(self, service, height: int):
-        try:
-            self.dock_height = height if height > 0 else 100
-        except Exception as e:
-            pass
-
-    def reload_data(self):
-        if not data.DOCK_ENABLED and self.dock_enabled:
-            self.set_visible(False)
-            self.dock_enabled = False
-        elif data.DOCK_ENABLED and not self.dock_enabled:
-            self.set_visible(True)
-            self.dock_enabled = True
-        # Update auto-hide behavior
-        if hasattr(self, "revealer"):
-            if data.DOCK_AUTO_HIDE:
-                if not hasattr(self, "is_hovered"):
-                    self.setup_occlusion_monitoring()
-            else:
-                self.revealer.set_reveal_child(True)
