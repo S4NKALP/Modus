@@ -11,12 +11,11 @@
 #switcher-button {
   padding: 4px;
   min-width: 100px;
-  border-radius: 16px;
 }
 
 #window-button {
   background-color: var(--surface);
-  border-radius: 16px;
+  border-radius: 4px;
 }
 
 #switcher-button:hover {

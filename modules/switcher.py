@@ -10,6 +10,7 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from utils.icon_resolver import IconResolver
+from utils.occlusion import get_screen_dimensions
 from widgets.wayland import WaylandWindow as Window
 
 gi.require_version("Glace", "0.1")
@@ -38,7 +39,14 @@ class ApplicationSwitcher(Window):
 
         # Initialize Glace manager for window previews
         self._manager = Glace.Manager()
-        self.preview_size = [150, 100]  # Preview size for each window in switcher
+
+        # Calculate preview size based on screen ratio
+        # Formula: screen_ratio = a:b, width = x, height = (x*b)/a
+        screen_width, screen_height = get_screen_dimensions()
+        preview_width = 150  # Base width
+        preview_height = int((preview_width * screen_height) / screen_width)
+        self.preview_size = [preview_width, preview_height]
+
         self.glace_clients = {}  # Map window addresses to Glace clients
         self.window_previews = {}  # Map window addresses to preview images
 
@@ -113,8 +121,12 @@ class ApplicationSwitcher(Window):
                     client_app_id = client.get_app_id()
                     client_title = client.get_title()
 
-                    if (client_app_id and client_app_id.lower() == window_class and
-                        client_title and client_title == window_title):
+                    if (
+                        client_app_id
+                        and client_app_id.lower() == window_class
+                        and client_title
+                        and client_title == window_title
+                    ):
                         return client
                 except Exception:
                     continue
@@ -141,12 +153,13 @@ class ApplicationSwitcher(Window):
         preview_image = Image()
 
         if glace_client:
+
             def capture_callback(pbuf, _):
                 try:
                     scaled_pixbuf = pbuf.scale_simple(
                         self.preview_size[0],
                         self.preview_size[1],
-                        2  # GdkPixbuf.InterpType.BILINEAR
+                        2,  # GdkPixbuf.InterpType.BILINEAR
                     )
                     preview_image.set_from_pixbuf(scaled_pixbuf)
                 except Exception as e:
