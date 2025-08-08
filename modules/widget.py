@@ -341,11 +341,22 @@ class Weather(Box):
     def _create_labels(self):
         """Create all weather labels."""
         self.city = Label(
-            name="city", label="Loading...", justification="right", h_align="start"
+            name="city",
+            label="Loading...",
+            justification="right",
+            h_align="start",
+            max_chars_width=12,
+            ellipsization="end",
         )
         self.temperature = Label(name="temperature", label="--°", h_align="start")
         self.condition_em = Label(name="condition-emoji", label="🌤️", h_align="start")
-        self.condition = Label(name="condition", label="Loading...", h_align="start")
+        self.condition = Label(
+            name="condition",
+            label="Loading...",
+            max_chars_width=18,
+            ellipsization="end",
+            h_align="start",
+        )
         self.feels_like = Label(name="feels-like", label="H:-- L:--", h_align="start")
 
     def _layout_labels(self):
