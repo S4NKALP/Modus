@@ -1,11 +1,9 @@
 import json
-from typing import List
-
-from loguru import logger
 
 from fabric.core.service import Property, Service, Signal
 from fabric.hyprland.service import Hyprland
-from fabric.notifications import Notification
+from loguru import logger
+
 from services.custom_notification import CachedNotifications
 
 notification_service = CachedNotifications()

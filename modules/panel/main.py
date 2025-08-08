@@ -16,6 +16,7 @@ from modules.panel.components.indicators import (
 )
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
+from modules.panel.components.workspace import WorkspaceIndicator
 from utils.roam import modus_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
@@ -133,6 +134,9 @@ class Panel(Window):
 
         self.recording_indicator = RecordingIndicator()
 
+        # Workspace indicator
+        self.workspace_indicator = WorkspaceIndicator()
+
         self.children = CenterBox(
             name="panel",
             start_children=Box(
@@ -151,6 +155,7 @@ class Panel(Window):
                 spacing=4,
                 orientation="h",
                 children=[
+                    self.workspace_indicator,
                     self.dnd_indicator,
                     self.tray_revealer,
                     self.chevron_button,
