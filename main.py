@@ -1,8 +1,21 @@
 import gi
+import setproctitle
+from fabric import Application
+from fabric.core import widgets
+from fabric.utils import get_relative_path, monitor_file
+from loguru import logger
+
+from config.data import APP_NAME
+from modules.dock import Dock
+from modules.launcher.main import Launcher
+from modules.notification.notification import ModusNoti
+from modules.osd import OSD
+from modules.panel.main import Panel
+from modules.switcher import ApplicationSwitcher
+from modules.widget import Deskwidgets
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk, Gdk
 
 # Initialize fontconfig early to prevent warnings
 try:
@@ -13,22 +26,8 @@ try:
 except:
     pass
 
-from fabric.core import widgets
-import setproctitle
-from loguru import logger
-
-from config.data import APP_NAME
-from fabric import Application
-from fabric.utils import get_relative_path, monitor_file
-from modules.dock import Dock
-from modules.launcher.main import Launcher
-from modules.notification.notification import ModusNoti
-from modules.widget import Deskwidgets
-from modules.osd import OSD
 
 # from modules.corners import Corners
-from modules.panel.main import Panel
-from modules.switcher import ApplicationSwitcher
 
 for log in [
     "fabric.hyprland.widgets",

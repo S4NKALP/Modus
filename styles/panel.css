@@ -97,3 +97,32 @@
   font-size: 17px;
   margin: 0 10px;
 }
+
+#workspace-indicator {
+  margin: 0 4px;
+}
+
+#workspaces > button {
+  padding: 0px 8px;
+  margin: 4px 0px;
+  min-width: 12px;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+
+#workspaces > button:hover {
+  background-color: var(--surface-bright);
+}
+
+#workspaces > button.active {
+  background-color: var(--on-tertiary);
+  font-weight: bold;
+}
+
+#workspaces > button.urgent {
+  background-color: var(--on-error);
+}
+
+#workspaces > button.empty {
+  background-color: var(--outline);
+}
