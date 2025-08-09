@@ -30,6 +30,8 @@ menu {
 menu > menuitem {
   padding: 5px 10px;
   margin: 1px 2px;
+  font-size: 13px;
+  font-family: "SF Pro Rounded";
   border-bottom: #474747 solid 1px;
 }
 
@@ -38,6 +40,8 @@ menu > menuitem:last-child {
 }
 menu > menuitem:hover {
   transition: all 20ms ease-in-out;
+  font-family: "SF Pro Rounded";
+  font-size: 13px;
   border-radius: 4px;
   color: #222;
   background-color: alpha(#2369ff, 1);
