@@ -64,7 +64,7 @@ class AppName:
     def format_app_name(self, title, wmclass, update=False):
         # Handle case when both title and wmclass are empty (no active window)
         if not title and not wmclass:
-            name = "Hyprland"
+            name = "Finder"
         else:
             name = wmclass
             if name == "":
@@ -292,7 +292,7 @@ class MenuBarDropdowns:
         self.global_menu_button_title = Button(
             child=ActiveWindow(
                 formatter=FormattedString(
-                    "{ format_window(win_title, win_class) if win_title or win_class else 'Hyprland' }",
+                    "{ format_window(win_title, win_class) if win_title or win_class else 'Finder' }",
                     format_window=format_window,
                 )
             ),
