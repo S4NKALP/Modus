@@ -26,6 +26,7 @@
 /* Widgets */
 #wifi-widget,
 #bluetooth-widget {
+  min-width: 150px;
   padding: 10px;
 }
 
