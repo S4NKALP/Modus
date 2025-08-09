@@ -13,12 +13,12 @@
 @import url("./styles/widgets.css");
 @import url("./styles/tray.css");
 @import url("./styles/battery-widget.css");
+@import url("./styles/lock.css");
 
 * {
   all: unset;
   color: var(--foreground);
-  font-size: 13px;
-  font-family: "SF Pro Rounded";
+  font-size: unset;
 }
 
 #corner {
