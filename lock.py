@@ -1,7 +1,14 @@
-import gi, pam, fabric
+import gi, pam
+
+gi.require_version("Gdk", "3.0")
+gi.require_version("Gtk", "3.0")
+
 
 gi.require_version("GtkSessionLock", "0.1")
-from gi.repository import Gdk, GtkSessionLock
+from gi.repository import (
+    Gdk,  # pyright: ignore[reportMissingModuleSource]
+    GtkSessionLock,  # pyright: ignore[reportAttributeAccessIssue]
+)
 
 from fabric.widgets.window import Window
 
@@ -30,8 +37,8 @@ class IndicatorBox(Box):
     def __init__(self, *args, **kwargs):
         super().__init__(
             h_align="end",
-            name="indicatorbox",
-            spacing=5,
+            name="indicator-box",
+            spacing=9,
             h_expand=True,
             children=[
                 BatteryIndicator(show_window=False),
@@ -50,7 +57,7 @@ class ContentBox(CenterBox):
             v_align="center",
             visible=False,
             password=True,
-            # on_activate=on_activate,
+            on_activate=on_activate,
         )
 
         self.password_entry.set_property("xalign", 0.5)
@@ -92,7 +99,7 @@ class ContentBox(CenterBox):
                     children=[
                         Image(
                             name="face-icon",
-                            image_file="/home/saumya/.face.icon",
+                            image_file=os.path.expanduser("~/.face.icon"),
                             size=64,
                         ),
                     ],
@@ -131,7 +138,7 @@ class LockScreen(Window):
         self.content = ContentBox(self.on_activate)
         super().__init__(
             title="lock",
-            visible=True,
+            visible=False,
             all_visible=False,
             name="lockscreen-bg",
             anchor="center",
@@ -183,9 +190,12 @@ class LockScreen(Window):
 
     def on_activate(self, entry: Entry, *args):
         if not pam.authenticate(getpass.getuser(), (entry.get_text() or "").strip()):
+            entry.set_text("")
+            entry.set_placeholder_text("Wrong Password")
             return
         self.lock.unlock_and_destroy()
         self.destroy()
+        GLib.idle_add(app.quit)  # schedules quit after unlock
 
 
 def initialize():
@@ -194,15 +204,15 @@ def initialize():
     lockscreen = LockScreen(lock)
     lock.new_surface(
         lockscreen,
-        Gdk.Display.get_default().get_monitor(
+        Gdk.Display.get_default().get_monitor(  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
             0
-        ),  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+        ),
     )
-    lockscreen.show_all()
+    lockscreen.show()
 
 
 if __name__ == "__main__":
-    # initialize()
+    initialize()
     lockscreen = LockScreen(GtkSessionLock.Lock())
 
     app = Application("lock", lockscreen)
