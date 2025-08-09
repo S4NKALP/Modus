@@ -20,6 +20,7 @@ from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
 from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from services.mpris import MprisPlayerManager
+from services.network import NetworkClient
 from fabric.widgets.svg import Svg
 from fabric.utils.helpers import get_relative_path
 
@@ -57,6 +58,13 @@ class ModusControlCenter(Window):
         self._per_app_volume_widget = None
         self._expanded_player_widget = None
         self._mpris_manager = None  # Shared MPRIS manager instance
+
+        # Initialize network service for WiFi toggle
+        self.network_service = NetworkClient()
+        self.wifi_service = None
+        
+        # Wait for network service to be ready
+        self.network_service.connect("wifi-device-added", self.on_network_ready)
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
@@ -576,15 +584,46 @@ class ModusControlCenter(Window):
         except Exception as e:
             logger.warning(f"Failed to toggle bluetooth: {e}")
 
+    def on_network_ready(self, *_):
+        """Called when network service is ready"""
+        self.wifi_service = self.network_service.wifi_device
+        if self.wifi_service:
+            # Connect to WiFi state changes to update icon
+            self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
+
+    def update_wifi_icon(self, *_):
+        """Update WiFi icon based on current state"""
+        try:
+            if self.wifi_service and hasattr(self, 'wifi_svg'):
+                is_enabled = self.wifi_service.wireless_enabled
+                icon_file = (
+                    "../../config/assets/icons/applets/wifi.svg"
+                    if is_enabled
+                    else "../../config/assets/icons/applets/wifi-off.svg"
+                )
+                self.wifi_svg.set_from_file(get_relative_path(icon_file))
+                
+                # Also update the label
+                if is_enabled:
+                    if hasattr(self.wifi_service, 'active_access_point') and self.wifi_service.active_access_point:
+                        # Connected to a network
+                        GLib.idle_add(lambda: self.wlan_label.set_label("Connected"))
+                    else:
+                        # WiFi enabled but not connected
+                        GLib.idle_add(lambda: self.wlan_label.set_label("Not Connected"))
+                else:
+                    # WiFi disabled
+                    GLib.idle_add(lambda: self.wlan_label.set_label("No Connection"))
+        except Exception as e:
+            logger.warning(f"Failed to update WiFi icon: {e}")
+
     def toggle_wifi(self, *_):
         """Toggle wifi on/off"""
         try:
-            # Import and use the network service
-            from services.network import WiFiDevice
-
-            wifi_device = WiFiDevice.get_default()
-            if wifi_device:
-                wifi_device.toggle_wifi()
+            if self.wifi_service:
+                self.wifi_service.toggle_wifi()
+                # Update icon immediately after toggle
+                GLib.timeout_add(100, self.update_wifi_icon)
             else:
                 logger.warning("WiFi device not available for toggling")
         except Exception as e:
