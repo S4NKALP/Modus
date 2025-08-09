@@ -2,6 +2,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GLib, Gtk
+from loguru import logger
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -293,14 +294,7 @@ class WifiConnections(Box):
         if self.wifi_service:
             # Set up WiFi toggle
             self.toggle_button.set_active(self.wifi_service.wireless_enabled)
-            self.toggle_button.connect(
-                "notify::active",
-                lambda *_: setattr(
-                    self.wifi_service,
-                    "wireless_enabled",
-                    self.toggle_button.get_active(),
-                ),
-            )
+            self.toggle_button.connect("notify::active", self.on_toggle_changed)
 
             # Connect to WiFi service signals
             self.wifi_service.connect(
@@ -312,6 +306,13 @@ class WifiConnections(Box):
 
             # Initial network update
             self.update_networks()
+
+    def on_toggle_changed(self, toggle_button, *_):
+        """Handle WiFi toggle button changes"""
+        if self.wifi_service:
+            new_state = toggle_button.get_active()
+            self.wifi_service.wireless_enabled = new_state
+            logger.info(f"[WiFi] Toggle changed to: {new_state}")
 
     def on_wifi_enabled_changed(self, *_):
         """Handle WiFi enabled state changes"""
