@@ -67,12 +67,12 @@ class ModusControlCenter(Window):
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
-        self.network_service.connect("wifi-device-added", self.on_network_ready)
         volume = 100
         wlan = modus_service.sc("wlan-changed", self.wlan_changed)
         bluetooth = modus_service.sc("bluetooth-changed", self.bluetooth_changed)
         music = modus_service.sc("music-changed", self.audio_changed)
 
+        self.network_service.connect("wifi-device-added", self.on_network_ready)
         # Store signal connections for cleanup
         self._signal_connections.extend(
             [

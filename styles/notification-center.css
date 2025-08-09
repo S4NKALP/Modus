@@ -1,24 +1,180 @@
 #noti-center-box {
-  background-color: alpha(#fff, 0.09);
+  background-color: transparent;
 
-  border: 1px solid alpha(#111, 0.3);
+  /* border: 1px solid alpha(#111, 0.3); */
   border-radius: 10px;
-  padding: 20px;
+  margin-right: 10px;
+  /* padding: 20px; */
   /* margin: 6px; */
 }
 
-#noti-clear-button {
-  min-width: 10px;
-  min-height: 40px;
-  border-radius: 10px;
+#noti-clear-button label {
+  /* min-width: 10px; */
+  background-color: alpha(#202828, 0.8);
+  min-height: 25px;
+  min-width: 70px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: "SF Pro Rounded";
+  border: 1.5px solid #525155;
+  border-radius: 15px;
   margin-top: 10px;
 }
 
-#noti-clear-button {
-  background-color: alpha(#888, 0.09);
-}
 #noti-clear-button:hover {
   background-color: alpha(#fff, 0.09);
+}
+
+/* Expandable notification group styles */
+#notification-group {
+  margin: 4px 0;
+}
+
+/* Single notification (no stacking) */
+#single-notification-content {
+  background-color: alpha(#202828, 0.8);
+  border: 1.5px solid #525155;
+  border-radius: 12px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+#single-notification-content:hover {
+  background-color: alpha(#999, 0.9);
+  border: 1.5px solid #525155;
+}
+
+/* Stacked notification container */
+#notification-stack-container {
+  background-color: transparent;
+  margin: 8px 0;
+}
+
+/* Bottom shadow layer (deepest) - offset to show stacking from below */
+#stack-shadow-bottom {
+  background-color: alpha(#202828, 0.9);
+  border: 1.5px solid #525155;
+  border-radius: 12px;
+  opacity: 1;
+  min-height: 16px;
+  margin-left: 20px;
+  margin-right: -4px;
+  margin-bottom: -8px;
+}
+
+/* Middle shadow layer */
+#stack-shadow-middle {
+  background-color: alpha(#202828, 0.9);
+  border: 1.5px solid #525155;
+  border-radius: 12px;
+  opacity: 1;
+  min-height: 20px;
+  margin-left: 10px;
+  margin-right: -2px;
+  margin-bottom: -12px;
+}
+
+/* Main notification content (top layer) */
+#stack-main-notification {
+  background-color: alpha(#202828, 1);
+  border: 1.5px solid #525155;
+  border-radius: 12px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+/* Hover effects for stacked notifications */
+#notification-stack-container:hover #stack-main-notification {
+  background-color: alpha(#525155, 0.1);
+  border: 1px solid #525155;
+}
+
+#notification-stack-container:hover #stack-shadow-middle {
+  opacity: 0.7;
+}
+
+#notification-stack-container:hover #stack-shadow-bottom {
+  opacity: 0.5;
+}
+
+/* Collapsed notification state */
+#notification-content-collapsed {
+  background-color: alpha(#000, 0.05);
+  border: 1px solid #525155;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 2px 0;
+  transition: all 0.2s ease;
+}
+
+#notification-content-collapsed:hover {
+  background-color: alpha(#525155, 0.1);
+  border: 1px solid #525155;
+}
+
+/* Notification count badge */
+#notification-count-label {
+  background-color: alpha(#fff, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  min-width: 16px;
+}
+
+/* Expanded notification group header */
+#notification-group-header {
+  background-color: alpha(#000, 0.05);
+  border: 1px solid #525155;
+  border-radius: 12px 12px 0 0;
+  padding: 8px 12px;
+  margin: 2px 0 0 0;
+}
+
+#notification-group-title {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+#notification-show-less {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid alpha(#fff, 0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  margin-right: 8px;
+}
+
+#notification-show-less:hover {
+  background-color: alpha(#fff, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+#notification-close-all {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid alpha(#fff, 0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  min-width: 24px;
+}
+
+#notification-close-all:hover {
+  background-color: alpha(#ff5555, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: alpha(#ff5555, 0.4);
+}
+
+/* Expanded notification list */
+#notification-group-expanded {
+  border: 1px solid #525155;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  /* background-color: alpha(#000, 0.02); */
 }
 
 /* Stacked notification group styles */
@@ -30,11 +186,8 @@
 }
 
 .stacked-notification-item {
-  background-color: alpha(#000, 0.4);
-  border: 0.5px solid alpha(#111, 0.4);
-  box-shadow:
-    inset 0 0 200px 0 alpha(#111, 0.5),
-    inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  background-color: alpha(#000, 0.05);
+  border: 1px solid #525155;
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
@@ -50,11 +203,8 @@
 }
 
 #stacked-notification-item:hover {
-  background-color: alpha(#111, 0.5);
-  box-shadow:
-    inset 0 0 200px 0 alpha(#111, 0.5),
-    inset 0 0 0 0.5px alpha(#aaa, 0.4),
-    0 4px 12px alpha(#000, 0.3);
+  background-color: alpha(#525155, 0.1);
+  border: 1px solid #525155;
 }
 
 /* Stack count indicator */
@@ -72,7 +222,57 @@
 
 /* Make expanded notifications clickable with subtle hover effect */
 #expanded-notification-list:hover {
-  background-color: alpha(#111, 0.1);
+  background-color: alpha(#111, 0.9);
   border-radius: 8px;
   transition: background-color 0.2s ease;
+}
+
+#notification-group-title {
+  font-family: "SF Pro Rounded";
+  font-size: 19px;
+  margin: 10px;
+  font-weight: bold;
+}
+#notification-show-less {
+  font-family: "SF Pro Rounded";
+  background-color: alpha(#111, 0.9);
+  font-size: 12px;
+  margin: 10px;
+  border-radius: 15px;
+}
+
+#notification-close-all {
+  margin: 10px 10px 10px 0;
+  background-color: alpha(#111, 0.9);
+  border-radius: 15px;
+}
+
+#notif-close-button {
+  background-color: transparent;
+}
+
+#notification-group-expanded {
+  background-color: transparent;
+  border: none;
+}
+
+#notification-content {
+  background-color: transparent;
+}
+#notification-count-label {
+  background-color: transparent;
+  color: white;
+  font-family: "SF Pro Rounded";
+  font-size: 13px;
+}
+#notification-centre-notifs {
+  background-color: alpha(#1c2328, 0.8);
+  min-height: 40px;
+  padding: 10px;
+  border: 1.5px solid #525155;
+  border-radius: 12px;
+}
+
+#notification-centre-notifs:last-child {
+  margin-bottom: 10px;
 }
