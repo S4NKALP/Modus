@@ -221,7 +221,7 @@ class ExpandableNotificationGroup(Box):
             spacing=0,
         )
 
-        # Header with app name and controls (this won't animate)
+        # Header with app name and controls
         self.header_content = Box(
             orientation="h",
             h_expand=True,
@@ -254,7 +254,15 @@ class ExpandableNotificationGroup(Box):
             ],
         )
 
-        # Box for individual notifications (this will animate)
+        # Wrap header in revealer for slide-up animation during collapse
+        self.header_revealer = Revealer(
+            child=self.header_content,
+            transition_type="crossfade",
+            transition_duration=300,
+            child_revealed=False,
+        )
+
+        # Box for individual notifications
         self.notifications_list = Box(
             name="notification-group-notifications",
             orientation="v",
@@ -266,21 +274,21 @@ class ExpandableNotificationGroup(Box):
             notification_widget = NotificationCenterWidget(notification=notification)
             self.notifications_list.add(notification_widget)
 
-        # Wrap only the notifications list in a revealer for animation
-        self.expanded_revealer = Revealer(
+        # Wrap notifications list in revealer for slide-down animation
+        self.notifications_revealer = Revealer(
             child=self.notifications_list,
             transition_type="slide-down",
             transition_duration=300,
             child_revealed=False,
         )
-        
-        # Add header (static) and revealer (animated) to container
-        self.expanded_container.add(self.header_content)
-        self.expanded_container.add(self.expanded_revealer)
-        
+
+        # Add header revealer and notifications revealer to container
+        self.expanded_container.add(self.header_revealer)
+        self.expanded_container.add(self.notifications_revealer)
+
         # Add the container to the main group
         self.add(self.expanded_container)
-        
+
         # Hide the entire expanded container initially
         self.expanded_container.set_visible(False)
 
@@ -311,7 +319,9 @@ class ExpandableNotificationGroup(Box):
 
     def on_clicked(self, widget, event):
         if event.button == 1:  # Left click
-            if len(self.notifications) > 1:  # Only expand if there are multiple notifications
+            if (
+                len(self.notifications) > 1
+            ):  # Only expand if there are multiple notifications
                 self.expand()
         return True
 
@@ -320,18 +330,26 @@ class ExpandableNotificationGroup(Box):
         self.is_expanded = True
         self.collapsed_eventbox.set_visible(False)
         self.expanded_container.set_visible(True)
-        # Small delay to ensure container is visible before starting animation
-        GLib.timeout_add(10, lambda: self.expanded_revealer.set_reveal_child(True))
+
+        # Show header immediately (no animation on expand)
+        self.header_revealer.set_reveal_child(True)
+
+        # Small delay then animate notifications sliding down
+        GLib.timeout_add(50, lambda: self.notifications_revealer.set_reveal_child(True))
         logger.debug(f"Expanded notification group: {self.app_name}")
 
     def collapse(self, *args):
-        """Collapse to show only the summary notification with slide-up animation"""
+        """Collapse with header sliding up and notifications sliding up"""
         self.is_expanded = False
-        self.expanded_revealer.set_reveal_child(False)
+
+        # Start both animations simultaneously
+        self.header_revealer.set_reveal_child(False)
+        self.notifications_revealer.set_reveal_child(False)
+
         # Hide the expanded container after animation completes and show collapsed state
-        GLib.timeout_add(310, self._complete_collapse)
+        GLib.timeout_add(320, self._complete_collapse)
         logger.debug(f"Collapsed notification group: {self.app_name}")
-    
+
     def _complete_collapse(self):
         """Complete the collapse animation by hiding expanded container and showing collapsed"""
         self.expanded_container.set_visible(False)
@@ -373,12 +391,14 @@ class ExpandableNotificationGroup(Box):
     def _close_single_notification_and_stop_propagation(self, notification):
         """Close notification and prevent click from expanding the group"""
         self._close_single_notification(notification)
-        
+
         # If this was the last notification in the group, the group will be removed
         # by the notification_removed signal handler. If there are still notifications,
         # we need to check if this group should be removed from view.
-        remaining_notifications = [n for n in self.notifications if n.cache_id != notification.cache_id]
-        
+        remaining_notifications = [
+            n for n in self.notifications if n.cache_id != notification.cache_id
+        ]
+
         if not remaining_notifications:
             # This was the last notification, the group will be destroyed by signal handler
             pass
@@ -386,11 +406,11 @@ class ExpandableNotificationGroup(Box):
             # Update the notifications list and refresh the view immediately
             self.notifications = remaining_notifications
             # Force immediate UI update by destroying and recreating collapsed state
-            if hasattr(self, 'collapsed_eventbox'):
+            if hasattr(self, "collapsed_eventbox"):
                 self.collapsed_eventbox.destroy()
             self.create_collapsed_state()
             self.show_all()
-        
+
         return True  # Stop event propagation
 
 
@@ -582,7 +602,15 @@ class NotificationCenter(Window):
         )
         main_box.add(self.button_centre_box)
 
-        self.children = main_box
+        # Wrap main content in revealer for slide-left animation
+        self.main_revealer = Revealer(
+            child=main_box,
+            transition_type="slide-left",
+            transition_duration=400,
+            child_revealed=False,
+        )
+
+        self.children = self.main_revealer
 
         # Load existing notifications and group them
         self._rebuild_notification_groups()
@@ -733,8 +761,12 @@ class NotificationCenter(Window):
         self.mousecapture = mousecapture
 
     def _set_mousecapture(self, visible):
-        # No need to refresh on visibility change since we use signals
-        pass
+        """Control notification center visibility with slide-left animation"""
+        if visible:
+            self.main_revealer.set_reveal_child(True)
+        else:
+            self.main_revealer.set_reveal_child(False)
+        logger.debug(f"Notification center visibility set to: {visible}")
 
     def _on_destroy(self, *_):
         try:
@@ -748,3 +780,4 @@ class NotificationCenter(Window):
             notification_service.disconnect("notify::count", self.on_count_changed)
         except Exception as e:
             logger.error(f"Error disconnecting signals: {e}")
+
