@@ -1,6 +1,7 @@
 from fabric.widgets.centerbox import CenterBox
 from loguru import logger
 from collections import defaultdict
+from gi.repository import GLib
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -28,10 +29,17 @@ class ExpandableNotificationGroup(Box):
 
         self.app_name = app_name
         self.notifications = notifications
-        self.is_expanded = False
+        self.is_expanded = False  # Always start collapsed
 
-        # Create collapsed state (shows only latest notification)
+        # Create collapsed state first (shows only latest notification)
         self.create_collapsed_state()
+
+        # Create expanded state (hidden initially)
+        self.create_expanded_state()
+
+        # Ensure we start in collapsed state
+        self.collapsed_eventbox.set_visible(True)
+        self.expanded_revealer.set_reveal_child(False)
 
     def create_collapsed_state(self):
         from widgets.custom_image import CustomImage
@@ -210,11 +218,9 @@ class ExpandableNotificationGroup(Box):
             name="notification-group-expanded",
             orientation="v",
             spacing=5,
-            visible=False,
         )
 
         # Header with app name and controls
-
         # App name and show less button
         header_content = Box(
             orientation="h",
@@ -255,7 +261,15 @@ class ExpandableNotificationGroup(Box):
             notification_widget = NotificationCenterWidget(notification=notification)
             self.expanded_box.add(notification_widget)
 
-        self.add(self.expanded_box)
+        # Wrap the expanded box in a revealer for smooth slide-down animation
+        self.expanded_revealer = Revealer(
+            child=self.expanded_box,
+            transition_type="slide-down",
+            transition_duration=300,
+            child_revealed=False,
+        )
+        
+        self.add(self.expanded_revealer)
 
     def _get_notification_pixbuf(self, notification):
         # Use the same logic as NotificationWidget
@@ -289,14 +303,19 @@ class ExpandableNotificationGroup(Box):
         return True
 
     def expand(self, *args):
+        """Expand to show all notifications in this group with slide-down animation"""
         self.is_expanded = True
         self.collapsed_eventbox.set_visible(False)
-        self.expanded_box.set_visible(True)
+        self.expanded_revealer.set_reveal_child(True)
+        logger.debug(f"Expanded notification group: {self.app_name}")
 
     def collapse(self, *args):
+        """Collapse to show only the summary notification with slide-up animation"""
         self.is_expanded = False
-        self.collapsed_eventbox.set_visible(True)
-        self.expanded_box.set_visible(False)
+        self.expanded_revealer.set_reveal_child(False)
+        # Use a timeout to hide the collapsed state after animation completes
+        GLib.timeout_add(310, lambda: self.collapsed_eventbox.set_visible(True))
+        logger.debug(f"Collapsed notification group: {self.app_name}")
 
     def close_all(self, *args):
         # Close all notifications in this group
