@@ -39,7 +39,7 @@ class IndicatorBox(Box):
         super().__init__(
             h_align="end",
             name="indicator-box",
-            spacing=9,
+            spacing=5,
             h_expand=True,
             children=[
                 BatteryIndicator(show_window=False),
