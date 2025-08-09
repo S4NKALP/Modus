@@ -58,7 +58,7 @@ class ContentBox(CenterBox):
             v_align="center",
             visible=False,
             password=True,
-            # on_activate=on_activate,
+            on_activate=on_activate,
         )
 
         self.password_entry.set_property("xalign", 0.5)
@@ -139,7 +139,7 @@ class LockScreen(Window):
         self.content = ContentBox(self.on_activate)
         super().__init__(
             title="lock",
-            visible=True,
+            visible=False,
             all_visible=False,
             name="lockscreen-bg",
             anchor="center",
@@ -172,7 +172,7 @@ class LockScreen(Window):
 
     def _start_hide_timer(self):
         self._stop_hide_timer()  # just in case
-        self._hide_timeout_id = GLib.timeout_add_seconds(500, self._hide_entry)
+        self._hide_timeout_id = GLib.timeout_add_seconds(5, self._hide_entry)
         # 10 seconds of inactivity before hiding
 
     def _restart_hide_timer(self):
@@ -213,8 +213,8 @@ def initialize():
 
 
 if __name__ == "__main__":
-    # initialize()
     setproctitle.setproctitle("lockscreen")
+    initialize()
     lockscreen = LockScreen(GtkSessionLock.Lock())
 
     app = Application("lock", lockscreen)
