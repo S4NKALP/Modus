@@ -3,6 +3,7 @@ import gi, pam
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
+import setproctitle
 
 gi.require_version("GtkSessionLock", "0.1")
 from gi.repository import (
@@ -57,7 +58,7 @@ class ContentBox(CenterBox):
             v_align="center",
             visible=False,
             password=True,
-            on_activate=on_activate,
+            # on_activate=on_activate,
         )
 
         self.password_entry.set_property("xalign", 0.5)
@@ -138,7 +139,7 @@ class LockScreen(Window):
         self.content = ContentBox(self.on_activate)
         super().__init__(
             title="lock",
-            visible=False,
+            visible=True,
             all_visible=False,
             name="lockscreen-bg",
             anchor="center",
@@ -212,7 +213,8 @@ def initialize():
 
 
 if __name__ == "__main__":
-    initialize()
+    # initialize()
+    setproctitle.setproctitle("lockscreen")
     lockscreen = LockScreen(GtkSessionLock.Lock())
 
     app = Application("lock", lockscreen)
