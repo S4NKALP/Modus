@@ -62,9 +62,9 @@ class ModusControlCenter(Window):
         # Initialize network service for WiFi toggle
         self.network_service = NetworkClient()
         self.wifi_service = None
-        
+
         # Wait for network service to be ready
-        self.network_service.connect("wifi-device-added", self.on_network_ready)
+        # self.network_service.connect("wifi-device-added", self.on_network_ready)
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
@@ -82,6 +82,7 @@ class ModusControlCenter(Window):
             ]
         )
 
+        print(wlan)
         self.wlan_label = Label(
             label=wlan,
             name="wifi-widget-label",
@@ -584,17 +585,17 @@ class ModusControlCenter(Window):
         except Exception as e:
             logger.warning(f"Failed to toggle bluetooth: {e}")
 
-    def on_network_ready(self, *_):
-        """Called when network service is ready"""
-        self.wifi_service = self.network_service.wifi_device
-        if self.wifi_service:
-            # Connect to WiFi state changes to update icon
-            self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
+    # def on_network_ready(self, *_):
+    #     """Called when network service is ready"""
+    #     self.wifi_service = self.network_service.wifi_device
+    #     if self.wifi_service:
+    #         # Connect to WiFi state changes to update icon
+    #         self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
 
     def update_wifi_icon(self, *_):
         """Update WiFi icon based on current state"""
         try:
-            if self.wifi_service and hasattr(self, 'wifi_svg'):
+            if self.wifi_service and hasattr(self, "wifi_svg"):
                 is_enabled = self.wifi_service.wireless_enabled
                 icon_file = (
                     "../../config/assets/icons/applets/wifi.svg"
@@ -602,15 +603,20 @@ class ModusControlCenter(Window):
                     else "../../config/assets/icons/applets/wifi-off.svg"
                 )
                 self.wifi_svg.set_from_file(get_relative_path(icon_file))
-                
+
                 # Also update the label
                 if is_enabled:
-                    if hasattr(self.wifi_service, 'active_access_point') and self.wifi_service.active_access_point:
+                    if (
+                        hasattr(self.wifi_service, "active_access_point")
+                        and self.wifi_service.active_access_point
+                    ):
                         # Connected to a network
                         GLib.idle_add(lambda: self.wlan_label.set_label("Connected"))
                     else:
                         # WiFi enabled but not connected
-                        GLib.idle_add(lambda: self.wlan_label.set_label("Not Connected"))
+                        GLib.idle_add(
+                            lambda: self.wlan_label.set_label("Not Connected")
+                        )
                 else:
                     # WiFi disabled
                     GLib.idle_add(lambda: self.wlan_label.set_label("No Connection"))
@@ -710,13 +716,17 @@ class ModusControlCenter(Window):
                 parts = wlan.split(":")
                 if len(parts) >= 2:
                     wifi_name = parts[1]
-                    GLib.idle_add(lambda: self.wlan_label.set_label(wifi_name))
+                    GLib.idle_add(
+                        lambda: self.wlan_label.set_property("label", wifi_name)
+                    )
                 else:
-                    GLib.idle_add(lambda: self.wlan_label.set_label("Connected"))
+                    GLib.idle_add(
+                        lambda: self.wlan_label.set_property("label", "Connected")
+                    )
             else:
-                GLib.idle_add(lambda: self.wlan_label.set_label(wlan))
+                GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
         else:
-            GLib.idle_add(lambda: self.wlan_label.set_label(wlan))
+            GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
 
     def bluetooth_changed(self, _, bluetooth):
         self.bluetooth_svg.set_from_file(
