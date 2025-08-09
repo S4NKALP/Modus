@@ -106,9 +106,15 @@
   margin: 0 4px;
 }
 
+#workspaces label {
+  color: white; /* fully transparent text */
+}
 #workspaces > button {
-  padding: 0px 8px;
-  margin: 4px 0px;
+  padding-top: 0px;
+  padding-right: 16px;
+  padding-left: 16px;
+
+  margin: 6px 0px;
   min-width: 12px;
   border: 1px solid var(--outline);
   border-radius: 8px;
@@ -119,14 +125,17 @@
 }
 
 #workspaces > button.active {
-  background-color: var(--on-tertiary);
+  background-color: alpha(#fff, 0.9);
   font-weight: bold;
 }
 
+#workspaces > button.active label {
+  color: alpha(#000, 1);
+}
 #workspaces > button.urgent {
-  background-color: var(--on-error);
+  background-color: alpha(var(--on-error), 0.7);
 }
 
 #workspaces > button.empty {
-  background-color: var(--outline);
+  background-color: transparent;
 }
