@@ -34,9 +34,9 @@ class IndicatorBox(Box):
             spacing=5,
             h_expand=True,
             children=[
-                BatteryIndicator(),
-                BluetoothIndicator(),
-                NetworkIndicator(),
+                BatteryIndicator(show_window=False),
+                BluetoothIndicator(show_window=False),
+                NetworkIndicator(show_window=False),
             ],
         )
 
