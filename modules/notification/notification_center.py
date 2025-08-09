@@ -39,7 +39,7 @@ class ExpandableNotificationGroup(Box):
 
         # Ensure we start in collapsed state
         self.collapsed_eventbox.set_visible(True)
-        self.expanded_revealer.set_reveal_child(False)
+        self.expanded_container.set_visible(False)
 
     def create_collapsed_state(self):
         from widgets.custom_image import CustomImage
@@ -214,15 +214,15 @@ class ExpandableNotificationGroup(Box):
         self.create_expanded_state()
 
     def create_expanded_state(self):
-        self.expanded_box = Box(
-            name="notification-group-expanded",
+        # Create main expanded container
+        self.expanded_container = Box(
+            name="notification-group-expanded-container",
             orientation="v",
-            spacing=5,
+            spacing=0,
         )
 
-        # Header with app name and controls
-        # App name and show less button
-        header_content = Box(
+        # Header with app name and controls (this won't animate)
+        self.header_content = Box(
             orientation="h",
             h_expand=True,
             children=[
@@ -254,22 +254,35 @@ class ExpandableNotificationGroup(Box):
             ],
         )
 
-        self.expanded_box.add(header_content)
+        # Box for individual notifications (this will animate)
+        self.notifications_list = Box(
+            name="notification-group-notifications",
+            orientation="v",
+            spacing=5,
+        )
 
-        # Individual notifications
+        # Add individual notifications to the list
         for notification in self.notifications:
             notification_widget = NotificationCenterWidget(notification=notification)
-            self.expanded_box.add(notification_widget)
+            self.notifications_list.add(notification_widget)
 
-        # Wrap the expanded box in a revealer for smooth slide-down animation
+        # Wrap only the notifications list in a revealer for animation
         self.expanded_revealer = Revealer(
-            child=self.expanded_box,
+            child=self.notifications_list,
             transition_type="slide-down",
             transition_duration=300,
             child_revealed=False,
         )
         
-        self.add(self.expanded_revealer)
+        # Add header (static) and revealer (animated) to container
+        self.expanded_container.add(self.header_content)
+        self.expanded_container.add(self.expanded_revealer)
+        
+        # Add the container to the main group
+        self.add(self.expanded_container)
+        
+        # Hide the entire expanded container initially
+        self.expanded_container.set_visible(False)
 
     def _get_notification_pixbuf(self, notification):
         # Use the same logic as NotificationWidget
@@ -306,16 +319,24 @@ class ExpandableNotificationGroup(Box):
         """Expand to show all notifications in this group with slide-down animation"""
         self.is_expanded = True
         self.collapsed_eventbox.set_visible(False)
-        self.expanded_revealer.set_reveal_child(True)
+        self.expanded_container.set_visible(True)
+        # Small delay to ensure container is visible before starting animation
+        GLib.timeout_add(10, lambda: self.expanded_revealer.set_reveal_child(True))
         logger.debug(f"Expanded notification group: {self.app_name}")
 
     def collapse(self, *args):
         """Collapse to show only the summary notification with slide-up animation"""
         self.is_expanded = False
         self.expanded_revealer.set_reveal_child(False)
-        # Use a timeout to hide the collapsed state after animation completes
-        GLib.timeout_add(310, lambda: self.collapsed_eventbox.set_visible(True))
+        # Hide the expanded container after animation completes and show collapsed state
+        GLib.timeout_add(310, self._complete_collapse)
         logger.debug(f"Collapsed notification group: {self.app_name}")
+    
+    def _complete_collapse(self):
+        """Complete the collapse animation by hiding expanded container and showing collapsed"""
+        self.expanded_container.set_visible(False)
+        self.collapsed_eventbox.set_visible(True)
+        return False  # Don't repeat timeout
 
     def close_all(self, *args):
         # Close all notifications in this group
