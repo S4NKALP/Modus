@@ -29,13 +29,13 @@ class ExpandableNotificationGroup(Box):
         self.app_name = app_name
         self.notifications = notifications
         self.is_expanded = False  # Always start collapsed
-        
+
         # Create collapsed state first (shows only latest notification)
         self.create_collapsed_state()
-        
-        # Create expanded state (hidden initially) 
+
+        # Create expanded state (hidden initially)
         self.create_expanded_state()
-        
+
         # Ensure we start in collapsed state
         self.collapsed_eventbox.set_visible(True)
         self.expanded_box.set_visible(False)
@@ -105,7 +105,9 @@ class ExpandableNotificationGroup(Box):
                                     icon_name="close-symbolic", icon_size=18
                                 ),
                                 visible=True,
-                                on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(latest_notification),
+                                on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(
+                                    latest_notification
+                                ),
                             ),
                             Box(v_expand=True),
                         ],
@@ -189,13 +191,15 @@ class ExpandableNotificationGroup(Box):
                                     icon_name="close-symbolic", icon_size=18
                                 ),
                                 visible=True,
-                                on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(latest_notification),
+                                on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(
+                                    latest_notification
+                                ),
                             ),
                             Label(
                                 name="notification-count-label",
                                 label=f"{len(self.notifications)}",
                                 h_align="end",
-                            )
+                            ),
                         ],
                     ),
                 ],
@@ -285,9 +289,13 @@ class ExpandableNotificationGroup(Box):
         return get_fallback_notification_icon((35, 35))
 
     def on_clicked(self, widget, event):
-        logger.debug(f"Notification group clicked: {self.app_name}, button: {event.button}")
+        logger.debug(
+            f"Notification group clicked: {self.app_name}, button: {event.button}"
+        )
         if event.button == 1:  # Left click
-            if len(self.notifications) > 1:  # Only expand if there are multiple notifications
+            if (
+                len(self.notifications) > 1
+            ):  # Only expand if there are multiple notifications
                 self.expand()
             else:
                 logger.debug("Single notification group - no expansion needed")
@@ -322,7 +330,7 @@ class ExpandableNotificationGroup(Box):
                 logger.error(
                     f"Error removing notification {notification.cache_id}: {e}"
                 )
-    
+
     def _close_single_notification(self, notification):
         """Close a single notification from this group"""
         try:
@@ -335,8 +343,10 @@ class ExpandableNotificationGroup(Box):
             notification_service.remove_cached_notification(notification.cache_id)
             logger.debug(f"Closed single notification: {notification.cache_id}")
         except Exception as e:
-            logger.error(f"Error removing single notification {notification.cache_id}: {e}")
-    
+            logger.error(
+                f"Error removing single notification {notification.cache_id}: {e}"
+            )
+
     def _close_single_notification_and_stop_propagation(self, notification):
         """Close notification and prevent click from expanding the group"""
         self._close_single_notification(notification)
