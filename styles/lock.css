@@ -1,0 +1,65 @@
+#lockscreen-bg {
+  background-size: cover;
+}
+#container-box {
+  min-height: 50px;
+  min-width: 250px;
+  transition: all 0.7s ease-in-out;
+}
+#password-entry {
+  background-color: alpha(#fff, 0.4);
+  border-radius: 20px;
+  color: white;
+  min-width: 220px;
+  min-height: 40px;
+  font-family: "SF Pro Rounded";
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.7s ease-in-out;
+}
+#profile-box {
+  margin-bottom: 10px;
+}
+#username {
+  font-size: 21px;
+  font-weight: bold;
+  margin-top: 5px;
+  transition: all 0.7s ease-in-out;
+}
+
+#lock-date label {
+  background-color: transparent;
+  font-family: "SF Pro Rounded";
+  color: alpha(#fff, 0.6);
+  border: none;
+  font-size: 30px;
+  margin-top: 80px;
+  font-weight: bold;
+}
+#lock-clock label {
+  background-color: transparent;
+  color: alpha(#fff, 0.6);
+  font-family: "SF Pro Rounded ";
+  border: none;
+  /* font-family: "SF Pro Rounded"; */
+  font-size: 130px;
+  margin-top: -20px;
+  font-weight: bold;
+}
+
+#face-icon image {
+  margin-bottom: 10px;
+}
+#face-icon {
+  padding-bottom: 10px;
+}
+
+#unlock-box {
+  margin-bottom: 40px;
+}
+#unlock-text {
+  font-family: "SF Pro Rounded";
+  font-size: 15px;
+  color: alpha(#fff, 0.6);
+  font-weight: bold;
+}
