@@ -149,7 +149,7 @@
 }
 
 #notification-show-less:hover {
-  background-color: alpha(#fff, 0.1);
+  background-color: alpha(#999, 0.7);
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -277,6 +277,9 @@
   margin-bottom: 10px;
 }
 
+#notification-close-header {
+  margin-right: 10px;
+}
 #notification-close,
 #notification-close-header {
   background-color: alpha(#444, 0.8);
@@ -284,10 +287,12 @@
   min-height: 23px;
   border-radius: 50%;
 }
-#notification-close:hover,
-#notification-close-summery:hover #notification-close-header {
+#notification-close:hover {
   background-color: alpha(#666, 0.8);
   min-width: 23px;
   min-height: 23px;
   border-radius: 50%;
+}
+#notification-close-summery:hover .notification-close-header button {
+  background-color: transparent;
 }
