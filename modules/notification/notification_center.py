@@ -28,17 +28,10 @@ class ExpandableNotificationGroup(Box):
 
         self.app_name = app_name
         self.notifications = notifications
-        self.is_expanded = False  # Always start collapsed
+        self.is_expanded = False
 
-        # Create collapsed state first (shows only latest notification)
+        # Create collapsed state (shows only latest notification)
         self.create_collapsed_state()
-
-        # Create expanded state (hidden initially)
-        self.create_expanded_state()
-
-        # Ensure we start in collapsed state
-        self.collapsed_eventbox.set_visible(True)
-        self.expanded_box.set_visible(False)
 
     def create_collapsed_state(self):
         from widgets.custom_image import CustomImage
@@ -209,7 +202,8 @@ class ExpandableNotificationGroup(Box):
 
         self.add(self.collapsed_eventbox)
 
-        # Note: expanded state creation moved to __init__
+        # Create expanded state (hidden initially)
+        self.create_expanded_state()
 
     def create_expanded_state(self):
         self.expanded_box = Box(
@@ -249,7 +243,7 @@ class ExpandableNotificationGroup(Box):
                         icon_size=18,
                         h_align="end",
                     ),
-                    visible=True,  # Initially hidden
+                    visible=True,
                 ),
             ],
         )
@@ -289,31 +283,20 @@ class ExpandableNotificationGroup(Box):
         return get_fallback_notification_icon((35, 35))
 
     def on_clicked(self, widget, event):
-        logger.debug(
-            f"Notification group clicked: {self.app_name}, button: {event.button}"
-        )
         if event.button == 1:  # Left click
-            if (
-                len(self.notifications) > 1
-            ):  # Only expand if there are multiple notifications
+            if len(self.notifications) > 1:  # Only expand if there are multiple notifications
                 self.expand()
-            else:
-                logger.debug("Single notification group - no expansion needed")
         return True
 
     def expand(self, *args):
-        """Expand to show all notifications in this group"""
         self.is_expanded = True
         self.collapsed_eventbox.set_visible(False)
         self.expanded_box.set_visible(True)
-        logger.debug(f"Expanded notification group: {self.app_name}")
 
     def collapse(self, *args):
-        """Collapse to show only the summary notification"""
         self.is_expanded = False
         self.collapsed_eventbox.set_visible(True)
         self.expanded_box.set_visible(False)
-        logger.debug(f"Collapsed notification group: {self.app_name}")
 
     def close_all(self, *args):
         # Close all notifications in this group
@@ -350,6 +333,24 @@ class ExpandableNotificationGroup(Box):
     def _close_single_notification_and_stop_propagation(self, notification):
         """Close notification and prevent click from expanding the group"""
         self._close_single_notification(notification)
+        
+        # If this was the last notification in the group, the group will be removed
+        # by the notification_removed signal handler. If there are still notifications,
+        # we need to check if this group should be removed from view.
+        remaining_notifications = [n for n in self.notifications if n.cache_id != notification.cache_id]
+        
+        if not remaining_notifications:
+            # This was the last notification, the group will be destroyed by signal handler
+            pass
+        else:
+            # Update the notifications list and refresh the view immediately
+            self.notifications = remaining_notifications
+            # Force immediate UI update by destroying and recreating collapsed state
+            if hasattr(self, 'collapsed_eventbox'):
+                self.collapsed_eventbox.destroy()
+            self.create_collapsed_state()
+            self.show_all()
+        
         return True  # Stop event propagation
 
 
@@ -507,10 +508,10 @@ class NotificationCenter(Window):
             name="noti-center-box",
         )
 
-        self.scrolled = ScrolledWindow(h_expand=True, v_expand=True)
+        self.scrolled = ScrolledWindow(h_expand=False, v_expand=False)
         self.notifications_box = Box(
-            v_expand=True,
-            h_expand=True,
+            v_expand=False,
+            h_expand=False,
             style="margin: 1px 0px 1px 1px;",
             orientation="v",
             spacing=5,
@@ -541,13 +542,7 @@ class NotificationCenter(Window):
         )
         main_box.add(self.button_centre_box)
 
-        self.revealer = Revealer(
-            child=main_box,
-            transition="slide-down",
-            transition_duration=600,
-            child_revealed=False,
-        )
-        self.children = self.revealer
+        self.children = main_box
 
         # Load existing notifications and group them
         self._rebuild_notification_groups()
@@ -698,9 +693,8 @@ class NotificationCenter(Window):
         self.mousecapture = mousecapture
 
     def _set_mousecapture(self, visible):
-        self.revealer.child_revealed = visible
-        # # No need to refresh on visibility change since we use signals
-        # pass
+        # No need to refresh on visibility change since we use signals
+        pass
 
     def _on_destroy(self, *_):
         try:
