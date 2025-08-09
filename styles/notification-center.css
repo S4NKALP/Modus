@@ -276,3 +276,18 @@
 #notification-centre-notifs:last-child {
   margin-bottom: 10px;
 }
+
+#notification-close,
+#notification-close-header {
+  background-color: alpha(#444, 0.8);
+  min-width: 23px;
+  min-height: 23px;
+  border-radius: 50%;
+}
+#notification-close:hover,
+#notification-close-summery:hover #notification-close-header {
+  background-color: alpha(#666, 0.8);
+  min-width: 23px;
+  min-height: 23px;
+  border-radius: 50%;
+}
