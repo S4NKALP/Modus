@@ -2,13 +2,15 @@ from fabric.bluetooth import BluetoothClient
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from fabric.widgets.label import Label
 from fabric.widgets.svg import Svg
+
+from modules.controlcenter.battery import BatteryControl
+from modules.controlcenter.bluetooth import BluetoothConnections
+from modules.controlcenter.wifi import WifiConnections
 from services.battery import Battery
 from services.network import NetworkClient
 from utils.roam import modus_service
-from modules.controlcenter.wifi import WifiConnections
-from modules.controlcenter.bluetooth import BluetoothConnections
-from modules.controlcenter.battery import BatteryControl
 from widgets.mousecapture import DropDownMouseCapture
 from widgets.wayland import WaylandWindow as Window
 
@@ -350,6 +352,9 @@ class BatteryIndicator(Box):
             on_clicked=self.on_battery_clicked,
         )
 
+        self.battery_label = Label(name="battery-label", label="--- %")
+
+        self.add(self.battery_label)
         self.add(self.battery_button)
 
         # Create Battery control center widget only if show_window is True
@@ -431,6 +436,7 @@ class BatteryIndicator(Box):
         if not self.battery_service.is_present:
             icon_file = "battery.svg"
             tooltip = "No battery detected"
+            percentage_text = "N/A"
         else:
             percentage = self.battery_service.percentage
             state = self.battery_service.state
@@ -440,10 +446,12 @@ class BatteryIndicator(Box):
                 percentage, is_charging, base_path="../../../config/assets/icons/"
             )
             tooltip = self.get_battery_tooltip(percentage, state)
+            percentage_text = f"{percentage}%"
 
-        # Update icon and tooltip
+        # Update icon, tooltip, and percentage label
         self.battery_icon.set_from_file(get_relative_path(icon_file))
         self.battery_button.set_tooltip_text(tooltip)
+        self.battery_label.set_label(percentage_text)
 
     def on_battery_clicked(self, *args):
         """Handle Battery indicator click"""
