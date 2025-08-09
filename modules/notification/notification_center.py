@@ -16,6 +16,7 @@ from services.modus import notification_service
 from widgets.wayland import WaylandWindow as Window
 from fabric.widgets.image import Image
 from fabric.widgets.eventbox import EventBox
+from widgets.custom_image import CustomImage
 from fabric.widgets.revealer import Revealer
 
 
@@ -86,6 +87,19 @@ class ExpandableNotificationGroup(Box):
                                 h_align="start",
                                 ellipsization="end",
                             ),
+                        ],
+                    ),
+                    Box(
+                        orientation="v",
+                        children=[
+                            Button(
+                                name="notification-close",
+                                image=CustomImage(
+                                    icon_name="close-symbolic", icon_size=18
+                                ),
+                                visible=True,  # Initially hidden
+                            ),
+                            Box(v_expand=True),
                         ],
                     ),
                 ],
@@ -205,10 +219,17 @@ class ExpandableNotificationGroup(Box):
                     h_align="end",
                 ),
                 Button(
-                    name="notification-close-all",
-                    label="×",
+                    name="notification-close-summery",
+                    h_expand=False,
+                    v_expand=False,
                     on_clicked=self.close_all,
-                    h_align="end",
+                    image=CustomImage(
+                        icon_name="close-symbolic",
+                        name="notification-close-header",
+                        icon_size=18,
+                        h_align="end",
+                    ),
+                    visible=True,  # Initially hidden
                 ),
             ],
         )
@@ -297,7 +318,9 @@ class NotificationCenterWidget(NotificationWidget):
 
         self.close_button = Button(
             name="notif-close-button",
-            image=CustomImage(icon_name="close-symbolic", icon_size=18),
+            image=CustomImage(
+                icon_name="close-symbolic", name="notification-close", icon_size=18
+            ),
             visible=True,  # Always visible in notification center
             on_clicked=self._on_close_clicked,
         )
