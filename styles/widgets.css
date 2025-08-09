@@ -14,7 +14,7 @@
 
 #city {
   margin-top: 10px;
-  color: #8b92ff;
+  color: #6fb4c3;
   font-weight: 600;
   font-size: 20px;
 }
@@ -55,7 +55,7 @@
 #calendar-month {
   font-size: 16px;
   font-weight: 600;
-  color: #8b92ff;
+  color: #6fb4c3;
   margin-bottom: 8px;
 }
 
@@ -100,7 +100,7 @@
   font-size: 12px;
   font-weight: 700;
   color: #191919;
-  background-color: #8b92ff;
+  background-color: #6fb4c3;
   border-radius: 50%;
   min-width: 18px;
   min-height: 16px;
@@ -139,7 +139,7 @@
   font-weight: 600;
 }
 #day label {
-  color: alpha(#8b92ff, 0.9);
+  color: alpha(#6fb4c3, 0.9);
 }
 
 #date-container {
@@ -170,14 +170,14 @@
 }
 #progress {
   font-family: "SF Pro Rounded";
-  border: solid 8px #8b92ff;
+  border: solid 8px #6fb4c3;
 
   color: alpha(#aaaaaa, 0.7);
 }
 
 /* Color indicators for memory usage */
 #used-color-indicator {
-  color: #8b92ff;
+  color: #6fb4c3;
   font-size: 10px;
   font-weight: 900;
 }
@@ -189,7 +189,7 @@
 }
 
 #temp-color-indicator {
-  color: #8b92ff;
+  color: #6fb4c3;
   font-size: 10px;
   font-weight: 900;
 }
