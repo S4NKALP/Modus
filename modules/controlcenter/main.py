@@ -64,10 +64,10 @@ class ModusControlCenter(Window):
         self.wifi_service = None
 
         # Wait for network service to be ready
-        # self.network_service.connect("wifi-device-added", self.on_network_ready)
 
         self.add_keybinding("Escape", self.hide_controlcenter)
 
+        self.network_service.connect("wifi-device-added", self.on_network_ready)
         volume = 100
         wlan = modus_service.sc("wlan-changed", self.wlan_changed)
         bluetooth = modus_service.sc("bluetooth-changed", self.bluetooth_changed)
@@ -585,12 +585,12 @@ class ModusControlCenter(Window):
         except Exception as e:
             logger.warning(f"Failed to toggle bluetooth: {e}")
 
-    # def on_network_ready(self, *_):
-    #     """Called when network service is ready"""
-    #     self.wifi_service = self.network_service.wifi_device
-    #     if self.wifi_service:
-    #         # Connect to WiFi state changes to update icon
-    #         self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
+    def on_network_ready(self, *_):
+        """Called when network service is ready"""
+        self.wifi_service = self.network_service.wifi_device
+        if self.wifi_service:
+            # Connect to WiFi state changes to update icon
+            self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
 
     def update_wifi_icon(self, *_):
         """Update WiFi icon based on current state"""
@@ -603,23 +603,6 @@ class ModusControlCenter(Window):
                     else "../../config/assets/icons/applets/wifi-off.svg"
                 )
                 self.wifi_svg.set_from_file(get_relative_path(icon_file))
-
-                # Also update the label
-                if is_enabled:
-                    if (
-                        hasattr(self.wifi_service, "active_access_point")
-                        and self.wifi_service.active_access_point
-                    ):
-                        # Connected to a network
-                        GLib.idle_add(lambda: self.wlan_label.set_label("Connected"))
-                    else:
-                        # WiFi enabled but not connected
-                        GLib.idle_add(
-                            lambda: self.wlan_label.set_label("Not Connected")
-                        )
-                else:
-                    # WiFi disabled
-                    GLib.idle_add(lambda: self.wlan_label.set_label("No Connection"))
         except Exception as e:
             logger.warning(f"Failed to update WiFi icon: {e}")
 
