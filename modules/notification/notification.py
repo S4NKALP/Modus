@@ -506,6 +506,7 @@ class NotificationWidget(Box):
                                     name="notification-summary",
                                     markup=notification.summary.replace("\n", " "),
                                     h_align="start",
+                                    max_chars_width=30,
                                     ellipsization="end",
                                 ),
                                 # Label(

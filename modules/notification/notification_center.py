@@ -257,7 +257,7 @@ class ExpandableNotificationGroup(Box):
         # Wrap header in revealer for slide-up animation during collapse
         self.header_revealer = Revealer(
             child=self.header_content,
-            transition_type="crossfade",
+            transition_type="slide-up",
             transition_duration=300,
             child_revealed=False,
         )
@@ -282,9 +282,17 @@ class ExpandableNotificationGroup(Box):
             child_revealed=False,
         )
 
-        # Add header revealer and notifications revealer to container
+        # Wrap notifications revealer in crossfade revealer for closing animation
+        self.notifications_crossfade = Revealer(
+            child=self.notifications_revealer,
+            transition_type="crossfade",
+            transition_duration=250,
+            child_revealed=True,  # Start revealed so crossfade works on close
+        )
+
+        # Add header revealer and notifications crossfade to container
         self.expanded_container.add(self.header_revealer)
-        self.expanded_container.add(self.notifications_revealer)
+        self.expanded_container.add(self.notifications_crossfade)
 
         # Add the container to the main group
         self.add(self.expanded_container)
@@ -333,29 +341,39 @@ class ExpandableNotificationGroup(Box):
 
         # Show header immediately (no animation on expand)
         self.header_revealer.set_reveal_child(True)
+        
+        # Ensure crossfade is revealed for expand
+        self.notifications_crossfade.set_reveal_child(True)
 
         # Small delay then animate notifications sliding down
         GLib.timeout_add(50, lambda: self.notifications_revealer.set_reveal_child(True))
         logger.debug(f"Expanded notification group: {self.app_name}")
 
     def collapse(self, *args):
-        """Collapse with header sliding up and notifications sliding up"""
+        """Collapse with header sliding up, notifications crossfading, then sliding up"""
         self.is_expanded = False
 
-        # Start both animations simultaneously
+        # Start header slide-up and notifications crossfade simultaneously
         self.header_revealer.set_reveal_child(False)
-        self.notifications_revealer.set_reveal_child(False)
+        self.notifications_crossfade.set_reveal_child(False)
+        
+        # Show collapsed state and hide expanded container halfway through crossfade
+        GLib.timeout_add(125, self._show_collapsed_midway)
 
-        # Hide the expanded container after animation completes and show collapsed state
-        GLib.timeout_add(320, self._complete_collapse)
+        # After crossfade completes, start slide-up animation (just for cleanup)
+        GLib.timeout_add(260, lambda: self.notifications_revealer.set_reveal_child(False))
+
         logger.debug(f"Collapsed notification group: {self.app_name}")
-
-    def _complete_collapse(self):
-        """Complete the collapse animation by hiding expanded container and showing collapsed"""
-        self.expanded_container.set_visible(False)
+    
+    def _show_collapsed_midway(self):
+        """Show collapsed state and hide expanded container to prevent deformation"""
         self.collapsed_eventbox.set_visible(True)
+        self.expanded_container.set_visible(False)
         return False  # Don't repeat timeout
-
+    
+    def _complete_collapse(self):
+        """Complete the collapse animation - no longer needed but kept for compatibility"""
+        return False  # Don't repeat timeout
     def close_all(self, *args):
         # Close all notifications in this group
         for notification in self.notifications:
