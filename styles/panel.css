@@ -21,7 +21,7 @@
 }
 
 #panel-button:hover {
-  background-color: var(--surface-bright);
+  background-color: alpha(#fff, 0.1);
 }
 
 #menubar {
@@ -33,6 +33,11 @@
   font-size: 13px;
   /* font-weight: 400; */
 }
+#battery-label {
+  font-family: "SF Pro Rounded";
+  font-weight: 500;
+  margin-right: 1px;
+}
 #battery-button {
   padding-right: 3px;
   padding-left: 3px;
@@ -40,7 +45,7 @@
 }
 
 #battery-button:hover {
-  background-color: var(--surface-bright);
+  background-color: alpha(#fff, 0.1);
 }
 
 #network-button {
@@ -50,7 +55,7 @@
 }
 
 #network-button:hover {
-  background-color: var(--surface-bright);
+  background-color: alpha(#fff, 0.1);
 }
 
 #bt-button {
@@ -60,7 +65,7 @@
 }
 
 #bt-button:hover {
-  background-color: var(--surface-bright);
+  background-color: alpha(#fff, 0.1);
 }
 
 #tray-button {
@@ -71,7 +76,7 @@
 }
 
 #tray-button:hover {
-  background-color: var(--surface-bright);
+  background-color: alpha(#fff, 0.1);
 }
 
 #date-time {
@@ -121,7 +126,7 @@
 }
 
 #workspaces > button:hover {
-  background-color: var(--surface-bright);
+  background-color: alpha(#fff, 0.1);
 }
 
 #workspaces > button.active {
