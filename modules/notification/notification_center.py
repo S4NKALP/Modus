@@ -341,7 +341,7 @@ class ExpandableNotificationGroup(Box):
 
         # Show header immediately (no animation on expand)
         self.header_revealer.set_reveal_child(True)
-        
+
         # Ensure crossfade is revealed for expand
         self.notifications_crossfade.set_reveal_child(True)
 
@@ -356,24 +356,27 @@ class ExpandableNotificationGroup(Box):
         # Start header slide-up and notifications crossfade simultaneously
         self.header_revealer.set_reveal_child(False)
         self.notifications_crossfade.set_reveal_child(False)
-        
+
         # Show collapsed state and hide expanded container halfway through crossfade
         GLib.timeout_add(125, self._show_collapsed_midway)
 
         # After crossfade completes, start slide-up animation (just for cleanup)
-        GLib.timeout_add(260, lambda: self.notifications_revealer.set_reveal_child(False))
+        GLib.timeout_add(
+            260, lambda: self.notifications_revealer.set_reveal_child(False)
+        )
 
         logger.debug(f"Collapsed notification group: {self.app_name}")
-    
+
     def _show_collapsed_midway(self):
         """Show collapsed state and hide expanded container to prevent deformation"""
         self.collapsed_eventbox.set_visible(True)
         self.expanded_container.set_visible(False)
         return False  # Don't repeat timeout
-    
+
     def _complete_collapse(self):
         """Complete the collapse animation - no longer needed but kept for compatibility"""
         return False  # Don't repeat timeout
+
     def close_all(self, *args):
         # Close all notifications in this group
         for notification in self.notifications:
@@ -490,6 +493,7 @@ class NotificationCenterWidget(NotificationWidget):
                                     name="notification-summary",
                                     markup=notification.summary.replace("\n", " "),
                                     h_align="start",
+                                    max_chars_width=30,
                                     ellipsization="end",
                                 ),
                             ],
@@ -498,6 +502,7 @@ class NotificationCenterWidget(NotificationWidget):
                             Label(
                                 markup=notification.body.replace("\n", " "),
                                 h_align="start",
+                                max_chars_width=35,
                                 ellipsization="end",
                             )
                             if notification.body
@@ -798,4 +803,3 @@ class NotificationCenter(Window):
             notification_service.disconnect("notify::count", self.on_count_changed)
         except Exception as e:
             logger.error(f"Error disconnecting signals: {e}")
-
