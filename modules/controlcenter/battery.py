@@ -1,387 +1,377 @@
-from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.svg import Svg
 from fabric.widgets.image import Image
+from fabric.widgets.separator import Separator
 from services.battery import Battery
 import subprocess
+from fabric.utils import get_relative_path
 import os
+from gi.repository import GLib
 
 
-class PowerProfileButton(Button):
-    def __init__(self, profile_name: str, display_name: str, battery_service: Battery, parent, **kwargs):
+class EnergyModeButton(CenterBox):
+    def __init__(
+        self,
+        profile_name: str,
+        display_name: str,
+        icon_name: str,
+        battery_service: Battery,
+        parent,
+        **kwargs,
+    ):
+        super().__init__(name="energy-mode-button", **kwargs)
         self.profile_name = profile_name
         self.battery_service = battery_service
         self.parent = parent
 
-        # Get symbolic icon for profile
-        profile_icons = {
-            "power-saver": "power-profile-power-saver-symbolic",
-            "powersave": "power-profile-power-saver-symbolic",
-            "power_saver": "power-profile-power-saver-symbolic",
-            "balanced": "power-profile-balanced-symbolic",
-            "balance": "power-profile-balanced-symbolic",
-            "performance": "power-profile-performance-symbolic",
-            "performance-mode": "power-profile-performance-symbolic"
-        }
-
-        icon_name = profile_icons.get(profile_name, "preferences-system-symbolic")
-
-        # Create symbolic icon
-        from fabric.widgets.image import Image
-        self.profile_icon = Image(
-            icon_name=icon_name,
-            size=20,
-            style_classes="battery-profile-icon"
+        self.mode_icon = Image(
+            icon_name=f"battery-{icon_name}-symbolic",
+            size=16,
+            name="energy-mode-icon",
+            style_classes="battery-profile-icon",
         )
 
-        self.profile_label = Label(
+        self.mode_label = Label(
             label=display_name,
-            style_classes="battery-profile-label"
+            style_classes="battery-power-source",
+            h_align="start",
+            h_expand=True,
         )
 
-        # Create vertical layout for icon and label
-        content = Box(
-            orientation="vertical",
-            spacing=2,
-            children=[self.profile_icon, self.profile_label],
-            h_align="center"
+        start_box = Box(
+            orientation="horizontal",
+            spacing=8,
+            children=[self.mode_icon, self.mode_label],
         )
-        
-        super().__init__(
-            child=content,
+
+        self.button = Button(
+            child=start_box,
+            name="energy-mode-button-clickable",
             on_clicked=self.on_clicked,
             style_classes="battery-profile-button",
-            **kwargs
         )
-        
-        # Update initial state
+
+        self.start_children = [self.button]
         self.update_state()
-    
+
     def on_clicked(self, *args):
-        """Handle profile selection"""
         success = self.battery_service.change_power_profile(self.profile_name)
         if success:
             # Update all profile buttons in parent
-            self.parent.update_profile_buttons()
-    
+            self.parent.update_energy_mode_buttons()
+
+        # Reset icon state after short delay
+        GLib.timeout_add(300, lambda: self._reset_icon_state())
+
+    def _reset_icon_state(self):
+        return False  # Remove timeout
+
     def update_state(self):
-        """Update the visual state based on current active profile"""
         is_active = self.battery_service.power_profile == self.profile_name
-        
         if is_active:
-            self.add_style_class("active")
+            self.mode_icon.add_style_class("connected")
         else:
-            self.remove_style_class("active")
+            self.mode_icon.remove_style_class("connected")
 
 
-class GameModeButton(Button):
-    def __init__(self, **kwargs):
-        self.script_path = get_relative_path("../../scripts/gamemode.sh")
-        self.gamemode_active = self.check_gamemode_status()
+class GameModeButton(CenterBox):
+    def __init__(self, parent, **kwargs):
+        super().__init__(name="game-mode-button", **kwargs)
+        self.parent = parent
 
-        # Create icon for gamemode
-        self.gamemode_icon = Image(
-            icon_name="applications-games-symbolic" if self.gamemode_active else "applications-games-symbolic",
-            size=20,
-            style_classes="battery-gamemode-icon"
+        self.game_icon = Image(
+            icon_name="applications-games-symbolic",
+            size=16,
+            name="game-mode-icon",
+            style_classes="battery-gamemode-icon",
         )
 
-        self.gamemode_label = Label(
+        self.game_label = Label(
             label="Game Mode",
-            style_classes="battery-gamemode-label"
+            style_classes="battery-power-source",
+            h_align="start",
+            h_expand=True,
         )
 
-        # Create vertical layout for icon and label
-        content = Box(
-            orientation="vertical",
-            spacing=2,
-            children=[self.gamemode_icon, self.gamemode_label],
-            h_align="center"
+        start_box = Box(
+            orientation="horizontal",
+            spacing=8,
+            children=[self.game_icon, self.game_label],
         )
 
-        super().__init__(
-            child=content,
-            on_clicked=self.toggle_gamemode,
+        self.button = Button(
+            child=start_box,
+            name="game-mode-button-clickable",
+            on_clicked=self.on_clicked,
             style_classes="battery-gamemode-button",
-            **kwargs
         )
 
-        # Update initial state
+        self.start_children = [self.button]
         self.update_state()
 
-    def check_gamemode_status(self):
-        """Check if gamemode is currently active"""
+    def on_clicked(self, *args):
         try:
-            result = subprocess.run(
-                [self.script_path, "check"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            return result.stdout.strip() == "t"
-        except Exception:
-            return False
+            script_path = get_relative_path("../../scripts/gamemode.sh")
+            subprocess.run([script_path], check=False)
 
-    def toggle_gamemode(self, *args):
-        """Toggle gamemode state"""
-        try:
-            # Make script executable if it isn't
-            os.chmod(self.script_path, 0o755)
-
-            # Run the toggle script
-            subprocess.run([self.script_path], timeout=10)
-
-            # Update state after toggle
-            self.gamemode_active = self.check_gamemode_status()
-            self.update_state()
+            GLib.timeout_add(500, lambda: self.update_state())
         except Exception as e:
-            print(f"Failed to toggle gamemode: {e}")
+            print(f"Failed to toggle game mode: {e}")
+
+        GLib.timeout_add(300, lambda: self._reset_icon_state())
+
+    def _reset_icon_state(self):
+        return False  # Remove timeout
 
     def update_state(self):
-        """Update the visual state based on gamemode status"""
-        if self.gamemode_active:
-            self.add_style_class("active")
-            self.gamemode_icon.set_property("style-classes", "battery-gamemode-icon active")
-        else:
-            self.remove_style_class("active")
-            self.gamemode_icon.set_property("style-classes", "battery-gamemode-icon")
+        try:
+            script_path = get_relative_path("../../scripts/gamemode.sh")
+            result = subprocess.run(
+                [script_path, "check"], capture_output=True, text=True, check=False
+            )
+            is_active = result.stdout.strip() == "t"
+
+            if is_active:
+                self.game_icon.add_style_class("connected")
+            else:
+                self.game_icon.remove_style_class("connected")
+        except Exception as e:
+            print(f"Failed to check game mode status: {e}")
+            # Default to inactive state on error
+            self.game_icon.remove_style_class("connected")
+
+        return False  # Remove timeout if called from GLib.timeout_add
 
 
 class BatteryControl(Box):
     def __init__(self, parent, **kwargs):
         super().__init__(
-            spacing=0,
+            spacing=12,
             orientation="vertical",
             name="control-center-widgets",
             **kwargs,
         )
-        self.set_size_request(300, -1)
+        self.set_size_request(400, -1)
 
         self.parent = parent
         self.battery_service = Battery()
-        self.profile_buttons = []
+        self.energy_mode_buttons = []
 
-        # Battery information widget in control center style
-        self.battery_info_widget = Box(
-            name="battery-info-widget",
+        self.battery_widget = Box(
+            name="battery-widget",
             orientation="vertical",
-            style_classes="menu",
+            style_classes="battery-status-section",
             h_expand=True,
-            children=[
-                Label(label="Battery", style_classes="title", h_align="start"),
-            ]
-        )
-
-        # Battery status labels
-        self.battery_percentage = Label(
-            label="100%",
-            style_classes="battery-info-item",
-            h_align="start"
-        )
-
-        self.battery_state = Label(
-            label="Fully Charged",
-            style_classes="battery-info-item",
-            h_align="start"
-        )
-
-        self.battery_capacity = Label(
-            label="",
-            style_classes="battery-info-item",
-            h_align="start"
-        )
-
-        self.battery_time_to_full = Label(
-            label="",
-            style_classes="battery-info-item",
-            h_align="start",
-            visible=False
-        )
-
-        self.battery_time_to_empty = Label(
-            label="",
-            style_classes="battery-info-item",
-            h_align="start",
-            visible=False
-        )
-
-        self.battery_temperature = Label(
-            label="",
-            style_classes="battery-info-item",
-            h_align="start"
-        )
-
-        # Add battery info to widget
-        self.battery_info_widget.add(self.battery_percentage)
-        self.battery_info_widget.add(self.battery_state)
-        self.battery_info_widget.add(self.battery_capacity)
-        self.battery_info_widget.add(self.battery_time_to_full)
-        self.battery_info_widget.add(self.battery_time_to_empty)
-        self.battery_info_widget.add(self.battery_temperature)
-
-        # Power profiles widget in control center style
-        self.profiles_widget = Box(
-            name="power-profiles-widget",
-            orientation="vertical",
-            style_classes="menu",
-            h_expand=True,
-            children=[
-                Label(label="Power Profiles", style_classes="title", h_align="start"),
-            ]
-        )
-        
-        # Power profiles container
-        self.profiles_container = Box(
-            orientation="horizontal",
             spacing=8,
-            style_classes="battery-profiles-container",
-            h_align="center"
         )
 
-        self.profiles_widget.add(self.profiles_container)
-
-        # Game mode widget in control center style
-        self.gamemode_widget = Box(
-            name="gamemode-widget",
-            orientation="vertical",
-            style_classes="menu",
-            h_expand=True,
-            children=[
-                Label(label="Game Mode", style_classes="title", h_align="start"),
-            ]
+        self.battery_title = Label(
+            label="Battery", style_classes="battery-main-title", h_align="start"
         )
 
-        # Add gamemode button
-        self.gamemode_button = GameModeButton()
-        gamemode_container = Box(
-            orientation="horizontal",
-            spacing=8,
-            style_classes="battery-gamemode-container",
-            h_align="center",
-            children=[self.gamemode_button]
+        self.battery_percentage_label = Label(
+            label="80%", style_classes="battery-percentage", h_align="end"
         )
-        self.gamemode_widget.add(gamemode_container)
 
-        # Add all widgets to main container
-        self.add(self.battery_info_widget)
-        self.add(self.profiles_widget)
-        self.add(self.gamemode_widget)
+        self.battery_header = CenterBox(
+            start_children=self.battery_title,
+            end_children=self.battery_percentage_label,
+            name="battery-header",
+        )
 
-        # Connect to battery service signals
+        self.power_source_label = Label(
+            label="Power Source: Power Adapter",
+            style_classes="battery-power-source",
+            h_align="start",
+        )
+
+        self.charging_time_label = Label(
+            label="1h 4m until fully charged",
+            style_classes="battery-power-source",
+            h_align="start",
+        )
+
+        self.energy_mode_section = Box(
+            orientation="vertical", spacing=8, name="energy-mode-section"
+        )
+
+        self.energy_mode_title = Label(
+            label="Energy Mode", style_classes="battery-section-title", h_align="start"
+        )
+
+        self.energy_modes_container = Box(
+            orientation="vertical", spacing=4, name="energy-modes-container"
+        )
+
+        self.game_mode_section = Box(
+            orientation="vertical", spacing=8, name="game-mode-section"
+        )
+
+        self.game_mode_title = Label(
+            label="Game Mode", style_classes="battery-section-title", h_align="start"
+        )
+
+        self.game_mode_container = Box(
+            orientation="vertical", spacing=4, name="game-mode-container"
+        )
+
+        self.battery_settings_button = Button(
+            child=Label(
+                label="Battery Settings...",
+                style_classes="battery-power-source",
+                h_align="start",
+            ),
+            style_classes="battery-settings-button",
+            on_clicked=self.open_battery_settings,
+        )
+
+        self.battery_widget.add(self.battery_header)
+        self.battery_widget.add(self.power_source_label)
+        self.battery_widget.add(self.charging_time_label)
+
+        separator1 = Separator(orientation="h", name="separator")
+        self.battery_widget.add(separator1)
+
+        self.energy_mode_section.add(self.energy_mode_title)
+        self.energy_mode_section.add(self.energy_modes_container)
+        self.battery_widget.add(self.energy_mode_section)
+
+        separator2 = Separator(orientation="h", name="separator")
+        self.battery_widget.add(separator2)
+
+        self.game_mode_section.add(self.game_mode_title)
+        self.game_mode_section.add(self.game_mode_container)
+        self.battery_widget.add(self.game_mode_section)
+
+        separator3 = Separator(orientation="h", name="separator")
+        self.battery_widget.add(separator3)
+
+        self.battery_widget.add(self.battery_settings_button)
+
+        self.add(self.battery_widget)
+
         self.battery_service.connect("changed", self.on_battery_changed)
         self.battery_service.connect("profile_changed", self.on_profile_changed)
 
         # Initialize display
         self.update_battery_info()
-        self.create_profile_buttons()
-    
+        self.create_energy_mode_buttons()
+        self.create_game_mode_button()
 
-    
-    def create_profile_buttons(self):
-        """Create buttons for available power profiles"""
+    def open_battery_settings(self, *args):
+        # TODO: Implement to open Battery Settings
+        pass
+
+    def create_energy_mode_buttons(self):
         # Clear existing buttons
-        for button in self.profile_buttons:
+        for button in self.energy_mode_buttons:
             button.destroy()
-        self.profile_buttons.clear()
-        
+        self.energy_mode_buttons.clear()
+
         # Get available profiles
         available_profiles = self.battery_service.available_profiles
-        
+
         if not available_profiles:
             no_profiles_label = Label(
-                label="No power profiles available",
+                label="No energy modes available",
                 style_classes="battery-no-profiles",
-                h_align="center"
+                h_align="start",
             )
-            self.profiles_container.add(no_profiles_label)
+            self.energy_modes_container.add(no_profiles_label)
             return
-        
-        # Create button for each profile
+
+        # Define energy mode mappings with proper icon names
+        energy_mode_config = {
+            "balanced": {"display": "Automatic", "icon": "good"},
+            "power-saver": {"display": "Low Power", "icon": "low"},
+            "powersave": {"display": "Low Power", "icon": "low"},
+            "performance": {"display": "High Power", "icon": "full"},
+        }
+
+        # Define the desired order for energy modes
+        desired_order = ["balanced", "power-saver", "powersave", "performance"]
+
+        # Create ordered list of available profiles
+        ordered_profiles = []
+        for profile_name in desired_order:
+            if profile_name in available_profiles:
+                ordered_profiles.append(profile_name)
+
+        # Add any remaining profiles not in the desired order
         for profile in available_profiles:
-            display_name = Battery.get_profile_display_name(profile)
-            button = PowerProfileButton(
-                profile_name=profile,
-                display_name=display_name,
-                battery_service=self.battery_service,
-                parent=self
+            if profile not in ordered_profiles:
+                ordered_profiles.append(profile)
+
+        # Create button for each available profile in the specified order
+        for profile in ordered_profiles:
+            config = energy_mode_config.get(
+                profile, {"display": profile.title(), "icon": "good"}
             )
-            self.profile_buttons.append(button)
-            self.profiles_container.add(button)
-    
-    def update_profile_buttons(self):
-        """Update the state of all profile buttons"""
-        for button in self.profile_buttons:
+
+            button = EnergyModeButton(
+                profile_name=profile,
+                display_name=config["display"],
+                icon_name=config["icon"],
+                battery_service=self.battery_service,
+                parent=self,
+            )
+            self.energy_mode_buttons.append(button)
+            self.energy_modes_container.add(button)
+
+    def update_energy_mode_buttons(self):
+        for button in self.energy_mode_buttons:
             button.update_state()
 
+    def create_game_mode_button(self):
+        # Clear existing game mode button if any
+        for child in list(self.game_mode_container.get_children()):
+            child.destroy()
+
+        # Create game mode button
+        self.game_mode_button = GameModeButton(parent=self)
+        self.game_mode_container.add(self.game_mode_button)
+
     def update_battery_info(self):
-        """Update battery information display"""
         if not self.battery_service.is_present:
-            self.battery_percentage.set_label("No Battery")
-            self.battery_state.set_label("Not Present")
-            self.battery_capacity.set_label("")
-            self.battery_time_to_full.set_visible(False)
-            self.battery_time_to_empty.set_visible(False)
-            self.battery_temperature.set_label("")
+            self.battery_percentage_label.set_label("No Battery")
+            self.power_source_label.set_label("Power Source: Not Present")
+            self.charging_time_label.set_label("")
             return
 
-        # Update percentage
+        # Update percentage in header
         percentage = self.battery_service.percentage
-        self.battery_percentage.set_label(f"Charge: {percentage}%")
+        self.battery_percentage_label.set_label(f"{percentage}%")
 
-        # Update state
+        # Update power source and charging info
         state = self.battery_service.state
-        state_text = state.replace("_", " ").title()
-        self.battery_state.set_label(f"Status: {state_text}")
 
-        # Update capacity
-        capacity = getattr(self.battery_service, 'capacity', None)
-        if capacity is not None:
-            try:
-                # Try to convert to float if it's a string
-                capacity_value = float(capacity)
-                self.battery_capacity.set_label(f"Capacity: {capacity_value:.1f} Wh")
-            except (ValueError, TypeError):
-                # If conversion fails, display as string
-                self.battery_capacity.set_label(f"Capacity: {capacity}")
+        if state == "CHARGING":
+            self.power_source_label.set_label("Power Source: Power Adapter")
+            time_to_full = self.battery_service.time_to_full
+            if time_to_full != "N/A":
+                self.charging_time_label.set_label(
+                    f"{time_to_full} until fully charged"
+                )
+            else:
+                self.charging_time_label.set_label("Charging...")
+        elif state == "FULLY_CHARGED":
+            self.power_source_label.set_label("Power Source: Power Adapter")
+            self.charging_time_label.set_label("Fully Charged")
+        elif state == "DISCHARGING":
+            self.power_source_label.set_label("Power Source: Battery")
+            time_to_empty = self.battery_service.time_to_empty
+            if time_to_empty != "N/A":
+                self.charging_time_label.set_label(f"{time_to_empty} remaining")
+            else:
+                self.charging_time_label.set_label("On Battery Power")
         else:
-            self.battery_capacity.set_label("Capacity: N/A")
-
-        # Update time to full
-        time_to_full = self.battery_service.time_to_full
-        if time_to_full != "N/A" and state == "CHARGING":
-            self.battery_time_to_full.set_label(f"Time to full: {time_to_full}")
-            self.battery_time_to_full.set_visible(True)
-        else:
-            self.battery_time_to_full.set_visible(False)
-
-        # Update time to empty
-        time_to_empty = self.battery_service.time_to_empty
-        if time_to_empty != "N/A" and state == "DISCHARGING":
-            self.battery_time_to_empty.set_label(f"Time remaining: {time_to_empty}")
-            self.battery_time_to_empty.set_visible(True)
-        else:
-            self.battery_time_to_empty.set_visible(False)
-
-        # Update temperature
-        temperature = getattr(self.battery_service, 'temperature', None)
-        if temperature is not None:
-            try:
-                # Try to convert to float and convert from tenths of degrees Celsius to Celsius
-                temp_value = float(temperature) / 10.0
-                self.battery_temperature.set_label(f"Temperature: {temp_value:.1f}°C")
-            except (ValueError, TypeError):
-                # If conversion fails, display as string
-                self.battery_temperature.set_label(f"Temperature: {temperature}")
-        else:
-            self.battery_temperature.set_label("Temperature: N/A")
+            self.power_source_label.set_label("Power Source: Unknown")
+            self.charging_time_label.set_label("")
 
     def on_battery_changed(self, *args):
-        """Handle battery service changes"""
         self.update_battery_info()
 
     def on_profile_changed(self, service, new_profile):
-        """Handle power profile changes"""
-        self.update_profile_buttons()
+        self.update_energy_mode_buttons()

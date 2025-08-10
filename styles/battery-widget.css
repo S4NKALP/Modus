@@ -1,20 +1,15 @@
 .battery-main-title {
   font-size: 1em;
-  font-weight: 600;
+  font-weight: 900;
   color: rgba(255, 255, 255, 0.95);
   margin: 6px 10px;
 }
 
 .battery-power-source {
   font-size: 0.9em;
+  font-weight: 500;
   color: rgba(255, 255, 255, 0.8);
-  margin: 4px 12px;
-}
-
-.battery-separator {
-  min-height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 4px 0;
+  margin: 0px 12px;
 }
 
 .battery-section-title {
@@ -29,42 +24,12 @@
   padding: 4px 0;
 }
 
-.battery-energy-indicator {
-  font-size: 0.8em;
-  margin-right: 4px;
-}
-
-.battery-energy-app {
-  font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.battery-settings-button {
-  background: transparent;
-  border: none;
-  padding: 8px 12px;
-  margin: 4px 0;
-  border-radius: 0;
-}
-
-.battery-settings-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.battery-info-item {
-  font-size: 0.85em;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 2px 10px;
-  padding: 1px 0;
-}
-
 .battery-status-section {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 8px 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* background: rgba(255, 255, 255, 0.06); */
+  /* border-radius: 12px; */
+  padding: 2px;
+  /* margin: 8px 0; */
+  /* border: 1px solid rgba(255, 255, 255, 0.08); */
 }
 
 .battery-percentage {
@@ -73,112 +38,74 @@
   color: rgba(255, 255, 255, 0.95);
 }
 
-.battery-state {
-  font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 4px;
-}
-
-.battery-time {
-  font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 2px;
-}
-
-.battery-capacity {
-  font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 2px;
-}
-
-.battery-temperature {
-  font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 2px;
-}
-
 .battery-section-title {
   font-size: 0.95em;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.9);
-  margin: 16px 0 8px 0;
+  margin: 0px 10px;
 }
 
-.battery-profiles-container {
-  background: transparent;
-  padding: 2px 8px;
-  margin: 2px 0;
-}
-
-.battery-profile-button {
+#energy-mode-button-clickable {
   background: transparent;
   border: none;
-  border-radius: 6px;
-  padding: 4px 6px;
-  margin: 0 1px;
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 1px 0;
   transition: all 0.2s ease;
-  min-width: 45px;
 }
 
-.battery-profile-button:hover {
+#energy-mode-button-clickable:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.battery-profile-button.active {
-  background: alpha(#2369ff, 0.2);
+#energy-mode-icon {
+  border-radius: 50%;
+  padding: 4px;
+  margin-right: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
 }
 
-.battery-profile-icon {
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2px;
+#energy-mode-icon.connected {
+  background-color: #007aff;
+  color: #ffffff;
 }
 
-.battery-profile-button.active .battery-profile-icon {
-  color: rgba(0, 122, 255, 1);
+#energy-mode-button .battery-power-source {
+  margin: 0;
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.battery-no-profiles {
-  font-size: 0.85em;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 16px;
-}
-
-/* Gamemode Button Styles */
-.battery-gamemode-container {
-  background: transparent;
-  padding: 2px 8px;
+#game-mode-button {
   margin: 2px 0;
 }
 
-.battery-gamemode-button {
+#game-mode-button-clickable {
   background: transparent;
   border: none;
-  border-radius: 6px;
-  padding: 4px 6px;
-  margin: 0 1px;
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 1px 0;
   transition: all 0.2s ease;
-  min-width: 45px;
+  /* min-height: 36px; */
 }
 
-.battery-gamemode-button:hover {
+#game-mode-button-clickable:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.battery-gamemode-button.active {
-  background: alpha(#2369ff, 0.2);
-  /* background: rgba(255, 69, 0, 0.2); */
+#game-mode-icon {
+  border-radius: 50%;
+  padding: 4px;
+  margin-right: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
 }
 
-.battery-gamemode-icon {
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2px;
-}
-
-.battery-gamemode-button.active .battery-gamemode-icon {
-  color: rgba(255, 69, 0, 1);
-}
-
-.battery-gamemode-label {
-  font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.8);
+#game-mode-icon.connected {
+  background-color: #ff4500;
+  color: #ffffff;
 }
