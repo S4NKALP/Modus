@@ -7,7 +7,6 @@ from fabric.widgets.image import Image
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.box import Box
-from loguru import logger
 from gi.repository import Gdk, GLib, Gtk
 from fabric.widgets.separator import Separator
 import gi
@@ -216,7 +215,7 @@ class WifiNetworkSlot(CenterBox):
                 self.wifi_service.connect_to_wifi(
                     self.access_point, password, callback=on_connection_result
                 )
-            except Exception as e:
+            except Exception:
                 # Handle any connection errors gracefully
                 self._reset_connect_state()
                 if self.password_dialog:
@@ -249,6 +248,9 @@ class WifiConnections(Box):
         self.network_service = NetworkClient()
         self.wifi_service = None
         self.is_scanning = False  # Track scanning state
+        self.refresh_timer = None  # Timer for periodic network refresh
+        self._update_in_progress = False  # Prevent concurrent updates
+        self._destroyed = False  # Track if widget is destroyed
 
         # Wait for network service to be ready
         self.network_service.connect("wifi-device-added", self.on_network_ready)
@@ -311,6 +313,9 @@ class WifiConnections(Box):
             overlay_scroll=True,
         )
 
+        # Add pull-to-refresh functionality to scrolled window
+        self.setup_pull_to_refresh()
+
         # Create revealer for Other Networks section
         self.other_networks_revealer = Revealer(
             child=self.other_networks_scrolled,
@@ -347,6 +352,9 @@ class WifiConnections(Box):
         # Connect cleanup on destroy
         self.connect("destroy", self.on_destroy)
 
+        # Start periodic network monitoring for real-time updates
+        self.start_network_monitoring()
+
     def toggle_other_networks(self, *_):
         """Toggle the visibility of other networks section"""
         current_state = self.other_networks_revealer.child_revealed
@@ -354,9 +362,11 @@ class WifiConnections(Box):
 
         # Update button text based on state
         if self.other_networks_revealer.child_revealed:
-            # Trigger a scan when revealing other networks
+            # Trigger a scan when revealing other networks and force refresh
             if self.wifi_service:
                 self.wifi_service.scan()
+                # Also force an immediate network refresh to catch any missed connections
+                self.force_network_refresh()
 
     def on_network_ready(self, *_):
         """Called when network service is ready"""
@@ -382,7 +392,6 @@ class WifiConnections(Box):
         if self.wifi_service:
             new_state = toggle_button.get_active()
             self.wifi_service.wireless_enabled = new_state
-            logger.info(f"[WiFi] Toggle changed to: {new_state}")
 
     def on_wifi_enabled_changed(self, *_):
         """Handle WiFi enabled state changes"""
@@ -396,74 +405,145 @@ class WifiConnections(Box):
             if self.parent and hasattr(self.parent, "hide_controlcenter"):
                 self.parent.hide_controlcenter()
         except FileNotFoundError:
-            logger.error(
-                "[WiFi] nm-connection-editor not found. Please install network-manager-gnome package."
-            )
-        except Exception as e:
-            logger.error(f"[WiFi] Failed to open network settings: {e}")
+            pass
+        except Exception:
+            pass
 
     def update_networks(self, *_):
         """Update the list of available networks"""
-        if not self.wifi_service:
+        # Prevent concurrent updates and check if destroyed
+        if self._update_in_progress or self._destroyed or not self.wifi_service:
             return
 
-        # Clear existing networks
-        for child in self.known_networks.get_children():
-            child.destroy()
-        for child in self.other_networks.get_children():
-            child.destroy()
+        self._update_in_progress = True
 
-        # Get current networks
-        access_points = self.wifi_service.access_points
-        known_networks = []
-        other_networks = []
+        try:
+            # Store current network SSIDs to detect changes
+            current_known_ssids = {
+                child.ssid
+                for child in self.known_networks.get_children()
+                if hasattr(child, "ssid")
+            }
+            current_other_ssids = {
+                child.ssid
+                for child in self.other_networks.get_children()
+                if hasattr(child, "ssid")
+            }
 
-        for access_point in access_points:
-            if access_point.ssid and access_point.ssid != "Unknown":
-                # Categorize networks: connected or saved networks go to "Known Network"
-                # All others go to "Other Networks"
-                if access_point.is_active or self._is_saved_network(access_point):
-                    known_networks.append(access_point)
-                else:
-                    other_networks.append(access_point)
+            # Get current networks
+            access_points = self.wifi_service.access_points
+            known_networks = []
+            other_networks = []
+            new_known_ssids = set()
+            new_other_ssids = set()
 
-        # Add known networks
-        for access_point in known_networks:
-            network_slot = WifiNetworkSlot(
-                access_point, self.wifi_service, parent=self.parent
-            )
-            self.known_networks.add(network_slot)
+            for access_point in access_points:
+                try:
+                    if access_point.ssid and access_point.ssid != "Unknown":
+                        # Categorize networks: connected or saved networks go to "Known Network"
+                        # All others go to "Other Networks"
+                        if access_point.is_active or self._is_saved_network(
+                            access_point
+                        ):
+                            known_networks.append(access_point)
+                            new_known_ssids.add(access_point.ssid)
+                        else:
+                            other_networks.append(access_point)
+                            new_other_ssids.add(access_point.ssid)
+                except Exception:
+                    continue
 
-        # Add other networks
-        for access_point in other_networks:
-            network_slot = WifiNetworkSlot(
-                access_point, self.wifi_service, parent=self.parent
-            )
-            self.other_networks.add(network_slot)
+            # Check if we need to update (networks added/removed)
+            known_changed = current_known_ssids != new_known_ssids
+            other_changed = current_other_ssids != new_other_ssids
 
-        # Show/hide sections based on available networks
-        has_known_networks = len(known_networks) > 0
-        has_other_networks = len(other_networks) > 0
-        has_any_networks = has_known_networks or has_other_networks
+            # Only rebuild if something actually changed
+            if known_changed or other_changed:
+                # Clear existing networks safely
+                for child in list(self.known_networks.get_children()):
+                    if not self._destroyed:
+                        child.destroy()
+                for child in list(self.other_networks.get_children()):
+                    if not self._destroyed:
+                        child.destroy()
 
-        # Show known networks section only if there are known networks
-        self.known_networks_label.set_visible(has_known_networks)
-        self.known_networks.set_visible(has_known_networks)
+                # Add known networks
+                for access_point in known_networks:
+                    if not self._destroyed:
+                        network_slot = WifiNetworkSlot(
+                            access_point, self.wifi_service, parent=self.parent
+                        )
+                        self.known_networks.add(network_slot)
 
-        # Show "No networks available" message if no networks at all
-        self.no_networks_label.set_visible(not has_any_networks)
+                # Add other networks
+                for access_point in other_networks:
+                    if not self._destroyed:
+                        network_slot = WifiNetworkSlot(
+                            access_point, self.wifi_service, parent=self.parent
+                        )
+                        self.other_networks.add(network_slot)
 
-        # Always show the other networks button, regardless of available networks
-        self.other_networks_button.set_visible(True)  # Always visible
+            # Show/hide sections based on available networks
+            if not self._destroyed:
+                has_known_networks = len(known_networks) > 0
+                has_other_networks = len(other_networks) > 0
+                has_any_networks = has_known_networks or has_other_networks
 
-        # Update all network connection states
-        self.refresh_network_states()
+                # Show known networks section only if there are known networks
+                self.known_networks_label.set_visible(has_known_networks)
+                self.known_networks.set_visible(has_known_networks)
+
+                # Show "No networks available" message if no networks at all
+                self.no_networks_label.set_visible(not has_any_networks)
+
+                # Always show the other networks button, regardless of available networks
+                self.other_networks_button.set_visible(True)  # Always visible
+
+                # Update all network connection states
+                self.refresh_network_states()
+
+        except Exception:
+            pass
+        finally:
+            self._update_in_progress = False
 
     def _is_saved_network(self, access_point):
-        """Check if a network is saved/known (placeholder implementation)"""
-        # TODO: Implement proper saved network detection
-        # This would typically check against NetworkManager's saved connections
-        # For now, we'll use a simple heuristic
+        """Check if a network is saved/known using NetworkManager connections"""
+        if not self.network_service or not self.network_service._client:
+            return False
+
+        try:
+            ssid = access_point.ssid
+            if not ssid or ssid == "Unknown":
+                return False
+
+            # Get all saved connections from NetworkManager
+            connections = self.network_service._client.get_connections()
+
+            for connection in connections:
+                # Check if this is a WiFi connection
+                if connection.get_connection_type() != "802-11-wireless":
+                    continue
+
+                # Get the wireless setting
+                wifi_setting = connection.get_setting_wireless()
+                if not wifi_setting:
+                    continue
+
+                # Compare SSIDs
+                connection_ssid_bytes = wifi_setting.get_ssid()
+                if connection_ssid_bytes:
+                    from gi.repository import NM
+
+                    connection_ssid = NM.utils_ssid_to_utf8(
+                        connection_ssid_bytes.get_data()
+                    )
+                    if connection_ssid == ssid:
+                        return True
+
+        except Exception:
+            pass
+
         return False
 
     def refresh_network_states(self, *_):
@@ -478,10 +558,138 @@ class WifiConnections(Box):
             if hasattr(child, "on_changed"):
                 child.on_changed()
 
+    def start_network_monitoring(self):
+        """Start periodic monitoring for network changes"""
+        # Monitor for network changes every 5 seconds
+        # This helps catch networks that connect from external sources
+        self.refresh_timer = GLib.timeout_add_seconds(5, self.periodic_network_refresh)
+
+    def stop_network_monitoring(self):
+        """Stop periodic monitoring"""
+        if self.refresh_timer:
+            GLib.source_remove(self.refresh_timer)
+            self.refresh_timer = None
+
+    def periodic_network_refresh(self):
+        """Periodically refresh network list to catch external connections"""
+        # Skip if update in progress, destroyed, or wifi service not available
+        if (
+            self._update_in_progress
+            or self._destroyed
+            or not self.wifi_service
+            or not self.wifi_service.wireless_enabled
+        ):
+            return True  # Continue monitoring
+
+        try:
+            # Simple check - just trigger update_networks which has its own safety checks
+            self.update_networks()
+        except Exception:
+            pass
+
+        return True  # Continue monitoring
+
+    def force_network_refresh(self):
+        """Force an immediate refresh of the network list"""
+        if self._update_in_progress or self._destroyed:
+            return
+
+        try:
+            # Simply trigger update_networks which has its own safety checks
+            self.update_networks()
+        except Exception:
+            pass
+
+    def setup_pull_to_refresh(self):
+        """Setup pull-to-refresh gesture for the scrolled window"""
+        # Get the scrolled window's vertical adjustment
+        self.vadjustment = self.other_networks_scrolled.get_vadjustment()
+
+        # Track gesture state
+        self.pull_start_y = 0
+        self.is_pulling = False
+        self.pull_threshold = 50  # pixels to trigger refresh
+
+        # Connect to scroll events
+        self.other_networks_scrolled.connect("scroll-event", self.on_scroll_event)
+        self.other_networks_scrolled.connect("button-press-event", self.on_button_press)
+        self.other_networks_scrolled.connect(
+            "button-release-event", self.on_button_release
+        )
+        self.other_networks_scrolled.connect(
+            "motion-notify-event", self.on_motion_notify
+        )
+
+        # Enable events
+        self.other_networks_scrolled.set_events(
+            Gdk.EventMask.SCROLL_MASK
+            | Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
+        )
+
+    def on_scroll_event(self, widget, event):
+        """Handle scroll events for pull-to-refresh"""
+        # Only handle pull-to-refresh when at the top
+        if self.vadjustment.get_value() <= 0:
+            if event.direction == Gdk.ScrollDirection.UP:
+                # Scrolling up at the top - trigger scan and force refresh
+                if self.wifi_service:
+                    self.wifi_service.scan()
+                    self.force_network_refresh()
+                return True  # Consume the event
+        return False  # Let normal scrolling continue
+
+    def on_button_press(self, widget, event):
+        """Handle button press for touch/drag gestures"""
+        if self.vadjustment.get_value() <= 0:
+            self.pull_start_y = event.y
+            self.is_pulling = True
+        return False
+
+    def on_button_release(self, widget, event):
+        """Handle button release for touch/drag gestures"""
+        if self.is_pulling:
+            pull_distance = event.y - self.pull_start_y
+            if pull_distance > self.pull_threshold:
+                # Trigger scan and force refresh
+                if self.wifi_service:
+                    self.wifi_service.scan()
+                    self.force_network_refresh()
+            # Hide refresh indicator
+            self.refresh_indicator.set_visible(False)
+            self.refresh_indicator.remove_style_class("ready-to-refresh")
+            self.is_pulling = False
+        return False
+
+    def on_motion_notify(self, widget, event):
+        """Handle motion events for visual feedback during pull"""
+        if self.is_pulling and self.vadjustment.get_value() <= 0:
+            pull_distance = event.y - self.pull_start_y
+            if pull_distance > 0:
+                # Show refresh indicator when pulling down
+                self.refresh_indicator.set_visible(True)
+                if pull_distance >= self.pull_threshold:
+                    self.refresh_indicator.set_label("↑ Release to scan")
+                    self.refresh_indicator.add_style_class("ready-to-refresh")
+                else:
+                    self.refresh_indicator.set_label("↓ Pull to scan for networks")
+                    self.refresh_indicator.remove_style_class("ready-to-refresh")
+            else:
+                self.refresh_indicator.set_visible(False)
+        return False
+
     def on_destroy(self, widget):
         """Cleanup when widget is destroyed"""
+        # Mark as destroyed to prevent further updates
+        self._destroyed = True
+        # Stop monitoring
+        self.stop_network_monitoring()
         # Make sure other networks revealer is collapsed when closing
-        self.other_networks_revealer.child_revealed = False
+        try:
+            self.other_networks_revealer.child_revealed = False
+        except:
+            pass  # Widget might already be destroyed
 
     def close_wifi(self):
         """Called when WiFi panel is being closed"""
