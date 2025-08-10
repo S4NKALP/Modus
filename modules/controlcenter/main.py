@@ -360,8 +360,6 @@ class ModusControlCenter(Window):
 
         # Create revealers for crossfade transitions
 
-        self.expanded_player_revealer = None  # Will be created lazily
-
         self.widgets.set_size_request(300, -1)
 
         self.children = self.center_box
@@ -520,15 +518,6 @@ class ModusControlCenter(Window):
                 start_children=[self.expanded_player_widgets]
             )
             self.expanded_player_center_box.set_size_request(300, -1)
-
-            # Create revealer for expanded player
-            if self.expanded_player_revealer is None:
-                self.expanded_player_revealer = Revealer(
-                    child=self.expanded_player_center_box,
-                    transition_type="crossfade",
-                    transition_duration=250,
-                    child_revealed=False,
-                )
 
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
@@ -689,13 +678,28 @@ class ModusControlCenter(Window):
         self.has_per_app_volume_open = False
 
     def open_expanded_player(self, *_):
+        self._ensure_expanded_player_widgets()
+        self._crossfade_to_view("expanded_player")
         self.has_expanded_player_open = True
         # Refresh the player when opening
         if self._expanded_player_widget:
             self._expanded_player_widget.refresh()
 
     def close_expanded_player(self, *_):
+        self._crossfade_to_view("main")
         self.has_expanded_player_open = False
+
+    def _crossfade_to_view(self, view_name):
+        """Handle transitions between views"""
+        if view_name == "expanded_player":
+            # Show expanded player
+            self._ensure_expanded_player_widgets()
+            idle_add(lambda *_: self.set_children(self.expanded_player_center_box))
+            self.current_view = "expanded_player"
+        elif view_name == "main":
+            # Show main view
+            idle_add(lambda *_: self.set_children(self.center_box))
+            self.current_view = "main"
 
     def _set_mousecapture(self, visible: bool):
         if visible:
