@@ -23,7 +23,7 @@ class BluetoothIndicator(Box):
         self.bluetooth = BluetoothClient()
         self.bt_icon = Svg(
             name="bt-icon",
-            size=22,
+            size=18,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/bluetooth-clear.svg"
             ),
@@ -167,7 +167,7 @@ class NetworkIndicator(Box):
 
         self.network_icon = Svg(
             name="network-icon",
-            size=22,
+            size=18,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/wifi-clear.svg"
             ),
@@ -434,10 +434,13 @@ class BatteryIndicator(Box):
 
     def update_state(self):
         if not self.battery_service.is_present:
-            icon_file = "battery.svg"
-            tooltip = "No battery detected"
-            percentage_text = "N/A"
+            # Hide the entire battery component when no battery is present
+            self.set_visible(False)
+            return
         else:
+            # Show the battery component when battery is present
+            self.set_visible(True)
+
             percentage = self.battery_service.percentage
             state = self.battery_service.state
             is_charging = state in ["CHARGING", "FULLY_CHARGED"]
@@ -448,10 +451,10 @@ class BatteryIndicator(Box):
             tooltip = self.get_battery_tooltip(percentage, state)
             percentage_text = f"{percentage}%"
 
-        # Update icon, tooltip, and percentage label
-        self.battery_icon.set_from_file(get_relative_path(icon_file))
-        self.battery_button.set_tooltip_text(tooltip)
-        self.battery_label.set_label(percentage_text)
+            # Update icon, tooltip, and percentage label
+            self.battery_icon.set_from_file(get_relative_path(icon_file))
+            self.battery_button.set_tooltip_text(tooltip)
+            self.battery_label.set_label(percentage_text)
 
     def on_battery_clicked(self, *args):
         """Handle Battery indicator click"""
