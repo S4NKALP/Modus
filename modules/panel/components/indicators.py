@@ -23,7 +23,7 @@ class BluetoothIndicator(Box):
         self.bluetooth = BluetoothClient()
         self.bt_icon = Svg(
             name="bt-icon",
-            size=18,
+            size=22,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/bluetooth-clear.svg"
             ),
@@ -167,7 +167,7 @@ class NetworkIndicator(Box):
 
         self.network_icon = Svg(
             name="network-icon",
-            size=18,
+            size=22,
             svg_file=get_relative_path(
                 "../../../config/assets/icons/applets/wifi-clear.svg"
             ),
