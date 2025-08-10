@@ -4,12 +4,16 @@ gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GLib, Gtk
 
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.svg import Svg
+
+from services.battery import Battery
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -41,6 +45,32 @@ class BluetoothDeviceSlot(CenterBox):
             Label(label=device.name),  # type: ignore
         ]
 
+        # Add battery info if available
+        if hasattr(device, 'battery_percentage') and device.battery_percentage > 0:
+            battery_box = Box(orientation="h", spacing=4)
+            
+            # Create battery icon
+            battery_icon = Svg(
+                size=16,
+                svg_file=get_relative_path(
+                    Battery.get_battery_icon_file(
+                        device.battery_percentage, 
+                        False,  # Not charging for bluetooth devices
+                        "../../config/assets/icons/"
+                    )
+                ),
+                name="battery-icon"
+            )
+            
+            # Create battery percentage label
+            battery_label = Label(
+                label=f"{device.battery_percentage:.0f}%",
+                name="battery-label"
+            )
+            
+            battery_box.children = [battery_icon, battery_label]
+            self.end_children = [battery_box]
+
         self.device.emit("changed")  # to update display status
 
     def toggle_connecting(self):
@@ -53,6 +83,53 @@ class BluetoothDeviceSlot(CenterBox):
             "paired" if self.device.paired else "",
         ]
         self.dimage.set_property("style-classes", " ".join(self.styles))
+        
+        # Update battery info if available
+        if hasattr(self.device, 'battery_percentage') and self.device.battery_percentage > 0:
+            if not self.end_children:  # Add battery display if not already present
+                battery_box = Box(orientation="h", spacing=4)
+                
+                # Create battery icon
+                battery_icon = Svg(
+                    size=16,
+                    svg_file=get_relative_path(
+                        Battery.get_battery_icon_file(
+                            self.device.battery_percentage, 
+                            False,  # Not charging for bluetooth devices
+                            "../../config/assets/icons/"
+                        )
+                    ),
+                    name="battery-icon"
+                )
+                
+                # Create battery percentage label
+                battery_label = Label(
+                    label=f"{self.device.battery_percentage:.0f}%",
+                    name="battery-label"
+                )
+                
+                battery_box.children = [battery_icon, battery_label]
+                self.end_children = [battery_box]
+            else:  # Update existing battery display
+                battery_box = self.end_children[0]
+                if hasattr(battery_box, 'children') and len(battery_box.children) >= 2:
+                    battery_icon = battery_box.children[0]
+                    battery_label = battery_box.children[1]
+                    
+                    # Update battery icon
+                    battery_icon.set_from_file(get_relative_path(
+                        Battery.get_battery_icon_file(
+                            self.device.battery_percentage, 
+                            False,  # Not charging for bluetooth devices
+                            "../../config/assets/icons/"
+                        )
+                    ))
+                    
+                    # Update battery percentage
+                    battery_label.set_label(f"{self.device.battery_percentage:.0f}%")
+        elif self.end_children:  # Remove battery display if no longer available
+            self.end_children = []
+        
         return
 
 
