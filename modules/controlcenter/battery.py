@@ -1,14 +1,15 @@
+import subprocess
+
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.label import Label
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
+from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
-from services.battery import Battery
-import subprocess
-from fabric.utils import get_relative_path
-import os
 from gi.repository import GLib
+
+from services.battery import Battery
 
 
 class EnergyModeButton(CenterBox):
