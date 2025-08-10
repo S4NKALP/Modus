@@ -52,9 +52,9 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [ ] Settings
 - [ ] Magnifier hover effect on Dock
 - [x] ~~New Application Switcher~~
-- [ ] Panel Widget
+- [x] Panel Widget
 - [x] Calendar Widget
-
+- [x] Expandable Notifiaction Centre
 ## Bug Fixes (the bug found till now)
 
 - [x] WiFi
