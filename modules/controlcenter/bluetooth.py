@@ -1,19 +1,22 @@
-import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('Gdk', '3.0')
-from gi.repository import Gdk, GLib, Gtk
-
-from fabric.bluetooth import BluetoothClient, BluetoothDevice
-from fabric.utils import get_relative_path
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.image import Image
-from fabric.widgets.label import Label
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.svg import Svg
-
+from loguru import logger
 from services.battery import Battery
+from fabric.widgets.revealer import Revealer
+from fabric.widgets.separator import Separator
+from fabric.widgets.svg import Svg
+from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.label import Label
+from fabric.widgets.image import Image
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.button import Button
+from fabric.widgets.box import Box
+from fabric.utils import get_relative_path
+from fabric.bluetooth import BluetoothClient, BluetoothDevice
+import subprocess
+from gi.repository import Gdk, GLib, Gtk
+import gi
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -46,28 +49,27 @@ class BluetoothDeviceSlot(CenterBox):
         ]
 
         # Add battery info if available
-        if hasattr(device, 'battery_percentage') and device.battery_percentage > 0:
+        if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
             battery_box = Box(orientation="h", spacing=4)
-            
+
             # Create battery icon
             battery_icon = Svg(
                 size=16,
                 svg_file=get_relative_path(
                     Battery.get_battery_icon_file(
-                        device.battery_percentage, 
+                        device.battery_percentage,
                         False,  # Not charging for bluetooth devices
-                        "../../config/assets/icons/"
+                        "../../config/assets/icons/",
                     )
                 ),
-                name="battery-icon"
+                name="battery-icon",
             )
-            
+
             # Create battery percentage label
             battery_label = Label(
-                label=f"{device.battery_percentage:.0f}%",
-                name="battery-label"
+                label=f"{device.battery_percentage:.0f}%", name="battery-label"
             )
-            
+
             battery_box.children = [battery_icon, battery_label]
             self.end_children = [battery_box]
 
@@ -83,53 +85,57 @@ class BluetoothDeviceSlot(CenterBox):
             "paired" if self.device.paired else "",
         ]
         self.dimage.set_property("style-classes", " ".join(self.styles))
-        
+
         # Update battery info if available
-        if hasattr(self.device, 'battery_percentage') and self.device.battery_percentage > 0:
+        if (
+            hasattr(self.device, "battery_percentage")
+            and self.device.battery_percentage > 0
+        ):
             if not self.end_children:  # Add battery display if not already present
                 battery_box = Box(orientation="h", spacing=4)
-                
+
                 # Create battery icon
                 battery_icon = Svg(
                     size=16,
                     svg_file=get_relative_path(
                         Battery.get_battery_icon_file(
-                            self.device.battery_percentage, 
+                            self.device.battery_percentage,
                             False,  # Not charging for bluetooth devices
-                            "../../config/assets/icons/"
+                            "../../config/assets/icons/",
                         )
                     ),
-                    name="battery-icon"
+                    name="battery-icon",
                 )
-                
+
                 # Create battery percentage label
                 battery_label = Label(
-                    label=f"{self.device.battery_percentage:.0f}%",
-                    name="battery-label"
+                    label=f"{self.device.battery_percentage:.0f}%", name="battery-label"
                 )
-                
+
                 battery_box.children = [battery_icon, battery_label]
                 self.end_children = [battery_box]
             else:  # Update existing battery display
                 battery_box = self.end_children[0]
-                if hasattr(battery_box, 'children') and len(battery_box.children) >= 2:
+                if hasattr(battery_box, "children") and len(battery_box.children) >= 2:
                     battery_icon = battery_box.children[0]
                     battery_label = battery_box.children[1]
-                    
+
                     # Update battery icon
-                    battery_icon.set_from_file(get_relative_path(
-                        Battery.get_battery_icon_file(
-                            self.device.battery_percentage, 
-                            False,  # Not charging for bluetooth devices
-                            "../../config/assets/icons/"
+                    battery_icon.set_from_file(
+                        get_relative_path(
+                            Battery.get_battery_icon_file(
+                                self.device.battery_percentage,
+                                False,  # Not charging for bluetooth devices
+                                "../../config/assets/icons/",
+                            )
                         )
-                    ))
-                    
+                    )
+
                     # Update battery percentage
                     battery_label.set_label(f"{self.device.battery_percentage:.0f}%")
         elif self.end_children:  # Remove battery display if no longer available
             self.end_children = []
-        
+
         return
 
 
@@ -138,16 +144,27 @@ class BluetoothConnections(Box):
         self, parent, show_hidden_devices: bool = False, show_back_button=True, **kwargs
     ):
         super().__init__(
-            spacing=4,
+            spacing=8,
             orientation="vertical",
             style="margin: 8px",
+            name="bluetooth-connections",
             **kwargs,
         )
 
         self.parent = parent
         self.show_hidden_devices = show_hidden_devices
+        self.is_scanning = False  # Track scanning state
 
         self.client = BluetoothClient(on_device_added=self.on_device_added)
+
+        # Create pull-to-refresh indicator
+        self.refresh_indicator = Label(
+            name="bluetooth-refresh-indicator",
+            label="↓ Pull to scan for devices",
+            h_align="center",
+            visible=False,
+            style="color: #fff; font-size: 12px; padding: 5px;",
+        )
 
         # Create title with optional back button
         title_children = []
@@ -158,7 +175,7 @@ class BluetoothConnections(Box):
                     on_clicked=lambda *_: self.parent.close_bluetooth(),
                 )
             )
-        title_children.append(Label("Bluetooth"))
+        title_children.append(Label("Bluetooth", name="bluetooth-title"))
 
         self.title = Box(
             orientation="h",
@@ -179,36 +196,60 @@ class BluetoothConnections(Box):
             "notify::enabled",
             lambda *_: self.toggle_button.set_active(self.client.enabled),
         )
-        # Connect scanning state changes to update scan button
         self.client.connect("notify::scanning", lambda *_: self.update_scan_label())
 
-        self.not_paired = Box(spacing=2, orientation="vertical")
-        self.paired = Box(spacing=2, orientation="vertical")
+        # Connect to device changes
+        self.client.connect("device-added", self.update_devices)
+        self.client.connect("device-removed", self.update_devices)
 
-        # Create pull-to-refresh indicator
-        self.refresh_indicator = Label(
-            name="bluetooth-refresh-indicator",
-            label="↓ Pull to scan for devices",
+        # Create Devices section
+        self.paired_devices_label = Label(
+            label="Devices", h_align="start", name="networks-title"
+        )
+        self.paired_devices = Box(
+            spacing=4, orientation="vertical", name="known-networks"
+        )
+
+        # Create "No devices available" message
+        self.no_devices_label = Label(
+            label="No devices available",
             h_align="center",
+            name="no-networks-label",
             visible=False,
         )
 
-        self.device_box = Box(
-            spacing=2,
-            orientation="vertical",
-            children=[self.refresh_indicator, self.paired, self.not_paired],
+        # Create Other Devices section with clickable title
+        self.other_devices_button = Button(
+            child=Label("Other Devices", h_align="start"),
+            name="wifi-other-button",
+            on_clicked=self.toggle_other_devices,
         )
+        self.other_devices = Box(spacing=4, orientation="vertical")
 
-        # Create scrolled window with pull-to-refresh
-        self.scrolled_window = ScrolledWindow(
-            min_content_size=(303, 400),
-            max_content_size=(303, 800),
-            child=self.device_box,
+        # Create scrolled window for other devices
+        self.other_devices_scrolled = ScrolledWindow(
+            min_content_size=(303, 150),
+            child=self.other_devices,
             overlay_scroll=True,
         )
 
-        # Add pull-to-refresh functionality
+        # Add pull-to-refresh functionality to scrolled window
         self.setup_pull_to_refresh()
+
+        # Create revealer for Other Devices section
+        self.other_devices_revealer = Revealer(
+            child=self.other_devices_scrolled,
+            transition_type="slide-down",
+            transition_duration=100,
+            child_revealed=False,
+        )
+
+        # Create More Settings button (same style as Other Devices button)
+        self.more_settings_button = Button(
+            child=Label("More Settings", h_align="start"),
+            name="wifi-other-button",
+            on_clicked=self.open_bluetooth_settings,
+        )
 
         self.children = [
             CenterBox(
@@ -216,88 +257,50 @@ class BluetoothConnections(Box):
                 end_children=self.toggle_button,
                 name="bluetooth-widget-top",
             ),
-            Label("Devices", h_align="start", name="devices-title"),
-            self.scrolled_window,
+            self.refresh_indicator,
+            Separator(orientation="h", name="separator"),
+            self.paired_devices_label,
+            self.paired_devices,
+            self.no_devices_label,
+            Separator(orientation="h", name="separator"),
+            self.other_devices_button,
+            self.other_devices_revealer,
+            Separator(orientation="h", name="separator"),
+            self.more_settings_button,
         ]
+
+        # Connect cleanup on destroy
+        self.connect("destroy", self.on_destroy)
+
         self.client.notify("scanning")
         self.client.notify("enabled")
 
-    def setup_pull_to_refresh(self):
-        """Setup pull-to-refresh gesture for the scrolled window"""
-        # Get the scrolled window's vertical adjustment
-        self.vadjustment = self.scrolled_window.get_vadjustment()
+        # Initial device update
+        self.update_devices()
 
-        # Track gesture state
-        self.pull_start_y = 0
-        self.is_pulling = False
-        self.pull_threshold = 50  # pixels to trigger refresh
+    def toggle_other_devices(self, *_):
+        """Toggle the visibility of other devices section"""
+        current_state = self.other_devices_revealer.child_revealed
+        self.other_devices_revealer.child_revealed = not current_state
 
-        # Connect to scroll events
-        self.scrolled_window.connect("scroll-event", self.on_scroll_event)
-        self.scrolled_window.connect("button-press-event", self.on_button_press)
-        self.scrolled_window.connect("button-release-event", self.on_button_release)
-        self.scrolled_window.connect("motion-notify-event", self.on_motion_notify)
+        # Update button text based on state
+        if self.other_devices_revealer.child_revealed:
+            # Trigger a scan when revealing other devices
+            if self.client:
+                self.client.start_scan()
 
-        # Enable events
-        self.scrolled_window.set_events(
-            Gdk.EventMask.SCROLL_MASK
-            | Gdk.EventMask.BUTTON_PRESS_MASK
-            | Gdk.EventMask.BUTTON_RELEASE_MASK
-            | Gdk.EventMask.POINTER_MOTION_MASK
-        )
-
-    def on_scroll_event(self, widget, event):
-        """Handle scroll events for pull-to-refresh"""
-        # Only handle pull-to-refresh when at the top
-        if self.vadjustment.get_value() <= 0:
-            if event.direction == Gdk.ScrollDirection.UP:
-                # Scrolling up at the top - toggle scan (start or stop)
-                self.client.toggle_scan()
-                return True  # Consume the event
-        return False  # Let normal scrolling continue
-
-    def on_button_press(self, widget, event):
-        """Handle button press for touch/drag gestures"""
-        if self.vadjustment.get_value() <= 0:
-            self.pull_start_y = event.y
-            self.is_pulling = True
-        return False
-
-    def on_button_release(self, widget, event):
-        """Handle button release for touch/drag gestures"""
-        if self.is_pulling:
-            pull_distance = event.y - self.pull_start_y
-            if pull_distance > self.pull_threshold:
-                # Toggle scan (start or stop)
-                self.client.toggle_scan()
-            # Hide refresh indicator
-            self.refresh_indicator.set_visible(False)
-            self.refresh_indicator.remove_style_class("ready-to-refresh")
-            self.is_pulling = False
-        return False
-
-    def on_motion_notify(self, widget, event):
-        """Handle motion events for visual feedback during pull"""
-        if self.is_pulling and self.vadjustment.get_value() <= 0:
-            pull_distance = event.y - self.pull_start_y
-            if pull_distance > 0:
-                # Show refresh indicator when pulling down
-                self.refresh_indicator.set_visible(True)
-                if pull_distance >= self.pull_threshold:
-                    if self.client.scanning:
-                        self.refresh_indicator.set_label("↑ Release to stop scanning")
-                    else:
-                        self.refresh_indicator.set_label("↑ Release to scan")
-                    self.refresh_indicator.add_style_class("ready-to-refresh")
-                else:
-                    if self.client.scanning:
-                        self.refresh_indicator.set_label("↓ Pull to stop scanning")
-                    else:
-                        self.refresh_indicator.set_label("↓ Pull to scan for devices")
-                    self.refresh_indicator.remove_style_class("ready-to-refresh")
-            else:
-                self.refresh_indicator.set_visible(False)
-        return False
+    def open_bluetooth_settings(self, *_):
+        """Open Blueman bluetooth manager"""
+        try:
+            subprocess.Popen(["blueman-manager"], start_new_session=True)
+            if self.parent and hasattr(self.parent, "hide_controlcenter"):
+                self.parent.hide_controlcenter()
+        except FileNotFoundError:
+            logger.error(
+                "[Bluetooth] blueman-manager not found. Please install blueman package."
+            )
+        except Exception as e:
+            logger.error(f"[Bluetooth] Failed to open bluetooth settings: {e}")
 
     def update_scan_label(self):
         """Update scanning state appearance"""
@@ -308,19 +311,70 @@ class BluetoothConnections(Box):
             self.refresh_indicator.add_style_class("scanning")
         else:
             # Hide scanning feedback
-            if not self.is_pulling:
-                self.refresh_indicator.set_visible(False)
+            self.refresh_indicator.set_visible(False)
             self.refresh_indicator.remove_style_class("scanning")
 
+    def update_devices(self, *_):
+        """Update the list of available devices"""
+        if not self.client:
+            return
+
+        # Clear existing devices
+        for child in self.paired_devices.get_children():
+            child.destroy()
+        for child in self.other_devices.get_children():
+            child.destroy()
+
+        # Get current devices
+        devices = self.client.devices
+        paired_devices = []
+        other_devices = []
+
+        for device in devices:
+            if device.name and device.name != "Unknown":
+                # Categorize devices: paired devices go to "Devices (Paired)"
+                # All others go to "Other Devices"
+                if device.paired:
+                    paired_devices.append(device)
+                else:
+                    other_devices.append(device)
+
+        # Add paired devices
+        for device in paired_devices:
+            device_slot = BluetoothDeviceSlot(device)
+            self.paired_devices.add(device_slot)
+
+        # Add other devices
+        for device in other_devices:
+            device_slot = BluetoothDeviceSlot(device)
+            self.other_devices.add(device_slot)
+
+        # Show/hide sections based on available devices
+        has_paired_devices = len(paired_devices) > 0
+        has_other_devices = len(other_devices) > 0
+        has_any_devices = has_paired_devices or has_other_devices
+
+        # Show paired devices section only if there are paired devices
+        self.paired_devices_label.set_visible(has_paired_devices)
+        self.paired_devices.set_visible(has_paired_devices)
+
+        # Show "No devices available" message if no devices at all
+        self.no_devices_label.set_visible(not has_any_devices)
+
+        # Always show the other devices button, regardless of available devices
+        self.other_devices_button.set_visible(True)  # Always visible
+
+    def on_destroy(self, widget):
+        """Cleanup when widget is destroyed"""
+        # Make sure other devices revealer is collapsed when closing
+        self.other_devices_revealer.child_revealed = False
+
+    def close_bluetooth(self):
+        """Called when Bluetooth panel is being closed"""
+        # Collapse the other devices section when closing
+        self.other_devices_revealer.child_revealed = False
+
     def on_device_added(self, client: BluetoothClient, address: str):
-        if not (device := client.get_device(address)):
-            return
-
-        if (device.name in ["", None]) and not self.show_hidden_devices:
-            return
-
-        slot = BluetoothDeviceSlot(device, paired=device.paired)
-
-        if device.paired:
-            return self.paired.add(slot)
-        return self.not_paired.add(slot)
+        """Handle when a new device is added"""
+        # Update the device list when devices are added
+        self.update_devices()
