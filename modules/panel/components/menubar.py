@@ -1,6 +1,6 @@
+import json
 import os
 import subprocess
-import json
 
 from fabric.hyprland.widgets import HyprlandActiveWindow as ActiveWindow
 from fabric.utils import FormattedString
@@ -8,6 +8,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
+
 from modules.about import About, AboutApp
 from utils.roam import modus_service
 from widgets.dropdown import ModusDropdown, dropdown_divider
@@ -73,12 +74,20 @@ class AppName:
 
             # Try to get the proper app name from desktop file only if wmclass is not empty
             if wmclass:
-                name = self.get_app_name(wmclass=wmclass)
+                desktop_name = self.get_app_name(wmclass=wmclass)
+                # Only use desktop name if it's different from wmclass (meaning we found a proper name)
+                if desktop_name and desktop_name != wmclass:
+                    name = desktop_name
 
-            # Smart title formatting (capitalize first letter)
-            name = str(name).title()
-            if "." in name:
-                name = name.split(".")[-1]
+            # Handle empty or None names (but not when we already set it to "Finder")
+            if not name or (name.lower() in ["unknown", "none"]):
+                name = title if title else "Unknown Application"
+
+            # Smart title formatting (capitalize first letter) - but not for "Finder"
+            if name != "Finder":
+                name = str(name).title()
+                if "." in name:
+                    name = name.split(".")[-1]
 
         if update:
             modus_service.current_active_app_name = name
@@ -96,26 +105,39 @@ def format_window(title, wmclass):
 def show_about_app():
     """Show about dialog for current active application"""
     try:
-        # Get current window info from Hyprland
-        result = subprocess.run(
-            ["hyprctl", "activewindow", "-j"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        import json
-        window_info = json.loads(result.stdout)
-        wmclass = window_info.get("class", "")
-        title = window_info.get("title", "")
+        # Use modus_service's Hyprland connection to get current window info
+        wmclass = ""
+        title = ""
+
+        if (
+            hasattr(modus_service, "_hyprland_connection")
+            and modus_service._hyprland_connection
+        ):
+            window_data = modus_service._hyprland_connection.send_command(
+                "j/activewindow"
+            ).reply
+            if window_data:
+                window_info = json.loads(window_data.decode("utf-8"))
+                wmclass = window_info.get("class", "")
+                title = window_info.get("title", "")
+
+        # Don't show about dialog if there's no active window (Finder state)
+        if not wmclass and not title:
+            return
+
         app_name = modus_service.current_active_app_name or "Unknown Application"
-        
+        # Don't show about dialog for Finder
+        if app_name == "Finder":
+            return
+
         about_window = AboutApp(app_name=app_name, wmclass=wmclass)
         about_window.toggle(None)
-    except Exception as e:
-        # Fallback: show about dialog with just the app name
-        app_name = modus_service.current_active_app_name or "Unknown Application"
-        about_window = AboutApp(app_name=app_name, wmclass="")
-        about_window.toggle(None)
+    except Exception:
+        # Fallback: only show if we have a real app name
+        app_name = modus_service.current_active_app_name or ""
+        if app_name and app_name != "Finder":
+            about_window = AboutApp(app_name=app_name, wmclass="")
+            about_window.toggle(None)
 
 
 def dropdown_option(
@@ -213,7 +235,7 @@ class MenuBarDropdowns:
         # Global menu dropdowns
         self.global_title_menu_about = dropdown_option(
             f"About {modus_service.current_active_app_name}",
-            on_clicked=lambda _: show_about_app()
+            on_clicked=lambda _: show_about_app(),
         )
         self.global_menu_title = DropDownMouseCapture(
             layer="bottom",
@@ -325,7 +347,7 @@ class MenuBarDropdowns:
             ),
             name="global-title-button",
             style_classes="button",
-            on_clicked=lambda _: self.global_menu_title.toggle_mousecapture(),
+            on_clicked=self._on_title_button_clicked,
         )
 
         self.global_menu_title.child_window.set_pointing_to(
@@ -367,6 +389,37 @@ class MenuBarDropdowns:
 
         modus_service.connect("current-dropdown-changed", self.changed_dropdown)
         modus_service.connect("dropdowns-hide-changed", self.hide_dropdowns)
+
+    def _on_title_button_clicked(self, _):
+        """Handle title button click - only show dropdown if there's an active window"""
+        try:
+            # Use modus_service's Hyprland connection to get current window info
+            if (
+                hasattr(modus_service, "_hyprland_connection")
+                and modus_service._hyprland_connection
+            ):
+                window_data = modus_service._hyprland_connection.send_command(
+                    "j/activewindow"
+                ).reply
+                if window_data:
+                    window_info = json.loads(window_data.decode("utf-8"))
+                    wmclass = window_info.get("class", "")
+                    title = window_info.get("title", "")
+
+                    # Only show dropdown if there's an active window (not Finder)
+                    if wmclass or title:
+                        self.global_menu_title.toggle_mousecapture()
+                    return
+
+            # Fallback: check if current_active_app_name is not "Finder"
+            if (
+                modus_service.current_active_app_name
+                and modus_service.current_active_app_name != "Finder"
+            ):
+                self.global_menu_title.toggle_mousecapture()
+        except Exception:
+            # If we can't get window info, don't show dropdown
+            pass
 
     def hide_dropdowns(self, *_):
         self.menu_button.remove_style_class("active")
