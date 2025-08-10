@@ -17,6 +17,8 @@
   min-width: 220px;
   min-height: 40px;
   font-family: "SF Pro Rounded";
+  padding-right: 5px;
+  padding-left: 5px;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.7s ease-in-out;
@@ -30,7 +32,6 @@
   margin-top: 5px;
   transition: all 0.7s ease-in-out;
 }
-
 #lock-date label {
   background-color: transparent;
   font-family: "SF Pro Rounded";
