@@ -11,6 +11,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.svg import Svg
+from fabric.widgets.revealer import Revealer
 from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
@@ -350,15 +351,29 @@ class ModusControlCenter(Window):
         self.per_app_volume_widgets = None
         self.expanded_player_widgets = None
 
+        # Create main content boxes
         self.center_box = CenterBox(start_children=[self.widgets])
         self.bluetooth_center_box = None
         self.wifi_center_box = None
         self.per_app_volume_center_box = None
         self.expanded_player_center_box = None
 
+        # Create revealers for crossfade transitions
+        self.main_revealer = Revealer(
+            child=self.center_box,
+            transition_type="crossfade",
+            transition_duration=250,
+            child_revealed=True,
+        )
+        
+        self.expanded_player_revealer = None  # Will be created lazily
+
         self.widgets.set_size_request(300, -1)
 
-        self.children = self.center_box
+        self.children = self.main_revealer
+
+        # Track current state for smooth transitions
+        self.current_view = "main"  # main, expanded_player
 
         # Connect to visibility changes for cleanup
         self.connect("notify::visible", self._on_visibility_changed)
@@ -511,6 +526,15 @@ class ModusControlCenter(Window):
                 start_children=[self.expanded_player_widgets]
             )
             self.expanded_player_center_box.set_size_request(300, -1)
+            
+            # Create revealer for expanded player
+            if self.expanded_player_revealer is None:
+                self.expanded_player_revealer = Revealer(
+                    child=self.expanded_player_center_box,
+                    transition_type="crossfade",
+                    transition_duration=250,
+                    child_revealed=False,
+                )
 
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
@@ -632,35 +656,82 @@ class ModusControlCenter(Window):
         self.has_wifi_open = True
 
     def close_bluetooth(self, *_):
-        idle_add(lambda *_: self.set_children(self.center_box))
+        if self.current_view == "expanded_player":
+            self._crossfade_to_view("main")
+        else:
+            idle_add(lambda *_: self.set_children(self.center_box))
         self.has_bluetooth_open = False
 
     def close_wifi(self, *_):
-        idle_add(lambda *_: self.set_children(self.center_box))
+        if self.current_view == "expanded_player":
+            self._crossfade_to_view("main")
+        else:
+            idle_add(lambda *_: self.set_children(self.center_box))
         self.has_wifi_open = False
 
     def open_per_app_volume(self, *_):
         self._ensure_per_app_volume_widgets()
-        idle_add(lambda *_: self.set_children(self.per_app_volume_center_box))
+        if self.current_view == "expanded_player":
+            # If coming from expanded player, use crossfade
+            self._crossfade_to_view("main")
+            GLib.timeout_add(250, lambda: idle_add(lambda *_: self.set_children(self.per_app_volume_center_box)))
+        else:
+            idle_add(lambda *_: self.set_children(self.per_app_volume_center_box))
         self.has_per_app_volume_open = True
         # Refresh the app list when opening
         if self._per_app_volume_widget:
             self._per_app_volume_widget.refresh()
 
     def close_per_app_volume(self, *_):
-        idle_add(lambda *_: self.set_children(self.center_box))
+        if self.current_view == "expanded_player":
+            self._crossfade_to_view("main")
+        else:
+            idle_add(lambda *_: self.set_children(self.center_box))
         self.has_per_app_volume_open = False
 
+    def _crossfade_to_view(self, target_view):
+        """Handle crossfade transition between views"""
+        if self.current_view == target_view:
+            return
+            
+        if target_view == "expanded_player":
+            # Transitioning to expanded player
+            self._ensure_expanded_player_widgets()
+            
+            # Add expanded player revealer to window if not already added
+            if self.expanded_player_revealer not in self.get_children():
+                self.add(self.expanded_player_revealer)
+            
+            # Start crossfade: hide main, show expanded player
+            self.main_revealer.set_reveal_child(False)
+            GLib.timeout_add(125, lambda: self.expanded_player_revealer.set_reveal_child(True))
+            
+        elif target_view == "main":
+            # Transitioning back to main
+            if self.expanded_player_revealer:
+                # Start crossfade: hide expanded player, show main
+                self.expanded_player_revealer.set_reveal_child(False)
+                GLib.timeout_add(125, lambda: self.main_revealer.set_reveal_child(True))
+                # Clean up expanded player revealer after transition
+                GLib.timeout_add(375, self._cleanup_expanded_player_revealer)
+        
+        self.current_view = target_view
+    
+    def _cleanup_expanded_player_revealer(self):
+        """Remove expanded player revealer from window after transition"""
+        if self.expanded_player_revealer and self.expanded_player_revealer in self.get_children():
+            self.remove(self.expanded_player_revealer)
+        return False
+
     def open_expanded_player(self, *_):
-        self._ensure_expanded_player_widgets()
-        idle_add(lambda *_: self.set_children(self.expanded_player_center_box))
+        self._crossfade_to_view("expanded_player")
         self.has_expanded_player_open = True
         # Refresh the player when opening
         if self._expanded_player_widget:
             self._expanded_player_widget.refresh()
 
     def close_expanded_player(self, *_):
-        idle_add(lambda *_: self.set_children(self.center_box))
+        self._crossfade_to_view("main")
         self.has_expanded_player_open = False
 
     def _set_mousecapture(self, visible: bool):

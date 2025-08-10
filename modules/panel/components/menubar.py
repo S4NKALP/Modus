@@ -1,5 +1,6 @@
 import os
 import subprocess
+import json
 
 from fabric.hyprland.widgets import HyprlandActiveWindow as ActiveWindow
 from fabric.utils import FormattedString
@@ -7,7 +8,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-from modules.about import About
+from modules.about import About, AboutApp
 from utils.roam import modus_service
 from widgets.dropdown import ModusDropdown, dropdown_divider
 from widgets.mousecapture import DropDownMouseCapture
@@ -90,6 +91,31 @@ app_name_class = AppName()
 def format_window(title, wmclass):
     name = app_name_class.format_app_name(title, wmclass, True)
     return name
+
+
+def show_about_app():
+    """Show about dialog for current active application"""
+    try:
+        # Get current window info from Hyprland
+        result = subprocess.run(
+            ["hyprctl", "activewindow", "-j"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        import json
+        window_info = json.loads(result.stdout)
+        wmclass = window_info.get("class", "")
+        title = window_info.get("title", "")
+        app_name = modus_service.current_active_app_name or "Unknown Application"
+        
+        about_window = AboutApp(app_name=app_name, wmclass=wmclass)
+        about_window.toggle(None)
+    except Exception as e:
+        # Fallback: show about dialog with just the app name
+        app_name = modus_service.current_active_app_name or "Unknown Application"
+        about_window = AboutApp(app_name=app_name, wmclass="")
+        about_window.toggle(None)
 
 
 def dropdown_option(
@@ -186,7 +212,8 @@ class MenuBarDropdowns:
 
         # Global menu dropdowns
         self.global_title_menu_about = dropdown_option(
-            f"About {modus_service.current_active_app_name}"
+            f"About {modus_service.current_active_app_name}",
+            on_clicked=lambda _: show_about_app()
         )
         self.global_menu_title = DropDownMouseCapture(
             layer="bottom",
