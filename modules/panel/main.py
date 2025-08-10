@@ -99,7 +99,7 @@ class Panel(Window):
             name="panel-button",
             on_clicked=lambda *_: self.search_apps(),
             child=Svg(
-                size=18,
+                size=22,
                 svg_file=get_relative_path("../../config/assets/icons/misc/search.svg"),
             ),
         )
