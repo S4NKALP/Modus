@@ -155,23 +155,27 @@ class BatteryControl(Box):
         super().__init__(
             spacing=0,
             orientation="vertical",
-            style="margin: 0px",
+            name="control-center-widgets",
             **kwargs,
         )
-        self.set_size_request(240, -1)
+        self.set_size_request(300, -1)
 
         self.parent = parent
         self.battery_service = Battery()
         self.profile_buttons = []
 
-        # Main title
-        self.title = Label(
-            label="Battery",
-            style_classes="battery-main-title",
-            h_align="start"
+        # Battery information widget in control center style
+        self.battery_info_widget = Box(
+            name="battery-info-widget",
+            orientation="vertical",
+            style_classes="menu",
+            h_expand=True,
+            children=[
+                Label(label="Battery", style_classes="title", h_align="start"),
+            ]
         )
 
-        # Battery status information
+        # Battery status labels
         self.battery_percentage = Label(
             label="100%",
             style_classes="battery-info-item",
@@ -209,8 +213,27 @@ class BatteryControl(Box):
             style_classes="battery-info-item",
             h_align="start"
         )
+
+        # Add battery info to widget
+        self.battery_info_widget.add(self.battery_percentage)
+        self.battery_info_widget.add(self.battery_state)
+        self.battery_info_widget.add(self.battery_capacity)
+        self.battery_info_widget.add(self.battery_time_to_full)
+        self.battery_info_widget.add(self.battery_time_to_empty)
+        self.battery_info_widget.add(self.battery_temperature)
+
+        # Power profiles widget in control center style
+        self.profiles_widget = Box(
+            name="power-profiles-widget",
+            orientation="vertical",
+            style_classes="menu",
+            h_expand=True,
+            children=[
+                Label(label="Power Profiles", style_classes="title", h_align="start"),
+            ]
+        )
         
-        # Power profiles section
+        # Power profiles container
         self.profiles_container = Box(
             orientation="horizontal",
             spacing=8,
@@ -218,26 +241,18 @@ class BatteryControl(Box):
             h_align="center"
         )
 
-        # Add all sections with proper spacing
-        self.add(self.title)
+        self.profiles_widget.add(self.profiles_container)
 
-        # Add battery information
-        self.add(self.battery_percentage)
-        self.add(self.battery_state)
-        self.add(self.battery_capacity)
-        self.add(self.battery_time_to_full)
-        self.add(self.battery_time_to_empty)
-        self.add(self.battery_temperature)
-
-        # Add separator before power profiles
-        separator = Box(style_classes="battery-separator")
-        self.add(separator)
-
-        self.add(self.profiles_container)
-
-        # Add separator before gamemode button
-        gamemode_separator = Box(style_classes="battery-separator")
-        self.add(gamemode_separator)
+        # Game mode widget in control center style
+        self.gamemode_widget = Box(
+            name="gamemode-widget",
+            orientation="vertical",
+            style_classes="menu",
+            h_expand=True,
+            children=[
+                Label(label="Game Mode", style_classes="title", h_align="start"),
+            ]
+        )
 
         # Add gamemode button
         self.gamemode_button = GameModeButton()
@@ -248,7 +263,12 @@ class BatteryControl(Box):
             h_align="center",
             children=[self.gamemode_button]
         )
-        self.add(gamemode_container)
+        self.gamemode_widget.add(gamemode_container)
+
+        # Add all widgets to main container
+        self.add(self.battery_info_widget)
+        self.add(self.profiles_widget)
+        self.add(self.gamemode_widget)
 
         # Connect to battery service signals
         self.battery_service.connect("changed", self.on_battery_changed)

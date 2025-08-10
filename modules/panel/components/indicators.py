@@ -360,10 +360,10 @@ class BatteryIndicator(Box):
         # Create Battery control center widget only if show_window is True
         if self.show_window:
             self.battery_window = Window(
-                layer="overlay",
+                layer="top",
                 title="modus",
                 anchor="top right",
-                margin="2px 200px 0px 0px",
+                margin="2px 10px 0px 0px",
                 exclusivity="auto",
                 keyboard_mode="on-demand",
                 name="battery-control-window",

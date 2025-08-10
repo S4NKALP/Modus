@@ -129,7 +129,7 @@ class Panel(Window):
         self.datetime_button = Button(
             name="datetime-button",
             on_clicked=self.notification_center.toggle_mousecapture,
-            child=DateTime(name="date-time", formatters=["%a %b %d %I:%M %P"]),
+            child=DateTime(name="date-time", formatters=["%a %-d %b %I:%M %P"]),
         )
 
         self.recording_indicator = RecordingIndicator()
