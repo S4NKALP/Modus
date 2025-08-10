@@ -1,19 +1,21 @@
-from loguru import logger
-from services.battery import Battery
+import subprocess
+
+import gi
+from fabric.bluetooth import BluetoothClient, BluetoothDevice
+from fabric.utils import get_relative_path
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
+from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 from fabric.widgets.svg import Svg
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.label import Label
-from fabric.widgets.image import Image
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.button import Button
-from fabric.widgets.box import Box
-from fabric.utils import get_relative_path
-from fabric.bluetooth import BluetoothClient, BluetoothDevice
-import subprocess
-from gi.repository import Gdk, GLib, Gtk
-import gi
+from gi.repository import Gdk, Gtk
+from loguru import logger
+
+from services.battery import Battery
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -287,7 +289,7 @@ class BluetoothConnections(Box):
         if self.other_devices_revealer.child_revealed:
             # Trigger a scan when revealing other devices
             if self.client:
-                self.client.start_scan()
+                self.client.toggle_scan()
 
     def open_bluetooth_settings(self, *_):
         """Open Blueman bluetooth manager"""
@@ -373,6 +375,87 @@ class BluetoothConnections(Box):
         """Called when Bluetooth panel is being closed"""
         # Collapse the other devices section when closing
         self.other_devices_revealer.child_revealed = False
+
+    def setup_pull_to_refresh(self):
+        """Setup pull-to-refresh gesture for the scrolled window"""
+        # Get the scrolled window's vertical adjustment
+        self.vadjustment = self.other_devices_scrolled.get_vadjustment()
+
+        # Track gesture state
+        self.pull_start_y = 0
+        self.is_pulling = False
+        self.pull_threshold = 50  # pixels to trigger refresh
+
+        # Connect to scroll events
+        self.other_devices_scrolled.connect("scroll-event", self.on_scroll_event)
+        self.other_devices_scrolled.connect("button-press-event", self.on_button_press)
+        self.other_devices_scrolled.connect(
+            "button-release-event", self.on_button_release
+        )
+        self.other_devices_scrolled.connect(
+            "motion-notify-event", self.on_motion_notify
+        )
+
+        # Enable events
+        self.other_devices_scrolled.set_events(
+            Gdk.EventMask.SCROLL_MASK
+            | Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
+        )
+
+    def on_scroll_event(self, widget, event):
+        """Handle scroll events for pull-to-refresh"""
+        # Only handle pull-to-refresh when at the top
+        if self.vadjustment.get_value() <= 0:
+            if event.direction == Gdk.ScrollDirection.UP:
+                # Scrolling up at the top - toggle scan
+                self.client.toggle_scan()
+                return True  # Consume the event
+        return False  # Let normal scrolling continue
+
+    def on_button_press(self, widget, event):
+        """Handle button press for touch/drag gestures"""
+        if self.vadjustment.get_value() <= 0:
+            self.pull_start_y = event.y
+            self.is_pulling = True
+        return False
+
+    def on_button_release(self, widget, event):
+        """Handle button release for touch/drag gestures"""
+        if self.is_pulling:
+            pull_distance = event.y - self.pull_start_y
+            if pull_distance > self.pull_threshold:
+                # Toggle scan
+                self.client.toggle_scan()
+            # Hide refresh indicator
+            self.refresh_indicator.set_visible(False)
+            self.refresh_indicator.remove_style_class("ready-to-refresh")
+            self.is_pulling = False
+        return False
+
+    def on_motion_notify(self, widget, event):
+        """Handle motion events for visual feedback during pull"""
+        if self.is_pulling and self.vadjustment.get_value() <= 0:
+            pull_distance = event.y - self.pull_start_y
+            if pull_distance > 0:
+                # Show refresh indicator when pulling down
+                self.refresh_indicator.set_visible(True)
+                if pull_distance >= self.pull_threshold:
+                    if self.client.scanning:
+                        self.refresh_indicator.set_label("↑ Release to stop scanning")
+                    else:
+                        self.refresh_indicator.set_label("↑ Release to scan")
+                    self.refresh_indicator.add_style_class("ready-to-refresh")
+                else:
+                    if self.client.scanning:
+                        self.refresh_indicator.set_label("↓ Pull to stop scanning")
+                    else:
+                        self.refresh_indicator.set_label("↓ Pull to scan for devices")
+                    self.refresh_indicator.remove_style_class("ready-to-refresh")
+            else:
+                self.refresh_indicator.set_visible(False)
+        return False
 
     def on_device_added(self, client: BluetoothClient, address: str):
         """Handle when a new device is added"""
