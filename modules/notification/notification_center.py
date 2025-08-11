@@ -652,17 +652,7 @@ class NotificationCenter(Window):
         self.scrolled.add(self.notifications_box)
         main_box.add(self.scrolled)
 
-        # No notifications label
-        self.not_found_label = Label(
-            label="No notifications",
-            h_align="center",
-            v_align="center",
-            h_expand=True,
-            v_expand=True,
-            style="color: #888888; font-style: italic; margin: 20px;",
-            visible=(notification_service.count == 0),
-        )
-        main_box.add(self.not_found_label)
+        # No notifications label - REMOVED
 
         self.clear_all_button = Button(
             name="noti-clear-button",
@@ -833,7 +823,7 @@ class NotificationCenter(Window):
 
     def on_count_changed(self, service, count=None):
         current_count = notification_service.count
-        self.not_found_label.set_visible(current_count == 0)
+        # No notifications label removed - only update clear button and scrolled visibility
         self.clear_all_button.set_visible(current_count > 0)
         self.scrolled.set_visible(current_count > 0)
 
