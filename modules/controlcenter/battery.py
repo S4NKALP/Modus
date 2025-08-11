@@ -5,6 +5,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
+from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
 from fabric.widgets.svg import Svg
@@ -28,12 +29,15 @@ class EnergyModeButton(CenterBox):
         self.battery_service = battery_service
         self.parent = parent
 
-        self.mode_icon = Svg(
+        self.mode_icon_svg = Svg(
             # icon_name=f"battery-{icon_name}-symbolic",
             svg_file=get_relative_path(
                 f"../../config/assets/icons/power_modes/battery-{icon_name}.svg"
             ),
             size=24,
+        )
+        self.mode_icon = Box(
+            children=[self.mode_icon_svg],
             name="energy-mode-icon",
             style_classes="battery-profile-icon",
         )
