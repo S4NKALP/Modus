@@ -14,7 +14,7 @@
 
 #city {
   margin-top: 10px;
-  color: #859aff;
+  color: #1a87e6;
   font-weight: 600;
   font-size: 20px;
 }
@@ -54,7 +54,7 @@
 #calendar-month {
   font-size: 16px;
   font-weight: 600;
-  color: #859aff;
+  color: #1a87e6;
   margin-bottom: 8px;
 }
 
@@ -99,7 +99,7 @@
   font-size: 12px;
   font-weight: 700;
   color: #191919;
-  background-color: #859aff;
+  background-color: #1a87e6;
   border-radius: 50%;
   min-width: 18px;
   min-height: 16px;
@@ -137,7 +137,7 @@
   font-weight: 600;
 }
 #day label {
-  color: alpha(#859aff, 0.9);
+  color: alpha(#1a87e6, 0.9);
 }
 
 #date-container {
@@ -165,13 +165,13 @@
   font-size: 13px;
 }
 #progress {
-  border: solid 8px #859aff;
+  border: solid 8px #1a87e6;
   color: alpha(#aaaaaa, 0.7);
 }
 
 /* Color indicators for memory usage */
 #used-color-indicator {
-  color: #859aff;
+  color: #1a87e6;
   font-size: 10px;
   font-weight: 900;
 }
@@ -183,7 +183,7 @@
 }
 
 #temp-color-indicator {
-  color: #859aff;
+  color: #1a87e6;
   font-size: 10px;
   font-weight: 900;
 }
