@@ -7,8 +7,11 @@ from fabric.widgets.image import Image
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.box import Box
+from fabric.widgets.svg import Svg
+from fabric.utils import get_relative_path
 from gi.repository import Gdk, GLib, Gtk
 from fabric.widgets.separator import Separator
+from utils.functions import get_wifi_icon_for_strength, get_wifi_connecting_icon
 import gi
 import subprocess
 
@@ -37,13 +40,24 @@ class WifiNetworkSlot(Box):
             "connected" if self.is_connected else "",
         ]
 
-        # Create connection status indicator using symbolic WiFi icon
-        self.dimage = Image(
-            icon_name="network-wireless-symbolic",
-            size=16,
+        # Create connection status indicator using dynamic WiFi icon based on signal strength
+        wifi_icon_path = get_wifi_icon_for_strength(self.strength)
+        self.dimage = Svg(
+            svg_file=wifi_icon_path,
+            size=28,
             name="device-icon",
-            style_classes=" ".join(self.styles),
         )
+        self.wifi_icon_box = Box(
+            children=[self.dimage],
+            style_classes=["wifi-icon-box"],
+        )
+        if self.is_connected:
+            self.wifi_icon_box.remove_style_class("wifi-icon-box")
+            self.wifi_icon_box.add_style_class("wifi-icon-box-connected")
+
+        # Set initial style classes
+        if self.is_connected:
+            self.dimage.add_style_class("connected")
 
         self.network_label = Label(
             label=self.ssid, name="wifi-network-name", h_align="start", h_expand=True
@@ -66,8 +80,8 @@ class WifiNetworkSlot(Box):
             orientation="h",
             spacing=8,
         )
-        start_box.children = [self.dimage, self.network_label]
-        if self.lock_icon is not None:
+        start_box.children = [self.wifi_icon_box, self.network_label]
+        if self.lock_icon:
             start_box.children.append(self.lock_icon)
         # Create end section with lock icon if needed
 
@@ -80,10 +94,6 @@ class WifiNetworkSlot(Box):
             )
         ]
 
-        if self.lock_icon is not None:
-            self.children.append(self.lock_icon)
-        end_children = []
-
         # Emit initial change to update display
         self.on_changed()
 
@@ -92,8 +102,9 @@ class WifiNetworkSlot(Box):
         is_currently_connected = self.access_point.is_active
 
         if is_currently_connected:
-            # Show disconnecting state
-            self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
+            # Show disconnecting state using connecting icon
+            connecting_icon = get_wifi_connecting_icon()
+            self.dimage.set_from_file(connecting_icon)
             self.dimage.add_style_class("disconnecting")
 
             # Disconnect from network
@@ -108,9 +119,8 @@ class WifiNetworkSlot(Box):
                 self._show_password_dialog()
             else:
                 # Try to connect without password (for open networks)
-                self.dimage.set_property(
-                    "icon-name", "network-wireless-acquiring-symbolic"
-                )
+                connecting_icon = get_wifi_connecting_icon()
+                self.dimage.set_from_file(connecting_icon)
                 self.dimage.add_style_class("connecting")
 
                 def on_open_connection_result(success, message):
@@ -141,14 +151,16 @@ class WifiNetworkSlot(Box):
     def _reset_disconnect_state(self):
         """Reset visual state after disconnect operation"""
         self.dimage.remove_style_class("disconnecting")
-        self.dimage.set_property("icon-name", "network-wireless-symbolic")
+        wifi_icon_path = get_wifi_icon_for_strength(self.strength)
+        self.dimage.set_from_file(wifi_icon_path)
         self.on_changed()
         return False  # Remove timeout
 
     def _reset_connect_state(self):
         """Reset visual state after connect operation"""
         self.dimage.remove_style_class("connecting")
-        self.dimage.set_property("icon-name", "network-wireless-symbolic")
+        wifi_icon_path = get_wifi_icon_for_strength(self.strength)
+        self.dimage.set_from_file(wifi_icon_path)
         self.on_changed()
         return False  # Remove timeout
 
@@ -158,7 +170,11 @@ class WifiNetworkSlot(Box):
         self.styles = [
             "connected" if self.is_connected else "",
         ]
-        self.dimage.set_property("style-classes", " ".join(self.styles))
+        # Update style classes for SVG widget
+        if self.is_connected:
+            self.dimage.add_style_class("connected")
+        else:
+            self.dimage.remove_style_class("connected")
         return
 
     def _show_password_dialog(self):
@@ -182,8 +198,9 @@ class WifiNetworkSlot(Box):
     def _on_password_connect(self, ssid, password):
         """Handle password dialog connect action"""
         if password.strip():
-            # Show connecting state
-            self.dimage.set_property("icon-name", "network-wireless-acquiring-symbolic")
+            # Show connecting state using connecting icon
+            connecting_icon = get_wifi_connecting_icon()
+            self.dimage.set_from_file(connecting_icon)
             self.dimage.add_style_class("connecting")
 
             # Try to connect with password using callback

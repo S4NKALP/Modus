@@ -916,3 +916,16 @@
   font-weight: bold;
   color: #ffffff;
 }
+
+.wifi-icon-box {
+  background-color: #aaaaaa;
+  border-radius: 50%;
+  padding: 2px;
+  /* margin-right: 8px; */
+}
+.wifi-icon-box-connected {
+  background-color: #007aff;
+  border-radius: 50%;
+  padding: 2px;
+  /* margin-right: 8px; */
+}

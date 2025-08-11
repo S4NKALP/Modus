@@ -264,11 +264,11 @@ class ModusControlCenter(Window):
         self.flight_icon = Svg(
             name="flight-icon",
             svg_file=get_relative_path(
-                "../../config/assets/icons/applets/network-flightmode-on.svg"
+                "../../config/assets/icons/applets/flight-on.svg"
                 if self.flight_mode
-                else "../../config/assets/icons/applets/network-flightmode-off.svg"
+                else "../../config/assets/icons/applets/flight-off.svg"
             ),
-            size=24,
+            size=46,
         )
 
         self.flight_widget = Button(
@@ -293,11 +293,11 @@ class ModusControlCenter(Window):
         self.caffeine_icon = Svg(
             name="caffeine-icon",
             svg_file=get_relative_path(
-                "../../config/assets/icons/applets/caffeine-cup-full.svg"
+                "../../config/assets/icons/applets/caffeine-on.svg"
                 if self.caffeine_mode
-                else "../../config/assets/icons/applets/caffeine-cup-empty.svg"
+                else "../../config/assets/icons/applets/caffeine-off.svg"
             ),
-            size=24,
+            size=46,
         )
 
         self.caffeine_widget = Button(
@@ -671,9 +671,9 @@ class ModusControlCenter(Window):
             # Update icon
             self.flight_icon.set_from_file(
                 get_relative_path(
-                    "../../config/assets/icons/applets/network-flightmode-on.svg"
+                    "../../config/assets/icons/applets/flight-on.svg"
                     if self.flight_mode
-                    else "../../config/assets/icons/applets/network-flightmode-off.svg"
+                    else "../../config/assets/icons/applets/flight-off.svg"
                 )
             )
 
@@ -703,9 +703,9 @@ class ModusControlCenter(Window):
 
             self.caffeine_icon.set_from_file(
                 get_relative_path(
-                    "../../config/assets/icons/applets/caffeine-cup-full.svg"
+                    "../../config/assets/icons/applets/caffeine-on.svg"
                     if self.caffeine_mode
-                    else "../../config/assets/icons/applets/caffeine-cup-empty.svg"
+                    else "../../config/assets/icons/applets/caffeine-off.svg"
                 )
             )
 

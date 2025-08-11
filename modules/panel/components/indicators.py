@@ -11,6 +11,7 @@ from modules.controlcenter.wifi import WifiConnections
 from services.battery import Battery
 from services.network import NetworkClient
 from utils.roam import modus_service
+from utils.functions import get_wifi_icon_for_strength, get_wifi_connecting_icon
 from widgets.mousecapture import DropDownMouseCapture
 from widgets.wayland import WaylandWindow as Window
 
@@ -286,10 +287,14 @@ class NetworkIndicator(Box):
                 tooltip = "WiFi disabled"
             elif wifi.active_access_point:
                 ap = wifi.active_access_point
-                icon_file = "wifi-clear.svg"
+                # Use dynamic WiFi icon based on signal strength
+                wifi_icon_path = get_wifi_icon_for_strength(ap.strength)
+                self.network_icon.set_from_file(wifi_icon_path)
                 tooltip = f"Connected to {ap.ssid}"
                 if ap.strength >= 0:
                     tooltip += f" ({ap.strength}%)"
+                self.network_button.set_tooltip_text(tooltip)
+                return  # Early return to avoid setting icon again
             else:
                 icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disconnected"
