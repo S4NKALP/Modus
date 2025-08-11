@@ -3,7 +3,7 @@ import json
 import os
 from typing import List
 
-# Fabric imports  
+# Fabric imports
 import gi
 from gi.repository import GdkPixbuf
 
@@ -224,7 +224,15 @@ class CachedNotifications(Notifications):
         notification = self.get_notification_from_id(notification_id)
 
         if notification:
-            # Always cache notifications, regardless of DND status
+            # Import here to avoid circular imports
+            from config import data
+
+            # Check if this app should be ignored for history (don't cache)
+            if notification.app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
+                # Don't cache notifications from ignored apps, but still allow popup display
+                return
+
+            # Cache notifications (except for ignored apps)
             # DND only affects popup display, not caching
             self._count += 1
             cache_id = self._count
@@ -258,7 +266,7 @@ class CachedNotifications(Notifications):
             if handler_id:
                 # Disconnect the signal handler
                 cached_notification.disconnect(handler_id)
-            
+
             # Emit signal to notify UI that notification was removed
             self.emit("cached-notification-removed", cached_notification)
 

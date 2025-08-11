@@ -26,6 +26,7 @@ from modules.notification.notification import (
 from services.modus import notification_service
 from widgets.custom_image import CustomImage
 from widgets.wayland import WaylandWindow as Window
+from config import data
 
 
 class ExpandableNotificationGroup(Box):
@@ -310,24 +311,36 @@ class ExpandableNotificationGroup(Box):
     def _get_notification_pixbuf(self, notification):
         """Use cached-first approach prioritizing existing cache over pixbuf processing"""
         notification_id = getattr(notification, "id", None)
-        
+
         # Priority 1: ALWAYS check for existing cached image first (critical for restart scenarios)
         if notification_id:
             existing_cached_image = find_existing_cached_image(notification_id)
             if existing_cached_image:
-                logger.debug(f"Using existing cached image in center for notification: {notification_id}")
+                logger.debug(
+                    f"Using existing cached image in center for notification: {
+                        notification_id
+                    }"
+                )
                 return existing_cached_image
-        
+
         try:
             # Priority 2: Try to process current pixbuf only if we have no cached version
-            if hasattr(notification, "image_pixbuf") and notification.image_pixbuf and notification_id:
+            if (
+                hasattr(notification, "image_pixbuf")
+                and notification.image_pixbuf
+                and notification_id
+            ):
                 try:
-                    cache_key = get_notification_image_cache_key(notification_id, notification.image_pixbuf)
+                    cache_key = get_notification_image_cache_key(
+                        notification_id, notification.image_pixbuf
+                    )
                     cached_image = get_cached_notification_image(cache_key)
                     if cached_image:
-                        logger.debug(f"Using cached notification image in center: {cache_key}")
+                        logger.debug(
+                            f"Using cached notification image in center: {cache_key}"
+                        )
                         return cached_image
-                    
+
                     # Try to cache the image now
                     cache_path, cache_key = cache_notification_image(
                         notification_id, notification.image_pixbuf, (35, 35)
@@ -335,17 +348,26 @@ class ExpandableNotificationGroup(Box):
                     if cache_path and cache_key:
                         cached_image = get_cached_notification_image(cache_key)
                         if cached_image:
-                            logger.debug(f"Cached and using notification image in center: {cache_key}")
+                            logger.debug(
+                                f"Cached and using notification image in center: {cache_key}"
+                            )
                             return cached_image
 
                     # Direct scaling fallback if caching works but loading fails
-                    logger.debug("Using direct scaling for notification image in center")
-                    return notification.image_pixbuf.scale_simple(35, 35, 2)  # GdkPixbuf.InterpType.BILINEAR = 2
-                    
+                    logger.debug(
+                        "Using direct scaling for notification image in center"
+                    )
+                    # GdkPixbuf.InterpType.BILINEAR = 2
+                    return notification.image_pixbuf.scale_simple(35, 35, 2)
+
                 except Exception as image_error:
-                    logger.debug(f"Notification image processing failed in center (temp file likely gone): {image_error}")
+                    logger.debug(
+                        f"Notification image processing failed in center (temp file likely gone): {
+                            image_error
+                        }"
+                    )
                     # Continue to app icon fallback
-                    
+
         except Exception as e:
             logger.debug(f"Failed to process notification image in center: {e}")
 
@@ -356,7 +378,9 @@ class ExpandableNotificationGroup(Box):
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(f"Using cached app icon in center for: {app_icon_source}")
+                    logger.debug(
+                        f"Using cached app icon in center for: {app_icon_source}"
+                    )
                     return cached_app_icon
         except Exception as e:
             logger.debug(f"Failed to get cached app icon in center: {e}")
@@ -425,15 +449,17 @@ class ExpandableNotificationGroup(Box):
                 # Get notification ID for cache cleanup
                 notification_id = getattr(notification._notification, "id", None)
                 app_icon_source = getattr(notification._notification, "app_icon", None)
-                
+
                 # Clean up caches using notification ID pattern
                 if notification_id:
                     cleanup_notification_specific_caches(
                         app_icon_source=app_icon_source,
-                        notification_image_cache_key=f"notif_{notification_id}_*"
+                        notification_image_cache_key=f"notif_{notification_id}_*",
                     )
-                    logger.debug(f"Cleaned up caches for notification ID: {notification_id}")
-                
+                    logger.debug(
+                        f"Cleaned up caches for notification ID: {notification_id}"
+                    )
+
                 notification_service.remove_cached_notification(notification.cache_id)
             except Exception as e:
                 logger.error(
@@ -446,15 +472,17 @@ class ExpandableNotificationGroup(Box):
             # Get notification ID for cache cleanup
             notification_id = getattr(notification._notification, "id", None)
             app_icon_source = getattr(notification._notification, "app_icon", None)
-            
+
             # Clean up caches using notification ID pattern
             if notification_id:
                 cleanup_notification_specific_caches(
                     app_icon_source=app_icon_source,
-                    notification_image_cache_key=f"notif_{notification_id}_*"
+                    notification_image_cache_key=f"notif_{notification_id}_*",
                 )
-                logger.debug(f"Cleaned up caches for notification ID: {notification_id}")
-            
+                logger.debug(
+                    f"Cleaned up caches for notification ID: {notification_id}"
+                )
+
             notification_service.remove_cached_notification(notification.cache_id)
             logger.debug(f"Closed single notification: {notification.cache_id}")
         except Exception as e:
@@ -583,15 +611,17 @@ class NotificationCenterWidget(NotificationWidget):
             # Get notification ID for cache cleanup
             notification_id = getattr(self.notification, "id", None)
             app_icon_source = getattr(self.notification, "app_icon", None)
-            
+
             # Clean up caches using notification ID pattern
             if notification_id:
                 cleanup_notification_specific_caches(
                     app_icon_source=app_icon_source,
-                    notification_image_cache_key=f"notif_{notification_id}_*"
+                    notification_image_cache_key=f"notif_{notification_id}_*",
                 )
-                logger.debug(f"Cleaned up caches for notification center ID: {notification_id}")
-            
+                logger.debug(
+                    f"Cleaned up caches for notification center ID: {notification_id}"
+                )
+
             notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
             logger.error(f"Error removing notification {self.notification_id}: {e}")
@@ -696,37 +726,63 @@ class NotificationCenter(Window):
         for cached_notification in notification_service.cached_notifications:
             app_name = cached_notification._notification.app_name
             notification_id = getattr(cached_notification._notification, "id", None)
-            
-            logger.debug(f"Rebuilding notification for {app_name} with ID: {notification_id}")
-            
+
+            # Skip ignored apps during rebuild
+            if app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
+                continue
+
             # Preload assets for each cached notification to ensure display consistency
             preload_notification_assets(cached_notification._notification)
-            
+
             # Check if we can find cached images for this notification
             if notification_id:
                 existing_image = find_existing_cached_image(notification_id)
                 if existing_image:
-                    logger.debug(f"✓ Found cached image for notification {notification_id} during rebuild")
+                    logger.debug(
+                        f"✓ Found cached image for notification {
+                            notification_id
+                        } during rebuild"
+                    )
                 else:
-                    logger.debug(f"✗ No cached image found for notification {notification_id} during rebuild")
-            
+                    logger.debug(
+                        f"✗ No cached image found for notification {
+                            notification_id
+                        } during rebuild"
+                    )
+
             self.notification_groups[app_name].append(cached_notification)
             rebuild_count += 1
 
-        logger.info(f"Rebuilt {rebuild_count} notifications into {len(self.notification_groups)} groups")
+        logger.info(
+            f"Rebuilt {rebuild_count} notifications into {
+                len(self.notification_groups)
+            } groups"
+        )
 
-        # Create group widgets
+        # Create group widgets and handle limited apps
         for app_name, notifications in self.notification_groups.items():
             # Sort notifications by timestamp (newest first)
             notifications.sort(key=lambda n: getattr(n, "timestamp", 0), reverse=True)
 
-            group_widget = ExpandableNotificationGroup(app_name, notifications)
+            # Handle limited apps history - only keep 5 notifications during rebuild
+            if app_name in data.NOTIFICATION_LIMITED_APPS_HISTORY:
+                if len(notifications) > 5:
+                    # Keep only the 5 most recent notifications
+                    self.notification_groups[app_name] = notifications[:5]
+
+            group_widget = ExpandableNotificationGroup(
+                app_name, self.notification_groups[app_name]
+            )
             self.group_widgets[app_name] = group_widget
             self.notifications_box.add(group_widget)
 
     def on_notification_added(self, service, cached_notification):
         try:
             app_name = cached_notification._notification.app_name
+
+            # Check if this app should be ignored for history (don't add to notification center)
+            if app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
+                return
 
             # Preload assets for notification center display (ensure caching consistency)
             preload_notification_assets(cached_notification._notification)
@@ -735,6 +791,23 @@ class NotificationCenter(Window):
             self.notification_groups[app_name].insert(
                 0, cached_notification
             )  # Insert at beginning (newest first)
+
+            # Handle limited apps history - only keep 5 notifications
+            if app_name in data.NOTIFICATION_LIMITED_APPS_HISTORY:
+                notifications_for_app = self.notification_groups[app_name]
+                if len(notifications_for_app) > 5:
+                    # Remove oldest notifications beyond the limit
+                    excess_notifications = notifications_for_app[5:]
+                    self.notification_groups[app_name] = notifications_for_app[:5]
+
+                    # Remove excess notifications from the service cache
+                    for excess_notification in excess_notifications:
+                        try:
+                            notification_service.remove_cached_notification(
+                                excess_notification.cache_id
+                            )
+                        except Exception as e:
+                            logger.error(f"Error removing excess notification: {e}")
 
             # Update or create group widget
             if app_name in self.group_widgets:
@@ -826,7 +899,7 @@ class NotificationCenter(Window):
         # No notifications label removed - only update clear button and scrolled visibility
         self.clear_all_button.set_visible(current_count > 0)
         self.scrolled.set_visible(current_count > 0)
-        
+
         # Auto-close notification center when no notifications remain
         if current_count == 0 and hasattr(self, "mousecapture"):
             self.mousecapture.hide_child_window()

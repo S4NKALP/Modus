@@ -10,8 +10,6 @@ gi.require_version("Gtk", "3.0")
 APP_NAME = "modus"
 APP_NAME_CAP = "Modus"
 
-ALLOWED_PLAYERS = ["vlc", "cmus", "firefox", "spotify", "chromium", "vivaldi", "brave"]
-
 
 def parse_timeout_string(timeout_str):
     """
@@ -90,30 +88,16 @@ if os.path.exists(CONFIG_FILE):
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get(
         "dock_hide_special_workspace_apps", True
     )
-    DOCK_PREVIEW_APPS = config.get("dock_preview_apps", False)
 
     NOTIFICATION_TIMEOUT_STR = config.get("notification_timeout", "5s")
     NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
-    NOTIFICATION_IGNORED_APPS = config.get("notification_ignored_apps", ["Hyprshot"])
-
-    DOCK_COMPONENTS_VISIBILITY = {
-        "workspace": config.get("dock_workspace_visible", True),
-        "metrics": config.get("dock_metrics_visible", True),
-        "battery": config.get("dock_battery_visible", True),
-        "date_time": config.get("dock_date_time_visible", True),
-        "controls": config.get("dock_controls_visible", True),
-        "indicators": config.get("dock_indicators_visible", True),
-        "notifications": config.get("dock_notifications_visible", True),
-        "systray": config.get("dock_tray_visible", True),
-        "applications": config.get("dock_applications_visible", True),
-        "language": config.get("dock_language_visible", True),
-    }
-
-    METRICS_DISKS = config.get("metrics_disks", ["/"])
-    METRICS_VISIBLE = config.get(
-        "metrics_visible",
-        {"cpu": True, "ram": True, "disk": True, "swap": True, "gpu": False},
+    NOTIFICATION_IGNORED_APPS_HISTORY = config.get(
+        "notification_ignored_apps_history", ["Hyprshot"]
     )
+    NOTIFICATION_LIMITED_APPS_HISTORY = config.get(
+        "notification_limited_apps_history", ["Spotify"]
+    )
+
 else:
     WALLPAPERS_DIR = WALLPAPERS_DIR_DEFAULT
     DOCK_POSITION = "Bottom"
@@ -122,34 +106,12 @@ else:
     DOCK_AUTO_HIDE = True
     TERMINAL_COMMAND = "kitty -e"
     DOCK_THEME = "Pills"
-    DOCK_ICON_SIZE = 52
+    DOCK_ICON_SIZE = 60
     WINDOW_SWITCHER_ITEMS_PER_ROW = 10
     HIDE_SPECIAL_WORKSPACE = True
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = True
-    DOCK_PREVIEW_APPS = False
 
     NOTIFICATION_TIMEOUT_STR = "5s"
     NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
-    NOTIFICATION_IGNORED_APPS = ["Hyprshot"]
-
-    DOCK_COMPONENTS_VISIBILITY = {
-        "workspace": True,
-        "metrics": True,
-        "battery": True,
-        "date_time": True,
-        "controls": True,
-        "indicators": True,
-        "notifications": True,
-        "systray": True,
-        "applications": True,
-        "language": True,
-    }
-
-    METRICS_DISKS = ["/"]
-    METRICS_VISIBLE = {
-        "cpu": True,
-        "ram": True,
-        "disk": True,
-        "swap": True,
-        "gpu": False,
-    }
+    NOTIFICATION_IGNORED_APPS_HISTORY = ["Hyprshot"]
+    NOTIFICATION_LIMITED_APPS_HISTORY = ["Spotify"]

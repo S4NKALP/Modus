@@ -1,37 +1,16 @@
 {
-	"wallpapers_dir": "~/Pictures/Wallpapers/",
-	"dock_position": "Bottom",
-	"terminal_command": "kitty -e",
-	"dock_enabled": true,
-	"dock_auto_hide": true,
-	"dock_always_occluded": false,
-	"dock_icon_size": 52,
-	"window_switcher_items_per_row": 10,
-	"hide_special_workspace": true,
-	"dock_hide_special_workspace_apps": true,
-	"dock_preview_apps": false,
-	"notification_timeout": "5s",
-	"notification_ignored_apps": [
-		"Hyprshot"
-	],
-	"dock_workspace_visible": true,
-	"dock_metrics_visible": true,
-	"dock_battery_visible": true,
-	"dock_date_time_visible": true,
-	"dock_controls_visible": true,
-	"dock_indicators_visible": true,
-	"dock_notifications_visible": true,
-	"dock_tray_visible": true,
-	"dock_applications_visible": true,
-	"dock_language_visible": true,
-	"metrics_disks": [
-		"/"
-	],
-	"metrics_visible": {
-		"cpu": true,
-		"ram": true,
-		"disk": true,
-		"swap": true,
-		"gpu": false
-	}
+  "wallpapers_dir": "~/Pictures/Wallpapers/",
+  "dock_position": "Bottom",
+  "terminal_command": "kitty -e",
+  "dock_enabled": true,
+  "dock_auto_hide": true,
+  "dock_always_occluded": false,
+  "dock_icon_size": 52,
+  "window_switcher_items_per_row": 10,
+  "hide_special_workspace": true,
+  "dock_hide_special_workspace_apps": true,
+  "dock_preview_apps": false,
+  "notification_timeout": "5s",
+  "notification_ignored_apps": ["Hyprshot"],
+  "notification_limited_apps_history": ["Spotify"]
 }
