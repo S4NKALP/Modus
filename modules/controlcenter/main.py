@@ -274,16 +274,17 @@ class ModusControlCenter(Window):
         self.flight_widget = Button(
             name="flight-widget",
             child=Box(
-                orientation="vertical",
+                orientation="h",
                 spacing=4,
-                h_align="center",
+                h_align="start",
                 v_align="center",
+                h_expand=True,
                 children=[
                     self.flight_icon,
                     Label(
                         label="Flight",
                         style_classes="title",
-                        h_align="center",
+                        h_align="start",
                     ),
                 ],
             ),
@@ -303,7 +304,7 @@ class ModusControlCenter(Window):
         self.caffeine_widget = Button(
             name="caffeine-widget",
             child=Box(
-                orientation="vertical",
+                orientation="h",
                 spacing=4,
                 h_align="center",
                 v_align="center",
@@ -366,18 +367,19 @@ class ModusControlCenter(Window):
                                             orientation="vertical",
                                             name="flight-widget-container",
                                             style_classes="menu",
+                                            h_expand=True,
                                             children=[
                                                 self.flight_widget,
                                             ],
                                         ),
-                                        Box(
-                                            orientation="vertical",
-                                            name="caffeine-widget-container",
-                                            style_classes="menu",
-                                            children=[
-                                                self.caffeine_widget,
-                                            ],
-                                        ),
+                                        # Box(
+                                        #     orientation="vertical",
+                                        #     name="caffeine-widget-container",
+                                        #     style_classes="menu",
+                                        #     children=[
+                                        #         self.caffeine_widget,
+                                        #     ],
+                                        # ),
                                     ],
                                 ),
                             ],

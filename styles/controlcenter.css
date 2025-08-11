@@ -1,3 +1,8 @@
+.title {
+  font-size: 16px;
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+}
 #control-center-menu {
   background-color: transparent;
   border-radius: 12px;
@@ -928,4 +933,8 @@
   border-radius: 50%;
   padding: 2px;
   /* margin-right: 8px; */
+}
+
+#flight-icon {
+  margin-left: -10px;
 }

@@ -51,10 +51,10 @@ class WifiNetworkSlot(Box):
             children=[self.dimage],
             style_classes=["wifi-icon-box"],
         )
-        if self.is_connected:
-            self.wifi_icon_box.remove_style_class("wifi-icon-box")
-            self.wifi_icon_box.add_style_class("wifi-icon-box-connected")
-
+        # if self.is_connected:
+        #     self.wifi_icon_box.remove_style_class("wifi-icon-box")
+        #     self.wifi_icon_box.add_style_class("wifi-icon-box-connected")
+        #
         # Set initial style classes
         if self.is_connected:
             self.dimage.add_style_class("connected")
@@ -172,9 +172,9 @@ class WifiNetworkSlot(Box):
         ]
         # Update style classes for SVG widget
         if self.is_connected:
-            self.dimage.add_style_class("connected")
+            self.wifi_icon_box.add_style_class("wifi-icon-box-connected")
         else:
-            self.dimage.remove_style_class("connected")
+            self.wifi_icon_box.remove_style_class("wifi-icon-box-connected")
         return
 
     def _show_password_dialog(self):
