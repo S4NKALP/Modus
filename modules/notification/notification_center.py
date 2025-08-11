@@ -91,7 +91,7 @@ class ExpandableNotificationGroup(Box):
                                 markup=latest_notification._notification.summary.replace(
                                     "\n", " "
                                 ),
-                                max_chars_width=20,
+                                max_chars_width=35,
                                 h_align="start",
                                 ellipsization="end",
                             ),
@@ -495,7 +495,7 @@ class NotificationCenterWidget(NotificationWidget):
                             Label(
                                 markup=notification.body.replace("\n", " "),
                                 h_align="start",
-                                max_chars_width=25,
+                                max_chars_width=35,
                                 ellipsization="end",
                             )
                             if notification.body
