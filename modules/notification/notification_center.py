@@ -826,6 +826,10 @@ class NotificationCenter(Window):
         # No notifications label removed - only update clear button and scrolled visibility
         self.clear_all_button.set_visible(current_count > 0)
         self.scrolled.set_visible(current_count > 0)
+        
+        # Auto-close notification center when no notifications remain
+        if current_count == 0 and hasattr(self, "mousecapture"):
+            self.mousecapture.hide_child_window()
 
     def clear_all_notifications(self, *_):
         # Clear all groups
