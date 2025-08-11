@@ -1,6 +1,12 @@
+#battery-widget {
+  padding-left: 12px;
+  padding-right: 12px;
+}
 .battery-main-title {
-  font-size: 1em;
-  font-weight: 900;
+  font-size: 16px;
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+
   color: rgba(255, 255, 255, 0.95);
   margin: 6px 10px;
 }
@@ -33,16 +39,11 @@
 }
 
 .battery-percentage {
-  font-size: 1.4em;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.battery-section-title {
-  font-size: 0.95em;
+  font-size: 16px;
+  font-family: "SF Pro Rounded";
+  margin-right: 8px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0px 10px;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 #energy-mode-button-clickable {
@@ -51,7 +52,6 @@
   border-radius: 8px;
   padding: 6px 12px;
   margin: 1px 0;
-  transition: all 0.2s ease;
 }
 
 #energy-mode-button-clickable:hover {
@@ -61,25 +61,71 @@
 #energy-mode-icon {
   border-radius: 50%;
   padding: 4px;
-  margin-right: 8px;
+  margin-top: -2px;
+  margin-bottom: -2px;
+  margin-right: 6px;
+  margin-left: -6px;
   background-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.7);
-  transition: all 0.2s ease;
 }
 
 #energy-mode-icon.connected {
   background-color: #007aff;
   color: #ffffff;
 }
+.battery-power-source {
+  font-size: 12px;
+  font-family: "SF Pro Rounded";
+  margin-bottom: -4px;
+  color: alpha(#ffffff, 0.5);
+}
+.battery-section-title {
+  font-size: 14px;
+  font-family: "SF Pro Rounded";
+  color: alpha(#ffffff, 0.7);
+  margin: 2px 0 0 8px;
+}
+.battery-power-mode {
+  font-family: "SF Pro Rounded";
+  font-size: 13px;
+}
 
-#energy-mode-button .battery-power-source {
-  margin: 0;
-  font-size: 0.9em;
+.battery-settings-button:hover {
+  margin-top: -5px;
+  background: alpha(#ffffff, 0.1);
+  min-height: 30px;
+  border-radius: 8px;
+}
+.battery-settings-button {
+  margin-top: -5px;
+  min-height: 30px;
+  border-radius: 8px;
+}
+.battery-settings-button label {
+  font-family: "SF Pro Rounded";
+  font-weight: 500;
+  color: alpha(#ffffff, 1);
+}
+#energy-mode-button:first-child {
+  margin-top: 0;
+}
+#energy-mode-button {
+  margin-top: -8px;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.gamemode-button {
+  font-size: 12px;
+  font-family: "SF Pro Rounded";
+  margin-left: -6px;
   color: rgba(255, 255, 255, 0.85);
 }
 
 #game-mode-button {
   margin: 2px 0;
+}
+#game-mode-icon {
+  margin-left: -6px;
 }
 
 #game-mode-button-clickable {
@@ -88,7 +134,6 @@
   border-radius: 8px;
   padding: 6px 12px;
   margin: 1px 0;
-  transition: all 0.2s ease;
   /* min-height: 36px; */
 }
 
@@ -102,10 +147,9 @@
   margin-right: 8px;
   background-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.7);
-  transition: all 0.2s ease;
 }
 
 #game-mode-icon.connected {
-  background-color: #ff4500;
+  background-color: #007aff;
   color: #ffffff;
 }

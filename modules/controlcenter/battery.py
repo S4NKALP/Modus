@@ -44,14 +44,14 @@ class EnergyModeButton(Box):
 
         self.mode_label = Label(
             label=display_name,
-            style_classes="battery-power-source",
+            style_classes="battery-power-mode",
             h_align="start",
             h_expand=True,
         )
 
         start_box = Box(
             orientation="horizontal",
-            spacing=8,
+            spacing=4,
             children=[self.mode_icon, self.mode_label],
         )
 
@@ -88,7 +88,7 @@ class EnergyModeButton(Box):
 
 class GameModeButton(Box):
     def __init__(self, parent, **kwargs):
-        super().__init__(name="game-mode-button", h_expand=True, **kwargs)
+        super().__init__(name="energy-mode-button", h_expand=True, **kwargs)
         self.parent = parent
 
         self.game_icon = Image(
@@ -100,14 +100,14 @@ class GameModeButton(Box):
 
         self.game_label = Label(
             label="Game Mode",
-            style_classes="battery-power-source",
+            style_classes="gamemode-button",
             h_align="start",
             h_expand=True,
         )
 
         start_box = Box(
             orientation="horizontal",
-            spacing=8,
+            spacing=3,
             children=[self.game_icon, self.game_label],
         )
 
@@ -164,7 +164,7 @@ class BatteryControl(Box):
             name="control-center-widgets",
             **kwargs,
         )
-        self.set_size_request(400, -1)
+        self.set_size_request(374, -1)
 
         self.parent = parent
         self.battery_service = Battery()
@@ -229,9 +229,9 @@ class BatteryControl(Box):
         )
 
         self.battery_settings_button = Button(
+            v_align="center",
             child=Label(
-                label="Battery Settings...",
-                style_classes="battery-power-source",
+                label="Battery Settings",
                 h_align="start",
             ),
             style_classes="battery-settings-button",
@@ -358,10 +358,10 @@ class BatteryControl(Box):
         # Update power source and charging info
         state = self.battery_service.state
 
-        if state == "CHARGING":
+        if state in ["CHARGING", "PENDING_CHARGE"]:
             self.power_source_label.set_label("Power Source: Power Adapter")
             time_to_full = self.battery_service.time_to_full
-            if time_to_full != "N/A":
+            if time_to_full != "N/A" and time_to_full != "0m":
                 self.charging_time_label.set_label(
                     f"{time_to_full} until fully charged"
                 )
@@ -370,13 +370,18 @@ class BatteryControl(Box):
         elif state == "FULLY_CHARGED":
             self.power_source_label.set_label("Power Source: Power Adapter")
             self.charging_time_label.set_label("Fully Charged")
-        elif state == "DISCHARGING":
+        elif state in ["DISCHARGING", "PENDING_DISCHARGE"]:
             self.power_source_label.set_label("Power Source: Battery")
             time_to_empty = self.battery_service.time_to_empty
-            if time_to_empty != "N/A":
+            if time_to_empty != "N/A" and not time_to_empty.startswith(
+                "4553h"
+            ):  # Filter out unrealistic times
                 self.charging_time_label.set_label(f"{time_to_empty} remaining")
             else:
                 self.charging_time_label.set_label("On Battery Power")
+        elif state == "EMPTY":
+            self.power_source_label.set_label("Power Source: Battery")
+            self.charging_time_label.set_label("Battery Empty")
         else:
             self.power_source_label.set_label("Power Source: Unknown")
             self.charging_time_label.set_label("")
