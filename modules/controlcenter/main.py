@@ -1,4 +1,4 @@
-from gi.repository import Gdk, GLib
+import subprocess
 
 from fabric.utils import idle_add
 from fabric.utils.helpers import (
@@ -6,29 +6,24 @@ from fabric.utils.helpers import (
 )
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from loguru import logger
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.svg import Svg
-from fabric.widgets.revealer import Revealer
+from gi.repository import Gdk, GLib
+from loguru import logger
 from modules.controlcenter.bluetooth import BluetoothConnections
+from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
+from modules.controlcenter.per_app_volume import PerAppVolumeControl
+from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
-from utils.roam import audio_service, modus_service
-from widgets.wayland import WaylandWindow as Window
-from modules.controlcenter.player import PlayerBoxStack
-from modules.controlcenter.per_app_volume import PerAppVolumeControl
-from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from services.mpris import MprisPlayerManager
 from services.network import NetworkClient
-from fabric.widgets.svg import Svg
-from fabric.utils.helpers import get_relative_path
+from utils.roam import audio_service, modus_service
+from widgets.wayland import WaylandWindow as Window
 
 brightness_service = Brightness.get_initial()
-
-# FIX: Icon not showing up in control center
-# TODO: Add Player
 
 
 class ModusControlCenter(Window):
@@ -48,6 +43,11 @@ class ModusControlCenter(Window):
         self._updating_brightness = False
         self._updating_volume = False
 
+        # Flight mode and caffeine states
+        self.flight_mode = False
+        self.caffeine_mode = False
+        self._caffeine_process = None
+
         # Lazy loading flags
         self._music_initialized = False
         self._per_app_volume_initialized = False
@@ -63,6 +63,9 @@ class ModusControlCenter(Window):
         # Initialize network service for WiFi toggle
         self.network_service = NetworkClient()
         self.wifi_service = None
+
+        # Initialize flight mode and caffeine states
+        self._check_initial_states()
 
         # Wait for network service to be ready
 
@@ -149,7 +152,9 @@ class ModusControlCenter(Window):
 
         # Create placeholder music widget - lazy load content when needed
         self.music_widget = Box(
-            name="music-widget", h_align="start", children=[]  # Empty initially
+            name="music-widget",
+            h_align="start",
+            children=[],  # Empty initially
         )
 
         self.has_bluetooth_open = False
@@ -256,17 +261,77 @@ class ModusControlCenter(Window):
             on_clicked=self.set_dont_disturb,
         )
 
+        self.flight_icon = Svg(
+            name="flight-icon",
+            svg_file=get_relative_path(
+                "../../config/assets/icons/applets/network-flightmode-on.svg"
+                if self.flight_mode
+                else "../../config/assets/icons/applets/network-flightmode-off.svg"
+            ),
+            size=24,
+        )
+
+        self.flight_widget = Button(
+            name="flight-widget",
+            child=Box(
+                orientation="vertical",
+                spacing=4,
+                h_align="center",
+                v_align="center",
+                children=[
+                    self.flight_icon,
+                    Label(
+                        label="Flight",
+                        style_classes="title",
+                        h_align="center",
+                    ),
+                ],
+            ),
+            on_clicked=self.toggle_flight_mode,
+        )
+
+        self.caffeine_icon = Svg(
+            name="caffeine-icon",
+            svg_file=get_relative_path(
+                "../../config/assets/icons/applets/caffeine-cup-full.svg"
+                if self.caffeine_mode
+                else "../../config/assets/icons/applets/caffeine-cup-empty.svg"
+            ),
+            size=24,
+        )
+
+        self.caffeine_widget = Button(
+            name="caffeine-widget",
+            child=Box(
+                orientation="vertical",
+                spacing=4,
+                h_align="center",
+                v_align="center",
+                children=[
+                    self.caffeine_icon,
+                    Label(
+                        label="Caffeine",
+                        style_classes="title",
+                        h_align="center",
+                    ),
+                ],
+            ),
+            on_clicked=self.toggle_caffeine,
+        )
+
         # Create main widgets directly without XML
         self.widgets = Box(
             orientation="vertical",
             h_expand=True,
             name="control-center-widgets",
             children=[
+                # Top section: Wi-Fi + Bluetooth on left, DND + Flight Mode + Caffeine on right
                 Box(
                     orientation="horizontal",
-                    name="top-widget",
                     h_expand=True,
+                    name="top-widget",
                     children=[
+                        # Left side: Wi-Fi and Bluetooth
                         Box(
                             orientation="vertical",
                             name="wb-widget",
@@ -277,13 +342,44 @@ class ModusControlCenter(Window):
                                 self.bluetooth_widget,
                             ],
                         ),
+                        # Right side: DND, Flight Mode, and Caffeine
                         Box(
-                            orientation="horizontal",
-                            name="dnd-widget",
-                            style_classes="menu",
+                            orientation="vertical",
                             h_expand=True,
+                            name="right-side-widget",
                             children=[
-                                self.focus_widget,
+                                # DND widget
+                                Box(
+                                    orientation="vertical",
+                                    name="dnd-widget",
+                                    style_classes="menu",
+                                    children=[
+                                        self.focus_widget,
+                                    ],
+                                ),
+                                # Flight Mode and Caffeine row
+                                Box(
+                                    orientation="horizontal",
+                                    name="flight-caffeine-row",
+                                    children=[
+                                        Box(
+                                            orientation="vertical",
+                                            name="flight-widget-container",
+                                            style_classes="menu",
+                                            children=[
+                                                self.flight_widget,
+                                            ],
+                                        ),
+                                        Box(
+                                            orientation="vertical",
+                                            name="caffeine-widget-container",
+                                            style_classes="menu",
+                                            children=[
+                                                self.caffeine_widget,
+                                            ],
+                                        ),
+                                    ],
+                                ),
                             ],
                         ),
                     ],
@@ -521,6 +617,25 @@ class ModusControlCenter(Window):
             )
             self.expanded_player_center_box.set_size_request(300, -1)
 
+    def _check_initial_states(self):
+        # Check if caffeine is already running
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "modus-inhibit"], capture_output=True, text=True
+            )
+            self.caffeine_mode = bool(result.stdout.strip())
+        except Exception:
+            self.caffeine_mode = False
+
+        # Flight mode starts as False (normal mode)
+        self.flight_mode = False
+
+        # Update initial labels (will be set after widgets are created)
+        GLib.timeout_add(100, self._update_initial_labels)
+
+    def _update_initial_labels(self):
+        return False
+
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
         modus_service.dont_disturb = self.focus_mode
@@ -531,6 +646,71 @@ class ModusControlCenter(Window):
                 else "../../config/assets/icons/applets/dnd-off.svg"
             )
         )
+
+    def toggle_flight_mode(self, *_):
+        try:
+            self.flight_mode = not self.flight_mode
+
+            if self.flight_mode:
+                # Turn off WiFi and Bluetooth
+                if self.wifi_service:
+                    self.wifi_service.wireless_enabled = False
+                if hasattr(self, "bluetooth_man") and hasattr(
+                    self.bluetooth_man, "client"
+                ):
+                    self.bluetooth_man.client.set_enabled(False)
+            else:
+                # Turn on WiFi and Bluetooth
+                if self.wifi_service:
+                    self.wifi_service.wireless_enabled = True
+                if hasattr(self, "bluetooth_man") and hasattr(
+                    self.bluetooth_man, "client"
+                ):
+                    self.bluetooth_man.client.set_enabled(True)
+
+            # Update icon
+            self.flight_icon.set_from_file(
+                get_relative_path(
+                    "../../config/assets/icons/applets/network-flightmode-on.svg"
+                    if self.flight_mode
+                    else "../../config/assets/icons/applets/network-flightmode-off.svg"
+                )
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to toggle flight mode: {e}")
+
+    def toggle_caffeine(self, *_):
+        try:
+            if self.caffeine_mode:
+                # Turn off caffeine
+                inhibit_script = get_relative_path("../../utils/inhibit.py")
+                subprocess.run(["python3", inhibit_script, "off"], check=False)
+                self.caffeine_mode = False
+                if self._caffeine_process:
+                    try:
+                        self._caffeine_process.terminate()
+                    except:
+                        pass
+                    self._caffeine_process = None
+            else:
+                # Turn on caffeine
+                inhibit_script = get_relative_path("../../utils/inhibit.py")
+                self._caffeine_process = subprocess.Popen(
+                    ["python3", inhibit_script, "on"], start_new_session=True
+                )
+                self.caffeine_mode = True
+
+            self.caffeine_icon.set_from_file(
+                get_relative_path(
+                    "../../config/assets/icons/applets/caffeine-cup-full.svg"
+                    if self.caffeine_mode
+                    else "../../config/assets/icons/applets/caffeine-cup-empty.svg"
+                )
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to toggle caffeine: {e}")
 
     def set_volume(self, _, __, volume):
         self._updating_volume = True
@@ -802,6 +982,14 @@ class ModusControlCenter(Window):
                 connection.disconnect()
             except:
                 pass
+
+        # Clean up caffeine process
+        if self._caffeine_process:
+            try:
+                self._caffeine_process.terminate()
+            except:
+                pass
+            self._caffeine_process = None
 
         # Clean up heavy components
         if hasattr(self, "wifi_man") and self.wifi_man:
