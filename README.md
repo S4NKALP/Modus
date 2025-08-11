@@ -1,37 +1,42 @@
 <p align="center">
   <img src="assets/modus.png" height="200" alt="Logo">
 </p>
-<p align="center"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /> <sup>A modular and extensible shell for Hyprland, written on <a href="https://github.com/Fabric-Development/fabric/">Fabric</a>. </sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25" /></p>
 
 <p align="center">
+  <sub><sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25"/></sup></sub>
+  <a href="https://github.com/hyprwm/Hyprland">
+    <img src="https://img.shields.io/badge/A%20hackable%20shell%20for-Hyprland-0092CD?style=for-the-badge&logo=linux&color=0092CD&logoColor=D9E0EE&labelColor=000000" alt="A hackable shell for Hyprland">
+  </a>
+  <a href="https://github.com/Fabric-Development/fabric/">
+    <img src="https://img.shields.io/badge/Powered%20by-Fabric-FAFAFA?style=for-the-badge&logo=python&color=FAFAFA&logoColor=D9E0EE&labelColor=000000" alt="Powered by Fabric">
+  <sub><sup><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis/main/Activity/Sparkles.webp" alt="Sparkles" width="25" height="25"/></sup></sub>
+  </a>
+  </p>
 
-<a href="https://github.com/S4NKALP/Modus/graphs/contributors">
-<img alt="People" src="https://img.shields.io/github/contributors/S4NKALP/Modus?style=flat&color=ffaaf2&label=People"> </a>
+<div align="center">
 
-<a href="https://github.com/S4NKALP/Modus/stargazers">
-<img alt="Stars" src="https://img.shields.io/github/stars/S4NKALP/Modus?style=flat&color=98c379&label=Stars"></a>
+[![GitHub stars](https://img.shields.io/github/stars/S4NKALP/Modus?style=for-the-badge&logo=github&color=FFB686&logoColor=D9E0EE&labelColor=292324)](https://github.com/S4NKALP/Modus/stargazers)
+[![Hyprland](https://img.shields.io/badge/Made%20for-Hyprland-pink?style=for-the-badge&logo=linux&logoColor=D9E0EE&labelColor=292324&color=C6A0F6)](https://hyprland.org/)
+[![Maintained](https://img.shields.io/badge/Maintained-Yes-blue?style=for-the-badge&logo=linux&logoColor=D9E0EE&labelColor=292324&color=3362E1)]()
+[![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/EMWUTgegDm)](https://discord.gg/EMWUTgegDm)
 
-<a href="https://github.com/S4NKALP/Modus/network/members">
-<img alt="Forks" src="https://img.shields.io/github/forks/S4NKALP/Modus?style=flat&color=66a8e0&label=Forks"> </a>
-
-<a href="https://github.com/S4NKALP/Modus/watchers">
-<img alt="Watches" src="https://img.shields.io/github/watchers/S4NKALP/Modus?style=flat&color=f5d08b&label=Watches"> </a>
-
-<a href="https://github.com/S4NKALP/Modus/pulse">
-<img alt="Last Updated" src="https://img.shields.io/github/last-commit/S4NKALP/Modus?style=flat&color=e06c75&label="> </a>
-</p>
+</div>
 
 <br>
 
 <figure>
+  <h2>Home Screen:</h2>
   <img src="assets/screenshots/home.png" alt="fabric">
-  <br/>
+  <br/>  
+  <h2>Lock Screen:</h2>
+    <img src="assets/screenshots/lock.png" alt="fabric">
 </figure>
 <br>
 
 ## Installation (WIP)
 
 ```bash
+paru -S glace-git gtk-session-lock
 git clone https://github.com/S4NKALP/Modus
 cd Modus
 python -m venv .venv
