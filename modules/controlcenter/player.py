@@ -173,10 +173,10 @@ class PlayerBoxStack(Box):
                         child.destroy()
                     except Exception as e:
                         logger.warning(f"Failed to destroy player child: {e}")
-            
+
             # Reset to no media state
             self.player_stack.children = [self.no_media_box]
-            
+
             # Clear player buttons
             for button in self.player_buttons:
                 try:
@@ -184,17 +184,18 @@ class PlayerBoxStack(Box):
                 except Exception:
                     pass
             self.player_buttons.clear()
-            
+
             # Reset stack position
             self.current_stack_pos = 0
-            
+
             # Clean up old cache files more aggressively
             cleanup_old_cache_files()
-            
+
             # Force garbage collection
             import gc
+
             gc.collect()
-            
+
             logger.debug("PlayerBoxStack enhanced cleanup completed")
         except Exception as e:
             logger.warning(f"PlayerBoxStack enhanced cleanup failed: {e}")
