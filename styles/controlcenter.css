@@ -879,7 +879,7 @@
   border: none;
   padding: 8px 12px;
   border-radius: 8px;
-  transition: background-color 0.2s ease;
+  /* transition: background-color 0.2s ease; */
 }
 
 #wifi-other-button:hover {
@@ -889,4 +889,11 @@
 #wifi-other-button label {
   font-size: 14px;
   font-weight: 500;
+}
+
+#device-button {
+  /* background-color: #000; */
+}
+#device-button.button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }

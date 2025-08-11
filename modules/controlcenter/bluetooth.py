@@ -21,7 +21,7 @@ gi.require_version("Gdk", "3.0")
 
 class BluetoothDeviceSlot(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(h_expand=True, name="device-button", **kwargs)
         self.device = device
         self.device.connect("changed", self.on_changed)
         self.device.connect(
@@ -42,10 +42,13 @@ class BluetoothDeviceSlot(CenterBox):
 
         self.start_children = [
             Button(
-                image=self.dimage,
                 on_clicked=lambda *_: self.toggle_connecting(),
+                child=Box(
+                    orientation="h",
+                    h_expand=True,
+                    children=[self.dimage, Label(label=device.name)],
+                ),  # type: ignore
             ),
-            Label(label=device.name),  # type: ignore
         ]
 
         # Add battery info if available

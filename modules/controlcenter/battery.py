@@ -14,7 +14,7 @@ from gi.repository import GLib
 from services.battery import Battery
 
 
-class EnergyModeButton(CenterBox):
+class EnergyModeButton(Box):
     def __init__(
         self,
         profile_name: str,
@@ -57,12 +57,13 @@ class EnergyModeButton(CenterBox):
 
         self.button = Button(
             child=start_box,
+            h_expand=True,
             name="energy-mode-button-clickable",
             on_clicked=self.on_clicked,
             style_classes="battery-profile-button",
         )
 
-        self.start_children = [self.button]
+        self.children = [self.button]
         self.update_state()
 
     def on_clicked(self, *args):
@@ -85,9 +86,9 @@ class EnergyModeButton(CenterBox):
             self.mode_icon.remove_style_class("connected")
 
 
-class GameModeButton(CenterBox):
+class GameModeButton(Box):
     def __init__(self, parent, **kwargs):
-        super().__init__(name="game-mode-button", **kwargs)
+        super().__init__(name="game-mode-button", h_expand=True, **kwargs)
         self.parent = parent
 
         self.game_icon = Image(
@@ -114,10 +115,11 @@ class GameModeButton(CenterBox):
             child=start_box,
             name="game-mode-button-clickable",
             on_clicked=self.on_clicked,
+            h_expand=True,
             style_classes="battery-gamemode-button",
         )
 
-        self.start_children = [self.button]
+        self.children = [self.button]
         self.update_state()
 
     def on_clicked(self, *args):
