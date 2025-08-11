@@ -40,16 +40,15 @@ class BluetoothDeviceSlot(CenterBox):
             style_classes=" ".join(self.styles),
         )
 
-        self.start_children = [
-            Button(
-                on_clicked=lambda *_: self.toggle_connecting(),
-                child=Box(
-                    orientation="h",
-                    h_expand=True,
-                    children=[self.dimage, Label(label=device.name)],
-                ),  # type: ignore
-            ),
-        ]
+        self.device_button = Button(
+            on_clicked=lambda *_: self.toggle_connecting(),
+            child=Box(
+                orientation="h",
+                h_expand=True,
+                children=[self.dimage, Label(label=device.name)],
+            ),  # type: ignore
+        )
+        self.start_children = [self.device_button]
 
         # Add battery info if available
         if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
@@ -76,7 +75,15 @@ class BluetoothDeviceSlot(CenterBox):
             battery_box.children = [battery_icon, battery_label]
             self.end_children = [battery_box]
 
+        self.device_button.connect("enter-notify-event", self.on_button_enter)
+        self.device_button.connect("leave-notify-event", self.on_button_leave)
         self.device.emit("changed")  # to update display status
+
+    def on_button_enter(self, widget, event):
+        self.add_style_class("button-hovered")
+
+    def on_button_leave(self, widget, event):
+        self.remove_style_class("button-hovered")
 
     def toggle_connecting(self):
         self.device.emit("changed")
