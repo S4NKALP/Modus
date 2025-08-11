@@ -36,7 +36,7 @@
 ## Installation (WIP)
 
 ```bash
-paru -S glace-git gtk-session-lock
+paru -S glace-git gtk-session-lock python-pyotp python-pillow python-ijson python-setproctitle
 git clone https://github.com/S4NKALP/Modus
 cd Modus
 python -m venv .venv
