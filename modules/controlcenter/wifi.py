@@ -16,7 +16,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 
 
-class WifiNetworkSlot(CenterBox):
+class WifiNetworkSlot(Box):
     def __init__(self, access_point, wifi_service, parent=None, **kwargs):
         super().__init__(name="wifi-network-slot", **kwargs)
         self.access_point = access_point
@@ -63,24 +63,26 @@ class WifiNetworkSlot(CenterBox):
 
         # Create the start section with WiFi icon and network name
         start_box = Box(
-            orientation="h", spacing=8, children=[self.dimage, self.network_label]
+            orientation="h",
+            spacing=8,
         )
-
+        start_box.children = [self.dimage, self.network_label]
+        if self.lock_icon is not None:
+            start_box.children.append(self.lock_icon)
         # Create end section with lock icon if needed
-        end_children = []
-        if self.lock_icon:
-            end_children.append(self.lock_icon)
 
-        self.start_children = [
+        self.children = [
             Button(
                 child=start_box,
+                h_expand=True,
                 name="wifi-network-button",
                 on_clicked=lambda *_: self.toggle_connecting(),
             )
         ]
 
-        if end_children:
-            self.end_children = end_children
+        if self.lock_icon is not None:
+            self.children.append(self.lock_icon)
+        end_children = []
 
         # Emit initial change to update display
         self.on_changed()
@@ -324,6 +326,7 @@ class WifiConnections(Box):
             child_revealed=False,
         )
 
+        self.other_networks_revealer.child_revealed = False
         # Create More Settings button (same style as Other Networks button)
         self.more_settings_button = Button(
             child=Label("More Settings", h_align="start"),
