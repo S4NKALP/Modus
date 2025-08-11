@@ -844,7 +844,7 @@
 /* WiFi network slots - macOS style */
 #wifi-network-slot button {
   border-radius: 8px;
-  padding: 4px 12px;
+  padding: 4px 4px;
   /* min-width: 280px; */
   margin: 2px 0;
 }
