@@ -112,7 +112,7 @@ class AudioOSDContainer(Box):
         )
         self.osd_window_image = Svg(
             get_relative_path("../config/assets/icons/volume/audio-volume.svg"),
-            size=(100, 150),
+            size=(150, 150),
             name="osd-image",
             h_align="center",
             v_align="center",
