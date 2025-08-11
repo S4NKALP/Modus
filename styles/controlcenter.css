@@ -598,13 +598,9 @@
 #macos-outer-player-box {
   min-height: 80px; /* Reduced height */
   min-width: 380px; /* Slightly wider to accommodate expanded track info */
-  border-radius: 12px;
   /* margin: 10px; */
-  padding: 15px;
-  background-color: alpha(#000, 0.4);
-  box-shadow:
-    0 4px 16px alpha(#000, 0.25),
-    inset 0 0 0 1px alpha(#fff, 0.1);
+  padding: 10px;
+  /* background-color: alpha(#000, 0.4); */
 }
 
 #macos-main-section {
