@@ -187,7 +187,6 @@ class NetworkIndicator(Box):
                 layer="overlay",
                 title="modus",
                 anchor="top right",
-                margin="2px 10px 0px 0px",
                 exclusivity="auto",
                 keyboard_mode="on-demand",
                 name="wifi-control-window",

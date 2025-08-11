@@ -164,7 +164,7 @@ class BatteryControl(Box):
             name="control-center-widgets",
             **kwargs,
         )
-        self.set_size_request(374, -1)
+        self.set_size_request(354, -1)
 
         self.parent = parent
         self.battery_service = Battery()

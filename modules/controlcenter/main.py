@@ -442,30 +442,30 @@ class ModusControlCenter(Window):
             self.bluetooth_widgets = Box(
                 orientation="vertical",
                 h_expand=True,
-                name="control-center-widgets",
+                v_expand=True,
                 children=[
-                    Box(
-                        orientation="horizontal",
-                        name="top-widget",
-                        h_expand=True,
-                        children=[
-                            Box(
-                                orientation="vertical",
-                                name="wb-widget",
-                                style_classes="menu",
-                                spacing=5,
-                                children=[
-                                    self.bluetooth_man,
-                                ],
-                            ),
-                        ],
-                    ),
+                    self.bluetooth_man,
+                    # Box(
+                    #     orientation="horizontal",
+                    #     name="top-widget",
+                    #     h_expand=True,
+                    #     children=[
+                    #         Box(
+                    #             orientation="vertical",
+                    #             name="wb-widget",
+                    #             style_classes="menu",
+                    #             spacing=5,
+                    #             children=[
+                    #             ],
+                    #         ),
+                    #     ],
+                    # ),
                 ],
             )
-            self.bluetooth_center_box = CenterBox(
-                start_children=[self.bluetooth_widgets]
+            self.bluetooth_center_box = Box(
+                h_expand=True, v_expand=True, children=[self.bluetooth_widgets]
             )
-            self.bluetooth_center_box.set_size_request(300, -1)
+            self.bluetooth_center_box.set_size_request(350, -1)
 
     def _ensure_wifi_widgets(self):
         """Lazy load wifi widgets"""
@@ -473,13 +473,15 @@ class ModusControlCenter(Window):
             self.wifi_widgets = Box(
                 orientation="vertical",
                 h_expand=True,
-                name="control-center-widgets",
+                v_expand=True,
                 children=[
                     self.wifi_man,
                 ],
             )
-            self.wifi_center_box = CenterBox(start_children=[self.wifi_widgets])
-            self.wifi_center_box.set_size_request(300, -1)
+            self.wifi_center_box = Box(
+                h_expand=True, v_expand=True, children=[self.wifi_widgets]
+            )
+            self.wifi_center_box.set_size_request(350, -1)
 
     def _ensure_per_app_volume_widgets(self):
         """Lazy load per-app volume widgets"""

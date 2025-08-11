@@ -241,7 +241,6 @@ class WifiConnections(Box):
         super().__init__(
             spacing=8,
             orientation="vertical",
-            style="margin: 8px",
             name="wifi-connections",
             **kwargs,
         )
@@ -326,7 +325,6 @@ class WifiConnections(Box):
             child_revealed=False,
         )
 
-        self.other_networks_revealer.child_revealed = False
         # Create More Settings button (same style as Other Networks button)
         self.more_settings_button = Button(
             child=Label("More Settings", h_align="start"),

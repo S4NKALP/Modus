@@ -1,32 +1,38 @@
 #control-center-menu {
   background-color: transparent;
-  border-radius: 15px;
+  border-radius: 12px;
   box-shadow: none;
   margin: 0;
 }
 
 #separator {
-  min-height: 2px;
-  margin: 2px 0;
-  background-color: var(--outline);
+  min-height: 0.09rem;
+  margin: 3px 0;
+  background-color: alpha(#fff, 0.2);
   border-radius: 8px;
 }
 
-#bluetooth-control-window,
-#wifi-control-window,
+/* #bluetooth-control-window { */
+/* #wifi-control-window, */
 #battery-control-window {
   margin: 6px;
-  background-color: alpha(#fff, 0.09);
+  /* background-color: alpha(#fff, 0.09); */
   border: 1px solid alpha(#111, 0.3);
   box-shadow: inset 0 0 200px 0 alpha(#111, 0.3);
   border-radius: 15px;
 }
 
+#bluetooth-title,
+#wifi-title {
+  font-family: "SF Pro Rounded";
+  font-size: 16px;
+  font-weight: bold;
+}
 #control-center-widgets {
-  background-color: alpha(#fff, 0.09);
+  background-color: alpha(#fff, 0.05);
   box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
   border: 1px solid alpha(#111, 0.4);
-  border-radius: 1.25rem;
+  border-radius: 8px;
   padding: 0.5rem;
 }
 
@@ -835,9 +841,14 @@
 /* macOS-style WiFi interface */
 #wifi-connections,
 #bluetooth-connections {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 12px;
+  /* background-color: rgba(255, 255, 255, 0.08); */
+  background-color: alpha(#fff, 0.05);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 8px;
+  /* padding: 0.5rem; */
+  /* border-radius: 12px; */
+  padding: 10px;
 }
 
 /* WiFi network slots - macOS style */
@@ -877,7 +888,9 @@
 #wifi-other-button {
   background: transparent;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 6px;
+  margin-bottom: -12px;
+  margin-top: -6px;
   border-radius: 8px;
   /* transition: background-color 0.2s ease; */
 }
@@ -885,10 +898,8 @@
 #wifi-other-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
-
-#wifi-other-button label {
-  font-size: 14px;
-  font-weight: 500;
+#wifi-other-button:last-child {
+  margin-bottom: 3px;
 }
 
 #device-button {
@@ -901,4 +912,11 @@
 
 .button-hovered {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+#wifi-other-device label,
+#wifi-other-button label {
+  font-size: 12px;
+  font-weight: bold;
+  font-family: "SF Pro Rounded";
 }
