@@ -9,7 +9,6 @@
 }
 
 #weather-widget label {
-  font-family: "SF Pro Rounded";
   margin-left: 12px;
 }
 
@@ -49,7 +48,6 @@
 }
 
 #calendar-widget {
-  font-family: "SF Pro Rounded";
   margin: 12px;
 }
 
@@ -119,7 +117,6 @@
 
 /* Date Widget CSS */
 #date-widget label {
-  font-family: "SF Pro Rounded";
   margin-top: 10px;
 }
 #day label,
@@ -160,19 +157,15 @@
   border-radius: 16px;
 }
 #ram-progress {
-  font-family: "SF Pro Rounded";
   margin-left: 12px;
   color: var(--foreground);
 }
 #progress-label {
-  font-family: "SF Pro Rounded";
   font-weight: 600;
   font-size: 13px;
 }
 #progress {
-  font-family: "SF Pro Rounded";
   border: solid 8px #859aff;
-
   color: alpha(#aaaaaa, 0.7);
 }
 
@@ -197,7 +190,6 @@
 
 /* Info text styling */
 #info-text {
-  font-family: "SF Pro Rounded";
   font-size: 13px;
   font-weight: 500;
   color: #8e8e8e;
@@ -205,7 +197,6 @@
 }
 
 #info-value {
-  font-family: "SF Pro Rounded";
   font-size: 12px;
   font-weight: 600;
   color: #ffffff;
@@ -217,7 +208,6 @@
 }
 
 #info {
-  font-family: "SF Pro Rounded";
   margin-left: -13px;
   margin-top: 5px;
   font-size: 14px;

@@ -24,7 +24,6 @@
 
 #bluetooth-title,
 #wifi-title {
-  font-family: "SF Pro Rounded";
   font-size: 16px;
   font-weight: bold;
 }
@@ -60,7 +59,6 @@
 /* WiFi Password Dialog */
 #wifi-password-dialog {
   background-color: transparent;
-  font-family: "SF Pro Rounded";
 }
 
 #wifi-dialog-background {
@@ -82,13 +80,11 @@
 
 #wifi-dialog-title {
   color: #ffffff;
-  font-family: "SF Pro Rounded";
   font-size: 14px;
   font-weight: 500;
 }
 
 #wifi-dialog-error {
-  font-family: "SF Pro Rounded";
   color: #ff4444;
   font-size: 12px;
   font-weight: 500;
@@ -103,7 +99,6 @@
   color: #ffffff;
   font-size: 13px;
   font-weight: 500;
-  font-family: "SF Pro Rounded";
   margin-bottom: 4px;
 }
 
@@ -913,13 +908,11 @@
 #wifi-other-button label {
   font-size: 12px;
   font-weight: bold;
-  font-family: "SF Pro Rounded";
 }
 #app-volume-header {
   font-size: 16px;
   padding-left: 5px;
   margin-top: -2px;
   font-weight: bold;
-  font-family: "SF Pro Rounded";
   color: #ffffff;
 }

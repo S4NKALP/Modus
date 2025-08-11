@@ -5,7 +5,6 @@
 }
 .battery-main-title {
   font-size: 16px;
-  font-family: "SF Pro Rounded";
   font-weight: bold;
 
   color: rgba(255, 255, 255, 0.95);
@@ -41,7 +40,6 @@
 
 .battery-percentage {
   font-size: 16px;
-  font-family: "SF Pro Rounded";
   margin-right: 8px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.95);
@@ -76,18 +74,15 @@
 }
 .battery-power-source {
   font-size: 12px;
-  font-family: "SF Pro Rounded";
   margin-bottom: -4px;
   color: alpha(#ffffff, 0.5);
 }
 .battery-section-title {
   font-size: 14px;
-  font-family: "SF Pro Rounded";
   color: alpha(#ffffff, 0.7);
   margin: 2px 0 0 8px;
 }
 .battery-power-mode {
-  font-family: "SF Pro Rounded";
   font-size: 13px;
 }
 
@@ -103,7 +98,6 @@
   border-radius: 8px;
 }
 .battery-settings-button label {
-  font-family: "SF Pro Rounded";
   font-weight: 500;
   color: alpha(#ffffff, 1);
 }
@@ -117,7 +111,6 @@
 }
 .gamemode-button {
   font-size: 12px;
-  font-family: "SF Pro Rounded";
   margin-left: -6px;
   color: rgba(255, 255, 255, 0.85);
 }

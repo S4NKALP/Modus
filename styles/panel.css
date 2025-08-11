@@ -29,12 +29,10 @@
 }
 
 #menubar label {
-  font-family: "SF Pro Rounded";
   font-size: 13px;
   /* font-weight: 400; */
 }
 #battery-label {
-  font-family: "SF Pro Rounded";
   font-weight: 500;
   margin-right: 1px;
 }

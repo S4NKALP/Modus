@@ -29,7 +29,6 @@
 
 #dropdown-option-label {
   font-size: 13px;
-  font-family: "SF Pro Rounded";
   margin: 0px;
   color: #fff;
   font-weight: 400;
@@ -44,7 +43,6 @@
 }
 
 #dropdown-option-keybind {
-  font-family: "Fira Code Nerd Font";
   font-weight: 500;
   color: #aaa;
 }

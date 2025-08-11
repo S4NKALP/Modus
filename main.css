@@ -19,6 +19,7 @@
   all: unset;
   color: var(--foreground);
   font-size: unset;
+  font-family: "SF Pro Rounded";
 }
 
 #corner {

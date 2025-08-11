@@ -16,7 +16,6 @@
   color: white;
   min-width: 220px;
   min-height: 40px;
-  font-family: "SF Pro Rounded";
   padding-right: 5px;
   padding-left: 5px;
   font-size: 14px;
@@ -34,7 +33,6 @@
 }
 #lock-date label {
   background-color: transparent;
-  font-family: "SF Pro Rounded";
   color: alpha(#fff, 0.6);
   border: none;
   font-size: 30px;
@@ -44,9 +42,7 @@
 #lock-clock label {
   background-color: transparent;
   color: alpha(#fff, 0.6);
-  font-family: "SF Pro Rounded ";
   border: none;
-  /* font-family: "SF Pro Rounded"; */
   font-size: 120px;
   margin-top: -20px;
   font-weight: bold;
@@ -63,7 +59,6 @@
   margin-bottom: 40px;
 }
 #unlock-text {
-  font-family: "SF Pro Rounded";
   font-size: 15px;
   color: alpha(#fff, 0.6);
   font-weight: bold;
