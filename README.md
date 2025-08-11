@@ -48,17 +48,18 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
 - [x] Launcher
+- [x] Lock Screen
 - [x] Dock
 - [x] Notification
 - [x] Control Center
 - [x] Music Player
 - [x] Desktop Widgets
-- [x] New Launcher (maybe like Spotlight)
+- [x] New Launcher (like Spotlight)
 - [ ] Settings
 - [ ] Magnifier hover effect on Dock
 - [x] ~~New Application Switcher~~
 - [x] Panel Widget
-- [x] Calendar Widget
+- [x] MacOS like Widget
 - [x] Expandable Notifiaction Centre
 ## Bug Fixes (the bug found till now)
 
