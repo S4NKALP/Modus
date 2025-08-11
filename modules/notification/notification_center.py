@@ -418,15 +418,22 @@ class ExpandableNotificationGroup(Box):
         return False  # Don't repeat timeout
 
     def close_all(self, *args):
+        """Close all notifications in this group with proper cache cleanup"""
         # Close all notifications in this group
         for notification in self.notifications:
             try:
-                cleanup_notification_specific_caches(
-                    app_icon_source=getattr(notification, "app_icon_source", None),
-                    notification_image_cache_key=getattr(
-                        notification, "notification_image_cache_key", None
-                    ),
-                )
+                # Get notification ID for cache cleanup
+                notification_id = getattr(notification._notification, "id", None)
+                app_icon_source = getattr(notification._notification, "app_icon", None)
+                
+                # Clean up caches using notification ID pattern
+                if notification_id:
+                    cleanup_notification_specific_caches(
+                        app_icon_source=app_icon_source,
+                        notification_image_cache_key=f"notif_{notification_id}_*"
+                    )
+                    logger.debug(f"Cleaned up caches for notification ID: {notification_id}")
+                
                 notification_service.remove_cached_notification(notification.cache_id)
             except Exception as e:
                 logger.error(
@@ -434,14 +441,20 @@ class ExpandableNotificationGroup(Box):
                 )
 
     def _close_single_notification(self, notification):
-        """Close a single notification from this group"""
+        """Close a single notification from this group with proper cache cleanup"""
         try:
-            cleanup_notification_specific_caches(
-                app_icon_source=getattr(notification, "app_icon_source", None),
-                notification_image_cache_key=getattr(
-                    notification, "notification_image_cache_key", None
-                ),
-            )
+            # Get notification ID for cache cleanup
+            notification_id = getattr(notification._notification, "id", None)
+            app_icon_source = getattr(notification._notification, "app_icon", None)
+            
+            # Clean up caches using notification ID pattern
+            if notification_id:
+                cleanup_notification_specific_caches(
+                    app_icon_source=app_icon_source,
+                    notification_image_cache_key=f"notif_{notification_id}_*"
+                )
+                logger.debug(f"Cleaned up caches for notification ID: {notification_id}")
+            
             notification_service.remove_cached_notification(notification.cache_id)
             logger.debug(f"Closed single notification: {notification.cache_id}")
         except Exception as e:
@@ -567,17 +580,18 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _on_close_clicked(self, *args):
         try:
-            # Clean up this notification's cached icons AND images
-            cleanup_notification_specific_caches(
-                app_icon_source=getattr(self, "app_icon_source", None),
-                notification_image_cache_key=getattr(
-                    self, "notification_image_cache_key", None
-                ),
-            )
-            logger.debug(
-                f"Cleaned up all caches for notification center: {self.notification_id}"
-            )
-
+            # Get notification ID for cache cleanup
+            notification_id = getattr(self.notification, "id", None)
+            app_icon_source = getattr(self.notification, "app_icon", None)
+            
+            # Clean up caches using notification ID pattern
+            if notification_id:
+                cleanup_notification_specific_caches(
+                    app_icon_source=app_icon_source,
+                    notification_image_cache_key=f"notif_{notification_id}_*"
+                )
+                logger.debug(f"Cleaned up caches for notification center ID: {notification_id}")
+            
             notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
             logger.error(f"Error removing notification {self.notification_id}: {e}")
