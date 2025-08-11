@@ -1,37 +1,36 @@
-import gi, pam
-
-gi.require_version("Gdk", "3.0")
-gi.require_version("Gtk", "3.0")
-
-import setproctitle
-
-gi.require_version("GtkSessionLock", "0.1")
-from gi.repository import (
-    Gdk,  # pyright: ignore[reportMissingModuleSource]
-    GtkSessionLock,  # pyright: ignore[reportAttributeAccessIssue]
-)
-
-from fabric.widgets.window import Window
-
-# from widgets.wayland import WaylandWindow as Window
-import os
-from fabric.widgets.entry import Entry
-from fabric.widgets.datetime import DateTime
+from widgets.circle_image import CircleImage as Image
 from modules.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
     NetworkIndicator,
 )
-from fabric.widgets.box import Box
+from gi.repository import (
+    Gdk,  # pyright: ignore[reportMissingModuleSource]
+    GLib,
+    GtkSessionLock,  # pyright: ignore[reportAttributeAccessIssue]
+)
+from fabric.widgets.window import Window
 from fabric.widgets.label import Label
+from fabric.widgets.entry import Entry
+from fabric.widgets.datetime import DateTime
 from fabric.widgets.centerbox import CenterBox
-
-# from fabric.widgets.image import Image
-import getpass
-from fabric import Application
-from gi.repository import GLib
-from widgets.circle_image import CircleImage as Image
+from fabric.widgets.box import Box
 from fabric.utils import get_relative_path
+from fabric import Application
+import os
+import getpass
+import setproctitle
+import gi
+import pam
+
+gi.require_version("Gdk", "3.0")
+gi.require_version("Gtk", "3.0")
+
+
+gi.require_version("GtkSessionLock", "0.1")
+# from fabric.widgets.image import Image
+
+# from widgets.wayland import WaylandWindow as Window
 
 
 class IndicatorBox(Box):

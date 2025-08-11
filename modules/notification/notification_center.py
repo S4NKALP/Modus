@@ -1,24 +1,25 @@
-from fabric.widgets.centerbox import CenterBox
-from loguru import logger
 from collections import defaultdict
-from gi.repository import GLib
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
+from gi.repository import GLib
+from loguru import logger
+
 from modules.notification.notification import (
     NotificationWidget,
-    cleanup_notification_image_cache,
+    cache_notification_icon,
     cleanup_all_notification_caches,
     cleanup_notification_specific_caches,
+    get_fallback_notification_icon,
 )
 from services.modus import notification_service
-from widgets.wayland import WaylandWindow as Window
-from fabric.widgets.image import Image
-from fabric.widgets.eventbox import EventBox
 from widgets.custom_image import CustomImage
-from fabric.widgets.revealer import Revealer
+from widgets.wayland import WaylandWindow as Window
 
 
 class ExpandableNotificationGroup(Box):
@@ -42,8 +43,6 @@ class ExpandableNotificationGroup(Box):
         self.expanded_container.set_visible(False)
 
     def create_collapsed_state(self):
-        from widgets.custom_image import CustomImage
-
         latest_notification = self.notifications[0]  # Most recent notification
 
         # Create clickable event box
@@ -92,6 +91,7 @@ class ExpandableNotificationGroup(Box):
                                 markup=latest_notification._notification.summary.replace(
                                     "\n", " "
                                 ),
+                                max_chars_width=20,
                                 h_align="start",
                                 ellipsization="end",
                             ),
@@ -177,6 +177,7 @@ class ExpandableNotificationGroup(Box):
                                 markup=latest_notification._notification.summary.replace(
                                     "\n", " "
                                 ),
+                                max_chars_width=25,
                                 h_align="start",
                                 ellipsization="end",
                             ),
@@ -312,8 +313,6 @@ class ExpandableNotificationGroup(Box):
 
         # Fallback to app icon
         try:
-            from modules.notification.notification import cache_notification_icon
-
             cached_app_icon = cache_notification_icon(notification.app_icon, (35, 35))
             if cached_app_icon:
                 return cached_app_icon
@@ -321,8 +320,6 @@ class ExpandableNotificationGroup(Box):
             pass
 
         # Ultimate fallback
-        from modules.notification.notification import get_fallback_notification_icon
-
         return get_fallback_notification_icon((35, 35))
 
     def on_clicked(self, widget, event):
@@ -449,7 +446,6 @@ class NotificationCenterWidget(NotificationWidget):
 
     def create_content(self, notification):
         # Create our custom close button for notification center
-        from widgets.custom_image import CustomImage
 
         self.close_button = Button(
             name="notif-close-button",
@@ -467,9 +463,6 @@ class NotificationCenterWidget(NotificationWidget):
         )
 
         # Create the content box manually with our custom close button
-        from fabric.widgets.box import Box
-        from fabric.widgets.label import Label
-
         return Box(
             name="notification-content",
             spacing=8,
@@ -493,7 +486,7 @@ class NotificationCenterWidget(NotificationWidget):
                                     name="notification-summary",
                                     markup=notification.summary.replace("\n", " "),
                                     h_align="start",
-                                    max_chars_width=30,
+                                    max_chars_width=25,
                                     ellipsization="end",
                                 ),
                             ],
@@ -502,7 +495,7 @@ class NotificationCenterWidget(NotificationWidget):
                             Label(
                                 markup=notification.body.replace("\n", " "),
                                 h_align="start",
-                                max_chars_width=35,
+                                max_chars_width=25,
                                 ellipsization="end",
                             )
                             if notification.body
