@@ -40,7 +40,7 @@ class PerAppVolumeControl(Box):
                     image=Image(icon_name="back", size=10),
                     on_clicked=lambda *_: self.control_center.close_per_app_volume(),
                 ),
-                Label("App Volume"),
+                Label("App Volume", name="app-volume-header"),
             ],
         )
 
