@@ -1,6 +1,7 @@
 /* Weather Widget CSS */
 #weather-container {
   background: linear-gradient(to bottom, #202020, #141414);
+  margin: 5px 5px 20px 5px;
   min-width: 170px;
   min-height: 170px;
   border-radius: 16px;
@@ -14,7 +15,7 @@
 
 #city {
   margin-top: 10px;
-  color: #6fb4c3;
+  color: #859aff;
   font-weight: 600;
   font-size: 20px;
 }
@@ -41,7 +42,7 @@
 /* Calendar Widget */
 #calendar-box-widget {
   background: linear-gradient(to bottom, #202020, #141414);
-  margin: 20px 20px 20px 10px;
+  margin: 5px 20px 20px 10px;
   min-width: 170px;
   min-height: 170px;
   border-radius: 16px;
@@ -55,7 +56,7 @@
 #calendar-month {
   font-size: 16px;
   font-weight: 600;
-  color: #6fb4c3;
+  color: #859aff;
   margin-bottom: 8px;
 }
 
@@ -100,7 +101,7 @@
   font-size: 12px;
   font-weight: 700;
   color: #191919;
-  background-color: #6fb4c3;
+  background-color: #859aff;
   border-radius: 50%;
   min-width: 18px;
   min-height: 16px;
@@ -139,12 +140,12 @@
   font-weight: 600;
 }
 #day label {
-  color: alpha(#6fb4c3, 0.9);
+  color: alpha(#859aff, 0.9);
 }
 
 #date-container {
   background: linear-gradient(to bottom, #202020, #141414);
-  margin: 20px 10px 20px 5px;
+  margin: 5px 10px 20px 5px;
   min-width: 170px;
   min-height: 170px;
   border-radius: 16px;
@@ -170,14 +171,14 @@
 }
 #progress {
   font-family: "SF Pro Rounded";
-  border: solid 8px #6fb4c3;
+  border: solid 8px #859aff;
 
   color: alpha(#aaaaaa, 0.7);
 }
 
 /* Color indicators for memory usage */
 #used-color-indicator {
-  color: #6fb4c3;
+  color: #859aff;
   font-size: 10px;
   font-weight: 900;
 }
@@ -189,7 +190,7 @@
 }
 
 #temp-color-indicator {
-  color: #6fb4c3;
+  color: #859aff;
   font-size: 10px;
   font-weight: 900;
 }

@@ -2,7 +2,7 @@
   background-color: transparent;
 
   /* border: 1px solid alpha(#111, 0.3); */
-  border-radius: 10px;
+  border-radius: 20px;
   margin-right: 10px;
   /* padding: 20px; */
   /* margin: 6px; */
@@ -10,13 +10,14 @@
 
 #noti-clear-button label {
   /* min-width: 10px; */
-  background-color: alpha(#202828, 0.8);
+  background-color: alpha(#1c2328, 0.05);
+
   min-height: 25px;
   min-width: 70px;
   font-size: 15px;
-  font-weight: 500;
+  /* font-weight: bol; */
   font-family: "SF Pro Rounded";
-  border: 1.5px solid #525155;
+  border: 1px solid #525155;
   border-radius: 15px;
   margin-top: 10px;
 }
@@ -32,7 +33,7 @@
 
 /* Single notification (no stacking) */
 #single-notification-content {
-  background-color: alpha(#202828, 0.8);
+  background-color: alpha(#1c2328, 0.05);
   border: 1.5px solid #525155;
   border-radius: 12px;
   padding: 12px;
@@ -52,32 +53,34 @@
 
 /* Bottom shadow layer (deepest) - offset to show stacking from below */
 #stack-shadow-bottom {
-  background-color: alpha(#202828, 0.9);
-  border: 1.5px solid #525155;
+  background-color: alpha(#1c2328, 0.05);
+  border-top: 1px solid #525155;
   border-radius: 12px;
   opacity: 1;
   min-height: 16px;
   margin-left: 20px;
   margin-right: -4px;
-  margin-bottom: -8px;
+  margin-bottom: -10px;
 }
 
 /* Middle shadow layer */
 #stack-shadow-middle {
-  background-color: alpha(#202828, 0.9);
-  border: 1.5px solid #525155;
+  background-color: alpha(#1c2328, 0.05);
+
+  border-top: 1px solid #525155;
   border-radius: 12px;
   opacity: 1;
   min-height: 20px;
   margin-left: 10px;
   margin-right: -2px;
-  margin-bottom: -12px;
+  margin-bottom: -14px;
 }
 
 /* Main notification content (top layer) */
 #stack-main-notification {
-  background-color: alpha(#202828, 1);
-  border: 1.5px solid #525155;
+  background-color: alpha(#1c2328, 0.05);
+
+  border: 1.2px solid #525155;
   border-radius: 12px;
   padding: 12px;
   transition: all 0.2s ease;
@@ -235,7 +238,7 @@
 }
 #notification-show-less {
   font-family: "SF Pro Rounded";
-  background-color: alpha(#111, 0.9);
+  background-color: alpha(#1c2328, 0.05);
   font-size: 12px;
   margin: 10px;
   border-radius: 15px;
@@ -243,7 +246,7 @@
 
 #notification-close-all {
   margin: 10px 10px 10px 0;
-  background-color: alpha(#111, 0.9);
+  background-color: alpha(#1c2328, 0.05);
   border-radius: 15px;
 }
 
@@ -266,10 +269,10 @@
   font-size: 13px;
 }
 #notification-centre-notifs {
-  background-color: alpha(#1c2328, 0.8);
+  background-color: alpha(#1c2328, 0.05);
   min-height: 40px;
   padding: 10px;
-  border: 1.5px solid #525155;
+  border: 1px solid #525155;
   border-radius: 12px;
 }
 
@@ -282,7 +285,6 @@
 }
 #notification-close,
 #notification-close-header {
-  background-color: alpha(#444, 0.8);
   min-width: 23px;
   min-height: 23px;
   border-radius: 50%;
