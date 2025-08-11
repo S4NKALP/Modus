@@ -60,12 +60,6 @@ WALLPAPERS_DIR_DEFAULT = os.path.expanduser(f"~/Pictures/Wallpapers/")
 CONFIG_FILE = get_relative_path("../config/assets/config.json")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
-WORKSPACE_NUMS = False
-WORKSPACE_USE_CHINESE_NUMERAL = False
-WORKSPACE_DOTS = False
-
-DOCK_THEME = "Pills"
-
 
 def load_config():
     """Load the configuration from config.json"""
@@ -86,17 +80,13 @@ if os.path.exists(CONFIG_FILE):
         config = json.load(f)
     WALLPAPERS_DIR = config.get("wallpapers_dir", WALLPAPERS_DIR_DEFAULT)
     DOCK_POSITION = config.get("dock_position", "Bottom")
-    VERTICAL = DOCK_POSITION in ["Left", "Right"]
     TERMINAL_COMMAND = config.get("terminal_command", "kitty -e")
     DOCK_ENABLED = config.get("dock_enabled", True)
     DOCK_AUTO_HIDE = config.get("dock_auto_hide", True)
     DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", False)
     DOCK_ICON_SIZE = config.get("dock_icon_size", 60)
-    WORKSPACE_NUMS = config.get("workspace_nums", False)
-    WORKSPACE_USE_CHINESE_NUMERAL = config.get("workspace_use_chinese_numerals", False)
-    WORKSPACE_DOTS = config.get("workspace_dots", False)
-    WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 13)
-    DOCK_HIDE_SPECIAL_WORKSPACE = config.get("dock_hide_special_workspace", True)
+    WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 10)
+    HIDE_SPECIAL_WORKSPACE = config.get("hide_special_workspace", True)
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get(
         "dock_hide_special_workspace_apps", True
     )
@@ -127,15 +117,14 @@ if os.path.exists(CONFIG_FILE):
 else:
     WALLPAPERS_DIR = WALLPAPERS_DIR_DEFAULT
     DOCK_POSITION = "Bottom"
-    VERTICAL = False
     DOCK_ENABLED = True
     DOCK_ALWAYS_OCCLUDED = False
     DOCK_AUTO_HIDE = True
     TERMINAL_COMMAND = "kitty -e"
     DOCK_THEME = "Pills"
     DOCK_ICON_SIZE = 60
-    WINDOW_SWITCHER_ITEMS_PER_ROW = 13
-    DOCK_HIDE_SPECIAL_WORKSPACE = True
+    WINDOW_SWITCHER_ITEMS_PER_ROW = 10
+    HIDE_SPECIAL_WORKSPACE = True
     DOCK_HIDE_SPECIAL_WORKSPACE_APPS = True
     DOCK_PREVIEW_APPS = False
 
