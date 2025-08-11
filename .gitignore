@@ -4,6 +4,7 @@
 *.pyo
 *.pyd
 config/assets/config.json
+config/assets/dock.json
 config/assets/accounts.json
 config/assets/passwords.json
 config/assets/bookmarks.json
@@ -15,4 +16,5 @@ fabric/
 .aider*
 .venv/*
 .venv/
+
 AGENTS.md
