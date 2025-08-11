@@ -20,6 +20,7 @@ from modules.panel.components.workspace import WorkspaceIndicator
 from utils.roam import modus_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
+from services.modus import notification_service
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
@@ -125,6 +126,20 @@ class Panel(Window):
             layer="overlay", child_window=NotificationCenter()
         )
 
+        # Notification Center Icon
+        self.notification_icon = Svg(
+            size=22,
+            svg_file=get_relative_path(
+                "../../config/assets/icons/notifications/notification-inactive.svg"
+            ),
+        )
+
+        self.notification_center_icon_button = Button(
+            name="notification-center-icon-button",
+            child=self.notification_icon,
+            on_clicked=self.notification_center.toggle_mousecapture,
+        )
+
         # Clickable DateTime for notification center
         self.datetime_button = Button(
             name="datetime-button",
@@ -163,6 +178,7 @@ class Panel(Window):
                     self.search,
                     self.control_center_button,
                     self.datetime_button,
+                    self.notification_center_icon_button,
                 ],
             ),
         )
@@ -171,6 +187,12 @@ class Panel(Window):
         modus_service.connect("dont-disturb-changed", self.on_dnd_changed)
         # Set initial DND state
         self.update_dnd_indicator(modus_service.dont_disturb)
+
+        # Connect to notification service for icon state updates
+        notification_service.connect("notify::count", self.on_notification_count_changed)
+        
+        # Set initial notification icon state
+        self.update_notification_icon()
 
         return self.show_all()
 
@@ -193,6 +215,7 @@ class Panel(Window):
     def on_dnd_changed(self, _, dnd_state):
         """Handle DND state changes from the service."""
         self.update_dnd_indicator(dnd_state)
+        self.update_notification_icon()  # Also update notification icon when DND changes
 
     def update_dnd_indicator(self, dnd_enabled):
         """Update the DND indicator opacity based on DND state."""
@@ -202,3 +225,25 @@ class Panel(Window):
         else:
             # 20% opacity when DND is disabled
             self.dnd_indicator.set_style("opacity: 0.2;")
+
+    def on_notification_count_changed(self, service, *args):
+        """Handle notification count changes from the service."""
+        self.update_notification_icon()
+
+    def update_notification_icon(self):
+        """Update the notification icon based on count and DND state."""
+        count = notification_service.count
+        dnd_enabled = modus_service.dont_disturb  # Use modus_service for DND state
+        
+        if dnd_enabled:
+            # DND is enabled - show disabled icon
+            icon_file = "notification-disabled.svg"
+        elif count > 0:
+            # Has notifications - show active icon
+            icon_file = "notification-active.svg"
+        else:
+            # No notifications - show inactive icon
+            icon_file = "notification-inactive.svg"
+        
+        icon_path = get_relative_path(f"../../config/assets/icons/notifications/{icon_file}")
+        self.notification_icon.set_from_file(icon_path)
