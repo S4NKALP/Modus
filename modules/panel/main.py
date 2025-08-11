@@ -130,7 +130,6 @@ class Panel(Window):
         # Clickable DateTime for notification center
         self.datetime_button = Button(
             name="datetime-button",
-            on_clicked=self.notification_center.toggle_mousecapture,
             child=DateTime(name="date-time", formatters=["%a %-d %b %I:%M %P"]),
         )
 
@@ -173,8 +172,10 @@ class Panel(Window):
         modus_service.connect("dont-disturb-changed", self.on_dnd_changed)
 
         # Connect to notification service for icon state updates
-        notification_service.connect("notify::count", self.on_notification_count_changed)
-        
+        notification_service.connect(
+            "notify::count", self.on_notification_count_changed
+        )
+
         # Set initial notification icon state
         self.update_notification_icon()
 
@@ -216,7 +217,7 @@ class Panel(Window):
         """Update the notification icon based on count and DND state."""
         count = notification_service.count
         dnd_enabled = modus_service.dont_disturb
-        
+
         if dnd_enabled:
             # DND is enabled - show disabled icon
             icon_file = "notification-disabled.svg"
@@ -226,6 +227,8 @@ class Panel(Window):
         else:
             # No notifications - show inactive icon
             icon_file = "notification-inactive.svg"
-        
-        icon_path = get_relative_path(f"../../config/assets/icons/notifications/{icon_file}")
+
+        icon_path = get_relative_path(
+            f"../../config/assets/icons/notifications/{icon_file}"
+        )
         self.notification_icon.set_from_file(icon_path)
