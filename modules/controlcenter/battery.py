@@ -7,6 +7,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
+from fabric.widgets.svg import Svg
 from gi.repository import GLib
 
 from services.battery import Battery
@@ -27,9 +28,12 @@ class EnergyModeButton(CenterBox):
         self.battery_service = battery_service
         self.parent = parent
 
-        self.mode_icon = Image(
-            icon_name=f"battery-{icon_name}-symbolic",
-            size=16,
+        self.mode_icon = Svg(
+            # icon_name=f"battery-{icon_name}-symbolic",
+            svg_file=get_relative_path(
+                f"../../config/assets/icons/power_modes/battery-{icon_name}.svg"
+            ),
+            size=24,
             name="energy-mode-icon",
             style_classes="battery-profile-icon",
         )
@@ -285,10 +289,10 @@ class BatteryControl(Box):
 
         # Define energy mode mappings with proper icon names
         energy_mode_config = {
-            "balanced": {"display": "Automatic", "icon": "good"},
-            "power-saver": {"display": "Low Power", "icon": "low"},
-            "powersave": {"display": "Low Power", "icon": "low"},
-            "performance": {"display": "High Power", "icon": "full"},
+            "balanced": {"display": "Automatic", "icon": "balanced"},
+            "power-saver": {"display": "Low Power", "icon": "power"},
+            "powersave": {"display": "Low Power", "icon": "power"},
+            "performance": {"display": "High Power", "icon": "performance"},
         }
 
         # Define the desired order for energy modes
