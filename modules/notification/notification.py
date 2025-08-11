@@ -365,16 +365,33 @@ def get_cached_notification_image(cache_key):
 
 
 def cleanup_notification_image_cache(cache_key=None):
-    """Clean up notification image cache - specific key or all"""
+    """Clean up notification image cache - specific key, notification ID pattern, or all"""
     try:
         ensure_notification_cache_dirs()
 
         if cache_key:
-            # Remove specific cached image
-            cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, f"{cache_key}.png")
-            if os.path.exists(cache_path):
-                os.unlink(cache_path)
-                logger.debug(f"Cleaned up cached notification image: {cache_key}")
+            # Handle notification ID-based cleanup (e.g., "notif_1_*")
+            if cache_key.endswith("_*"):
+                # Extract notification ID from pattern
+                notification_id_pattern = cache_key[:-2]  # Remove "_*"
+                cleaned_count = 0
+                for filename in os.listdir(NOTIFICATION_IMAGE_CACHE_DIR):
+                    if filename.startswith(notification_id_pattern) and filename.endswith(".png"):
+                        filepath = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, filename)
+                        try:
+                            os.unlink(filepath)
+                            logger.debug(f"Cleaned up cached notification image: {filename}")
+                            cleaned_count += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to cleanup cache file {filename}: {e}")
+                if cleaned_count > 0:
+                    logger.info(f"Cleaned up {cleaned_count} cached images for notification ID pattern: {notification_id_pattern}")
+            else:
+                # Remove specific cached image
+                cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, f"{cache_key}.png")
+                if os.path.exists(cache_path):
+                    os.unlink(cache_path)
+                    logger.debug(f"Cleaned up cached notification image: {cache_key}")
         else:
             # Remove all cached images
             for filename in os.listdir(NOTIFICATION_IMAGE_CACHE_DIR):
@@ -798,7 +815,9 @@ class NotificationWidget(Box):
         if notification_id:
             existing_cached_image = find_existing_cached_image(notification_id)
             if existing_cached_image:
-                logger.debug(f"Using existing cached image for notification: {notification_id}")
+                # Store the cache key for cleanup when manually closed
+                self.notification_image_cache_key = f"notif_{notification_id}_*"  # Wildcard for cleanup
+                logger.debug(f"Using existing cached image for notification: {notification_id}, cache_key: {self.notification_image_cache_key}")
                 return existing_cached_image
         
         try:
@@ -817,6 +836,8 @@ class NotificationWidget(Box):
                     )
 
                     if cache_path and cache_key:
+                        # Store the cache key for cleanup when manually closed
+                        self.notification_image_cache_key = cache_key
                         # Load and return the newly cached image
                         cached_pixbuf = get_cached_notification_image(cache_key)
                         if cached_pixbuf:
@@ -887,6 +908,7 @@ class NotificationWidget(Box):
     def _manual_close(self):
         """Handle manual close button click - mark for cache cleanup"""
         self._should_cleanup_cache = True
+        logger.debug(f"Manual close triggered for notification with cache_key: {getattr(self, 'notification_image_cache_key', 'None')} and app_icon: {getattr(self, 'app_icon_source', 'None')}")
         self.notification.close("dismissed-by-user")
 
     def destroy(self):

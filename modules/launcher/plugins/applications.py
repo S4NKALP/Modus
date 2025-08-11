@@ -142,12 +142,9 @@ class ApplicationsPlugin(PluginBase):
         return bool(re.search(pattern, text, re.IGNORECASE))
 
     def _launch_application(self, app: DesktopApp):
-        print("Original:", app.command_line)
 
         # Remove ALL % codes (e.g., %u, %U, %f, %F, %i, %c, etc.)
         cleaned_command = re.sub(r"%\w+", "", app.command_line).strip()
-
-        print("Cleaned:", cleaned_command)
 
         # Final command with hyprctl dispatch
         final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
