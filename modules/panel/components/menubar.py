@@ -13,93 +13,7 @@ from modules.about import About, AboutApp
 from utils.roam import modus_service
 from widgets.dropdown import ModusDropdown, dropdown_divider
 from widgets.mousecapture import DropDownMouseCapture
-
-
-class AppName:
-    def __init__(self, path="/usr/share/applications"):
-        self.files = os.listdir(path)
-        self.path = path
-
-    def get_app_name(self, wmclass, format_=False):
-        desktop_file = ""
-        for f in self.files:
-            if f.startswith(wmclass + ".desktop"):
-                desktop_file = f
-
-        desktop_app_name = wmclass
-
-        if desktop_file == "":
-            return wmclass
-        with open(os.path.join(self.path, desktop_file), "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                if line.startswith("Name="):
-                    desktop_app_name = line.split("=")[1].strip()
-                    break
-        return desktop_app_name
-
-    def get_app_exec(self, wmclass, format_=False):
-        desktop_file = ""
-        for f in self.files:
-            if f.startswith(wmclass + ".desktop"):
-                desktop_file = f
-
-        desktop_app_name = wmclass
-
-        if desktop_file == "":
-            return wmclass
-        with open(os.path.join(self.path, desktop_file), "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                if line.startswith("Exec="):
-                    desktop_app_name = line.split("=")[1].strip()
-                    break
-        return desktop_app_name
-
-    def get_desktop_file(self, wmclass):
-        desktop_file = ""
-        for f in self.files:
-            if f.startswith(wmclass + ".desktop"):
-                desktop_file = f
-        return desktop_file
-
-    def format_app_name(self, title, wmclass, update=False):
-        # Handle case when both title and wmclass are empty (no active window)
-        if not title and not wmclass:
-            name = "Finder"
-        else:
-            name = wmclass
-            if name == "":
-                name = title
-
-            # Try to get the proper app name from desktop file only if wmclass is not empty
-            if wmclass:
-                desktop_name = self.get_app_name(wmclass=wmclass)
-                # Only use desktop name if it's different from wmclass (meaning we found a proper name)
-                if desktop_name and desktop_name != wmclass:
-                    name = desktop_name
-
-            # Handle empty or None names (but not when we already set it to "Finder")
-            if not name or (name.lower() in ["unknown", "none"]):
-                name = title if title else "Unknown Application"
-
-            # Smart title formatting (capitalize first letter) - but not for "Finder"
-            if name != "Finder":
-                name = str(name).title()
-                if "." in name:
-                    name = name.split(".")[-1]
-
-        if update:
-            modus_service.current_active_app_name = name
-        return name
-
-
-app_name_class = AppName()
-
-
-def format_window(title, wmclass):
-    name = app_name_class.format_app_name(title, wmclass, True)
-    return name
+from utils.app_name_resolver import format_window
 
 
 def show_about_app():
@@ -125,7 +39,7 @@ def show_about_app():
         if not wmclass and not title:
             return
 
-        app_name = modus_service.current_active_app_name or "Unknown Application"
+        app_name = modus_service.current_active_app_name or "Finder"
         # Don't show about dialog for Finder
         if app_name == "Finder":
             return
@@ -341,7 +255,7 @@ class MenuBarDropdowns:
         self.global_menu_button_title = Button(
             child=ActiveWindow(
                 formatter=FormattedString(
-                    "{ format_window(win_title, win_class) if win_title or win_class else 'Finder' }",
+                    "{ format_window(win_title, win_class) }",
                     format_window=format_window,
                 )
             ),

@@ -78,5 +78,7 @@ app_name_resolver = AppName()
 
 
 def format_window(title, wmclass):
+    if not title and not wmclass:
+        return "Finder"
     name = app_name_resolver.format_app_name(title, wmclass, True)
     return name
