@@ -249,13 +249,20 @@ class ModusControlCenter(Window):
             size=46,
         )
 
+        self.focus_status_label = Label(
+            label="On" if self.focus_mode else "Off",
+            style_classes="status-label",
+            h_align="center",
+        )
+
         self.focus_widget = Button(
             name="focus-widget",
             child=Box(
+                spacing=4,
                 orientation="h",
                 children=[
                     self.focus_icon,
-                    Label(label="Focus", style_classes="title ct", h_align="start"),
+                    Label(label="Focus", style_classes="title-widget", h_align="start"),
                 ],
             ),
             on_clicked=self.set_dont_disturb,
@@ -301,18 +308,24 @@ class ModusControlCenter(Window):
             size=46,
         )
 
+        self.caffeine_status_label = Label(
+            label="On" if self.caffeine_mode else "Off",
+            style_classes="status-label",
+            h_align="center",
+        )
+
         self.caffeine_widget = Button(
             name="caffeine-widget",
             child=Box(
                 orientation="h",
                 spacing=4,
-                h_align="center",
+                h_align="start",
                 v_align="center",
                 children=[
                     self.caffeine_icon,
                     Label(
                         label="Caffeine",
-                        style_classes="title",
+                        style_classes="title-widget",
                         h_align="center",
                     ),
                 ],
@@ -356,6 +369,7 @@ class ModusControlCenter(Window):
                                     style_classes="menu",
                                     children=[
                                         self.focus_widget,
+                                        self.focus_status_label,
                                     ],
                                 ),
                                 # Flight Mode and Caffeine row
@@ -363,23 +377,25 @@ class ModusControlCenter(Window):
                                     orientation="horizontal",
                                     name="flight-caffeine-row",
                                     children=[
-                                        Box(
-                                            orientation="vertical",
-                                            name="flight-widget-container",
-                                            style_classes="menu",
-                                            h_expand=True,
-                                            children=[
-                                                self.flight_widget,
-                                            ],
-                                        ),
                                         # Box(
                                         #     orientation="vertical",
-                                        #     name="caffeine-widget-container",
+                                        #     name="flight-widget-container",
                                         #     style_classes="menu",
+                                        #     h_expand=True,
                                         #     children=[
-                                        #         self.caffeine_widget,
+                                        #         self.flight_widget,
                                         #     ],
                                         # ),
+                                        Box(
+                                            orientation="vertical",
+                                            name="caffeine-widget-container",
+                                            h_expand=True,
+                                            style_classes="menu",
+                                            children=[
+                                                self.caffeine_widget,
+                                                self.caffeine_status_label,
+                                            ],
+                                        ),
                                     ],
                                 ),
                             ],
@@ -654,6 +670,7 @@ class ModusControlCenter(Window):
                 else "../../config/assets/icons/applets/dnd-off.svg"
             )
         )
+        self.focus_status_label.set_label("On" if self.focus_mode else "Off")
 
     def toggle_flight_mode(self, *_):
         try:
@@ -716,6 +733,7 @@ class ModusControlCenter(Window):
                     else "../../config/assets/icons/applets/caffeine-off.svg"
                 )
             )
+            self.caffeine_status_label.set_label("On" if self.caffeine_mode else "Off")
 
         except Exception as e:
             logger.warning(f"Failed to toggle caffeine: {e}")
@@ -974,6 +992,7 @@ class ModusControlCenter(Window):
                 else "../../config/assets/icons/applets/dnd-off.svg"
             )
         )
+        self.focus_status_label.set_label("On" if self.focus_mode else "Off")
 
     def _init_mousecapture(self, mousecapture):
         self._mousecapture_parent = mousecapture
