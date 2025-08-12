@@ -647,12 +647,12 @@ class PlayerBox(Box):
         # Create SVG icons with consistent sizing
         self.skip_next_icon = Svg(
             name="control-buttons",
-            size=(28, 28),
+            size=(22, 22),
             svg_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
         )
         self.play_pause_icon = Svg(
             name="control-buttons",
-            size=(28, 28),
+            size=(22, 22),
             svg_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
         )
 
