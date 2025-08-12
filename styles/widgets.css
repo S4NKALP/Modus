@@ -48,18 +48,18 @@
 }
 
 #calendar-widget {
-  margin: 12px;
+  margin: 5px 10px 0px 10px;
 }
 
 #calendar-month {
   font-size: 16px;
   font-weight: 600;
   color: #1a87e6;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 #calendar-days-header {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 #calendar-day-header {
@@ -67,7 +67,7 @@
   font-weight: 600;
   color: #ffffff;
   min-width: 18px;
-  min-height: 16px;
+  min-height: 10px;
 }
 
 #calendar-day-header-weekend {
@@ -75,7 +75,7 @@
   font-weight: 600;
   color: #8e8d93;
   min-width: 18px;
-  min-height: 16px;
+  min-height: 10px;
 }
 
 #calendar-day {
@@ -84,7 +84,7 @@
   font-weight: 500;
   color: #ffffff;
   min-width: 18px;
-  min-height: 16px;
+  min-height: 10px;
 }
 
 #calendar-day-weekend {

@@ -467,6 +467,8 @@ class Calendar(Box):
     """Calendar widget displaying current month."""
 
     def __init__(self, **kwargs):
+        # Set Sunday as first day of week
+        calendar.setfirstweekday(6)  # 6 = Sunday
         super().__init__(
             name="calendar-widget",
             h_expand=True,
