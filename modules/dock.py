@@ -377,6 +377,10 @@ class AppBar(Box):
             if client.get("hidden", False):
                 continue
 
+            # Skip apps in special workspaces if configured to hide them
+            if not self._should_show_app_instance(client):
+                continue
+
             instance_address = client.get("address", "")
             if not instance_address:
                 continue
@@ -406,6 +410,7 @@ class AppBar(Box):
             for client in clients
             if not client.get("hidden", False)
             and (client.get("class") or client.get("title"))
+            and self._should_show_app_instance(client)
         }
 
         for app_identifier, button in self.pinned_buttons.items():
@@ -492,6 +497,30 @@ class AppBar(Box):
         elif isinstance(workspace_data, (int, str)):
             return workspace_data
         return None
+
+    def _is_special_workspace_id(self, ws_id):
+        """Check if a workspace ID represents a special workspace"""
+        try:
+            # Convert to int if it's a string
+            workspace_id = int(ws_id)
+            # Special workspaces have negative IDs
+            return workspace_id < 0
+        except (ValueError, TypeError):
+            # If it's a string, check if it starts with "special:"
+            if isinstance(ws_id, str) and ws_id.startswith("special:"):
+                return True
+            return False
+
+    def _should_show_app_instance(self, client):
+        """Determine if an app instance should be shown based on workspace and configuration"""
+        if not data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS:
+            return True
+            
+        workspace_id = self._get_workspace_id(client)
+        if workspace_id is None:
+            return True
+            
+        return not self._is_special_workspace_id(workspace_id)
 
     def update_instance_button(self, instance_address, client, app_class):
         if instance_address not in self.client_buttons:
