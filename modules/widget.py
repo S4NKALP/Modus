@@ -9,8 +9,6 @@ import calendar
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Tuple, List, Dict, Any
 
-from widgets.masked_text import MaskedText
-
 # Fabric imports
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
