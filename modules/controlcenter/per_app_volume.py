@@ -266,8 +266,17 @@ class PerAppVolumeControl(Box):
             h_expand=True,
             style_classes="compact-app-volume-item",
             children=[
-                app_icon,
-                name_label,
+                Box(
+                    orientation="h",
+                    spacing=3,
+                    v_expand=True,
+                    v_align="center",
+                    name="app-control-box",
+                    children=[
+                        app_icon,
+                        name_label,
+                    ],
+                ),
                 volume_scale,
             ],
         )

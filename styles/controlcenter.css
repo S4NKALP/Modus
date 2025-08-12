@@ -33,7 +33,7 @@
   font-weight: bold;
 }
 #control-center-widgets {
-  background-color: alpha(#fff, 0.01);
+  background-color: alpha(#010101, 0.01);
   box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
   /* border: 1px solid alpha(#111, 0.4); */
   border-radius: 12px;
@@ -958,7 +958,7 @@
 }
 
 .title-widget {
-  margin-top: -14px;
+  /* margin-top: -14px; */
   /* margin-left: 5px; */
   font-size: 13px;
   font-family: "SF Pro Rounded";
@@ -968,9 +968,13 @@
   font-size: 11px;
   font-weight: 500;
   color: #aaa;
-  margin-top: -28px;
-  margin-left: 5px;
+  /* margin-top: -28px; */
+  /* margin-left: 5px; */
   font-family: "SF Pro Rounded";
   /* font-weight: bold; */
   /* margin-bottom: 2px; */
+}
+
+#app-control-box {
+  min-width: 100px;
 }

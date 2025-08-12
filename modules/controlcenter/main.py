@@ -20,6 +20,9 @@ from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
 from services.mpris import MprisPlayerManager
 from services.network import NetworkClient
+from utils.animator import Animator
+from utils.animator import Animator
+from utils.animator import Animator
 from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
 
@@ -178,7 +181,7 @@ class ModusControlCenter(Window):
                 if wlan != "No Connection"
                 else "../../config/assets/icons/applets/wifi-off.svg"
             ),
-            size=46,
+            size=42,
         )
 
         self.bluetooth_widget = Box(
@@ -246,13 +249,13 @@ class ModusControlCenter(Window):
                 if self.focus_mode
                 else "../../config/assets/icons/applets/dnd-off.svg"
             ),
-            size=46,
+            size=42,
         )
 
         self.focus_status_label = Label(
             label="On" if self.focus_mode else "Off",
             style_classes="status-label",
-            h_align="center",
+            h_align="start",
         )
 
         self.focus_widget = Button(
@@ -262,7 +265,21 @@ class ModusControlCenter(Window):
                 orientation="h",
                 children=[
                     self.focus_icon,
-                    Label(label="Focus", style_classes="title-widget", h_align="start"),
+                    Box(
+                        v_expand=True,
+                        h_expand=True,
+                        v_align="center",
+                        orientation="v",
+                        h_align="start",
+                        children=[
+                            Label(
+                                label="Focus",
+                                style_classes="title-widget",
+                                h_align="start",
+                            ),
+                            self.focus_status_label,
+                        ],
+                    ),
                 ],
             ),
             on_clicked=self.set_dont_disturb,
@@ -275,7 +292,7 @@ class ModusControlCenter(Window):
                 if self.flight_mode
                 else "../../config/assets/icons/applets/flight-off.svg"
             ),
-            size=46,
+            size=42,
         )
 
         self.flight_widget = Button(
@@ -305,13 +322,13 @@ class ModusControlCenter(Window):
                 if self.caffeine_mode
                 else "../../config/assets/icons/applets/caffeine-off.svg"
             ),
-            size=46,
+            size=42,
         )
 
         self.caffeine_status_label = Label(
             label="On" if self.caffeine_mode else "Off",
             style_classes="status-label",
-            h_align="center",
+            h_align="start",
         )
 
         self.caffeine_widget = Button(
@@ -323,10 +340,20 @@ class ModusControlCenter(Window):
                 v_align="center",
                 children=[
                     self.caffeine_icon,
-                    Label(
-                        label="Caffeine",
-                        style_classes="title-widget",
-                        h_align="center",
+                    Box(
+                        orientation="vertical",
+                        v_expand=True,
+                        v_align="center",
+                        h_align="start",
+                        h_expand=True,
+                        children=[
+                            Label(
+                                label="Caffeine",
+                                style_classes="title-widget",
+                                h_align="start",
+                            ),
+                            self.caffeine_status_label,
+                        ],
                     ),
                 ],
             ),
@@ -369,7 +396,6 @@ class ModusControlCenter(Window):
                                     style_classes="menu",
                                     children=[
                                         self.focus_widget,
-                                        self.focus_status_label,
                                     ],
                                 ),
                                 # Flight Mode and Caffeine row
@@ -393,7 +419,6 @@ class ModusControlCenter(Window):
                                             style_classes="menu",
                                             children=[
                                                 self.caffeine_widget,
-                                                self.caffeine_status_label,
                                             ],
                                         ),
                                     ],

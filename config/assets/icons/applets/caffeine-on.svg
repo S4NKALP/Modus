@@ -11,7 +11,7 @@
    class="css-i6dzq1"
    version="1.1"
    id="svg1"
-   sodipodi:docname="caffeine-on.svg"
+   sodipodi:docname="caffeine-off.svg"
    inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -66,8 +66,7 @@
      stroke="#2369ff"
      stroke-width="1.5"
      fill="#2369ff"
-     id="circle1"
-     style="fill:#b3b3b3;stroke:#b6b4b4;stroke-opacity:1" />
+     id="circle1" />
   <polyline
      points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"
      id="polyline1"
