@@ -6,7 +6,10 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from widgets.wayland import WaylandWindow as Window
+
+# from widgets.wayland import WaylandWindow as Window
+
+from fabric.widgets.window import Window
 
 gi.require_version("Gtk", "3.0")
 
@@ -33,6 +36,8 @@ class WiFiPasswordDialog(Window):
         self.ssid = ssid
         self.on_connect_callback = on_connect_callback
         self.on_cancel_callback = on_cancel_callback
+        # self.set_size_request(400, 300)
+        self.set_resizable(False)
         self.on_dialog_closed = on_dialog_closed
         self.is_connecting = False
         self.connection_timeout_id = None
@@ -59,7 +64,7 @@ class WiFiPasswordDialog(Window):
             spacing=8,
             children=[self.wifi_icon, self.title_label],
             name="wifi-dialog-title-container",
-            h_align="center",
+            h_align="start",
         )
 
         self.error_label = Label(
@@ -78,6 +83,7 @@ class WiFiPasswordDialog(Window):
             name="wifi-dialog-password-entry",
             visibility=False,
             h_expand=True,
+            h_align="fill",
         )
 
         self.password_entry.connect("activate", lambda *_: self._on_join_clicked())
@@ -116,6 +122,7 @@ class WiFiPasswordDialog(Window):
         self.button_box = Box(
             orientation="h",
             spacing=12,
+            h_expand=True,
             children=[self.cancel_button, self.join_button],
             name="wifi-dialog-button-box",
             h_align="end",
@@ -123,6 +130,7 @@ class WiFiPasswordDialog(Window):
 
         self.password_container = Box(
             orientation="v",
+            h_expand=True,
             spacing=6,
             children=[self.password_label, self.password_entry, self.show_password_box],
             name="wifi-dialog-password-container",
@@ -130,6 +138,7 @@ class WiFiPasswordDialog(Window):
 
         self.content_box = Box(
             orientation="v",
+            h_expand=True,
             spacing=12,
             children=[
                 self.title_container,
@@ -138,7 +147,7 @@ class WiFiPasswordDialog(Window):
                 self.button_box,
             ],
             name="wifi-dialog-content",
-            h_align="center",
+            h_align="fill",
             v_align="center",
         )
 
