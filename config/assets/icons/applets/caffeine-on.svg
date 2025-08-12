@@ -66,7 +66,8 @@
      stroke="#2369ff"
      stroke-width="1.5"
      fill="#2369ff"
-     id="circle1" />
+     id="circle1"
+     style="fill:#b3b3b3;stroke:#b6b4b4;stroke-opacity:1" />
   <polyline
      points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"
      id="polyline1"
@@ -78,26 +79,26 @@
      id="path1"
      style="color:#f2f2f2;display:none;fill:#ffffff;stroke-width:0;stroke-dasharray:none" />
   <g
-     transform="matrix(1.6071429,0,0,1.6071429,-0.35714939,0.44714008)"
+     transform="matrix(1.6071429,0,0,1.6071429,0.5803506,0.02100376)"
      class="ColorScheme-Text"
      fill="currentColor"
      id="g4"
-     style="color:#f2f2f2;fill:#ffffff;stroke-width:0.7;stroke-dasharray:none">
+     style="color:#f2f2f2;fill:#ffffff;stroke-width:0.3;stroke-dasharray:none">
     <path
        d="m 1,7 v 3 c 0,3 2,5 5,5 h 2 c 3,0 4.76,-1.566 4.959,-4 H 13.5 C 15,11 15,9.5 15,9.5 v -1 C 15,7 13.5,7 13.5,7 H 13 Z m 1,1 h 10 v 2 c 0,2.216 -1.784,4 -4,4 H 6 C 3.784,14 2,12.216 2,10 Z m 11.5,0 c 0.5,-0.032 0.516,0.531 0.516,0.531 v 1 C 14.016,10 13.5,10 13.5,10 H 13 l 0.01,-1.985 z"
        id="path1-5"
-       style="fill:#ffffff;stroke-width:0.7;stroke-dasharray:none" />
+       style="fill:#ffffff;stroke-width:0.3;stroke-dasharray:none" />
     <path
        d="M 7.193,-0.001 C 6.095,1.384 5.765,2.065 6.161,2.947 6.521,3.745 7.449,4.152 6.982,5.999 7.749,5.099 8.358,3.957 7.756,3.035 7.144,2.097 6.808,1.527 7.193,-0.001 Z"
        id="path2"
-       style="fill:#ffffff;stroke-width:0.7;stroke-dasharray:none" />
+       style="fill:#ffffff;stroke-width:0;stroke-dasharray:none" />
     <path
        d="M 4.193,-0.001 C 3.095,1.384 2.765,2.065 3.161,2.947 3.521,3.745 4.449,4.152 3.982,5.999 4.749,5.099 5.358,3.957 4.756,3.035 4.144,2.097 3.808,1.527 4.193,-0.001 Z"
        id="path3"
-       style="fill:#ffffff;stroke-width:0.7;stroke-dasharray:none" />
+       style="fill:#ffffff;stroke-width:0;stroke-dasharray:none" />
     <path
        d="M 10.193,-0.001 C 9.095,1.384 8.765,2.065 9.161,2.947 9.521,3.745 10.449,4.152 9.982,5.999 10.749,5.099 11.358,3.957 10.756,3.035 10.144,2.097 9.808,1.527 10.193,-0.001 Z"
        id="path4"
-       style="fill:#ffffff;stroke-width:0.7;stroke-dasharray:none" />
+       style="fill:#ffffff;stroke-width:0;stroke-dasharray:none" />
   </g>
 </svg>
