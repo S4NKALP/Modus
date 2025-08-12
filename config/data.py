@@ -76,7 +76,8 @@ def load_config():
 if os.path.exists(CONFIG_FILE):
     with open(CONFIG_FILE, "r") as f:
         config = json.load(f)
-    WALLPAPERS_DIR = config.get("wallpapers_dir", WALLPAPERS_DIR_DEFAULT)
+    wallpapers_dir_from_config = config.get("wallpapers_dir", WALLPAPERS_DIR_DEFAULT)
+    WALLPAPERS_DIR = os.path.expanduser(wallpapers_dir_from_config)
     DOCK_POSITION = config.get("dock_position", "Bottom")
     TERMINAL_COMMAND = config.get("terminal_command", "kitty -e")
     DOCK_ENABLED = config.get("dock_enabled", True)
