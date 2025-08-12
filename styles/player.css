@@ -8,7 +8,7 @@
 #button-box-c {
   /* margin-left: -10px; */
 
-  margin-right: 4px;
+  margin-right: 7px;
 }
 
 #player-stack-button:hover {
@@ -47,12 +47,20 @@
   /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
 }
 #box-c {
+  background-color: alpha(#000, 0.08);
+  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 12px;
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-bottom: 0.5rem;
+
   min-height: 50px;
   min-width: 220px;
-  border-radius: 8px;
-  margin: 0 6px 10px;
-  border: 0.5px solid alpha(#000, 0.4);
-  background-color: alpha(#999, 0.1);
+  /* border-radius: 8px; */
+  /* margin: 0 6px 10px; */
+  /* border: 0.5px solid alpha(#000, 0.4); */
+  /* background-color: alpha(#999, 0.1); */
   /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
 }
 #player-box:disabled highlight,
@@ -84,7 +92,7 @@
   font-size: 16px;
 }
 #player-app-icon {
-  /* margin-bottom: 2px; */
+  margin-bottom: 10px;
 }
 
 #player-artist-c {
@@ -129,8 +137,10 @@
   min-width: 50px;
   min-height: 50px;
   background-position: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
   background-size: cover;
-  margin-left: 5px;
+  margin-left: 10px;
   border-radius: 5px;
 }
 .album-image {

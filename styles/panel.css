@@ -110,11 +110,13 @@
 }
 
 #workspaces label {
+  font-family: "SF Pro Rounded";
   color: white; /* fully transparent text */
 }
 #workspaces > button {
   padding-top: 0px;
   padding-right: 16px;
+  font-family: "SF Pro Rounded";
   padding-left: 16px;
 
   margin: 6px 0px;
@@ -129,11 +131,12 @@
 
 #workspaces > button.active {
   background-color: alpha(#fff, 0.9);
-  font-weight: bold;
+  /* font-weight: bold; */
 }
 
 #workspaces > button.active label {
   color: alpha(#000, 1);
+  font-family: "SF Pro Rounded";
 }
 #workspaces > button.urgent {
   background-color: alpha(var(--on-error), 0.7);

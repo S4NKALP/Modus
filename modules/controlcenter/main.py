@@ -407,18 +407,29 @@ class ModusControlCenter(Window):
                     children=[
                         Label(label="Sound", style_classes="title", h_align="start"),
                         Box(
+                            name="vol-box",
                             orientation="horizontal",
                             spacing=8,
-                            v_expand=False,
+                            v_expand=True,
                             children=[
-                                self.volume_scale,
+                                Box(
+                                    name="vol-slider-box",
+                                    h_expand=True,
+                                    v_align="center",
+                                    v_expand=False,
+                                    children=[
+                                        self.volume_scale,
+                                    ],
+                                ),
                                 Button(
                                     name="per-app-volume-button",
+                                    size=(36, 36),
                                     child=Svg(
                                         svg_file=get_relative_path(
                                             "../../config/assets/icons/player/audio-switcher.svg"
                                         ),
                                         name="per-app-volume-icon",
+                                        sidze=32,
                                     ),
                                     on_clicked=self.open_per_app_volume,
                                 ),
@@ -427,12 +438,7 @@ class ModusControlCenter(Window):
                         Label(label=" ", name="volume-widget-icon", h_align="start"),
                     ],
                 ),
-                Box(
-                    orientation="vertical",
-                    children=[
-                        self.music_widget,
-                    ],
-                ),
+                self.music_widget,
             ],
         )
 
