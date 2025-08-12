@@ -53,7 +53,7 @@ class AppName:
     def format_app_name(self, title, wmclass, update=False):
         # Handle case when both title and wmclass are empty (no active window)
         if not title and not wmclass:
-            name = "Hyprland"
+            name = "Finder"
         else:
             name = wmclass
             if name == "":
@@ -78,7 +78,16 @@ app_name_resolver = AppName()
 
 
 def format_window(title, wmclass):
-    if not title and not wmclass:
+    # Handle the case when HyprlandActiveWindow passes "unknown" instead of empty strings
+    if (not title or title == "unknown") and (not wmclass or wmclass == "unknown"):
         return "Finder"
+    
+    # Clean up "unknown" values
+    if title == "unknown":
+        title = ""
+    if wmclass == "unknown":
+        wmclass = ""
+    
     name = app_name_resolver.format_app_name(title, wmclass, True)
     return name
+

@@ -1,5 +1,5 @@
 {
-  "wallpapers_dir": "~/Pictures/Wallpapers/",
+  "wallpapers_dir": "/home/sankalp/Pictures/Wallpapers/",
   "dock_position": "Bottom",
   "terminal_command": "kitty -e",
   "dock_enabled": true,

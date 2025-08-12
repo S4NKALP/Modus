@@ -252,6 +252,9 @@ class MenuBarDropdowns:
             ),
         )
 
+        # Connect to active app name changes to update the title button
+        modus_service.connect("current-active-app-name-changed", self._on_active_app_changed)
+
         self.global_menu_button_title = Button(
             child=ActiveWindow(
                 formatter=FormattedString(
@@ -334,6 +337,11 @@ class MenuBarDropdowns:
         except Exception:
             # If we can't get window info, don't show dropdown
             pass
+
+    def _on_active_app_changed(self, _, value):
+        """Handle active app name changes"""
+        # Update the "About" menu item label
+        self.global_title_menu_about.set_property("label", f"About {value}")
 
     def hide_dropdowns(self, *_):
         self.menu_button.remove_style_class("active")

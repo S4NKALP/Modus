@@ -230,7 +230,7 @@ class ModusService(Service):
         self._bluetooth = ""
         self._dock_apps = ""
         self._dont_disturb = False
-        self._current_active_app_name = "Hyprland"
+        self._current_active_app_name = "Finder"  # Changed from "Hyprland" to "Finder"
         self._current_workspace = "1"
         self._music = ""
         self._current_dropdown = None
@@ -241,8 +241,9 @@ class ModusService(Service):
         self._dock_width = 0
         self._dock_height = 0
 
-        # Initialize Hyprland connection for workspace monitoring
+        # Initialize Hyprland connection for workspace and window monitoring
         self._setup_workspace_monitoring()
+        self._setup_active_window_monitoring()
 
     def _setup_workspace_monitoring(self):
         """Setup Hyprland connection and workspace monitoring"""
@@ -264,6 +265,58 @@ class ModusService(Service):
         except Exception as e:
             logger.error(f"[ModusService] Failed to setup workspace monitoring: {e}")
             self._current_workspace = "1"
+
+    def _setup_active_window_monitoring(self):
+        """Setup active window monitoring"""
+        try:
+            if not hasattr(self, '_hyprland_connection') or not self._hyprland_connection:
+                return
+
+            # Get initial active window
+            self._update_active_window()
+
+            # Note: The HyprlandActiveWindow widget from Fabric library
+            # should handle active window updates automatically.
+            # We just need to ensure the initial state is correct.
+
+        except Exception as e:
+            logger.error(f"[ModusService] Failed to setup active window monitoring: {e}")
+
+    def _update_active_window(self):
+        """Update the current active app name based on active window"""
+        try:
+            if not hasattr(self, '_hyprland_connection') or not self._hyprland_connection:
+                return
+
+            window_data = self._hyprland_connection.send_command("j/activewindow").reply
+            if not window_data:
+                self.current_active_app_name = "Finder"
+                return
+
+            window_info = json.loads(window_data.decode("utf-8"))
+            wmclass = window_info.get("class", "")
+            title = window_info.get("title", "")
+
+            # Handle the case when there's no active window
+            if not title and not wmclass:
+                self.current_active_app_name = "Finder"
+                return
+
+            # Simple app name formatting without circular import
+            name = wmclass if wmclass else title
+            if name:
+                # Basic formatting: capitalize first letter and remove file extensions
+                name = str(name).title()
+                if "." in name:
+                    name = name.split(".")[-1]
+            else:
+                name = "Finder"
+
+            self.current_active_app_name = name
+
+        except Exception as e:
+            logger.error(f"[ModusService] Error updating active window: {e}")
+            self.current_active_app_name = "Finder"
 
     def _on_workspace_changed(self, obj, signal):
         """Handle workspace change events from Hyprland"""
