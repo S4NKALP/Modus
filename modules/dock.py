@@ -92,6 +92,9 @@ class AppBar(Box):
         for app_data in self.pinned_apps:
             self._create_pinned_button(app_data, desktop_apps)
 
+        # Add trash icon at the end of pinned apps
+        self._create_trash_button()
+
     def _create_pinned_button(self, app_data, desktop_apps):
         if isinstance(app_data, dict):
             app_identifier = app_data.get("name", "") or app_data.get(
@@ -145,6 +148,42 @@ class AppBar(Box):
         self.pinned_buttons[app_identifier] = pinned_button
         self.pinned_apps_container.add(pinned_button)
         self.pinned_items_pos.append(pinned_button)
+
+    def _create_trash_button(self):
+        """Create a trash button that opens the trash in file manager"""
+        # Get trash icon
+        trash_icon_pixbuf = self.icon_resolver.get_icon_pixbuf(
+            "user-trash", data.DOCK_ICON_SIZE
+        )
+        
+        trash_image = Image(name="dock_item_icon")
+        trash_image.set_from_pixbuf(trash_icon_pixbuf)
+
+        main_container = Box(
+            name="dock_item_main_container",
+            orientation="v",
+            children=[trash_image],
+        )
+
+        trash_button = Button(
+            name="dock_item",
+            child=main_container,
+            tooltip_text="Trash",
+            on_button_press_event=lambda _, event: self._handle_trash_click(event),
+            on_enter_notify_event=lambda *_: self._handle_item_hovered(
+                trash_button, True
+            ),
+            on_leave_notify_event=lambda *_: self._handle_item_unhovered(
+                trash_button, True
+            ),
+        )
+
+        trash_button.add_style_class("shown")
+        trash_button.is_trash = True
+
+        self.pinned_buttons["trash"] = trash_button
+        self.pinned_apps_container.add(trash_button)
+        self.pinned_items_pos.append(trash_button)
 
     def _find_desktop_app_from_data(self, app_data: dict, desktop_apps):
         for app in desktop_apps:
@@ -242,6 +281,26 @@ class AppBar(Box):
             app_identifier = self._get_app_identifier(app_data)
             self.show_menu(app_identifier)
             self.menu.popup_at_pointer(event)
+
+    def _handle_trash_click(self, event):
+        """Handle trash button click to open trash in file manager"""
+        if event.button == 1:  # Left click
+            try:
+                trash_path = os.path.expanduser("~/.local/share/Trash/files")
+                file_managers = ["nautilus", "dolphin", "thunar", "nemo", "caja", "pcmanfm"]
+                
+                for fm in file_managers:
+                    try:
+                        result = subprocess.run(["which", fm], capture_output=True, text=True)
+                        if result.returncode == 0:
+                            subprocess.Popen([fm, trash_path])
+                            return
+                    except Exception:
+                        continue
+            except Exception as e:
+                logger.error(f"[AppBar] Error opening trash: {e}")
+
+
 
     def _handle_item_hovered(self, item, pinned=False):
         if pinned:
@@ -467,6 +526,10 @@ class AppBar(Box):
         }
 
         for app_identifier, button in self.pinned_buttons.items():
+            # Skip trash button as it's not a regular app
+            if app_identifier == "trash" or hasattr(button, 'is_trash'):
+                continue
+                
             if app_identifier.lower() in running_app_classes:
                 button.add_style_class("instance")
             else:
