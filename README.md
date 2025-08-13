@@ -27,7 +27,7 @@
 <figure>
   <h2>Home Screen:</h2>
   <img src="assets/screenshots/home.png" alt="fabric">
-  <br/>  
+  <br/>
   <h2>Lock Screen:</h2>
     <img src="assets/screenshots/lock.png" alt="fabric">
 </figure>
@@ -56,11 +56,12 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [x] Desktop Widgets
 - [x] New Launcher (like Spotlight)
 - [ ] Settings
-- [ ] Magnifier hover effect on Dock
+- [x] ~~Magnifier hover effect on Dock~~
 - [x] ~~New Application Switcher~~
 - [x] Panel Widget
 - [x] MacOS like Widget
 - [x] Expandable Notifiaction Centre
+
 ## Bug Fixes (the bug found till now)
 
 - [x] WiFi
