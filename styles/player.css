@@ -51,6 +51,7 @@
   box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
   border: 1px solid alpha(#111, 0.4);
   border-radius: 12px;
+  margin-top: 0.5rem;
   margin-left: 4px;
   margin-right: 4px;
   margin-bottom: 0.5rem;
