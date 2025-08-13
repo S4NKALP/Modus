@@ -7,31 +7,92 @@
   transition: all 0.25s cubic-bezier(0.5, 0.25, 0, 1);
 }
 
-#dock-app-button {
-  border-radius: 16px;
+#dock.shown {
+  transition: margin 0.4s cubic-bezier(0.2, 1.8, 0.5, 0.8);
 }
 
-#dock-separator {
-  min-width: 3px;
-  margin: 2px 0;
-  background-color: var(--shadow);
-  border-radius: 8px;
+#dock_item_main_container {
+  transition: all 0.15s ease-out;
 }
 
-#dock-app-overlay label {
-  background-color: alpha(#000, 0.5);
-  font-size: 12px;
-  margin-top: 20px;
-  min-width: 15px;
-  border-radius: 8px;
+#dock_item.shown:hover #dock_item_main_container {
+  margin-top: -12px;
 }
 
-#dock-app-button:hover,
-#dock-app-button:hover.instance {
-  background-color: var(--surface-bright);
+#dock_item.shown.semi_hovered #dock_item_main_container {
+  margin-top: -7px;
 }
 
-#dock-app-button:active,
-#dock-app-button:active.instance {
-  background-color: #89b4fa;
+#dock_item.shown.semi_hovered #dock_item_indicator {
+  margin-top: 11px;
+}
+
+#dock_item.shown.activated:hover #dock_item_main_container {
+  margin-top: -12px;
+}
+
+#dock_item.shown.activated:hover #dock_item_indicator {
+  margin-top: 16px;
+}
+
+#dock_item.shown.activated #dock_item_main_container {
+  margin-top: -4px;
+}
+
+#dock_item.shown.activated #dock_item_icon {
+  opacity: 1;
+  /* background-color: #01458e; */
+}
+
+#dock_item.shown.activated #dock_item_indicator {
+  min-width: 4px;
+  margin-top: 8px;
+  background-color: #aac7ff;
+}
+
+#dock_item_icon {
+  border-radius: 13px;
+  opacity: 0.7;
+}
+
+#dock_item_indicator {
+  transition: all 0.15s ease-out;
+  min-height: 4px;
+  border-radius: 4px;
+}
+
+#dock_item {
+  transition: margin 0.2s ease-out;
+}
+
+#dock_item.shown {
+  transition: margin 0.2s ease-out;
+  padding-left: 5px;
+  opacity: 1;
+}
+
+#dock_item.shown:first-child {
+  padding-left: 0px;
+}
+
+.dock_separator {
+  transition: all 0.1s ease-out;
+  min-width: 1.5px;
+  min-height: 50px;
+  border-radius: 2px;
+  background-color: #2b5ea7;
+  margin: 0px 2px;
+}
+
+.dock_separator.hidden {
+  min-width: 0px;
+  background-color: transparent;
+  margin: 0px;
+}
+
+#dock_item.shown:not(.activated) {
+  min-width: 0px;
+  min-height: 0px;
+  margin-top: 0px;
+  background-color: transparent;
 }

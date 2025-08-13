@@ -1,9 +1,9 @@
-from gi.repository import GLib, Gtk
 import json
 import os
 import re
 import subprocess
 
+from fabric.utils.helpers import get_desktop_applications, get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
@@ -11,16 +11,15 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.separator import Separator
-from widgets.wayland import WaylandWindow as Window
+from gi.repository import GLib, Gtk
 from loguru import logger
 
-from utils.icon_resolver import IconResolver
-from utils.occlusion import check_occlusion
-from fabric.utils.helpers import get_relative_path, get_desktop_applications
+import config.data as data
 from services.modus import modus_service
 from utils.functions import read_json_file, write_json_file
-import config.data as data
+from utils.icon_resolver import IconResolver
+from utils.occlusion import check_occlusion
+from widgets.wayland import WaylandWindow as Window
 
 # Pinned apps file
 PINNED_APPS_FILE = get_relative_path("../config/assets/dock.json")
@@ -30,11 +29,16 @@ class AppBar(Box):
     def __init__(self, parent: Window):
         self.client_buttons = {}  # For running app instances
         self.pinned_buttons = {}  # For pinned apps
+        # Position tracking for hover effects
+        self.running_items_pos = []
+        self.pinned_items_pos = []
         self._parent = parent
 
         # Set orientation based on dock position
-        orientation = "vertical" if data.DOCK_POSITION in ["Left", "Right"] else "horizontal"
-        
+        orientation = (
+            "vertical" if data.DOCK_POSITION in ["Left", "Right"] else "horizontal"
+        )
+
         super().__init__(
             spacing=10,
             name="dock",
@@ -48,13 +52,15 @@ class AppBar(Box):
         self.menu = Gtk.Menu()
 
         self.pinned_apps = read_json_file(PINNED_APPS_FILE) or []
-        self.pinned_apps_container = Box(name="pinned-apps-container")
+        self.pinned_apps_container = Box()
         self.add(self.pinned_apps_container)
 
-        self.separator = Separator(name="dock-separator")
+        self.separator = Box(
+            v_align="center", style_classes=["hidden", "dock_separator"]
+        )
         self.add(self.separator)
 
-        self.running_apps_container = Box(name="running-apps-container")
+        self.running_apps_container = Box(name="dock_container")
         self.add(self.running_apps_container)
 
         self._populate_pinned_apps()
@@ -76,6 +82,7 @@ class AppBar(Box):
             self.pinned_apps_container.remove(child)
 
         self.pinned_buttons = {}
+        self.pinned_items_pos = []
 
         try:
             desktop_apps = get_desktop_applications(include_hidden=False)
@@ -109,28 +116,35 @@ class AppBar(Box):
             display_name = app.display_name or app.name
             icon_pixbuf = app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
 
-        pinned_image = Image(pixbuf=icon_pixbuf)
+        pinned_image = Image(name="dock_item_icon")
+        pinned_image.set_from_pixbuf(icon_pixbuf)
 
-        icon_container = Box(
-            name="dock-icon",
-            orientation="vertical",
-            h_align="center",
+        main_container = Box(
+            name="dock_item_main_container",
+            orientation="v",
             children=[pinned_image],
         )
 
-        overlay_container = Overlay(name="dock-app-overlay", child=icon_container)
-
         pinned_button = Button(
-            name="dock-app-button",
-            child=overlay_container,
+            name="dock_item",
+            child=main_container,
             tooltip_text=display_name,
             on_button_press_event=lambda _, event: self._handle_pinned_app_click(
                 event, app_data
             ),
+            on_enter_notify_event=lambda *_: self._handle_item_hovered(
+                pinned_button, True
+            ),
+            on_leave_notify_event=lambda *_: self._handle_item_unhovered(
+                pinned_button, True
+            ),
         )
+
+        pinned_button.add_style_class("shown")
 
         self.pinned_buttons[app_identifier] = pinned_button
         self.pinned_apps_container.add(pinned_button)
+        self.pinned_items_pos.append(pinned_button)
 
     def _find_desktop_app_from_data(self, app_data: dict, desktop_apps):
         for app in desktop_apps:
@@ -229,6 +243,46 @@ class AppBar(Box):
             self.show_menu(app_identifier)
             self.menu.popup_at_pointer(event)
 
+    def _handle_item_hovered(self, item, pinned=False):
+        if pinned:
+            try:
+                index = self.pinned_items_pos.index(item)
+                if index > 0:
+                    self.pinned_items_pos[index - 1].add_style_class("semi_hovered")
+                if index < len(self.pinned_items_pos) - 1:
+                    self.pinned_items_pos[index + 1].add_style_class("semi_hovered")
+            except ValueError:
+                pass
+        else:
+            try:
+                index = self.running_items_pos.index(item)
+                if index > 0:
+                    self.running_items_pos[index - 1].add_style_class("semi_hovered")
+                if index < len(self.running_items_pos) - 1:
+                    self.running_items_pos[index + 1].add_style_class("semi_hovered")
+            except ValueError:
+                pass
+
+    def _handle_item_unhovered(self, item, pinned=False):
+        if pinned:
+            try:
+                index = self.pinned_items_pos.index(item)
+                if index > 0:
+                    self.pinned_items_pos[index - 1].remove_style_class("semi_hovered")
+                if index < len(self.pinned_items_pos) - 1:
+                    self.pinned_items_pos[index + 1].remove_style_class("semi_hovered")
+            except ValueError:
+                pass
+        else:
+            try:
+                index = self.running_items_pos.index(item)
+                if index > 0:
+                    self.running_items_pos[index - 1].remove_style_class("semi_hovered")
+                if index < len(self.running_items_pos) - 1:
+                    self.running_items_pos[index + 1].remove_style_class("semi_hovered")
+            except ValueError:
+                pass
+
     def _get_app_identifier(self, app_data):
         if isinstance(app_data, dict):
             return app_data.get("name", "") or app_data.get("window_class", "")
@@ -298,7 +352,6 @@ class AppBar(Box):
                     "command_line": app.command_line,
                 }
             else:
-                # Fallback: create minimal app data
                 app_data = {
                     "name": app_class,
                     "display_name": app_class,
@@ -395,9 +448,9 @@ class AppBar(Box):
 
             button = self.client_buttons[instance_address]
             if instance_address == focused_address:
-                button.add_style_class("active")
+                button.add_style_class("activated")
             else:
-                button.remove_style_class("active")
+                button.remove_style_class("activated")
 
         self._update_pinned_apps_state(clients)
         self._update_separator_visibility()
@@ -428,10 +481,24 @@ class AppBar(Box):
 
         for instance_id in buttons_to_remove:
             button = self.client_buttons.pop(instance_id)
-            self.running_apps_container.remove(button)
+            try:
+                if button in self.running_items_pos:
+                    self.running_items_pos.remove(button)
+                button.remove_style_class("shown")
+            except Exception:
+                pass
+
+            def remove_later():
+                try:
+                    self.running_apps_container.remove(button)
+                except Exception:
+                    pass
+                return False
+
+            GLib.timeout_add(250, remove_later)
 
     def create_instance_button(self, instance_address, client, app_class):
-        client_image = Image()
+        client_image = Image(name="dock_item_icon")
 
         try:
             desktop_apps = get_desktop_applications(include_hidden=False)
@@ -440,7 +507,9 @@ class AppBar(Box):
             if desktop_app:
                 pixbuf = desktop_app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
             else:
-                pixbuf = self.icon_resolver.get_icon_pixbuf(app_class, data.DOCK_ICON_SIZE)
+                pixbuf = self.icon_resolver.get_icon_pixbuf(
+                    app_class, data.DOCK_ICON_SIZE
+                )
 
             client_image.set_from_pixbuf(pixbuf)
         except Exception as e:
@@ -460,25 +529,29 @@ class AppBar(Box):
         if workspace_label:
             image_overlay.add_overlay(workspace_label)
 
-        icon_container = Box(
-            name="dock-icon",
-            orientation="vertical",
-            h_align="center",
-            children=[image_overlay],
+        indicator = Box(name="dock_item_indicator", h_align="center")
+        main_container = Box(
+            name="dock_item_main_container",
+            orientation="v",
+            children=[image_overlay, indicator],
         )
-
-        overlay_container = Overlay(name="dock-app-overlay", child=icon_container)
 
         tooltip_text = client.get("title", app_class)
         if tooltip_text != app_class:
             tooltip_text = f"{app_class}: {tooltip_text}"
 
         client_button = Button(
-            name="dock-app-button",
-            child=overlay_container,
+            name="dock_item",
+            child=main_container,
             tooltip_text=tooltip_text,
             on_button_press_event=lambda widget, event: self.handle_instance_click(
                 widget, event
+            ),
+            on_enter_notify_event=lambda *_: self._handle_item_hovered(
+                client_button, False
+            ),
+            on_leave_notify_event=lambda *_: self._handle_item_unhovered(
+                client_button, False
             ),
         )
 
@@ -486,9 +559,11 @@ class AppBar(Box):
         client_button.client_data = client
         client_button.app_class = app_class
         client_button.workspace_label = workspace_label
+        client_button.add_style_class("shown")
 
         self.client_buttons[instance_address] = client_button
         self.running_apps_container.add(client_button)
+        self.running_items_pos.append(client_button)
 
     def _get_workspace_id(self, client):
         workspace_data = client.get("workspace", {})
@@ -499,7 +574,6 @@ class AppBar(Box):
         return None
 
     def _is_special_workspace_id(self, ws_id):
-        """Check if a workspace ID represents a special workspace"""
         try:
             # Convert to int if it's a string
             workspace_id = int(ws_id)
@@ -512,14 +586,13 @@ class AppBar(Box):
             return False
 
     def _should_show_app_instance(self, client):
-        """Determine if an app instance should be shown based on workspace and configuration"""
         if not data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS:
             return True
-            
+
         workspace_id = self._get_workspace_id(client)
         if workspace_id is None:
             return True
-            
+
         return not self._is_special_workspace_id(workspace_id)
 
     def update_instance_button(self, instance_address, client, app_class):
@@ -538,30 +611,28 @@ class AppBar(Box):
         workspace_id = self._get_workspace_id(client)
         existing_label = getattr(button, "workspace_label", None)
 
-        overlay_container = button.get_child()
-        if isinstance(overlay_container, Overlay):
-            icon_container = overlay_container.get_child()
-            if hasattr(icon_container, "get_children"):
-                children = icon_container.get_children()
-                if children:
-                    image_overlay = children[0]
-                    if isinstance(image_overlay, Overlay):
-                        # Remove existing workspace label
-                        if existing_label and existing_label.get_parent():
-                            image_overlay.remove_overlay(existing_label)
+        container = button.get_child()
+        if hasattr(container, "get_children"):
+            children = container.get_children()
+            if children:
+                image_overlay = children[0]
+                if isinstance(image_overlay, Overlay):
+                    # Remove existing workspace label
+                    if existing_label and existing_label.get_parent():
+                        image_overlay.remove_overlay(existing_label)
 
-                        # Add new workspace label if needed
-                        if workspace_id is not None:
-                            new_label = Label(
-                                label=str(workspace_id),
-                                name="workspace-indicator",
-                                h_align="end",
-                                v_align="end",
-                            )
-                            image_overlay.add_overlay(new_label)
-                            button.workspace_label = new_label
-                        else:
-                            button.workspace_label = None
+                    # Add new workspace label if needed
+                    if workspace_id is not None:
+                        new_label = Label(
+                            label=str(workspace_id),
+                            name="workspace-indicator",
+                            h_align="end",
+                            v_align="end",
+                        )
+                        image_overlay.add_overlay(new_label)
+                        button.workspace_label = new_label
+                    else:
+                        button.workspace_label = None
 
     def handle_instance_click(self, button_widget, event):
         instance_address = getattr(button_widget, "instance_address", None)
@@ -592,9 +663,12 @@ class AppBar(Box):
         )
 
     def _update_separator_visibility(self):
-        has_pinned_apps = len(self.pinned_buttons) > 0
-        has_running_apps = len(self.client_buttons) > 0
-        self.separator.set_visible(has_pinned_apps and has_running_apps)
+        has_pinned_apps = len(self.pinned_items_pos) > 0
+        has_running_apps = len(self.running_items_pos) > 0
+        if has_pinned_apps and has_running_apps:
+            self.separator.remove_style_class("hidden")
+        else:
+            self.separator.add_style_class("hidden")
 
 
 class Dock(Window):
@@ -609,9 +683,9 @@ class Dock(Window):
         super().__init__(layer="top", anchor=anchor)
 
         self.app_bar = AppBar(self)
-        
+
         transition_type = self._get_transition_type()
-        
+
         self.revealer = Revealer(
             child=Box(children=[self.app_bar], style="padding: 20px 50px 5px 50px;"),
             transition_duration=500,
@@ -626,11 +700,12 @@ class Dock(Window):
         )
 
         self.revealer.set_reveal_child(True)
+        self.app_bar.add_style_class("shown")
 
         self.dock_height = 100
         self.is_hovered = False
         self.hide_timeout_id = None
-        
+
         # Only setup occlusion monitoring if auto-hide is enabled
         if data.DOCK_AUTO_HIDE:
             self.setup_occlusion_monitoring()
@@ -641,9 +716,11 @@ class Dock(Window):
             GLib.source_remove(self.hide_timeout_id)
             self.hide_timeout_id = None
         self.revealer.set_reveal_child(True)
+        self.app_bar.add_style_class("shown")
 
     def on_hover_leave(self):
         self.is_hovered = False
+        # Revealer/occlusion logic will handle CSS state
 
     def _get_anchor_from_position(self):
         if data.DOCK_POSITION == "Left":
@@ -684,8 +761,14 @@ class Dock(Window):
                     and self.revealer.get_reveal_child()
                 ):
                     self.revealer.set_reveal_child(False)
+                    self.app_bar.remove_style_class("shown")
                 elif not is_occluded and not self.revealer.get_reveal_child():
                     self.revealer.set_reveal_child(True)
+                    self.app_bar.add_style_class("shown")
+                elif is_occluded and self.is_hovered:
+                    if not self.revealer.get_reveal_child():
+                        self.revealer.set_reveal_child(True)
+                    self.app_bar.add_style_class("shown")
             except Exception as e:
                 logger.error(f"[Dock] Occlusion check error: {e}")
 
