@@ -60,13 +60,16 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [x] ~~New Application Switcher~~
 - [x] Panel Widget
 - [x] MacOS like Widget
-- [x] Expandable Notifiaction Centre
+- [x] Expandable Notification Centre
+- [ ] Installation Script
+- [ ] Proper Documentation
 
 ## Bug Fixes (the bug found till now)
 
 - [x] WiFi
 - [x] wifi off button looks bigger
 - [x] Metadata Changes delay in Media Player
+- [x] Active Window Title showing `Unknown` when no active window
 
 ## Team
 
