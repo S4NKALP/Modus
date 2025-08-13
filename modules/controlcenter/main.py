@@ -14,6 +14,7 @@ from gi.repository import Gdk, GLib
 from loguru import logger
 from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
+from modules.controlcenter.nightlight import create_night_light_widget
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
 from modules.controlcenter.player import PlayerBoxStack
 from modules.controlcenter.wifi import WifiConnections
@@ -298,17 +299,18 @@ class ModusControlCenter(Window):
         self.flight_widget = Button(
             name="flight-widget",
             child=Box(
-                orientation="h",
-                spacing=4,
-                h_align="start",
-                v_align="center",
+                orientation="v",
                 h_expand=True,
+                v_expand=True,
+                spacing=8,
+                h_align="center",
+                v_align="center",
                 children=[
                     self.flight_icon,
                     Label(
                         label="Flight",
-                        style_classes="title",
-                        h_align="start",
+                        style_classes="title-widget",
+                        h_align="center",
                     ),
                 ],
             ),
@@ -334,31 +336,36 @@ class ModusControlCenter(Window):
         self.caffeine_widget = Button(
             name="caffeine-widget",
             child=Box(
-                orientation="h",
-                spacing=4,
-                h_align="start",
+                orientation="v",
+                spacing=8,
+                h_expand=True,
+                v_expand=True,
+                h_align="center",
                 v_align="center",
                 children=[
                     self.caffeine_icon,
-                    Box(
-                        orientation="vertical",
-                        v_expand=True,
-                        v_align="center",
-                        h_align="start",
-                        h_expand=True,
-                        children=[
-                            Label(
-                                label="Caffeine",
-                                style_classes="title-widget",
-                                h_align="start",
-                            ),
-                            self.caffeine_status_label,
-                        ],
+                    Label(
+                        label="Caffeine",
+                        style_classes="title-widget",
+                        h_align="center",
                     ),
+                    # Box(
+                    #     orientation="vertical",
+                    #     v_expand=True,
+                    #     v_align="center",
+                    #     h_align="center",
+                    #     h_expand=True,
+                    #     children=[
+                    #         # self.caffeine_status_label,
+                    #     ],
+                    # ),
                 ],
             ),
             on_clicked=self.toggle_caffeine,
         )
+
+        # Create night light widget
+        self.night_light_widget = create_night_light_widget(self)
 
         # Create main widgets directly without XML
         self.widgets = Box(
@@ -381,6 +388,7 @@ class ModusControlCenter(Window):
                             children=[
                                 self.wlan_widget,
                                 self.bluetooth_widget,
+                                self.night_light_widget,
                             ],
                         ),
                         # Right side: DND, Flight Mode, and Caffeine
@@ -403,19 +411,21 @@ class ModusControlCenter(Window):
                                     orientation="horizontal",
                                     name="flight-caffeine-row",
                                     children=[
-                                        # Box(
-                                        #     orientation="vertical",
-                                        #     name="flight-widget-container",
-                                        #     style_classes="menu",
-                                        #     h_expand=True,
-                                        #     children=[
-                                        #         self.flight_widget,
-                                        #     ],
-                                        # ),
+                                        Box(
+                                            orientation="vertical",
+                                            name="flight-widget-container",
+                                            style_classes="menu",
+                                            h_expand=True,
+                                            v_expand=True,
+                                            children=[
+                                                self.flight_widget,
+                                            ],
+                                        ),
                                         Box(
                                             orientation="vertical",
                                             name="caffeine-widget-container",
                                             h_expand=True,
+                                            v_expand=True,
                                             style_classes="menu",
                                             children=[
                                                 self.caffeine_widget,

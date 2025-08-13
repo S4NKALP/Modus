@@ -50,9 +50,10 @@
 }
 /* Widgets */
 #wifi-widget,
-#bluetooth-widget {
+#bluetooth-widget,
+#nightlight-widget {
   min-width: 140px;
-  padding: 10px 0 0px 0;
+  padding: 5px 0 0px 0;
 }
 
 .icon {
@@ -62,7 +63,8 @@
 }
 
 #bluetooth-widget-label,
-#wifi-widget-label {
+#wifi-widget-label,
+#nightlight-widget-label {
   font-size: 12px;
   margin-left: 5px;
   font-weight: 500;
@@ -283,7 +285,8 @@
 }
 
 #bluetooth-widget-name,
-#wifi-widget-name {
+#wifi-widget-name,
+#nightlight-widget-name {
   margin-top: 6px;
   font-size: 14px;
   font-weight: bold;
@@ -953,9 +956,9 @@
   /* margin-right: 8px; */
 }
 
-#flight-icon {
-  margin-left: -10px;
-}
+/* #flight-icon { */
+/*   margin-left: -10px; */
+/* } */
 
 .title-widget {
   /* margin-top: -14px; */
@@ -977,4 +980,9 @@
 
 #app-control-box {
   min-width: 100px;
+}
+#caffeine-widget,
+#flight-widget {
+  padding: 0px 0 5px 0;
+  min-width: 50px;
 }

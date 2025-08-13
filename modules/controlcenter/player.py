@@ -720,15 +720,16 @@ class PlayerBox(Box):
             # ],
         )
 
-        self.box = Box(
+        self.box = CenterBox(
             name="box-c",
             orientation="h",
             h_align="center",
-            h_expand=True,
-            children=[
+            start_children=[
                 self.outer_box,
-                self.button_box,
                 # self.stack_buttons_box,
+            ],
+            end_children=[
+                self.button_box,
             ],
         )
 
