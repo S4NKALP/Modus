@@ -162,7 +162,6 @@ class BluetoothConnections(Box):
         super().__init__(
             spacing=8,
             orientation="vertical",
-            style="margin: 8px",
             name="bluetooth-connections",
             **kwargs,
         )

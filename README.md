@@ -63,6 +63,8 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [x] Expandable Notification Centre
 - [ ] Installation Script
 - [ ] Proper Documentation
+- [ ] Pomodoro Timer Widget
+- [ ] To-do List Widget
 
 ## Bug Fixes (the bug found till now)
 
