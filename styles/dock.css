@@ -66,8 +66,7 @@
 }
 
 #dock_item.shown {
-  transition: margin 0.2s ease-out;
-  padding-left: 5px;
+  padding-left: 4px;
   opacity: 1;
 }
 
@@ -81,7 +80,6 @@
   min-height: 50px;
   border-radius: 2px;
   background-color: #2b5ea7;
-  margin: 0px 2px;
 }
 
 .dock_separator.hidden {
