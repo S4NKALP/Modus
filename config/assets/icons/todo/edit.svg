@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="16"
+   height="16"
+   version="1.1"
+   id="svg2"
+   sodipodi:docname="edit.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="namedview2"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="18.826718"
+     inkscape:cx="4.1430482"
+     inkscape:cy="11.101244"
+     inkscape:window-width="1014"
+     inkscape:window-height="1045"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2" />
+  <metadata
+     id="metadata1">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <path
+     d="m4 1c-1.108 0-2 0.892-2 2v10c0 1.108 0.892 2 2 2h8c1.108 0 2-0.892 2-2v-5.0488l-1 1v4.0488c0 0.554-0.446 1-1 1h-8c-0.554 0-1-0.446-1-1v-10c0-0.554 0.446-1 1-1h6.0488l1-1z"
+     fill="#dedede"
+     id="path1"
+     style="fill:#ffffff" />
+  <path
+     class="ColorScheme-Text"
+     d="m14.607 1.6863c-0.78347-0.78347-2.045-0.78347-2.8284 0l3.5355 3.5355c0.78347-0.78347 0.78348-2.045 0-2.8284zm-3.5355 0.70711-7.0711 7.0711-6e-7 3.5355h3.5355l7.0711-7.0711zm0 1.4142 2.1213 2.1213-5.6569 5.6569-2.1213-2.1213z"
+     fill="#dedede"
+     id="path2"
+     style="fill:#ffffff" />
+</svg>

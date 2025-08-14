@@ -14,6 +14,7 @@
 @import url("./styles/tray.css");
 @import url("./styles/battery-widget.css");
 @import url("./styles/lock.css");
+@import url("./styles/todo.css");
 
 * {
   all: unset;

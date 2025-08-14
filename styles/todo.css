@@ -1,0 +1,258 @@
+/* Todo List Styles - matching control center design */
+
+#todo-list-window {
+  /* background-color: alpha(#fff, 0.05); */
+  border-radius: 12px;
+  box-shadow: none;
+  margin: 0;
+}
+
+#todo-main-container {
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+  border-radius: 12px;
+  padding: 12px; /* Increased padding */
+  min-height: 500px; /* Ensure minimum height */
+  min-width: 350px; /* Ensure minimum width */
+}
+
+#todo-header {
+  margin-bottom: 8px;
+}
+
+#todo-title {
+  font-size: 16px;
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+  color: #ffffff;
+}
+
+#todo-stats {
+  font-size: 12px;
+  font-weight: 500;
+  color: #999;
+  margin-top: -2px;
+}
+
+/* Add new todo section */
+#todo-add-section {
+  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 8px;
+  min-height: 40px; /* Ensure minimum height */
+}
+
+#new-todo-entry {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: "SF Pro Rounded";
+}
+
+#new-todo-entry:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#add-todo-button {
+  /* background-color: #007aff; */
+  /* border: 1px solid #007aff; */
+  border-radius: 6px;
+  min-width: 20px;
+  min-height: 12px;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+#add-todo-button:hover {
+  /* background-color: #0056cc; */
+  /* border-color: #0056cc; */
+}
+
+/* Todo items container */
+#todos-scrolled {
+  background-color: transparent;
+  min-height: 200px; /* Minimum height for content */
+}
+
+#todos-container {
+  padding: 4px;
+}
+
+/* Individual todo items */
+#todo-item {
+  background-color: alpha(#000, 0.2); /* More visible background */
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 4px 0;
+  min-height: 40px; /* Ensure minimum height */
+  transition: background-color 0.2s ease;
+}
+
+#todo-item:hover {
+  background-color: alpha(#fff, 0.12);
+}
+
+/* Todo item controls */
+#todo-checkbox {
+  background-color: transparent;
+  border-radius: 50%; /* Circular appearance */
+  min-width: 20px;
+  min-height: 20px;
+  margin-right: 8px;
+}
+
+#todo-checkbox:hover {
+  border-color: #007aff;
+}
+
+/* SVG icon styling for checkboxes and buttons */
+#todo-checkbox-icon {
+  color: #007aff;
+}
+
+#todo-edit-icon,
+#todo-delete-icon,
+#add-todo-icon {
+  color: #ffffff;
+  opacity: 0.8;
+}
+
+#todo-edit-icon:hover,
+#todo-delete-icon:hover,
+#add-todo-icon:hover {
+  opacity: 1;
+}
+
+#todo-text {
+  font-size: 13px;
+  font-weight: 400;
+  color: #ffffff;
+  font-family: "SF Pro Rounded";
+}
+
+#todo-date {
+  font-size: 10px;
+  font-weight: 400;
+  color: #999999;
+  font-family: "SF Pro Rounded";
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.todo-date-text {
+  color: #999999;
+  font-size: 10px;
+}
+
+#todo-text-entry {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: "SF Pro Rounded";
+}
+
+#todo-text-entry:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Priority, edit, delete buttons */
+#todo-priority,
+#todo-edit,
+#todo-delete {
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 0 2px;
+  transition: background-color 0.2s ease;
+}
+
+#todo-priority:hover,
+#todo-edit:hover,
+#todo-delete:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#todo-priority-label,
+#todo-edit-label,
+#todo-delete-label {
+  font-size: 12px;
+}
+
+/* Clear completed button */
+#clear-completed-button {
+  background-color: alpha(#fff, 0.1);
+  border: 1px solid alpha(#999, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #999;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: "SF Pro Rounded";
+  margin-top: 8px;
+  transition: background-color 0.2s ease;
+}
+
+#clear-completed-button:hover {
+  background-color: alpha(#fff, 0.15);
+  color: #ffffff;
+}
+
+/* Completed todos styling */
+#todo-item.completed {
+  opacity: 0.6;
+}
+
+#todo-item.completed #todo-text {
+  text-decoration: line-through;
+  color: #999;
+}
+
+/* Priority styling */
+.priority-high #todo-priority-label {
+  color: #ff4444;
+}
+
+.priority-medium #todo-priority-label {
+  color: #ffaa00;
+}
+
+.priority-low #todo-priority-label {
+  color: #44ff44;
+}
+
+/* Scrollbar styling to match control center */
+#todos-scrolled scrollbar {
+  background-color: transparent;
+  border-radius: 8px;
+  margin: 2px;
+  min-width: 8px;
+}
+
+#todos-scrolled scrollbar slider {
+  background-color: alpha(#fff, 0.3);
+  border-radius: 4px;
+  min-width: 6px;
+  margin: 1px;
+}
+
+#todos-scrolled scrollbar slider:hover {
+  background-color: alpha(#fff, 0.5);
+}
+
+#todos-scrolled scrollbar slider:active {
+  background-color: alpha(#fff, 0.7);
+}

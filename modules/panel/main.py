@@ -17,6 +17,7 @@ from modules.panel.components.indicators import (
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
 from modules.panel.components.workspace import WorkspaceIndicator
+from modules.todo.todo_widget import TodoListCapture
 from utils.roam import modus_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
@@ -113,6 +114,9 @@ class Panel(Window):
             layer="overlay", child_window=NotificationCenter()
         )
 
+        # Todo List with MouseCapture
+        self.todo_list = TodoListCapture()
+
         # Notification Center Icon
         self.notification_icon = Svg(
             size=22,
@@ -127,10 +131,11 @@ class Panel(Window):
             on_clicked=self.on_notification_icon_clicked,
         )
 
-        # Clickable DateTime for notification center
+        # Clickable DateTime for todo list
         self.datetime_button = Button(
             name="datetime-button",
             child=DateTime(name="date-time", formatters=["%a %-d %b %I:%M %P"]),
+            on_clicked=self.on_datetime_clicked,
         )
 
         self.recording_indicator = RecordingIndicator()
@@ -212,6 +217,10 @@ class Panel(Window):
             # Only open notification center if there are notifications
             self.notification_center.toggle_mousecapture()
         # Do nothing if no notifications
+
+    def on_datetime_clicked(self, *args):
+        """Handle datetime button clicks - open todo list."""
+        self.todo_list.toggle_mousecapture()
 
     def update_notification_icon(self):
         """Update the notification icon based on count and DND state."""
