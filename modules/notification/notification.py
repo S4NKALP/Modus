@@ -818,13 +818,7 @@ class NotificationWidget(Box):
             self.start_timeout()
 
     def _manual_close(self):
-        """Handle manual close button click - mark for cache cleanup"""
-        self._should_cleanup_cache = True
-        logger.debug(
-            f"Manual close triggered for notification with cache_key: {
-                getattr(self, 'notification_image_cache_key', 'None')
-            } and app_icon: {getattr(self, 'app_icon_source', 'None')}"
-        )
+        """Handle manual close button click - just close notification"""
         self.notification.close("dismissed-by-user")
 
     def destroy(self):
