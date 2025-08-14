@@ -34,12 +34,12 @@ def get_unified_cache_key(source_data, size=None, app_name=None):
             # For file paths - create hash-based name
             if source_data.startswith("file://"):
                 source_data = source_data[7:]
-            
+
             # Create hash from file path and size
             hash_input = source_data
             if size:
                 hash_input += f"_{size[0]}x{size[1]}"
-            
+
             return hashlib.md5(hash_input.encode()).hexdigest()[:8]
         else:
             # Fallback to random UUID
@@ -62,7 +62,9 @@ def save_to_cache(pixbuf, cache_key, size=None):
 
         # Scale if size is specified
         if size and (pixbuf.get_width() != size[0] or pixbuf.get_height() != size[1]):
-            pixbuf = pixbuf.scale_simple(size[0], size[1], GdkPixbuf.InterpType.BILINEAR)
+            pixbuf = pixbuf.scale_simple(
+                size[0], size[1], GdkPixbuf.InterpType.BILINEAR
+            )
 
         pixbuf.savev(cache_path, "png", [], [])
         logger.debug(f"Cached notification asset: {cache_key}")
@@ -77,7 +79,7 @@ def get_from_cache(cache_key, size=None):
     try:
         cache_path = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, f"{cache_key}.png")
         if os.path.exists(cache_path):
-            logger.debug(f"Using cached asset: {cache_key}")
+            # logger.debug(f"Using cached asset: {cache_key}")
             if size:
                 return GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     cache_path, size[0], size[1], True
@@ -96,7 +98,9 @@ def cleanup_cache(cache_key=None):
 
         if cache_key:
             # Remove specific cached asset
-            cache_path = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, f"{cache_key}.png")
+            cache_path = os.path.join(
+                UNIFIED_NOTIFICATION_CACHE_DIR, f"{cache_key}.png"
+            )
             if os.path.exists(cache_path):
                 os.unlink(cache_path)
                 logger.debug(f"Cleaned up cached asset: {cache_key}")
@@ -144,7 +148,9 @@ def verify_cache_persistence():
 
         if os.path.exists(UNIFIED_NOTIFICATION_CACHE_DIR):
             cache_files = [
-                f for f in os.listdir(UNIFIED_NOTIFICATION_CACHE_DIR) if f.endswith(".png")
+                f
+                for f in os.listdir(UNIFIED_NOTIFICATION_CACHE_DIR)
+                if f.endswith(".png")
             ]
 
         logger.info(f"Cache persistence check: {len(cache_files)} assets cached")
@@ -188,3 +194,4 @@ def get_fallback_icon(size=(48, 48)):
 ensure_cache_dir()
 cleanup_old_cache_files()
 verify_cache_persistence()
+

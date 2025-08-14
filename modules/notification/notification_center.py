@@ -23,6 +23,7 @@ from modules.notification.notification import (
     get_fallback_notification_icon,
 )
 from services.modus import notification_service
+from utils.functions import escape_markup_text
 from widgets.custom_image import CustomImage
 from widgets.wayland import WaylandWindow as Window
 from config import data
@@ -122,9 +123,9 @@ class ExpandableNotificationGroup(Box):
                             ),
                             Label(
                                 name="notification-body",
-                                markup=latest_notification._notification.summary.replace(
+                                markup=escape_markup_text(latest_notification._notification.summary.replace(
                                     "\n", " "
-                                ),
+                                )),
                                 max_chars_width=25,
                                 h_align="start",
                                 ellipsization="end",
@@ -168,26 +169,41 @@ class ExpandableNotificationGroup(Box):
         notification_id = getattr(notification, "id", None)
 
         # First try to get cached notification image using stored cache key
-        if hasattr(cached_notification, 'cache_metadata') and cached_notification.cache_metadata:
-            notification_image_cache_key = cached_notification.cache_metadata.get('notification_image_cache_key')
+        if (
+            hasattr(cached_notification, "cache_metadata")
+            and cached_notification.cache_metadata
+        ):
+            notification_image_cache_key = cached_notification.cache_metadata.get(
+                "notification_image_cache_key"
+            )
             if notification_image_cache_key:
                 try:
-                    cached_image = get_cached_notification_image(notification_image_cache_key)
+                    cached_image = get_cached_notification_image(
+                        notification_image_cache_key
+                    )
                     if cached_image:
-                        logger.debug(f"Using cached notification image: {notification_image_cache_key}")
+                        logger.debug(
+                            f"Using cached notification image: {notification_image_cache_key}"
+                        )
                         return cached_image
                 except Exception as e:
                     logger.debug(f"Failed to load cached notification image: {e}")
 
         # Fallback to app icon using cached key
-        if hasattr(cached_notification, 'cache_metadata') and cached_notification.cache_metadata:
-            app_icon_cache_key = cached_notification.cache_metadata.get('app_icon_cache_key')
+        if (
+            hasattr(cached_notification, "cache_metadata")
+            and cached_notification.cache_metadata
+        ):
+            app_icon_cache_key = cached_notification.cache_metadata.get(
+                "app_icon_cache_key"
+            )
             if app_icon_cache_key:
                 try:
                     from modules.notification.unified_cache import get_from_cache
+
                     cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
                     if cached_app_icon:
-                        logger.debug(f"Using cached app icon: {app_icon_cache_key}")
+                        # logger.debug(f"Using cached app icon: {app_icon_cache_key}")
                         return cached_app_icon
                 except Exception as e:
                     logger.debug(f"Failed to load cached app icon: {e}")
@@ -198,7 +214,9 @@ class ExpandableNotificationGroup(Box):
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(f"Using directly cached app icon for: {app_icon_source}")
+                    logger.debug(
+                        f"Using directly cached app icon for: {app_icon_source}"
+                    )
                     return cached_app_icon
         except Exception as e:
             logger.debug(f"Failed to get directly cached app icon: {e}")
@@ -433,7 +451,7 @@ class ExpandableNotificationGroup(Box):
 class NotificationCenterWidget(NotificationWidget):
     def __init__(self, notification, **kwargs):
         self.notification_id = notification.cache_id
-        self.cache_metadata = getattr(notification, 'cache_metadata', {})
+        self.cache_metadata = getattr(notification, "cache_metadata", {})
 
         super().__init__(
             notification._notification,
@@ -449,25 +467,32 @@ class NotificationCenterWidget(NotificationWidget):
 
         # First try to get cached notification image using stored cache key
         if self.cache_metadata:
-            notification_image_cache_key = self.cache_metadata.get('notification_image_cache_key')
+            notification_image_cache_key = self.cache_metadata.get(
+                "notification_image_cache_key"
+            )
             if notification_image_cache_key:
                 try:
-                    cached_image = get_cached_notification_image(notification_image_cache_key)
+                    cached_image = get_cached_notification_image(
+                        notification_image_cache_key
+                    )
                     if cached_image:
-                        logger.debug(f"Using cached notification image: {notification_image_cache_key}")
+                        logger.debug(
+                            f"Using cached notification image: {notification_image_cache_key}"
+                        )
                         return cached_image
                 except Exception as e:
                     logger.debug(f"Failed to load cached notification image: {e}")
 
         # Fallback to app icon using cached key
         if self.cache_metadata:
-            app_icon_cache_key = self.cache_metadata.get('app_icon_cache_key')
+            app_icon_cache_key = self.cache_metadata.get("app_icon_cache_key")
             if app_icon_cache_key:
                 try:
                     from modules.notification.unified_cache import get_from_cache
+
                     cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
                     if cached_app_icon:
-                        logger.debug(f"Using cached app icon: {app_icon_cache_key}")
+                        # logger.debug(f"Using cached app icon: {app_icon_cache_key}")
                         return cached_app_icon
                 except Exception as e:
                     logger.debug(f"Failed to load cached app icon: {e}")
@@ -478,7 +503,9 @@ class NotificationCenterWidget(NotificationWidget):
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(f"Using directly cached app icon for: {app_icon_source}")
+                    logger.debug(
+                        f"Using directly cached app icon for: {app_icon_source}"
+                    )
                     return cached_app_icon
         except Exception as e:
             logger.debug(f"Failed to get directly cached app icon: {e}")
@@ -527,7 +554,7 @@ class NotificationCenterWidget(NotificationWidget):
                             children=[
                                 Label(
                                     name="notification-summary",
-                                    markup=notification.summary.replace("\n", " "),
+                                    markup=escape_markup_text(notification.summary.replace("\n", " ")),
                                     h_align="start",
                                     max_chars_width=25,
                                     ellipsization="end",
@@ -536,7 +563,7 @@ class NotificationCenterWidget(NotificationWidget):
                         ),
                         (
                             Label(
-                                markup=notification.body.replace("\n", " "),
+                                markup=escape_markup_text(notification.body.replace("\n", " ")),
                                 h_align="start",
                                 max_chars_width=35,
                                 ellipsization="end",
@@ -711,7 +738,9 @@ class NotificationCenter(Window):
         for app_name, notifications in self.notification_groups.items():
             # Sort notifications by ID (highest ID first - newest notifications)
             # This ensures the latest notifications appear at the top of each group
-            notifications.sort(key=lambda n: getattr(n._notification, "id", 0), reverse=True)
+            notifications.sort(
+                key=lambda n: getattr(n._notification, "id", 0), reverse=True
+            )
 
             # Handle limited apps history - only keep 5 notifications during rebuild
             if app_name in data.NOTIFICATION_LIMITED_APPS_HISTORY:
@@ -739,7 +768,7 @@ class NotificationCenter(Window):
             # Add to groups in sorted order (highest ID first - maintains newest-first ordering)
             notifications_list = self.notification_groups[app_name]
             new_notification_id = getattr(cached_notification._notification, "id", 0)
-            
+
             # Find the correct position to insert based on ID (highest first)
             insert_position = 0
             for i, existing_notification in enumerate(notifications_list):
@@ -748,7 +777,7 @@ class NotificationCenter(Window):
                     insert_position = i
                     break
                 insert_position = i + 1
-            
+
             notifications_list.insert(insert_position, cached_notification)
 
             # Handle limited apps history - only keep 5 notifications

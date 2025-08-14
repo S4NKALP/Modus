@@ -28,6 +28,7 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from utils.roam import modus_service
+from utils.functions import escape_markup_text
 from widgets.custom_image import CustomImage
 from widgets.customrevealer import SlideRevealer
 from widgets.wayland import WaylandWindow as Window
@@ -137,6 +138,7 @@ def get_cached_pixbuf(cache_key, fallback_size=(48, 48), cache_dir=None):
         cache_path = os.path.join(cache_dir, f"{cache_key}.png")
         if os.path.exists(cache_path):
             logger.debug(f"Using cached notification icon: {cache_key}")
+            logger.debug(f"Using cached notification icon: {cache_key}")
             return GdkPixbuf.Pixbuf.new_from_file_at_scale(
                 cache_path, fallback_size[0], fallback_size[1], True
             )
@@ -159,7 +161,6 @@ def cache_notification_icon(source, size=(48, 48), app_name=None):
                 cache_key, fallback_size=size, cache_dir=NOTIFICATION_ICON_CACHE_DIR
             )
             if cached_pixbuf:
-                logger.debug(f"Cache hit for icon: {cache_key}")
                 return cached_pixbuf
 
             # Load, cache, and return icon in one optimized flow
@@ -185,7 +186,6 @@ def cache_notification_icon(source, size=(48, 48), app_name=None):
                 cache_key, fallback_size=size, cache_dir=NOTIFICATION_ICON_CACHE_DIR
             )
             if cached_pixbuf:
-                logger.debug(f"Cache hit for pixbuf: {cache_key}")
                 return cached_pixbuf
 
             # Scale once and cache immediately
@@ -193,7 +193,6 @@ def cache_notification_icon(source, size=(48, 48), app_name=None):
                 size[0], size[1], GdkPixbuf.InterpType.BILINEAR
             )
             save_pixbuf_to_cache(scaled_pixbuf, cache_key, NOTIFICATION_ICON_CACHE_DIR)
-            logger.debug(f"Cached new pixbuf icon: {cache_key}")
             return scaled_pixbuf
 
     except Exception as e:
@@ -305,7 +304,6 @@ def get_cached_notification_image(cache_key):
     try:
         cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, f"{cache_key}.png")
         if os.path.exists(cache_path):
-            logger.debug(f"Using cached notification image: {cache_key}")
             return GdkPixbuf.Pixbuf.new_from_file(cache_path)
     except Exception as e:
         logger.warning(f"Failed to load cached notification image: {e}")
@@ -495,7 +493,6 @@ def preload_notification_assets(notification):
             try:
                 # Only cache at 35x35 to reduce disk usage - headers will scale this down
                 cache_notification_icon(notification.app_icon, (35, 35))
-                logger.debug(f"Preloaded app icon (35x35) for: {notification.app_name}")
             except Exception as icon_error:
                 logger.debug(
                     f"Failed to preload app icon for {notification.app_name}: {
@@ -663,7 +660,7 @@ class NotificationWidget(Box):
                             children=[
                                 Label(
                                     name="notification-summary",
-                                    markup=notification.summary.replace("\n", " "),
+                                    markup=escape_markup_text(notification.summary.replace("\n", " ")),
                                     h_align="start",
                                     max_chars_width=40,
                                     ellipsization="end",
@@ -678,7 +675,7 @@ class NotificationWidget(Box):
                         ),
                         (
                             Label(
-                                markup=notification.body.replace("\n", " "),
+                                markup=escape_markup_text(notification.body.replace("\n", " ")),
                                 h_align="start",
                                 max_chars_width=45,
                                 ellipsization="end",
@@ -761,7 +758,6 @@ class NotificationWidget(Box):
                     cache_key = get_notification_image_cache_key(notification_id, notification.image_pixbuf)
                     cached_image = get_cached_notification_image(cache_key)
                     if cached_image:
-                        logger.debug(f"Using cached notification image: {cache_key[:8]}")
                         return cached_image
                 except Exception as image_error:
                     logger.debug(f"Notification image processing failed: {image_error}")
@@ -776,13 +772,11 @@ class NotificationWidget(Box):
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(f"Using cached app icon for: {app_icon_source}")
                     return cached_app_icon
         except Exception as e:
             logger.debug(f"Failed to get cached app icon: {e}")
 
         # Ultimate fallback
-        logger.debug("Using fallback notification icon")
         return get_fallback_notification_icon((35, 35))
 
     def create_action_buttons(self, notification):

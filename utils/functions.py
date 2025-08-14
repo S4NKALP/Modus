@@ -1,3 +1,4 @@
+import html
 import json
 import os
 import threading
@@ -149,6 +150,24 @@ def is_special_workspace(client: dict) -> bool:
             return True
 
     return False
+
+
+def escape_markup_text(text: str) -> str:
+    """
+    Escape special characters in text to make it safe for Pango markup.
+    
+    Args:
+        text: Raw text that may contain special characters
+        
+    Returns:
+        Escaped text safe for use in Pango markup
+    """
+    if not text or not isinstance(text, str):
+        return ""
+    
+    # Use html.escape to escape XML/HTML special characters
+    # This handles &, <, >, and quotes
+    return html.escape(text)
 
 
 
