@@ -294,7 +294,7 @@ class CachedNotifications(Notifications):
         self.clear_all.emit()
 
     def on_notification_added(self, service, notification_id: int) -> None:
-        """Handle notification added and cache it with enhanced metadata"""
+        """Handle notification added and cache it with enhanced metadata - GUARANTEED STORAGE"""
         # Don't call super() - we're handling this ourselves
         
         # Import logger at the top of the function
@@ -302,48 +302,75 @@ class CachedNotifications(Notifications):
         
         notification = self.get_notification_from_id(notification_id)
 
-        if notification:
-            # Import here to avoid circular imports
-            from config import data
-            from modules.notification.notification import (
-                preload_notification_assets,
-                cache_notification_icon,
-                cache_notification_image,
-                get_cache_key,
-                get_notification_image_cache_key
-            )
+        if not notification:
+            logger.error(f"CRITICAL: Failed to get notification with ID {notification_id}")
+            return
 
-            # Check if this app should be ignored for history (don't cache)
-            if notification.app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
-                # Don't cache notifications from ignored apps, but still allow popup display
-                logger.debug(f"Ignoring notification from {notification.app_name} (in ignore list)")
-                return
+        # Import here to avoid circular imports
+        from config import data
+        from modules.notification.notification import (
+            preload_notification_assets,
+            cache_notification_icon,
+            cache_notification_image,
+            get_cache_key,
+            get_notification_image_cache_key
+        )
 
-            # Check if we already have this notification cached (by notification.id)
-            existing_notification = None
-            for cached_notif in self._cached_notifications.values():
-                if cached_notif._notification.id == notification.id:
-                    existing_notification = cached_notif
-                    break
-            
-            if existing_notification:
-                logger.debug(f"Notification ID {notification.id} already cached, skipping")
-                return
+        # Check if this app should be ignored for history (don't cache)
+        if notification.app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
+            # Don't cache notifications from ignored apps, but still allow popup display
+            logger.debug(f"Ignoring notification from {notification.app_name} (in ignore list)")
+            return
 
-            logger.debug(f"Caching new notification: ID={notification.id}, App={notification.app_name}, Summary={notification.summary[:50]}...")
+        # Check if we already have this notification cached (by notification.id)
+        existing_notification = None
+        for cached_notif in self._cached_notifications.values():
+            if cached_notif._notification.id == notification.id:
+                existing_notification = cached_notif
+                break
+        
+        if existing_notification:
+            logger.debug(f"Notification ID {notification.id} already cached, skipping")
+            return
 
-            # Cache notifications (except for ignored apps)
-            # DND only affects popup display, not caching
-            cache_id = self._next_cache_id
-            self._next_cache_id += 1
-            self._count += 1
+        logger.debug(f"Caching new notification: ID={notification.id}, App={notification.app_name}, Summary={notification.summary[:50]}...")
 
-            cached_notification = CachedNotification(
-                notification=notification, cache_id=cache_id
-            )
-            # Set cache_id directly since it's read-only property  
-            cached_notification._cache_id = cache_id
-            
+        # GUARANTEED STORAGE: Always create and store notification to history first
+        cache_id = self._next_cache_id
+        self._next_cache_id += 1
+        self._count += 1
+
+        cached_notification = CachedNotification(
+            notification=notification, cache_id=cache_id
+        )
+        # Set cache_id directly since it's read-only property  
+        cached_notification._cache_id = cache_id
+        
+        # Initialize cache metadata (will be populated below)
+        cached_notification.cache_metadata = {
+            "app_icon_cache_key": None,
+            "notification_image_cache_key": None,
+            "has_cached_image": False,
+            "cache_timestamp": int(time.time())
+        }
+        
+        # IMMEDIATELY store to history before attempting any caching operations
+        handler_id = cached_notification.connect(
+            "removed-from-cache",
+            lambda *args: self.remove_cached_notification(notification_id=cache_id),
+        )
+        self._signal_handlers[cache_id] = handler_id
+        self._cached_notifications[cache_id] = cached_notification
+        
+        # Save to JSON file immediately - GUARANTEED STORAGE
+        try:
+            self.cache_notifications()
+            logger.debug(f"GUARANTEED: Notification {cache_id} stored to history")
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to save notification {cache_id} to history: {e}")
+        
+        # Now attempt asset caching (failures here won't affect history storage)
+        try:
             # Preload assets and store cache metadata
             preload_notification_assets(notification)
             
@@ -352,8 +379,13 @@ class CachedNotifications(Notifications):
             notification_image_cache_key = None
             
             if notification.app_icon:
-                app_icon_cache_key = get_cache_key(notification.app_icon, (35, 35), notification.app_name)
-                cache_notification_icon(notification.app_icon, (35, 35), notification.app_name)
+                try:
+                    app_icon_cache_key = get_cache_key(notification.app_icon, (35, 35), notification.app_name)
+                    cache_notification_icon(notification.app_icon, (35, 35), notification.app_name)
+                    cached_notification.cache_metadata["app_icon_cache_key"] = app_icon_cache_key
+                    logger.debug(f"Cached app icon for notification {cache_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to cache app icon for notification {cache_id}: {e}")
             
             if hasattr(notification, 'image_pixbuf'):
                 try:
@@ -364,33 +396,26 @@ class CachedNotifications(Notifications):
                             notification.id, image_pixbuf
                         )
                         cache_notification_image(notification.id, image_pixbuf, (35, 35))
-                except (AttributeError, OSError, Exception):
-                    # If temp file is gone or any other error, skip caching
-                    pass
+                        cached_notification.cache_metadata["notification_image_cache_key"] = notification_image_cache_key
+                        cached_notification.cache_metadata["has_cached_image"] = True
+                        logger.debug(f"Cached notification image for notification {cache_id}")
+                except (AttributeError, OSError, Exception) as e:
+                    logger.warning(f"Failed to cache notification image for notification {cache_id}: {e}")
             
-            # Store metadata in cached notification
-            cached_notification.cache_metadata = {
-                "app_icon_cache_key": app_icon_cache_key,
-                "notification_image_cache_key": notification_image_cache_key,
-                "has_cached_image": notification_image_cache_key is not None,
-                "cache_timestamp": int(time.time())
-            }
-            
-            handler_id = cached_notification.connect(
-                "removed-from-cache",
-                lambda *args: self.remove_cached_notification(notification_id=cache_id),
-            )
-
-            self._signal_handlers[cache_id] = handler_id
+            # Update cached notification with final metadata
             self._cached_notifications[cache_id] = cached_notification
-            self.cache_notifications()
-
-            self.notify("count")
-            self.emit("cached-notification-added", cached_notification)
             
-            logger.debug(f"Successfully cached notification: Cache ID={cache_id}, Total cached={len(self._cached_notifications)}")
-        else:
-            print(f"WARNING: Failed to get notification with ID {notification_id}")
+            # Save updated metadata to JSON
+            self.cache_notifications()
+            
+        except Exception as e:
+            logger.error(f"Asset caching failed for notification {cache_id}, but notification is still stored: {e}")
+
+        # Always emit signals regardless of caching success
+        self.notify("count")
+        self.emit("cached-notification-added", cached_notification)
+        
+        logger.debug(f"Successfully processed notification: Cache ID={cache_id}, Total cached={len(self._cached_notifications)}")
 
     def remove_cached_notification(self, notification_id: int):
         """Remove the notification of given id with enhanced cache cleanup"""
