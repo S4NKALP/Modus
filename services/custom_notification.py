@@ -224,6 +224,7 @@ class CachedNotifications(Notifications):
         self._dont_disturb = False
         self._count = 0
         self._next_cache_id = 1  # Track next available cache ID
+        self._session_start_time = int(time.time())  # Track session start time for deduplication
 
         self.load_cached_notifications()
         
@@ -322,15 +323,26 @@ class CachedNotifications(Notifications):
             logger.debug(f"Ignoring notification from {notification.app_name} (in ignore list)")
             return
 
-        # Check if we already have this notification cached (by notification.id)
+        # Check for duplicates using both notification ID and timestamp to avoid session restart issues
         existing_notification = None
+        current_time = int(time.time())
+        
         for cached_notif in self._cached_notifications.values():
-            if cached_notif._notification.id == notification.id:
+            # Only consider it a duplicate if:
+            # 1. Same notification ID AND
+            # 2. Notification was cached in the current session (after session start time) AND  
+            # 3. Notification was cached recently (within last 5 minutes)
+            cached_time = getattr(cached_notif, 'timestamp', 0)
+            is_recent = (current_time - cached_time) < 300  # 5 minutes
+            is_current_session = cached_time >= self._session_start_time
+            
+            if (cached_notif._notification.id == notification.id and 
+                is_current_session and is_recent):
                 existing_notification = cached_notif
                 break
         
         if existing_notification:
-            logger.debug(f"Notification ID {notification.id} already cached, skipping")
+            logger.debug(f"Notification ID {notification.id} already cached in current session, skipping")
             return
 
         logger.debug(f"Caching new notification: ID={notification.id}, App={notification.app_name}, Summary={notification.summary[:50]}...")
