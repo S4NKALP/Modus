@@ -62,66 +62,69 @@ class ExpandableNotificationGroup(Box):
 
         if num_notifications == 1:
             # Single notification - no stacking needed
-            single_notification = Box(
-                name="single-notification-content",
-                spacing=8,
-                children=[
-                    Box(
-                        name="notification-image",
-                        children=CustomImage(
-                            pixbuf=self._get_notification_pixbuf(
-                                latest_notification._notification
-                            )
-                        ),
-                    ),
-                    Box(
-                        name="notification-text",
-                        orientation="v",
-                        v_align="center",
-                        h_expand=True,
-                        children=[
-                            Box(
-                                name="notification-summary-box",
-                                orientation="h",
-                                children=[
-                                    Label(
-                                        name="notification-summary",
-                                        markup=f"<b>{self.app_name}</b>",
-                                        h_align="start",
-                                        ellipsization="end",
-                                    ),
-                                ],
-                            ),
-                            Label(
-                                name="notification-body",
-                                markup=latest_notification._notification.summary.replace(
-                                    "\n", " "
-                                ),
-                                max_chars_width=35,
-                                h_align="start",
-                                ellipsization="end",
-                            ),
-                        ],
-                    ),
-                    Box(
-                        orientation="v",
-                        children=[
-                            Button(
-                                name="notification-close",
-                                image=CustomImage(
-                                    icon_name="close-symbolic", icon_size=18
-                                ),
-                                visible=True,
-                                on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(
-                                    latest_notification
-                                ),
-                            ),
-                            Box(v_expand=True),
-                        ],
-                    ),
-                ],
+            notification_widget = NotificationCenterWidget(
+                notification=latest_notification
             )
-            self.collapsed_eventbox.add(single_notification)
+            # single_notification = Box(
+            #     name="single-notification-content",
+            #     spacing=8,
+            #     children=[
+            #         Box(
+            #             name="notification-image",
+            #             children=CustomImage(
+            #                 pixbuf=self._get_notification_pixbuf(
+            #                     latest_notification._notification
+            #                 )
+            #             ),
+            #         ),
+            #         Box(
+            #             name="notification-text",
+            #             orientation="v",
+            #             v_align="center",
+            #             h_expand=True,
+            #             children=[
+            #                 Box(
+            #                     name="notification-summary-box",
+            #                     orientation="h",
+            #                     children=[
+            #                         Label(
+            #                             name="notification-summary",
+            #                             markup=f"<b>{self.app_name}</b>",
+            #                             h_align="start",
+            #                             ellipsization="end",
+            #                         ),
+            #                     ],
+            #                 ),
+            #                 Label(
+            #                     name="notification-body",
+            #                     markup=latest_notification._notification.summary.replace(
+            #                         "\n", " "
+            #                     ),
+            #                     max_chars_width=35,
+            #                     h_align="start",
+            #                     ellipsization="end",
+            #                 ),
+            #             ],
+            #         ),
+            #         Box(
+            #             orientation="v",
+            #             children=[
+            #                 Button(
+            #                     name="notification-close",
+            #                     image=CustomImage(
+            #                         icon_name="close-symbolic", icon_size=18
+            #                     ),
+            #                     visible=True,
+            #                     on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(
+            #                         latest_notification
+            #                     ),
+            #                 ),
+            #                 Box(v_expand=True),
+            #             ],
+            #         ),
+            #     ],
+            # )
+            self.collapsed_eventbox.add(notification_widget)
         else:
             # Multiple notifications - create stacked effect
             # Create container for the entire stack
@@ -331,7 +334,9 @@ class ExpandableNotificationGroup(Box):
                     if cache_path and cache_key:
                         cached_pixbuf = get_cached_notification_image(cache_key)
                         if cached_pixbuf:
-                            logger.debug(f"Cached and using notification image: {cache_key}")
+                            logger.debug(
+                                f"Cached and using notification image: {cache_key}"
+                            )
                             return cached_pixbuf
 
                     # Direct fallback if caching succeeded but loading failed
@@ -363,10 +368,9 @@ class ExpandableNotificationGroup(Box):
 
     def on_clicked(self, widget, event):
         if event.button == 1:  # Left click
-            if (
-                len(self.notifications) > 1
-            ):  # Only expand if there are multiple notifications
-                self.expand()
+            # Always allow expansion, even for single notifications
+            # This ensures single notifications can show their expanded entry view
+            self.expand()
         return True
 
     def expand(self, *args):
@@ -419,40 +423,58 @@ class ExpandableNotificationGroup(Box):
         for notification in self.notifications:
             try:
                 # Get notification cache metadata for cleanup
-                cache_metadata = getattr(notification, 'cache_metadata', {})
-                
+                cache_metadata = getattr(notification, "cache_metadata", {})
+
                 # Clean up caches using stored metadata
-                from modules.notification.notification import cleanup_notification_specific_caches
+                from modules.notification.notification import (
+                    cleanup_notification_specific_caches,
+                )
+
                 cleanup_notification_specific_caches(
                     app_icon_source=notification._notification.app_icon,
-                    notification_image_cache_key=cache_metadata.get('notification_image_cache_key')
+                    notification_image_cache_key=cache_metadata.get(
+                        "notification_image_cache_key"
+                    ),
                 )
-                
-                logger.debug(f"Cleaned up caches for notification ID: {notification._notification.id}")
+
+                logger.debug(
+                    f"Cleaned up caches for notification ID: {notification._notification.id}"
+                )
 
                 notification_service.remove_cached_notification(notification.cache_id)
             except Exception as e:
-                logger.error(f"Error removing notification {notification.cache_id}: {e}")
+                logger.error(
+                    f"Error removing notification {notification.cache_id}: {e}"
+                )
 
     def _close_single_notification(self, notification):
         """Close a single notification from this group with proper cache cleanup"""
         try:
             # Get notification cache metadata for cleanup
-            cache_metadata = getattr(notification, 'cache_metadata', {})
-            
+            cache_metadata = getattr(notification, "cache_metadata", {})
+
             # Clean up caches using stored metadata
-            from modules.notification.notification import cleanup_notification_specific_caches
+            from modules.notification.notification import (
+                cleanup_notification_specific_caches,
+            )
+
             cleanup_notification_specific_caches(
                 app_icon_source=notification._notification.app_icon,
-                notification_image_cache_key=cache_metadata.get('notification_image_cache_key')
+                notification_image_cache_key=cache_metadata.get(
+                    "notification_image_cache_key"
+                ),
             )
-            
-            logger.debug(f"Cleaned up caches for notification ID: {notification._notification.id}")
+
+            logger.debug(
+                f"Cleaned up caches for notification ID: {notification._notification.id}"
+            )
 
             notification_service.remove_cached_notification(notification.cache_id)
             logger.debug(f"Closed single notification: {notification.cache_id}")
         except Exception as e:
-            logger.error(f"Error removing single notification {notification.cache_id}: {e}")
+            logger.error(
+                f"Error removing single notification {notification.cache_id}: {e}"
+            )
 
     def _close_single_notification_and_stop_propagation(self, notification):
         """Close notification and prevent click from expanding the group"""
@@ -573,18 +595,25 @@ class NotificationCenterWidget(NotificationWidget):
     def _on_close_clicked(self, *args):
         try:
             # Get notification cache metadata for cleanup
-            cache_metadata = getattr(self, 'cache_metadata', {})
-            if hasattr(self.notification, '_cache_metadata'):
+            cache_metadata = getattr(self, "cache_metadata", {})
+            if hasattr(self.notification, "_cache_metadata"):
                 cache_metadata = self.notification._cache_metadata
-            
+
             # Clean up caches using stored metadata
-            from modules.notification.notification import cleanup_notification_specific_caches
+            from modules.notification.notification import (
+                cleanup_notification_specific_caches,
+            )
+
             cleanup_notification_specific_caches(
                 app_icon_source=self.notification.app_icon,
-                notification_image_cache_key=cache_metadata.get('notification_image_cache_key')
+                notification_image_cache_key=cache_metadata.get(
+                    "notification_image_cache_key"
+                ),
             )
-            
-            logger.debug(f"Cleaned up caches for notification center ID: {self.notification.id}")
+
+            logger.debug(
+                f"Cleaned up caches for notification center ID: {self.notification.id}"
+            )
 
             notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
