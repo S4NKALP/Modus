@@ -380,10 +380,11 @@ class CachedNotifications(Notifications):
             
             if notification.app_icon:
                 try:
+                    # Only cache at 35x35 to reduce disk usage - headers will scale this down
                     app_icon_cache_key = get_cache_key(notification.app_icon, (35, 35), notification.app_name)
                     cache_notification_icon(notification.app_icon, (35, 35), notification.app_name)
                     cached_notification.cache_metadata["app_icon_cache_key"] = app_icon_cache_key
-                    logger.debug(f"Cached app icon for notification {cache_id}")
+                    logger.debug(f"Cached app icon (35x35) for notification {cache_id}")
                 except Exception as e:
                     logger.warning(f"Failed to cache app icon for notification {cache_id}: {e}")
             
