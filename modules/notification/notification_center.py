@@ -738,8 +738,9 @@ class NotificationCenter(Window):
 
         # Create group widgets and handle limited apps
         for app_name, notifications in self.notification_groups.items():
-            # Sort notifications by timestamp (newest first)
-            notifications.sort(key=lambda n: getattr(n, "timestamp", 0), reverse=True)
+            # Sort notifications by ID (highest ID first - newest notifications)
+            # This ensures the latest notifications appear at the top of each group
+            notifications.sort(key=lambda n: getattr(n._notification, "id", 0), reverse=True)
 
             # Handle limited apps history - only keep 5 notifications during rebuild
             if app_name in data.NOTIFICATION_LIMITED_APPS_HISTORY:
@@ -764,10 +765,20 @@ class NotificationCenter(Window):
             # Preload assets for notification center display (ensure caching consistency)
             preload_notification_assets(cached_notification._notification)
 
-            # Add to groups
-            self.notification_groups[app_name].insert(
-                0, cached_notification
-            )  # Insert at beginning (newest first)
+            # Add to groups in sorted order (highest ID first - maintains newest-first ordering)
+            notifications_list = self.notification_groups[app_name]
+            new_notification_id = getattr(cached_notification._notification, "id", 0)
+            
+            # Find the correct position to insert based on ID (highest first)
+            insert_position = 0
+            for i, existing_notification in enumerate(notifications_list):
+                existing_id = getattr(existing_notification._notification, "id", 0)
+                if new_notification_id > existing_id:
+                    insert_position = i
+                    break
+                insert_position = i + 1
+            
+            notifications_list.insert(insert_position, cached_notification)
 
             # Handle limited apps history - only keep 5 notifications
             if app_name in data.NOTIFICATION_LIMITED_APPS_HISTORY:
