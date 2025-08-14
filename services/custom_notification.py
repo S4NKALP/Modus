@@ -92,19 +92,23 @@ class CachedNotification(Service):
 
     @Property(object, "readable")
     def image_pixbuf(self) -> GdkPixbuf.Pixbuf | None:
-        if self.image_pixmap:
-            return self.image_pixmap.as_pixbuf()
-        if self.image_file and os.path.exists(self.image_file):
-            try:
-                return GdkPixbuf.Pixbuf.new_from_file(self.image_file)
-            except Exception:
-                # If file can't be loaded, return None
-                pass
+        try:
+            if self.image_pixmap:
+                return self.image_pixmap.as_pixbuf()
+            if self.image_file and os.path.exists(self.image_file):
+                try:
+                    return GdkPixbuf.Pixbuf.new_from_file(self.image_file)
+                except Exception:
+                    # If file can't be loaded, return None
+                    pass
+        except Exception:
+            # If any error occurs (including temp file gone), return None safely
+            pass
         return None
 
     @Property(dict, "readable")
     def serialized(self) -> dict:
-        """Enhanced serialization with cache metadata"""
+        """Enhanced serialization with cache metadata - stores only cache keys"""
         from modules.notification.notification import (
             get_cache_key,
             get_notification_image_cache_key,
@@ -117,17 +121,27 @@ class CachedNotification(Service):
         if self.app_icon:
             app_icon_cache_key = get_cache_key(self.app_icon, (35, 35), self.app_name)
         
-        if self.id and hasattr(self._notification, 'image_pixbuf'):
-            # Only try to access image_pixbuf if we can safely do so
+        # Only try to get notification image cache key if we can safely access image_pixbuf
+        if self.id:
             try:
-                # Check if image_pixbuf exists and can be accessed
-                image_pixbuf = getattr(self._notification, 'image_pixbuf', None)
-                if image_pixbuf:
-                    notification_image_cache_key = get_notification_image_cache_key(
-                        self.id, image_pixbuf
-                    )
-            except (AttributeError, OSError, Exception):
-                # If temp file is gone or any other error, just mark as None
+                # First check if we already have the cache key stored
+                if hasattr(self, 'cache_metadata') and self.cache_metadata:
+                    notification_image_cache_key = self.cache_metadata.get('notification_image_cache_key')
+                
+                # If not, try to generate it safely
+                if not notification_image_cache_key and hasattr(self._notification, 'image_pixbuf'):
+                    try:
+                        # Check if image_pixbuf exists and can be accessed without loading from file
+                        image_pixbuf = getattr(self._notification, 'image_pixbuf', None)
+                        if image_pixbuf:
+                            notification_image_cache_key = get_notification_image_cache_key(
+                                self.id, image_pixbuf
+                            )
+                    except (AttributeError, OSError, Exception):
+                        # If temp file is gone or any other error, just mark as None
+                        pass
+            except Exception:
+                # If any error occurs during cache key generation, skip it
                 pass
         
         return {
@@ -141,12 +155,11 @@ class CachedNotification(Service):
             "urgency": self.urgency,
             "actions": [(action.identifier, action.label) for action in self.actions],
             "image-file": self.image_file,
-            "image-pixmap": (
-                self.image_pixmap.serialize() if self.image_pixmap else None
-            ),
+            # Only store image-pixmap if no cache key is available (fallback)
+            "image-pixmap": None,  # Don't store image data, only cache key
             "timestamp": int(time.time()),
             "group": self.app_name,  # Group notifications by app name
-            # Enhanced cache metadata
+            # Enhanced cache metadata - store only cache keys
             "cache_metadata": {
                 "app_icon_cache_key": app_icon_cache_key,
                 "notification_image_cache_key": notification_image_cache_key,
@@ -284,6 +297,9 @@ class CachedNotifications(Notifications):
         """Handle notification added and cache it with enhanced metadata"""
         # Don't call super() - we're handling this ourselves
         
+        # Import logger at the top of the function
+        from loguru import logger
+        
         notification = self.get_notification_from_id(notification_id)
 
         if notification:
@@ -300,7 +316,21 @@ class CachedNotifications(Notifications):
             # Check if this app should be ignored for history (don't cache)
             if notification.app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
                 # Don't cache notifications from ignored apps, but still allow popup display
+                logger.debug(f"Ignoring notification from {notification.app_name} (in ignore list)")
                 return
+
+            # Check if we already have this notification cached (by notification.id)
+            existing_notification = None
+            for cached_notif in self._cached_notifications.values():
+                if cached_notif._notification.id == notification.id:
+                    existing_notification = cached_notif
+                    break
+            
+            if existing_notification:
+                logger.debug(f"Notification ID {notification.id} already cached, skipping")
+                return
+
+            logger.debug(f"Caching new notification: ID={notification.id}, App={notification.app_name}, Summary={notification.summary[:50]}...")
 
             # Cache notifications (except for ignored apps)
             # DND only affects popup display, not caching
@@ -357,6 +387,10 @@ class CachedNotifications(Notifications):
 
             self.notify("count")
             self.emit("cached-notification-added", cached_notification)
+            
+            logger.debug(f"Successfully cached notification: Cache ID={cache_id}, Total cached={len(self._cached_notifications)}")
+        else:
+            print(f"WARNING: Failed to get notification with ID {notification_id}")
 
     def remove_cached_notification(self, notification_id: int):
         """Remove the notification of given id with enhanced cache cleanup"""

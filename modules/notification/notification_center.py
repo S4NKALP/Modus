@@ -65,65 +65,6 @@ class ExpandableNotificationGroup(Box):
             notification_widget = NotificationCenterWidget(
                 notification=latest_notification
             )
-            # single_notification = Box(
-            #     name="single-notification-content",
-            #     spacing=8,
-            #     children=[
-            #         Box(
-            #             name="notification-image",
-            #             children=CustomImage(
-            #                 pixbuf=self._get_notification_pixbuf(
-            #                     latest_notification._notification
-            #                 )
-            #             ),
-            #         ),
-            #         Box(
-            #             name="notification-text",
-            #             orientation="v",
-            #             v_align="center",
-            #             h_expand=True,
-            #             children=[
-            #                 Box(
-            #                     name="notification-summary-box",
-            #                     orientation="h",
-            #                     children=[
-            #                         Label(
-            #                             name="notification-summary",
-            #                             markup=f"<b>{self.app_name}</b>",
-            #                             h_align="start",
-            #                             ellipsization="end",
-            #                         ),
-            #                     ],
-            #                 ),
-            #                 Label(
-            #                     name="notification-body",
-            #                     markup=latest_notification._notification.summary.replace(
-            #                         "\n", " "
-            #                     ),
-            #                     max_chars_width=35,
-            #                     h_align="start",
-            #                     ellipsization="end",
-            #                 ),
-            #             ],
-            #         ),
-            #         Box(
-            #             orientation="v",
-            #             children=[
-            #                 Button(
-            #                     name="notification-close",
-            #                     image=CustomImage(
-            #                         icon_name="close-symbolic", icon_size=18
-            #                     ),
-            #                     visible=True,
-            #                     on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(
-            #                         latest_notification
-            #                     ),
-            #                 ),
-            #                 Box(v_expand=True),
-            #             ],
-            #         ),
-            #     ],
-            # )
             self.collapsed_eventbox.add(notification_widget)
         else:
             # Multiple notifications - create stacked effect
@@ -138,7 +79,6 @@ class ExpandableNotificationGroup(Box):
             if num_notifications >= 3:
                 bottom_shadow = Box(
                     name="stack-shadow-bottom",
-                    # style="min-height: 16px; margin-left: 20px; margin-right: -4px; margin-bottom: -8px;",
                 )
                 stack_container.add(bottom_shadow)
 
@@ -146,7 +86,6 @@ class ExpandableNotificationGroup(Box):
             if num_notifications >= 2:
                 middle_shadow = Box(
                     name="stack-shadow-middle",
-                    # style="min-height: 20px; margin-left: 10px; margin-right: -2px; margin-bottom: -12px;",
                 )
                 stack_container.add(middle_shadow)
 
@@ -158,8 +97,8 @@ class ExpandableNotificationGroup(Box):
                     Box(
                         name="notification-image",
                         children=CustomImage(
-                            pixbuf=self._get_notification_pixbuf(
-                                latest_notification._notification
+                            pixbuf=self._get_notification_pixbuf_for_group(
+                                latest_notification
                             )
                         ),
                     ),
@@ -222,6 +161,51 @@ class ExpandableNotificationGroup(Box):
 
         # Create expanded state (hidden initially)
         self.create_expanded_state()
+
+    def _get_notification_pixbuf_for_group(self, cached_notification):
+        """Get notification pixbuf using cached image key - fallback to app icon"""
+        notification = cached_notification._notification
+        notification_id = getattr(notification, "id", None)
+
+        # First try to get cached notification image using stored cache key
+        if hasattr(cached_notification, 'cache_metadata') and cached_notification.cache_metadata:
+            notification_image_cache_key = cached_notification.cache_metadata.get('notification_image_cache_key')
+            if notification_image_cache_key:
+                try:
+                    cached_image = get_cached_notification_image(notification_image_cache_key)
+                    if cached_image:
+                        logger.debug(f"Using cached notification image: {notification_image_cache_key}")
+                        return cached_image
+                except Exception as e:
+                    logger.debug(f"Failed to load cached notification image: {e}")
+
+        # Fallback to app icon using cached key
+        if hasattr(cached_notification, 'cache_metadata') and cached_notification.cache_metadata:
+            app_icon_cache_key = cached_notification.cache_metadata.get('app_icon_cache_key')
+            if app_icon_cache_key:
+                try:
+                    from modules.notification.unified_cache import get_from_cache
+                    cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
+                    if cached_app_icon:
+                        logger.debug(f"Using cached app icon: {app_icon_cache_key}")
+                        return cached_app_icon
+                except Exception as e:
+                    logger.debug(f"Failed to load cached app icon: {e}")
+
+        # Final fallback - try to cache app icon directly if available
+        try:
+            app_icon_source = getattr(notification, "app_icon", None)
+            if app_icon_source:
+                cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
+                if cached_app_icon:
+                    logger.debug(f"Using directly cached app icon for: {app_icon_source}")
+                    return cached_app_icon
+        except Exception as e:
+            logger.debug(f"Failed to get directly cached app icon: {e}")
+
+        # Ultimate fallback
+        logger.debug("Using fallback notification icon")
+        return get_fallback_notification_icon((35, 35))
 
     def create_expanded_state(self):
         # Create main expanded container
@@ -309,62 +293,6 @@ class ExpandableNotificationGroup(Box):
 
         # Hide the entire expanded container initially
         self.expanded_container.set_visible(False)
-
-    def _get_notification_pixbuf(self, notification):
-        """Simplified notification pixbuf for notification center"""
-        notification_id = getattr(notification, "id", None)
-
-        try:
-            # Try to process current pixbuf if available
-            if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
-                try:
-                    cache_key = get_notification_image_cache_key(
-                        notification_id, notification.image_pixbuf
-                    )
-                    cached_image = get_cached_notification_image(cache_key)
-                    if cached_image:
-                        logger.debug(f"Using cached notification image: {cache_key}")
-                        return cached_image
-
-                    # Try to cache the image now
-                    cache_path, cache_key = cache_notification_image(
-                        notification_id, notification.image_pixbuf, (35, 35)
-                    )
-
-                    if cache_path and cache_key:
-                        cached_pixbuf = get_cached_notification_image(cache_key)
-                        if cached_pixbuf:
-                            logger.debug(
-                                f"Cached and using notification image: {cache_key}"
-                            )
-                            return cached_pixbuf
-
-                    # Direct fallback if caching succeeded but loading failed
-                    logger.debug("Using direct scaling for notification image")
-                    return notification.image_pixbuf.scale_simple(
-                        35, 35, GdkPixbuf.InterpType.BILINEAR
-                    )
-                except Exception as image_error:
-                    logger.debug(f"Notification image processing failed: {image_error}")
-                    # Continue to app icon fallback
-
-        except Exception as e:
-            logger.debug(f"Failed to process notification image: {e}")
-
-        # Use cached app icon as fallback
-        try:
-            app_icon_source = getattr(notification, "app_icon", None)
-            if app_icon_source:
-                cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
-                if cached_app_icon:
-                    logger.debug(f"Using cached app icon for: {app_icon_source}")
-                    return cached_app_icon
-        except Exception as e:
-            logger.debug(f"Failed to get cached app icon: {e}")
-
-        # Ultimate fallback
-        logger.debug("Using fallback notification icon")
-        return get_fallback_notification_icon((35, 35))
 
     def on_clicked(self, widget, event):
         if event.button == 1:  # Left click
@@ -505,6 +433,7 @@ class ExpandableNotificationGroup(Box):
 class NotificationCenterWidget(NotificationWidget):
     def __init__(self, notification, **kwargs):
         self.notification_id = notification.cache_id
+        self.cache_metadata = getattr(notification, 'cache_metadata', {})
 
         super().__init__(
             notification._notification,
@@ -513,6 +442,50 @@ class NotificationCenterWidget(NotificationWidget):
             name="notification-centre-notifs",
             **kwargs,
         )
+
+    def _get_notification_pixbuf(self, notification):
+        """Get notification pixbuf using cached image key - fallback to app icon"""
+        notification_id = getattr(notification, "id", None)
+
+        # First try to get cached notification image using stored cache key
+        if self.cache_metadata:
+            notification_image_cache_key = self.cache_metadata.get('notification_image_cache_key')
+            if notification_image_cache_key:
+                try:
+                    cached_image = get_cached_notification_image(notification_image_cache_key)
+                    if cached_image:
+                        logger.debug(f"Using cached notification image: {notification_image_cache_key}")
+                        return cached_image
+                except Exception as e:
+                    logger.debug(f"Failed to load cached notification image: {e}")
+
+        # Fallback to app icon using cached key
+        if self.cache_metadata:
+            app_icon_cache_key = self.cache_metadata.get('app_icon_cache_key')
+            if app_icon_cache_key:
+                try:
+                    from modules.notification.unified_cache import get_from_cache
+                    cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
+                    if cached_app_icon:
+                        logger.debug(f"Using cached app icon: {app_icon_cache_key}")
+                        return cached_app_icon
+                except Exception as e:
+                    logger.debug(f"Failed to load cached app icon: {e}")
+
+        # Final fallback - try to cache app icon directly if available
+        try:
+            app_icon_source = getattr(notification, "app_icon", None)
+            if app_icon_source:
+                cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
+                if cached_app_icon:
+                    logger.debug(f"Using directly cached app icon for: {app_icon_source}")
+                    return cached_app_icon
+        except Exception as e:
+            logger.debug(f"Failed to get directly cached app icon: {e}")
+
+        # Ultimate fallback
+        logger.debug("Using fallback notification icon")
+        return get_fallback_notification_icon((35, 35))
 
     def create_content(self, notification):
         # Create our custom close button for notification center
@@ -594,10 +567,8 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _on_close_clicked(self, *args):
         try:
-            # Get notification cache metadata for cleanup
-            cache_metadata = getattr(self, "cache_metadata", {})
-            if hasattr(self.notification, "_cache_metadata"):
-                cache_metadata = self.notification._cache_metadata
+            # Use instance cache metadata instead of notification attribute
+            cache_metadata = self.cache_metadata
 
             # Clean up caches using stored metadata
             from modules.notification.notification import (
@@ -629,7 +600,7 @@ class NotificationCenterWidget(NotificationWidget):
 
     # Override to disable auto-close functionality
     def close_notification(self):
-        pass
+        return False
 
 
 class NotificationCenter(Window):
@@ -919,14 +890,5 @@ class NotificationCenter(Window):
         logger.debug(f"Notification center visibility set to: {visible}")
 
     def _on_destroy(self, *_):
-        try:
-            notification_service.disconnect(
-                "cached-notification-added", self.on_notification_added
-            )
-            notification_service.disconnect(
-                "cached-notification-removed", self.on_notification_removed
-            )
-            notification_service.disconnect("clear-all", self.on_clear_all)
-            notification_service.disconnect("notify::count", self.on_count_changed)
-        except Exception as e:
-            logger.error(f"Error disconnecting signals: {e}")
+        # Signals will be automatically disconnected when the object is destroyed
+        pass
