@@ -111,7 +111,7 @@ class TodoItem(Box):
         # Edit button - using SVG icon
         self.edit_icon = Svg(
             name="todo-edit-icon",
-            size=14,
+            size=12,
             svg_file=get_relative_path("../../config/assets/icons/todo/edit.svg"),
         )
         self.edit_button = Button(
@@ -123,7 +123,7 @@ class TodoItem(Box):
         # Delete button - using SVG icon
         self.delete_icon = Svg(
             name="todo-delete-icon",
-            size=14,
+            size=12,
             svg_file=get_relative_path(
                 "../../config/assets/icons/todo/delete-symbolic.svg"
             ),

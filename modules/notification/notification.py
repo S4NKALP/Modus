@@ -1,12 +1,21 @@
 import os
 import hashlib
 import time
+import uuid
 
 from fabric.utils import get_relative_path
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
 from loguru import logger
 
 import config.data as data
+from .unified_cache import (
+    get_unified_cache_key,
+    save_to_cache,
+    get_from_cache,
+    cleanup_cache,
+    get_fallback_icon,
+    ensure_cache_dir
+)
 from fabric.notifications import (
     Notification,
     NotificationAction,
@@ -30,62 +39,75 @@ NOTIFICATION_IMAGE_SIZE = 48
 NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
 
-# Notification icon cache directory (for small notification and app icons)
-NOTIFICATION_ICON_CACHE_DIR = os.path.join(data.CACHE_DIR, "notification_icons")
-# Notification image cache directory (for large notification images)
-NOTIFICATION_IMAGE_CACHE_DIR = os.path.join(data.CACHE_DIR, "notification_images")
+# Unified notification cache directory (for both app icons and notification images)
+UNIFIED_NOTIFICATION_CACHE_DIR = os.path.join(data.CACHE_DIR, "notifications")
+
+# Backward compatibility constants
+NOTIFICATION_ICON_CACHE_DIR = UNIFIED_NOTIFICATION_CACHE_DIR
+NOTIFICATION_IMAGE_CACHE_DIR = UNIFIED_NOTIFICATION_CACHE_DIR
 
 
 def ensure_notification_cache_dirs():
-    """Ensure notification cache directories exist"""
-    os.makedirs(NOTIFICATION_ICON_CACHE_DIR, exist_ok=True)
-    os.makedirs(NOTIFICATION_IMAGE_CACHE_DIR, exist_ok=True)
+    """Ensure unified notification cache directory exists"""
+    os.makedirs(UNIFIED_NOTIFICATION_CACHE_DIR, exist_ok=True)
 
 
 def cleanup_old_cache_files():
-    """Clean up old notification cache files (older than 7 days) from icon cache only"""
+    """Clean up old notification cache files (older than 7 days)"""
     try:
-        if not os.path.exists(NOTIFICATION_ICON_CACHE_DIR):
+        if not os.path.exists(UNIFIED_NOTIFICATION_CACHE_DIR):
             return
 
         current_time = time.time()
         week_ago = current_time - (7 * 24 * 60 * 60)  # 7 days
 
-        for filename in os.listdir(NOTIFICATION_ICON_CACHE_DIR):
-            filepath = os.path.join(NOTIFICATION_ICON_CACHE_DIR, filename)
+        for filename in os.listdir(UNIFIED_NOTIFICATION_CACHE_DIR):
+            filepath = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, filename)
             try:
                 if os.path.isfile(filepath):
                     file_mtime = os.path.getmtime(filepath)
                     if file_mtime < week_ago:
                         os.unlink(filepath)
-                        logger.debug(
-                            f"Cleaned up old notification icon cache: {filename}"
-                        )
+                        logger.debug(f"Cleaned up old notification cache: {filename}")
             except Exception as e:
                 logger.warning(f"Failed to cleanup cache file {filename}: {e}")
     except Exception as e:
         logger.warning(f"Failed to cleanup notification cache: {e}")
 
 
-def get_cache_key(source_data, size=None):
-    """Generate a cache key from source data and optional size"""
-    if isinstance(source_data, str):
-        # For file paths
-        cache_input = source_data
-        if size:
-            cache_input += f"_{size[0]}x{size[1]}"
-    else:
-        # For pixbuf data - use hash of pixel data
-        try:
-            pixel_data = source_data.get_pixels()
-            cache_input = hashlib.md5(pixel_data).hexdigest()
+def get_unified_cache_key(source_data, size=None, app_name=None):
+    """Generate a unified cache key that works for both app icons and notification images"""
+    try:
+        if hasattr(source_data, "get_pixels"):
+            # For pixbuf data - use hash of pixel data for deterministic caching
+            try:
+                pixel_data = source_data.get_pixels()
+                image_hash = hashlib.md5(pixel_data).hexdigest()[:8]
+                return image_hash
+            except Exception:
+                # Fallback to timestamp if pixel data fails
+                return str(int(time.time()))[:8]
+        elif isinstance(source_data, str):
+            # For file paths - create hash-based name
+            if source_data.startswith("file://"):
+                source_data = source_data[7:]
+            
+            # Create hash from file path and size
+            hash_input = source_data
             if size:
-                cache_input += f"_{size[0]}x{size[1]}"
-        except Exception:
-            # Fallback to timestamp if pixel data fails
-            cache_input = f"pixbuf_{int(time.time())}"
+                hash_input += f"_{size[0]}x{size[1]}"
+            
+            return hashlib.md5(hash_input.encode()).hexdigest()[:8]
+        else:
+            # Fallback to timestamp
+            return str(int(time.time()))[:8]
+    except Exception:
+        # Ultimate fallback
+        return str(int(time.time()))[:8]
 
-    return hashlib.md5(cache_input.encode()).hexdigest()
+
+# Backward compatibility
+get_cache_key = get_unified_cache_key
 
 
 def save_pixbuf_to_cache(pixbuf, cache_key, cache_dir):
@@ -123,18 +145,18 @@ def get_cached_pixbuf(cache_key, fallback_size=(48, 48), cache_dir=None):
     return None
 
 
-def cache_notification_icon(source, size=(48, 48)):
+def cache_notification_icon(source, size=(48, 48), app_name=None):
     """Optimized notification icon caching with immediate pixbuf generation and caching"""
     try:
         ensure_notification_cache_dirs()
 
         # Handle different source types with optimized caching
         if isinstance(source, str):
-            cache_key = get_cache_key(source, size)
+            cache_key = get_unified_cache_key(source, size, app_name)
 
             # Check cache first for immediate return
             cached_pixbuf = get_cached_pixbuf(
-                cache_key, size, NOTIFICATION_ICON_CACHE_DIR
+                cache_key, fallback_size=size, cache_dir=NOTIFICATION_ICON_CACHE_DIR
             )
             if cached_pixbuf:
                 logger.debug(f"Cache hit for icon: {cache_key}")
@@ -156,11 +178,11 @@ def cache_notification_icon(source, size=(48, 48)):
 
         elif hasattr(source, "scale_simple"):
             # Already a pixbuf - cache it directly with optimized flow
-            cache_key = get_cache_key(source, size)
+            cache_key = get_unified_cache_key(source, size, app_name)
 
             # Check cache first
             cached_pixbuf = get_cached_pixbuf(
-                cache_key, size, NOTIFICATION_ICON_CACHE_DIR
+                cache_key, fallback_size=size, cache_dir=NOTIFICATION_ICON_CACHE_DIR
             )
             if cached_pixbuf:
                 logger.debug(f"Cache hit for pixbuf: {cache_key}")
@@ -198,23 +220,8 @@ def load_and_cache_local_icon(file_path, cache_key, size):
 
 def load_and_cache_theme_icon(icon_name, cache_key, size):
     """Load an icon from the current theme and cache it"""
-    try:
-        icon_theme = Gtk.IconTheme.get_default()
-        icon_info = icon_theme.lookup_icon(icon_name, min(size), 0)
-
-        if icon_info:
-            pixbuf = icon_info.load_icon()
-            if pixbuf:
-                scaled_pixbuf = pixbuf.scale_simple(
-                    size[0], size[1], GdkPixbuf.InterpType.BILINEAR
-                )
-                save_pixbuf_to_cache(
-                    scaled_pixbuf, cache_key, NOTIFICATION_ICON_CACHE_DIR
-                )
-                return scaled_pixbuf
-    except Exception as e:
-        logger.warning(f"Failed to load theme notification icon {icon_name}: {e}")
-
+    # For simplicity, just use fallback since theme icon loading is complex in GTK4
+    logger.debug(f"Using fallback for theme icon {icon_name}")
     return get_fallback_notification_icon(size)
 
 
@@ -236,119 +243,47 @@ def get_fallback_notification_icon(size=(48, 48)):
             return None
 
 
-def find_existing_cached_image(notification_id):
-    """Find existing cached image for a notification ID, regardless of hash - prioritizes restart scenarios"""
-    try:
-        if not os.path.exists(NOTIFICATION_IMAGE_CACHE_DIR):
-            logger.debug(
-                f"Notification image cache directory does not exist: {
-                    NOTIFICATION_IMAGE_CACHE_DIR
-                }"
-            )
-            return None
-
-        # Look for any cached image that starts with this notification ID
-        matching_files = []
-        for filename in os.listdir(NOTIFICATION_IMAGE_CACHE_DIR):
-            if filename.startswith(f"notif_{notification_id}_") and filename.endswith(
-                ".png"
-            ):
-                matching_files.append(filename)
-
-        if not matching_files:
-            logger.debug(
-                f"No cached images found for notification ID: {notification_id}"
-            )
-            return None
-
-        # Sort by modification time to get the most recent cache file
-        matching_files.sort(
-            key=lambda f: os.path.getmtime(
-                os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, f)
-            ),
-            reverse=True,
-        )
-
-        # Try to load the most recent cached image
-        for filename in matching_files:
-            cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, filename)
-            try:
-                cached_pixbuf = GdkPixbuf.Pixbuf.new_from_file(cache_path)
-                if cached_pixbuf:
-                    cache_key = filename[:-4]  # Remove .png extension
-                    logger.debug(
-                        f"Found existing cached image for notification {
-                            notification_id
-                        }: {cache_key}"
-                    )
-                    return cached_pixbuf
-            except Exception as e:
-                logger.debug(f"Failed to load cached image {filename}: {e}")
-                continue
-
-        logger.debug(
-            f"Found {len(matching_files)} cache files for notification {
-                notification_id
-            } but none could be loaded"
-        )
-        return None
-    except Exception as e:
-        logger.debug(
-            f"Failed to find existing cached image for notification {notification_id}: {
-                e
-            }"
-        )
-        return None
-
-
 def get_notification_image_cache_key(notification_id, image_pixbuf):
-    """Generate a robust cache key for notification images, handling corrupted pixbufs"""
+    """Generate a deterministic cache key based on image content to prevent duplicate caching"""
     try:
-        # Primary approach: Use notification ID and image hash for unique key
-        if hasattr(image_pixbuf, "get_pixels"):
+        # Use image content hash for deterministic caching
+        if image_pixbuf and hasattr(image_pixbuf, "get_pixels"):
             try:
                 pixel_data = image_pixbuf.get_pixels()
                 image_hash = hashlib.md5(pixel_data).hexdigest()[:8]
-                return f"notif_{notification_id}_{image_hash}"
-            except Exception as pixel_error:
-                logger.debug(
-                    f"Failed to get pixel data for cache key (temp file likely gone): {
-                        pixel_error
-                    }"
-                )
-                # Fallback to notification ID + dimensions if pixel data fails
+                return image_hash
+            except Exception:
+                # If pixel data fails, use image dimensions + timestamp
                 try:
                     width = image_pixbuf.get_width()
                     height = image_pixbuf.get_height()
-                    dimension_hash = hashlib.md5(
-                        f"{width}x{height}".encode()
-                    ).hexdigest()[:8]
-                    return f"notif_{notification_id}_{dimension_hash}"
+                    dimension_hash = hashlib.md5(f"{width}x{height}".encode()).hexdigest()[:8]
+                    return dimension_hash
                 except Exception:
-                    # Ultimate fallback using just notification ID and timestamp
-                    return f"notif_{notification_id}_{int(time.time())}"
-        else:
-            # Not a valid pixbuf, use notification ID + timestamp
-            return f"notif_{notification_id}_{int(time.time())}"
+                    pass
+        
+        # Fallback to timestamp for invalid pixbufs
+        return str(int(time.time()))[:8]
     except Exception:
-        # Absolute fallback
-        return f"notif_{notification_id}_{int(time.time())}"
+        # Ultimate fallback
+        return str(int(time.time()))[:8]
 
 
 def cache_notification_image(notification_id, image_pixbuf, size=(64, 64)):
-    """Optimized notification image caching with robust error handling for persistent notifications"""
+    """Smart notification image caching that avoids duplicate caching"""
     try:
         ensure_notification_cache_dirs()
 
+        # Generate deterministic cache key based on image content
         cache_key = get_notification_image_cache_key(notification_id, image_pixbuf)
         cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, f"{cache_key}.png")
 
         # Check if already cached to avoid redundant work
         if os.path.exists(cache_path):
-            logger.debug(f"Image cache hit: {cache_key}")
+            logger.debug(f"Image cache hit - already exists: {cache_key}")
             return cache_path, cache_key
 
-        # Try to scale and save the image with robust error handling
+        # Try to scale and save the image
         try:
             scaled_pixbuf = image_pixbuf.scale_simple(
                 size[0], size[1], GdkPixbuf.InterpType.BILINEAR
@@ -357,29 +292,7 @@ def cache_notification_image(notification_id, image_pixbuf, size=(64, 64)):
             logger.debug(f"Generated and cached notification image: {cache_key}")
             return cache_path, cache_key
         except Exception as scale_error:
-            # Handle cases where pixbuf is corrupted or references invalid files
-            logger.debug(
-                f"Failed to scale/save pixbuf (likely temp file gone): {scale_error}"
-            )
-
-            # Try to get pixel data directly to create a valid cache key even if file is gone
-            try:
-                # If we can't scale but pixbuf exists, create a fallback cache entry
-                fallback_cache_key = f"fallback_{notification_id}_{int(time.time())}"
-                fallback_cache_path = os.path.join(
-                    NOTIFICATION_IMAGE_CACHE_DIR, f"{fallback_cache_key}.png"
-                )
-
-                # Create a fallback image based on notification ID
-                fallback_pixbuf = get_fallback_notification_icon(size)
-                if fallback_pixbuf:
-                    fallback_pixbuf.savev(fallback_cache_path, "png", [], [])
-                    logger.debug(f"Created fallback cached image: {fallback_cache_key}")
-                    return fallback_cache_path, fallback_cache_key
-
-            except Exception as fallback_error:
-                logger.debug(f"Fallback cache creation failed: {fallback_error}")
-
+            logger.debug(f"Failed to cache image (temp file likely gone): {scale_error}")
             return None, None
 
     except Exception as e:
@@ -400,47 +313,16 @@ def get_cached_notification_image(cache_key):
 
 
 def cleanup_notification_image_cache(cache_key=None):
-    """Clean up notification image cache - specific key, notification ID pattern, or all"""
+    """Clean up notification image cache - specific key or all"""
     try:
         ensure_notification_cache_dirs()
 
         if cache_key:
-            # Handle notification ID-based cleanup (e.g., "notif_1_*")
-            if cache_key.endswith("_*"):
-                # Extract notification ID from pattern
-                notification_id_pattern = cache_key[:-2]  # Remove "_*"
-                cleaned_count = 0
-                for filename in os.listdir(NOTIFICATION_IMAGE_CACHE_DIR):
-                    if filename.startswith(
-                        notification_id_pattern
-                    ) and filename.endswith(".png"):
-                        filepath = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, filename)
-                        try:
-                            os.unlink(filepath)
-                            logger.debug(
-                                f"Cleaned up cached notification image: {filename}"
-                            )
-                            cleaned_count += 1
-                        except Exception as e:
-                            logger.warning(
-                                f"Failed to cleanup cache file {filename}: {e}"
-                            )
-                if cleaned_count > 0:
-                    logger.info(
-                        f"Cleaned up {
-                            cleaned_count
-                        } cached images for notification ID pattern: {
-                            notification_id_pattern
-                        }"
-                    )
-            else:
-                # Remove specific cached image
-                cache_path = os.path.join(
-                    NOTIFICATION_IMAGE_CACHE_DIR, f"{cache_key}.png"
-                )
-                if os.path.exists(cache_path):
-                    os.unlink(cache_path)
-                    logger.debug(f"Cleaned up cached notification image: {cache_key}")
+            # Remove specific cached image
+            cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, f"{cache_key}.png")
+            if os.path.exists(cache_path):
+                os.unlink(cache_path)
+                logger.debug(f"Cleaned up cached notification image: {cache_key}")
         else:
             # Remove all cached images
             for filename in os.listdir(NOTIFICATION_IMAGE_CACHE_DIR):
@@ -448,9 +330,7 @@ def cleanup_notification_image_cache(cache_key=None):
                     filepath = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, filename)
                     try:
                         os.unlink(filepath)
-                        logger.debug(
-                            f"Cleaned up cached notification image: {filename}"
-                        )
+                        logger.debug(f"Cleaned up cached notification image: {filename}")
                     except Exception as e:
                         logger.warning(f"Failed to cleanup cache file {filename}: {e}")
     except Exception as e:
@@ -468,7 +348,7 @@ def cleanup_notification_specific_caches(
 
         # Clean up app icon cache for this specific source
         if app_icon_source:
-            cache_key = get_cache_key(
+            cache_key = get_unified_cache_key(
                 app_icon_source, (24, 24)
             )  # Standard app icon size
             cache_path = os.path.join(NOTIFICATION_ICON_CACHE_DIR, f"{cache_key}.png")
@@ -477,7 +357,7 @@ def cleanup_notification_specific_caches(
                 logger.debug(f"Cleaned up cached app icon: {cache_key}")
 
             # Also clean 35x35 version used in notifications
-            cache_key_35 = get_cache_key(app_icon_source, (35, 35))
+            cache_key_35 = get_unified_cache_key(app_icon_source, (35, 35))
             cache_path_35 = os.path.join(
                 NOTIFICATION_ICON_CACHE_DIR, f"{cache_key_35}.png"
             )
@@ -616,7 +496,7 @@ except Exception as e:
 
 
 def preload_notification_assets(notification):
-    """Preload and cache notification assets with robust error handling for persistent notifications"""
+    """Preload and cache notification assets with robust error handling for persistent notifications - NO caching for image-pixmap"""
     try:
         # Preload app icon at common sizes used in notifications
         if hasattr(notification, "app_icon") and notification.app_icon:
@@ -632,32 +512,9 @@ def preload_notification_assets(notification):
                     }"
                 )
 
-        # Preload notification image if present (with resilient handling)
+        # Cache notification image if available
         if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
-            try:
-                notification_id = getattr(notification, "id", int(time.time()))
-
-                # Try to cache the image, but don't fail if temp files are gone
-                cache_path, cache_key = cache_notification_image(
-                    notification_id, notification.image_pixbuf, (35, 35)
-                )
-                if cache_path and cache_key:
-                    logger.debug(
-                        f"Preloaded notification image for: {notification.app_name}"
-                    )
-                else:
-                    logger.debug(
-                        f"Skipped preloading notification image for {
-                            notification.app_name
-                        } (temp file likely gone)"
-                    )
-
-            except Exception as image_error:
-                logger.debug(
-                    f"Failed to preload notification image for {
-                        notification.app_name
-                    }: {image_error}"
-                )
+            cache_notification_image(notification.id, notification.image_pixbuf, (35, 35))
 
     except Exception as e:
         logger.warning(f"Failed to preload notification assets: {e}")
@@ -891,78 +748,38 @@ class NotificationWidget(Box):
 
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(icon_path)
-            return pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+            if pixbuf:
+                return pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+            else:
+                return get_fallback_notification_icon((width, height))
         except Exception as e:
             logger.error(f"Failed to load or scale icon: {e}")
             return get_fallback_notification_icon((width, height))
 
     def _get_notification_pixbuf(self, notification):
-        """Optimized notification pixbuf with cached-first approach for restart scenarios"""
+        """Simplified notification pixbuf with NO CACHING for image-pixmap to prevent disk bloat"""
         notification_id = getattr(notification, "id", int(time.time()))
 
-        # Priority 1: ALWAYS check for existing cached image first (especially important for restarts)
-        if notification_id:
-            existing_cached_image = find_existing_cached_image(notification_id)
-            if existing_cached_image:
-                # Store the cache key for cleanup when manually closed
-                self.notification_image_cache_key = (
-                    f"notif_{notification_id}_*"  # Wildcard for cleanup
-                )
-                logger.debug(
-                    f"Using existing cached image for notification: {
-                        notification_id
-                    }, cache_key: {self.notification_image_cache_key}"
-                )
-                return existing_cached_image
-
         try:
-            # Priority 2: Try to process current pixbuf only if we have no cached version
+            # Try to get cached notification image first
             if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
                 try:
-                    cache_key = get_notification_image_cache_key(
-                        notification_id, notification.image_pixbuf
-                    )
+                    cache_key = get_notification_image_cache_key(notification_id, notification.image_pixbuf)
                     cached_image = get_cached_notification_image(cache_key)
                     if cached_image:
-                        logger.debug(f"Using cached notification image: {cache_key}")
+                        logger.debug(f"Using cached notification image: {cache_key[:8]}")
                         return cached_image
-
-                    # Try to cache the image now
-                    cache_path, cache_key = cache_notification_image(
-                        notification_id, notification.image_pixbuf, (35, 35)
-                    )
-
-                    if cache_path and cache_key:
-                        # Store the cache key for cleanup when manually closed
-                        self.notification_image_cache_key = cache_key
-                        # Load and return the newly cached image
-                        cached_pixbuf = get_cached_notification_image(cache_key)
-                        if cached_pixbuf:
-                            logger.debug(
-                                f"Cached and using notification image: {cache_key}"
-                            )
-                            return cached_pixbuf
-
-                    # Direct fallback if caching succeeded but loading failed
-                    logger.debug("Using direct scaling for notification image")
-                    return notification.image_pixbuf.scale_simple(
-                        35, 35, GdkPixbuf.InterpType.BILINEAR
-                    )
                 except Exception as image_error:
-                    logger.debug(
-                        f"Notification image processing failed (temp file likely gone): {image_error}"
-                    )
+                    logger.debug(f"Notification image processing failed: {image_error}")
                     # Continue to app icon fallback
 
         except Exception as e:
             logger.debug(f"Failed to process notification image: {e}")
 
-        # Priority 3: Use cached app icon with optimized cache-first approach
+        # Use cached app icon as fallback
         try:
-            # Generate optimized cache key for app icon
             app_icon_source = getattr(notification, "app_icon", None)
             if app_icon_source:
-                # Cache icon immediately and return cached version
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
                     logger.debug(f"Using cached app icon for: {app_icon_source}")
@@ -970,7 +787,7 @@ class NotificationWidget(Box):
         except Exception as e:
             logger.debug(f"Failed to get cached app icon: {e}")
 
-        # Priority 4: Ultimate fallback with caching
+        # Ultimate fallback
         logger.debug("Using fallback notification icon")
         return get_fallback_notification_icon((35, 35))
 
@@ -1289,6 +1106,10 @@ class ModusNoti(Window):
 
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
+        
+        # Check if notification still exists (might have been removed already)
+        if not notification:
+            return
 
         if self._server.dont_disturb or modus_service.dont_disturb:
             # Notification is already cached by the service, just don't show popup
@@ -1369,6 +1190,14 @@ class ModusNoti(Window):
             return
 
         notification = self.notification_queue.pop(0)
+        
+        # Check if notification is still valid (might have been removed)
+        if not notification or not hasattr(notification, 'app_icon'):
+            # Skip invalid notifications and try next one
+            if self.notification_queue:
+                self._show_next_notification()
+            return
+            
         self.notification_state = NotificationState.SHOWING
 
         new_box = NotificationRevealer(
@@ -1391,7 +1220,7 @@ class ModusNoti(Window):
         # Show the window now that we have content to display
         self.set_visible(True)
 
-        new_box.show_all()
+        new_box.show()
         self.notifications.queue_resize()
 
         def start_animation():

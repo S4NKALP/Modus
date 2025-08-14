@@ -8,7 +8,7 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GLib
+from gi.repository import GLib, GdkPixbuf
 from loguru import logger
 
 from modules.notification.notification import (
@@ -17,7 +17,6 @@ from modules.notification.notification import (
     cache_notification_image,
     get_cached_notification_image,
     get_notification_image_cache_key,
-    find_existing_cached_image,
     preload_notification_assets,
     cleanup_all_notification_caches,
     cleanup_notification_specific_caches,
@@ -309,84 +308,57 @@ class ExpandableNotificationGroup(Box):
         self.expanded_container.set_visible(False)
 
     def _get_notification_pixbuf(self, notification):
-        """Use cached-first approach prioritizing existing cache over pixbuf processing"""
+        """Simplified notification pixbuf for notification center"""
         notification_id = getattr(notification, "id", None)
 
-        # Priority 1: ALWAYS check for existing cached image first (critical for restart scenarios)
-        if notification_id:
-            existing_cached_image = find_existing_cached_image(notification_id)
-            if existing_cached_image:
-                logger.debug(
-                    f"Using existing cached image in center for notification: {
-                        notification_id
-                    }"
-                )
-                return existing_cached_image
-
         try:
-            # Priority 2: Try to process current pixbuf only if we have no cached version
-            if (
-                hasattr(notification, "image_pixbuf")
-                and notification.image_pixbuf
-                and notification_id
-            ):
+            # Try to process current pixbuf if available
+            if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
                 try:
                     cache_key = get_notification_image_cache_key(
                         notification_id, notification.image_pixbuf
                     )
                     cached_image = get_cached_notification_image(cache_key)
                     if cached_image:
-                        logger.debug(
-                            f"Using cached notification image in center: {cache_key}"
-                        )
+                        logger.debug(f"Using cached notification image: {cache_key}")
                         return cached_image
 
                     # Try to cache the image now
                     cache_path, cache_key = cache_notification_image(
                         notification_id, notification.image_pixbuf, (35, 35)
                     )
+
                     if cache_path and cache_key:
-                        cached_image = get_cached_notification_image(cache_key)
-                        if cached_image:
-                            logger.debug(
-                                f"Cached and using notification image in center: {cache_key}"
-                            )
-                            return cached_image
+                        cached_pixbuf = get_cached_notification_image(cache_key)
+                        if cached_pixbuf:
+                            logger.debug(f"Cached and using notification image: {cache_key}")
+                            return cached_pixbuf
 
-                    # Direct scaling fallback if caching works but loading fails
-                    logger.debug(
-                        "Using direct scaling for notification image in center"
+                    # Direct fallback if caching succeeded but loading failed
+                    logger.debug("Using direct scaling for notification image")
+                    return notification.image_pixbuf.scale_simple(
+                        35, 35, GdkPixbuf.InterpType.BILINEAR
                     )
-                    # GdkPixbuf.InterpType.BILINEAR = 2
-                    return notification.image_pixbuf.scale_simple(35, 35, 2)
-
                 except Exception as image_error:
-                    logger.debug(
-                        f"Notification image processing failed in center (temp file likely gone): {
-                            image_error
-                        }"
-                    )
+                    logger.debug(f"Notification image processing failed: {image_error}")
                     # Continue to app icon fallback
 
         except Exception as e:
-            logger.debug(f"Failed to process notification image in center: {e}")
+            logger.debug(f"Failed to process notification image: {e}")
 
-        # Priority 3: Use cached app icon with optimized cache-first approach
+        # Use cached app icon as fallback
         try:
-            # Use optimized caching for app icon
             app_icon_source = getattr(notification, "app_icon", None)
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(
-                        f"Using cached app icon in center for: {app_icon_source}"
-                    )
+                    logger.debug(f"Using cached app icon for: {app_icon_source}")
                     return cached_app_icon
         except Exception as e:
-            logger.debug(f"Failed to get cached app icon in center: {e}")
+            logger.debug(f"Failed to get cached app icon: {e}")
 
-        # Priority 4: Ultimate fallback with caching
-        logger.debug("Using fallback notification icon in center")
+        # Ultimate fallback
+        logger.debug("Using fallback notification icon")
         return get_fallback_notification_icon((35, 35))
 
     def on_clicked(self, widget, event):
@@ -446,49 +418,41 @@ class ExpandableNotificationGroup(Box):
         # Close all notifications in this group
         for notification in self.notifications:
             try:
-                # Get notification ID for cache cleanup
-                notification_id = getattr(notification._notification, "id", None)
-                app_icon_source = getattr(notification._notification, "app_icon", None)
-
-                # Clean up caches using notification ID pattern
-                if notification_id:
-                    cleanup_notification_specific_caches(
-                        app_icon_source=app_icon_source,
-                        notification_image_cache_key=f"notif_{notification_id}_*",
-                    )
-                    logger.debug(
-                        f"Cleaned up caches for notification ID: {notification_id}"
-                    )
+                # Get notification cache metadata for cleanup
+                cache_metadata = getattr(notification, 'cache_metadata', {})
+                
+                # Clean up caches using stored metadata
+                from modules.notification.notification import cleanup_notification_specific_caches
+                cleanup_notification_specific_caches(
+                    app_icon_source=notification._notification.app_icon,
+                    notification_image_cache_key=cache_metadata.get('notification_image_cache_key')
+                )
+                
+                logger.debug(f"Cleaned up caches for notification ID: {notification._notification.id}")
 
                 notification_service.remove_cached_notification(notification.cache_id)
             except Exception as e:
-                logger.error(
-                    f"Error removing notification {notification.cache_id}: {e}"
-                )
+                logger.error(f"Error removing notification {notification.cache_id}: {e}")
 
     def _close_single_notification(self, notification):
         """Close a single notification from this group with proper cache cleanup"""
         try:
-            # Get notification ID for cache cleanup
-            notification_id = getattr(notification._notification, "id", None)
-            app_icon_source = getattr(notification._notification, "app_icon", None)
-
-            # Clean up caches using notification ID pattern
-            if notification_id:
-                cleanup_notification_specific_caches(
-                    app_icon_source=app_icon_source,
-                    notification_image_cache_key=f"notif_{notification_id}_*",
-                )
-                logger.debug(
-                    f"Cleaned up caches for notification ID: {notification_id}"
-                )
+            # Get notification cache metadata for cleanup
+            cache_metadata = getattr(notification, 'cache_metadata', {})
+            
+            # Clean up caches using stored metadata
+            from modules.notification.notification import cleanup_notification_specific_caches
+            cleanup_notification_specific_caches(
+                app_icon_source=notification._notification.app_icon,
+                notification_image_cache_key=cache_metadata.get('notification_image_cache_key')
+            )
+            
+            logger.debug(f"Cleaned up caches for notification ID: {notification._notification.id}")
 
             notification_service.remove_cached_notification(notification.cache_id)
             logger.debug(f"Closed single notification: {notification.cache_id}")
         except Exception as e:
-            logger.error(
-                f"Error removing single notification {notification.cache_id}: {e}"
-            )
+            logger.error(f"Error removing single notification {notification.cache_id}: {e}")
 
     def _close_single_notification_and_stop_propagation(self, notification):
         """Close notification and prevent click from expanding the group"""
@@ -608,19 +572,19 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _on_close_clicked(self, *args):
         try:
-            # Get notification ID for cache cleanup
-            notification_id = getattr(self.notification, "id", None)
-            app_icon_source = getattr(self.notification, "app_icon", None)
-
-            # Clean up caches using notification ID pattern
-            if notification_id:
-                cleanup_notification_specific_caches(
-                    app_icon_source=app_icon_source,
-                    notification_image_cache_key=f"notif_{notification_id}_*",
-                )
-                logger.debug(
-                    f"Cleaned up caches for notification center ID: {notification_id}"
-                )
+            # Get notification cache metadata for cleanup
+            cache_metadata = getattr(self, 'cache_metadata', {})
+            if hasattr(self.notification, '_cache_metadata'):
+                cache_metadata = self.notification._cache_metadata
+            
+            # Clean up caches using stored metadata
+            from modules.notification.notification import cleanup_notification_specific_caches
+            cleanup_notification_specific_caches(
+                app_icon_source=self.notification.app_icon,
+                notification_image_cache_key=cache_metadata.get('notification_image_cache_key')
+            )
+            
+            logger.debug(f"Cleaned up caches for notification center ID: {self.notification.id}")
 
             notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
@@ -733,22 +697,6 @@ class NotificationCenter(Window):
 
             # Preload assets for each cached notification to ensure display consistency
             preload_notification_assets(cached_notification._notification)
-
-            # Check if we can find cached images for this notification
-            if notification_id:
-                existing_image = find_existing_cached_image(notification_id)
-                if existing_image:
-                    logger.debug(
-                        f"✓ Found cached image for notification {
-                            notification_id
-                        } during rebuild"
-                    )
-                else:
-                    logger.debug(
-                        f"✗ No cached image found for notification {
-                            notification_id
-                        } during rebuild"
-                    )
 
             self.notification_groups[app_name].append(cached_notification)
             rebuild_count += 1

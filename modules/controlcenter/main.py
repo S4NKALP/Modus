@@ -460,7 +460,7 @@ class ModusControlCenter(Window):
                         Box(
                             name="vol-box",
                             orientation="horizontal",
-                            spacing=8,
+                            spacing=12,
                             v_expand=True,
                             children=[
                                 Box(
