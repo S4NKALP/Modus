@@ -8,7 +8,7 @@ config/assets/dock.json
 config/assets/accounts.json
 config/assets/passwords.json
 config/assets/bookmarks.json
-config/hypr/modus.conf
+# config/hypr/modus.conf
 config/hypr/colors.conf
 fabric/**
 fabric/

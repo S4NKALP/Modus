@@ -155,7 +155,7 @@ class AppBar(Box):
         trash_icon_pixbuf = self.icon_resolver.get_icon_pixbuf(
             "user-trash", data.DOCK_ICON_SIZE
         )
-        
+
         trash_image = Image(name="dock_item_icon")
         trash_image.set_from_pixbuf(trash_icon_pixbuf)
 
@@ -287,11 +287,20 @@ class AppBar(Box):
         if event.button == 1:  # Left click
             try:
                 trash_path = os.path.expanduser("~/.local/share/Trash/files")
-                file_managers = ["nautilus", "dolphin", "thunar", "nemo", "caja", "pcmanfm"]
-                
+                file_managers = [
+                    "nautilus",
+                    "dolphin",
+                    "thunar",
+                    "nemo",
+                    "caja",
+                    "pcmanfm",
+                ]
+
                 for fm in file_managers:
                     try:
-                        result = subprocess.run(["which", fm], capture_output=True, text=True)
+                        result = subprocess.run(
+                            ["which", fm], capture_output=True, text=True
+                        )
                         if result.returncode == 0:
                             subprocess.Popen([fm, trash_path])
                             return
@@ -299,8 +308,6 @@ class AppBar(Box):
                         continue
             except Exception as e:
                 logger.error(f"[AppBar] Error opening trash: {e}")
-
-
 
     def _handle_item_hovered(self, item, pinned=False):
         if pinned:
@@ -527,9 +534,9 @@ class AppBar(Box):
 
         for app_identifier, button in self.pinned_buttons.items():
             # Skip trash button as it's not a regular app
-            if app_identifier == "trash" or hasattr(button, 'is_trash'):
+            if app_identifier == "trash" or hasattr(button, "is_trash"):
                 continue
-                
+
             if app_identifier.lower() in running_app_classes:
                 button.add_style_class("instance")
             else:
@@ -738,7 +745,7 @@ class Dock(Window):
     def __init__(self):
         if not data.DOCK_ENABLED:
             anchor = self._get_anchor_from_position()
-            super().__init__(layer="top", anchor=anchor)
+            super().__init__(layer="top", title="dock", anchor=anchor)
             self.children = Box()  # Empty dock if disabled
             return
 
