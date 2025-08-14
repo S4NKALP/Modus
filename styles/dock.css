@@ -22,44 +22,44 @@
 #dock_item.shown.semi_hovered #dock_item_main_container {
   margin-top: -7px;
 }
+/**/
+/* #dock_item.shown.semi_hovered #dock_item_indicator { */
+/*   margin-top: 11px; */
+/* } */
 
-#dock_item.shown.semi_hovered #dock_item_indicator {
-  margin-top: 11px;
-}
-
-#dock_item.shown.activated:hover #dock_item_main_container {
-  margin-top: -12px;
-}
-
-#dock_item.shown.activated:hover #dock_item_indicator {
-  margin-top: 16px;
-}
-
-#dock_item.shown.activated #dock_item_main_container {
-  margin-top: -4px;
-}
+/* #dock_item.shown.activated:hover #dock_item_main_container { */
+/*   margin-top: -12px; */
+/* } */
+/**/
+/* #dock_item.shown.activated:hover #dock_item_indicator { */
+/*   margin-top: 16px; */
+/* } */
+/**/
+/* #dock_item.shown.activated #dock_item_main_container { */
+/*   margin-top: -4px; */
+/* } */
 
 #dock_item.shown.activated #dock_item_icon {
   opacity: 1;
   /* background-color: #01458e; */
 }
 
-#dock_item.shown.activated #dock_item_indicator {
-  min-width: 4px;
-  margin-top: 8px;
-  background-color: #aac7ff;
-}
+/* #dock_item.shown.activated #dock_item_indicator { */
+/*   min-width: 4px; */
+/*   margin-top: 8px; */
+/*   background-color: #aac7ff; */
+/* } */
 
 #dock_item_icon {
   border-radius: 13px;
   opacity: 0.7;
 }
 
-#dock_item_indicator {
-  transition: all 0.15s ease-out;
-  min-height: 4px;
-  border-radius: 4px;
-}
+/* #dock_item_indicator { */
+/*   transition: all 0.15s ease-out; */
+/*   min-height: 4px; */
+/*   border-radius: 4px; */
+/* } */
 
 #dock_item {
   transition: margin 0.2s ease-out;
@@ -78,6 +78,7 @@
   transition: all 0.1s ease-out;
   min-width: 1.5px;
   min-height: 50px;
+  margin: 0px 4px;
   border-radius: 2px;
   background-color: #2b5ea7;
 }
@@ -88,9 +89,9 @@
   margin: 0px;
 }
 
-#dock_item.shown:not(.activated) {
-  min-width: 0px;
-  min-height: 0px;
-  margin-top: 0px;
-  background-color: transparent;
-}
+/* #dock_item.shown:not(.activated) { */
+/*   min-width: 0px; */
+/*   min-height: 0px; */
+/*   margin-top: 0px; */
+/*   background-color: transparent; */
+/* } */

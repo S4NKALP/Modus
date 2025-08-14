@@ -95,3 +95,61 @@ def get_wifi_connecting_icon() -> str:
     project_root = os.path.dirname(current_dir)
     
     return os.path.join(project_root, "config", "assets", "icons", "wifi", "wifi-connecting.svg")
+
+
+def is_special_workspace_id(ws_id) -> bool:
+    """
+    Check if a workspace ID represents a special workspace.
+    
+    Args:
+        ws_id: Workspace ID (can be int, string, or other types)
+        
+    Returns:
+        True if the workspace is special, False otherwise
+    """
+    try:
+        # Convert to int if it's a string
+        workspace_id = int(ws_id)
+        # Special workspaces have negative IDs
+        return workspace_id < 0
+    except (ValueError, TypeError):
+        # If it's a string, check if it starts with "special:"
+        if isinstance(ws_id, str) and ws_id.startswith("special:"):
+            return True
+        return False
+
+
+def is_special_workspace(client: dict) -> bool:
+    """
+    Check if a client is in a special workspace.
+    
+    Args:
+        client: Client data dictionary from Hyprland
+        
+    Returns:
+        True if the client is in a special workspace, False otherwise
+    """
+    if "workspace" not in client:
+        return False
+
+    workspace = client["workspace"]
+    
+    # Check workspace name first
+    if "name" in workspace:
+        workspace_name = str(workspace["name"])
+        # Special workspaces typically start with "special:" or have negative IDs
+        if workspace_name.startswith("special:"):
+            return True
+
+    # Check workspace ID
+    if "id" in workspace:
+        workspace_id = workspace["id"]
+        # Special workspaces have negative IDs
+        if workspace_id < 0:
+            return True
+
+    return False
+
+
+
+

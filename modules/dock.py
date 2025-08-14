@@ -16,7 +16,7 @@ from loguru import logger
 
 import config.data as data
 from services.modus import modus_service
-from utils.functions import read_json_file, write_json_file
+from utils.functions import read_json_file, write_json_file, is_special_workspace_id
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from widgets.wayland import WaylandWindow as Window
@@ -40,7 +40,7 @@ class AppBar(Box):
         )
 
         super().__init__(
-            spacing=10,
+            spacing=0,
             name="dock",
             orientation=orientation,
             children=[],
@@ -74,7 +74,7 @@ class AppBar(Box):
                 logger.error(f"[AppBar] Error updating apps: {e}")
             return True
 
-        GLib.timeout_add(1000, update_running_apps)
+        GLib.timeout_add(100, update_running_apps)
         GLib.idle_add(self.update_dock_apps)
 
     def _populate_pinned_apps(self):
@@ -486,42 +486,42 @@ class AppBar(Box):
             return None
 
     def update_dock_apps(self):
-        clients = self.get_clients()
-        focused_window = self.get_focused_window()
-        focused_address = focused_window.get("address", "") if focused_window else ""
+        try:
+            clients = self.get_clients()
+            focused_window = self.get_focused_window()
+            focused_address = focused_window.get("address", "") if focused_window else ""
 
-        current_instance_ids = set()
+            current_instance_ids = set()
 
-        for client in clients:
-            if client.get("hidden", False):
-                continue
+            for client in clients:
+                if client.get("hidden", False) or not self._should_show_app_instance(client):
+                    continue
 
-            # Skip apps in special workspaces if configured to hide them
-            if not self._should_show_app_instance(client):
-                continue
+                instance_address = client.get("address", "")
+                app_class = client.get("class", "") or client.get("title", "")
+                if not instance_address or not app_class:
+                    continue
 
-            instance_address = client.get("address", "")
-            if not instance_address:
-                continue
+                current_instance_ids.add(instance_address)
 
-            current_instance_ids.add(instance_address)
-            app_class = client.get("class", "") or client.get("title", "unknown-app")
+                if instance_address not in self.client_buttons:
+                    self.create_instance_button(instance_address, client, app_class)
+                else:
+                    self.update_instance_button(instance_address, client, app_class)
 
-            if instance_address not in self.client_buttons:
-                self.create_instance_button(instance_address, client, app_class)
-            else:
-                self.update_instance_button(instance_address, client, app_class)
+                button = self.client_buttons[instance_address]
+                if instance_address == focused_address:
+                    button.add_style_class("activated")
+                else:
+                    button.remove_style_class("activated")
 
-            button = self.client_buttons[instance_address]
-            if instance_address == focused_address:
-                button.add_style_class("activated")
-            else:
-                button.remove_style_class("activated")
+            self._update_pinned_apps_state(clients)
+            self._update_separator_visibility()
 
-        self._update_pinned_apps_state(clients)
-        self._update_separator_visibility()
-
-        self._cleanup_removed_instances(current_instance_ids)
+            self._cleanup_removed_instances(current_instance_ids)
+            
+        except Exception as e:
+            logger.error(f"[AppBar] Error in update_dock_apps: {e}")
 
     def _update_pinned_apps_state(self, clients):
         running_app_classes = {
@@ -549,91 +549,93 @@ class AppBar(Box):
             if instance_id not in current_instance_ids
         ]
 
-        for instance_id in buttons_to_remove:
-            button = self.client_buttons.pop(instance_id)
-            try:
-                if button in self.running_items_pos:
-                    self.running_items_pos.remove(button)
-                button.remove_style_class("shown")
-            except Exception:
-                pass
-
-            def remove_later():
+        # Clean up removed and orphaned buttons
+        for instance_id in buttons_to_remove + [k for k, v in self.client_buttons.items() 
+                                              if not hasattr(v, 'instance_address') or not v.get_parent()]:
+            if instance_id in self.client_buttons:
+                button = self.client_buttons.pop(instance_id)
                 try:
-                    self.running_apps_container.remove(button)
-                except Exception:
-                    pass
-                return False
-
-            GLib.timeout_add(250, remove_later)
+                    if button in self.running_items_pos:
+                        self.running_items_pos.remove(button)
+                    button.remove_style_class("shown")
+                    button.remove_style_class("activated")
+                    if button.get_parent():
+                        button.get_parent().remove(button)
+                    button.destroy()
+                except Exception as e:
+                    logger.warning(f"[AppBar] Error during cleanup: {e}")
 
     def create_instance_button(self, instance_address, client, app_class):
-        client_image = Image(name="dock_item_icon")
-
         try:
-            desktop_apps = get_desktop_applications(include_hidden=False)
-            desktop_app = self._find_desktop_app_by_id(app_class, desktop_apps)
+            client_image = Image(name="dock_item_icon")
 
-            if desktop_app:
-                pixbuf = desktop_app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
-            else:
-                pixbuf = self.icon_resolver.get_icon_pixbuf(
-                    app_class, data.DOCK_ICON_SIZE
+            try:
+                desktop_apps = get_desktop_applications(include_hidden=False)
+                desktop_app = self._find_desktop_app_by_id(app_class, desktop_apps)
+
+                if desktop_app:
+                    pixbuf = desktop_app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
+                else:
+                    pixbuf = self.icon_resolver.get_icon_pixbuf(
+                        app_class, data.DOCK_ICON_SIZE
+                    )
+
+                client_image.set_from_pixbuf(pixbuf)
+            except Exception as e:
+                logger.warning(f"[AppBar] Could not load icon for {app_class}: {e}")
+
+            workspace_id = self._get_workspace_id(client)
+            workspace_label = None
+            if workspace_id is not None:
+                workspace_label = Label(
+                    label=str(workspace_id),
+                    name="workspace-indicator",
+                    h_align="end",
+                    v_align="end",
                 )
 
-            client_image.set_from_pixbuf(pixbuf)
-        except Exception as e:
-            logger.warning(f"[AppBar] Could not load icon for {app_class}: {e}")
+            image_overlay = Overlay(name="dock-image-overlay", child=client_image)
+            if workspace_label:
+                image_overlay.add_overlay(workspace_label)
 
-        workspace_id = self._get_workspace_id(client)
-        workspace_label = None
-        if workspace_id is not None:
-            workspace_label = Label(
-                label=str(workspace_id),
-                name="workspace-indicator",
-                h_align="end",
-                v_align="end",
+            indicator = Box(name="dock_item_indicator", h_align="center")
+            main_container = Box(
+                name="dock_item_main_container",
+                orientation="v",
+                children=[image_overlay, indicator],
             )
 
-        image_overlay = Overlay(name="dock-image-overlay", child=client_image)
-        if workspace_label:
-            image_overlay.add_overlay(workspace_label)
+            tooltip_text = client.get("title", app_class)
+            if tooltip_text != app_class:
+                tooltip_text = f"{app_class}: {tooltip_text}"
 
-        indicator = Box(name="dock_item_indicator", h_align="center")
-        main_container = Box(
-            name="dock_item_main_container",
-            orientation="v",
-            children=[image_overlay, indicator],
-        )
+            client_button = Button(
+                name="dock_item",
+                child=main_container,
+                tooltip_text=tooltip_text,
+                on_button_press_event=lambda widget, event: self.handle_instance_click(
+                    widget, event
+                ),
+                on_enter_notify_event=lambda *_: self._handle_item_hovered(
+                    client_button, False
+                ),
+                on_leave_notify_event=lambda *_: self._handle_item_unhovered(
+                    client_button, False
+                ),
+            )
 
-        tooltip_text = client.get("title", app_class)
-        if tooltip_text != app_class:
-            tooltip_text = f"{app_class}: {tooltip_text}"
+            client_button.instance_address = instance_address
+            client_button.client_data = client
+            client_button.app_class = app_class
+            client_button.workspace_label = workspace_label
+            client_button.add_style_class("shown")
 
-        client_button = Button(
-            name="dock_item",
-            child=main_container,
-            tooltip_text=tooltip_text,
-            on_button_press_event=lambda widget, event: self.handle_instance_click(
-                widget, event
-            ),
-            on_enter_notify_event=lambda *_: self._handle_item_hovered(
-                client_button, False
-            ),
-            on_leave_notify_event=lambda *_: self._handle_item_unhovered(
-                client_button, False
-            ),
-        )
-
-        client_button.instance_address = instance_address
-        client_button.client_data = client
-        client_button.app_class = app_class
-        client_button.workspace_label = workspace_label
-        client_button.add_style_class("shown")
-
-        self.client_buttons[instance_address] = client_button
-        self.running_apps_container.add(client_button)
-        self.running_items_pos.append(client_button)
+            self.client_buttons[instance_address] = client_button
+            self.running_apps_container.add(client_button)
+            self.running_items_pos.append(client_button)
+            
+        except Exception as e:
+            logger.error(f"[AppBar] Error creating instance button for {app_class}: {e}")
 
     def _get_workspace_id(self, client):
         workspace_data = client.get("workspace", {})
@@ -644,16 +646,7 @@ class AppBar(Box):
         return None
 
     def _is_special_workspace_id(self, ws_id):
-        try:
-            # Convert to int if it's a string
-            workspace_id = int(ws_id)
-            # Special workspaces have negative IDs
-            return workspace_id < 0
-        except (ValueError, TypeError):
-            # If it's a string, check if it starts with "special:"
-            if isinstance(ws_id, str) and ws_id.startswith("special:"):
-                return True
-            return False
+        return is_special_workspace_id(ws_id)
 
     def _should_show_app_instance(self, client):
         if not data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS:
@@ -844,4 +837,4 @@ class Dock(Window):
 
             return True
 
-        GLib.timeout_add(250, check_dock_occlusion)
+        GLib.timeout_add(100, check_dock_occlusion)

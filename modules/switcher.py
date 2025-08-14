@@ -11,6 +11,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from utils.icon_resolver import IconResolver
 from utils.occlusion import get_screen_dimensions
+from utils.functions import is_special_workspace
 from widgets.wayland import WaylandWindow as Window
 
 gi.require_version("Glace", "0.1")
@@ -193,24 +194,7 @@ class ApplicationSwitcher(Window):
         image_widget.set_from_pixbuf(icon_img)
 
     def _is_special_workspace(self, client):
-        """Check if a client is in a special workspace"""
-        if "workspace" not in client:
-            return False
-
-        workspace = client["workspace"]
-        if "name" in workspace:
-            workspace_name = str(workspace["name"])
-            # Special workspaces typically start with "special:" or have negative IDs
-            if workspace_name.startswith("special:"):
-                return True
-
-        if "id" in workspace:
-            workspace_id = workspace["id"]
-            # Special workspaces have negative IDs
-            if workspace_id < 0:
-                return True
-
-        return False
+        return is_special_workspace(client)
 
     def update_windows(self) -> None:
         for child in self.view.get_children():
