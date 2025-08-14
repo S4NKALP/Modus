@@ -60,6 +60,9 @@ class ContentBox(CenterBox):
             on_activate=on_activate,
         )
 
+        face_icon = os.path.expanduser("~/.face.icon")
+        if not os.path.exists(face_icon):
+            face_icon = get_relative_path("./assets/default.png")
         self.password_entry.set_property("xalign", 0.5)
         self.username_label = Label(
             label=f"{getpass.getuser().title()}",
@@ -99,7 +102,7 @@ class ContentBox(CenterBox):
                     children=[
                         Image(
                             name="face-icon",
-                            image_file=os.path.expanduser("~/.face.icon"),
+                            image_file=face_icon,
                             size=64,
                         ),
                     ],
@@ -149,6 +152,8 @@ class LockScreen(Window):
         self.connect("key-press-event", self._on_keypress)
 
         bg = os.path.expanduser("~/.current.wall")
+        if not os.path.exists(bg):
+            bg = get_relative_path("./assets/wallpapers_example/example-1.png")
         self.set_style(f"background-image: url('{bg}');")
 
     def _on_keypress(self, widget, event):
