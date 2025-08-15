@@ -41,7 +41,7 @@
 ## Installation (WIP)
 
 ```bash
-paru -S glace-git gtk-session-lock python-pyotp python-pillow python-ijson python-setproctitle apple-fonts --needed
+paru -S glace-git gtk-session-lock python-pyotp python-pillow python-ijson python-setproctitle apple-fonts cinnamon-desktop --needed
 git clone https://github.com/S4NKALP/Modus ~/.config/Modus
 cd ~/.config/Modus
 python -m venv .venv
