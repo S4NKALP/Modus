@@ -9,7 +9,7 @@ from modules.launcher.plugin_manager import PluginManager
 from modules.launcher.result import Result
 from modules.launcher.result_item import ResultItem
 from modules.launcher.trigger_config import TriggerConfig
-from widgets.smartscrolled import SmartScrolledBox
+from fabric.widgets.scrolledwindow import ScrolledWindow
 from widgets.wayland import WaylandWindow as Window
 
 # Constants
@@ -107,14 +107,21 @@ class Launcher(Window):
 
         main_box.add(self.header_box)
 
-        self.results_scroll = SmartScrolledBox(max_height=LAUNCHER_HEIGHT)
+        self.results_scroll = ScrolledWindow(
+            name="launcher-results-scroll",
+            h_scrollbar_policy="never",
+            min_content_size=(LAUNCHER_WIDTH, LAUNCHER_HEIGHT),
+            max_content_size=(LAUNCHER_WIDTH, LAUNCHER_HEIGHT),
+            propagate_width=False,
+            propagate_height=False,
+        )
 
         self.results_box = Box(
             name="launcher-results",
             orientation="v",
             spacing=0,
         )
-        self.results_scroll.append(self.results_box)
+        self.results_scroll.add(self.results_box)
         main_box.add(self.results_scroll)
 
         # Keep the results container visible initially
@@ -741,10 +748,6 @@ class Launcher(Window):
 
         self.results_box.show_all()
 
-        # Force height constraints after adding results
-        self.results_scroll.force_height_constraint()
-
-        # Always show scroll container
         self.results_scroll.show()
 
     def _update_input_action_text(self):
@@ -801,13 +804,6 @@ class Launcher(Window):
         elif self.opened_with_trigger:
             # If launcher was opened with a trigger keyword, close directly
             self.close_launcher()
-            return True
-        elif self.triggered_plugin:
-            # Exit trigger mode
-            self.triggered_plugin = None
-            self.active_trigger = ""
-            self.search_entry.set_text("")
-            self._clear_results()
             return True
         else:
             # Hide launcher
