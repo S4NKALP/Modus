@@ -74,7 +74,7 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [ ] Installation Script
 - [ ] Proper Documentation
 - [ ] Pomodoro Timer Widget
-- [ ] To-do List Widget
+- [x] To-do List Widget
 
 ## Bug Fixes (the bug found till now)
 
@@ -82,6 +82,7 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [x] wifi off button looks bigger
 - [x] Metadata Changes delay in Media Player
 - [x] Active Window Title showing `Unknown` when no active window
+- [x] Notification Escape Char Issue
 
 ## Team
 
