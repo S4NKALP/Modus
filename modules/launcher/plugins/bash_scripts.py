@@ -31,25 +31,6 @@ class BashScriptsPlugin(PluginBase):
             "screen-capture.sh"  # Exclude screen-capture.sh as it's handled by screencapture plugin
         }
 
-        # Built-in power manager commands
-        self.power_manager_commands = {
-            "pm balanced": {
-                "description": "Switch to balanced power profile",
-                "profile": "balanced",
-                "icon": "power-balanced",
-            },
-            "pm performance": {
-                "description": "Switch to performance power profile",
-                "profile": "performance",
-                "icon": "power-performance",
-            },
-            "pm saver": {
-                "description": "Switch to power saver profile",
-                "profile": "power-saver",
-                "icon": "power-saving",
-            },
-        }
-
         # In-memory cache
         self._scripts_cache: Dict[str, Dict] = {}
         self._last_cache_update = 0
@@ -59,15 +40,11 @@ class BashScriptsPlugin(PluginBase):
         self._cache_building = False
         self._cache_thread = None
 
-        # Battery service reference
-        self._battery_service = None
-
     def initialize(self):
         """Initialize the bash scripts plugin."""
         self.set_triggers(["sh"])
         self._load_scripts_cache()
         self._start_background_cache_update()
-        self._get_battery_service()
 
     def cleanup(self):
         """Cleanup the bash scripts plugin."""
@@ -75,79 +52,6 @@ class BashScriptsPlugin(PluginBase):
         if self._cache_thread and self._cache_thread.is_alive():
             # Note: We don't join the thread to avoid blocking cleanup
             pass
-
-    def _get_battery_service(self):
-        """Get reference to the battery service."""
-        try:
-            from services.battery import Battery
-
-            self._battery_service = Battery()
-        except Exception as e:
-            print(f"BashScriptsPlugin: Error getting battery service: {e}")
-            self._battery_service = None
-
-    def _set_power_profile(self, profile: str) -> bool:
-        """Set the power profile using the battery service."""
-        if not self._battery_service:
-            print("BashScriptsPlugin: Battery service not available")
-            return False
-
-        try:
-            # Check if profile proxy is available
-            if (
-                not hasattr(self._battery_service, "_profile_proxy")
-                or not self._battery_service._profile_proxy
-            ):
-                print("BashScriptsPlugin: Power profile proxy not available")
-                return False
-
-            # Get available profiles
-            profiles = self._battery_service._profile_proxy.Profiles
-            available_profiles = []
-            for p in profiles:
-                if isinstance(p, dict) and "Profile" in p:
-                    available_profiles.append(p["Profile"])
-                elif hasattr(p, "Profile"):
-                    available_profiles.append(p.Profile)
-                elif isinstance(p, str):
-                    available_profiles.append(p)
-
-            # Map profile types to actual profile names
-            profile_mapping = {
-                "power-saver": ["power-saver", "powersave", "power_saver"],
-                "balanced": ["balanced", "balance"],
-                "performance": ["performance", "performance-mode"],
-            }
-
-            # Find the actual profile name
-            actual_profile = None
-            if profile in profile_mapping:
-                for candidate in profile_mapping[profile]:
-                    if candidate in available_profiles:
-                        actual_profile = candidate
-                        break
-            elif profile in available_profiles:
-                actual_profile = profile
-
-            if actual_profile:
-                self._battery_service._profile_proxy.ActiveProfile = actual_profile
-                print(
-                    f"BashScriptsPlugin: Successfully set power profile to {
-                        actual_profile
-                    }"
-                )
-                return True
-            else:
-                print(
-                    f"BashScriptsPlugin: No matching profile found for '{
-                        profile
-                    }' in available profiles: {available_profiles}"
-                )
-                return False
-
-        except Exception as e:
-            print(f"BashScriptsPlugin: Error setting power profile: {e}")
-            return False
 
     def _load_scripts_cache(self):
         """Load scripts cache from JSON file."""
@@ -310,18 +214,10 @@ class BashScriptsPlugin(PluginBase):
 
         results = []
 
-        # Check for power manager commands first
-        power_results = self._search_power_commands(query)
-        if power_results:
-            results.extend(power_results)
-
         # Handle special commands
         if not query:
             # Show all scripts when no query
             results.extend(self._list_all_scripts())
-            # Also show power manager commands when no query
-            if not power_results:
-                results.extend(self._list_all_power_commands())
         else:
             # Search for scripts
             results.extend(self._search_scripts(query))
@@ -405,94 +301,6 @@ class BashScriptsPlugin(PluginBase):
                 break
 
         return results
-
-    def _search_power_commands(self, query: str) -> List[Result]:
-        """Search for power manager commands matching the query."""
-        if not query:
-            return []
-
-        results = []
-        query_lower = query.lower()
-
-        for cmd, info in self.power_manager_commands.items():
-            cmd_lower = cmd.lower()
-            description_lower = info["description"].lower()
-
-            # Check for exact match or partial match
-            if (
-                query_lower == cmd_lower
-                or cmd_lower.startswith(query_lower)
-                or query_lower in cmd_lower
-                or query_lower in description_lower
-            ):
-                relevance = 1.0 if query_lower == cmd_lower else 0.9
-
-                result = Result(
-                    title=cmd,
-                    subtitle=info["description"],
-                    icon_name=info["icon"],
-                    action=self._create_power_action(info["profile"]),
-                    relevance=relevance,
-                    plugin_name=self.display_name,
-                    data={
-                        "command": cmd,
-                        "profile": info["profile"],
-                        "type": "power_manager",
-                    },
-                )
-                results.append(result)
-
-        return results
-
-    def _list_all_power_commands(self) -> List[Result]:
-        """List all power manager commands."""
-        results = []
-
-        for cmd, info in self.power_manager_commands.items():
-            result = Result(
-                title=cmd,
-                subtitle=info["description"],
-                icon_name=info["icon"],
-                action=self._create_power_action(info["profile"]),
-                relevance=0.8,
-                plugin_name=self.display_name,
-                data={
-                    "command": cmd,
-                    "profile": info["profile"],
-                    "type": "power_manager",
-                },
-            )
-            results.append(result)
-
-        return results
-
-    def _create_power_action(self, profile: str):
-        """Create an action function for setting power profile."""
-
-        def action():
-            success = self._set_power_profile(profile)
-            if success:
-                # Clear the search query after successful execution
-                try:
-                    from gi.repository import GLib
-
-                    from fabric import Application
-
-                    app = Application.get_default()
-                    if app and hasattr(app, "launcher"):
-                        launcher = app.launcher
-                        if launcher and hasattr(launcher, "search_entry"):
-
-                            def clear_search():
-                                launcher.search_entry.set_text("")
-                                return False
-
-                            # Use a small delay to ensure the action completes first
-                            GLib.timeout_add(50, clear_search)
-                except Exception as e:
-                    print(f"BashScriptsPlugin: Could not clear search query: {e}")
-
-        return action
 
     def _create_script_result(
         self, script_name: str, script_info: Dict, relevance: float
