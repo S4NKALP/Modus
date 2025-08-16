@@ -328,13 +328,18 @@ class BluetoothConnections(Box):
         current_state = self.other_devices_revealer.child_revealed
         self.other_devices_revealer.child_revealed = not current_state
 
-        # Update button text based on state
-        if self.other_devices_revealer.child_revealed:
-            # Trigger a scan when revealing other devices and force refresh
-            if self.client:
-                self.client.toggle_scan()
+        # Handle scanning based on section visibility
+        if self.client:
+            if self.other_devices_revealer.child_revealed:
+                # Start scanning when revealing other devices section
+                if not self.client.scanning:
+                    self.client.toggle_scan()
                 # Also force an immediate device refresh to catch any missed connections
                 self.force_device_refresh()
+            else:
+                # Stop scanning when hiding other devices section
+                if self.client.scanning:
+                    self.client.toggle_scan()
 
     def open_bluetooth_settings(self, *_):
         """Open Blueman bluetooth manager"""
