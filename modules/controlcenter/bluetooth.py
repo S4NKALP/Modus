@@ -2,7 +2,7 @@ import subprocess
 
 import gi
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
-from fabric.utils import get_relative_path
+from fabric.utils import exec_shell_command, get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -12,11 +12,30 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 from fabric.widgets.svg import Svg
-from gi.repository import Gdk, Gtk, GLib
+from gi.repository import Gdk, GLib, Gtk
+from loguru import logger
+
 from services.battery import Battery
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
+
+
+def set_bluetooth_enabled_with_fallback(client, enabled: bool):
+    try:
+        # Try fabric bluetooth first
+        client.set_enabled(enabled)
+    except Exception as e:
+        logger.warning(f"Fabric bluetooth set_enabled({enabled}) failed: {e}")
+
+        # Fallback to bluetoothctl using exec_shell_command
+        power_state = "on" if enabled else "off"
+        command = f"bluetoothctl power {power_state}"
+
+        try:
+            exec_shell_command(command)
+        except Exception as fallback_e:
+            logger.error(f"bluetoothctl fallback failed: {fallback_e}")
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -206,7 +225,9 @@ class BluetoothConnections(Box):
         self.toggle_button.set_active(self.client.enabled)
         self.toggle_button.connect(
             "notify::active",
-            lambda *_: self.client.set_enabled(self.toggle_button.get_active()),
+            lambda *_: set_bluetooth_enabled_with_fallback(
+                self.client, self.toggle_button.get_active()
+            ),
         )
 
         # Connect client signals

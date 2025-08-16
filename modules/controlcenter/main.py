@@ -12,7 +12,11 @@ from fabric.widgets.scale import Scale
 from fabric.widgets.svg import Svg
 from gi.repository import Gdk, GLib
 from loguru import logger
-from modules.controlcenter.bluetooth import BluetoothConnections
+
+from modules.controlcenter.bluetooth import (
+    BluetoothConnections,
+    set_bluetooth_enabled_with_fallback,
+)
 from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from modules.controlcenter.nightlight import create_night_light_widget
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
@@ -21,9 +25,6 @@ from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
 from services.mpris import MprisPlayerManager
 from services.network import NetworkClient
-from utils.animator import Animator
-from utils.animator import Animator
-from utils.animator import Animator
 from utils.roam import audio_service, modus_service
 from widgets.wayland import WaylandWindow as Window
 
@@ -824,12 +825,13 @@ class ModusControlCenter(Window):
         return True
 
     def toggle_bluetooth(self, *_):
-        """Toggle bluetooth on/off"""
         try:
             # Access the bluetooth client from the bluetooth manager
             if hasattr(self, "bluetooth_man") and hasattr(self.bluetooth_man, "client"):
                 current_state = self.bluetooth_man.client.enabled
-                self.bluetooth_man.client.set_enabled(not current_state)
+                set_bluetooth_enabled_with_fallback(
+                    self.bluetooth_man.client, not current_state
+                )
             else:
                 logger.warning("Bluetooth client not available for toggling")
         except Exception as e:
