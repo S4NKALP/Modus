@@ -63,7 +63,7 @@ class Battery(Service):
             "balanced": "Balanced",
             "balance": "Balanced",
             "performance": "Performance",
-            "performance-mode": "Performance"
+            "performance-mode": "Performance",
         }
         return profile_names.get(profile, profile.title())
 
@@ -140,20 +140,23 @@ class Battery(Service):
 
     @Property(str, "readable")
     def power_profile(self):
-        if self._profile_proxy:
-            return self._profile_proxy.ActiveProfile
+        if hasattr(self, "_profile_proxy") and self._profile_proxy:
+            try:
+                return self._profile_proxy.ActiveProfile
+            except Exception:
+                return None
         return None
 
     @Property(list, "readable")
     def available_profiles(self):
-        if self._profile_proxy:
+        if hasattr(self, "_profile_proxy") and self._profile_proxy:
             try:
                 profiles = []
                 for p in self._profile_proxy.Profiles:
-                    if hasattr(p, 'Profile'):
+                    if hasattr(p, "Profile"):
                         profiles.append(p.Profile)
-                    elif isinstance(p, dict) and 'Profile' in p:
-                        profiles.append(p['Profile'])
+                    elif isinstance(p, dict) and "Profile" in p:
+                        profiles.append(p["Profile"])
                     elif isinstance(p, str):
                         profiles.append(p)
                 return profiles
@@ -162,17 +165,17 @@ class Battery(Service):
         return []
 
     def change_power_profile(self, profile: str) -> bool:
-        if not self._profile_proxy:
+        if not hasattr(self, "_profile_proxy") or not self._profile_proxy:
             return False
 
         # Get available profiles using the same logic as available_profiles property
         available_profiles = []
         try:
             for p in self._profile_proxy.Profiles:
-                if hasattr(p, 'Profile'):
+                if hasattr(p, "Profile"):
                     available_profiles.append(p.Profile)
-                elif isinstance(p, dict) and 'Profile' in p:
-                    available_profiles.append(p['Profile'])
+                elif isinstance(p, dict) and "Profile" in p:
+                    available_profiles.append(p["Profile"])
                 elif isinstance(p, str):
                     available_profiles.append(p)
         except Exception:
@@ -194,6 +197,7 @@ class Battery(Service):
         self._bus = SystemBus()
         self._use_psutil_fallback = False
         self._psutil_battery = None
+        self._profile_proxy = None  # Initialize to None first
 
         # Battery device
         try:
@@ -213,7 +217,7 @@ class Battery(Service):
             except Exception:
                 return  # psutil battery not available either
 
-        # PowerProfiles
+        # PowerProfiles - Initialize after other attributes
         try:
             self._profile_proxy = self._bus.get(
                 "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"
