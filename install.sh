@@ -51,6 +51,7 @@ PACKAGES=(
     pyzbar
     python-pywayland
     python-psutil
+    python-pydbus
     gtk-session-lock
     swww
     apple-fonts
