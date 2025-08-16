@@ -74,7 +74,7 @@ class AppBar(Box):
                 logger.error(f"[AppBar] Error updating apps: {e}")
             return True
 
-        GLib.timeout_add(100, update_running_apps)
+        GLib.timeout_add(250, update_running_apps)
         GLib.idle_add(self.update_dock_apps)
 
     def _populate_pinned_apps(self):
@@ -751,7 +751,7 @@ class Dock(Window):
 
         self.revealer = Revealer(
             child=Box(children=[self.app_bar], style="padding: 20px 50px 5px 50px;"),
-            transition_duration=500,
+            transition_duration=200,
             transition_type=transition_type,
         )
 
@@ -783,7 +783,10 @@ class Dock(Window):
 
     def on_hover_leave(self):
         self.is_hovered = False
-        # Revealer/occlusion logic will handle CSS state
+        # Add small delay before potential hiding to prevent rapid show/hide cycles
+        if self.hide_timeout_id:
+            GLib.source_remove(self.hide_timeout_id)
+        self.hide_timeout_id = GLib.timeout_add(100, lambda: None)
 
     def _get_anchor_from_position(self):
         if data.DOCK_POSITION == "Left":
@@ -837,4 +840,4 @@ class Dock(Window):
 
             return True
 
-        GLib.timeout_add(100, check_dock_occlusion)
+        GLib.timeout_add(300, check_dock_occlusion)
