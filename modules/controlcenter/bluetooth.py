@@ -2,7 +2,7 @@ import subprocess
 
 import gi
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
-from fabric.utils import get_relative_path, exec_shell_command
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -12,9 +12,10 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 from fabric.widgets.svg import Svg
-from gi.repository import Gdk, Gtk, GLib
-from services.battery import Battery
+from gi.repository import Gdk, GLib, Gtk
 from loguru import logger
+
+from services.battery import Battery
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -26,21 +27,19 @@ def set_bluetooth_enabled_with_fallback(client, enabled: bool):
         client.set_enabled(enabled)
     except Exception as e:
         logger.warning(f"Fabric bluetooth set_enabled({enabled}) failed: {e}")
-
         # Fallback to rfkill to unblock/block bluetooth
         if enabled:
-            command = "rfkill unblock bluetooth"
+            command = ["rfkill", "unblock", "bluetooth"]
         else:
-            command = "rfkill block bluetooth"
+            command = ["rfkill", "block", "bluetooth"]
 
-        result = exec_shell_command(command)
-        if result is False:
-            logger.error(f"rfkill fallback failed: command '{command}' returned False")
-        elif isinstance(result, str) and result.strip():
-            # If result is a non-empty string, it might be an error message
-            logger.warning(f"rfkill command output: {result.strip()}")
-        else:
-            logger.info(f"rfkill fallback succeeded: {command}")
+        try:
+            # Execute the rfkill command
+            subprocess.run(
+                command, capture_output=True, text=True, timeout=10, check=True
+            )
+        except Exception as subprocess_error:
+            logger.error(f"rfkill fallback failed with exception: {subprocess_error}")
 
 
 class BluetoothDeviceSlot(CenterBox):
