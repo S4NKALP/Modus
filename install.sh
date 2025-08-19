@@ -52,6 +52,8 @@ PACKAGES=(
     python-pywayland
     python-psutil
     python-pydbus
+    python-thefuzz
+    python-pam
     gtk-session-lock
     swww
     apple-fonts
