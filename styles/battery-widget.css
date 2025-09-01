@@ -1,0 +1,149 @@
+#battery-widget {
+  background: rgba(0, 0, 0, 0);
+  padding-left: 5px;
+  padding-right: 5px;
+}
+.battery-main-title {
+  font-size: 16px;
+  font-weight: bold;
+
+  color: rgba(255, 255, 255, 0.95);
+  margin: 6px 10px;
+}
+
+.battery-power-source {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0px 12px;
+}
+
+.battery-section-title {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 8px 12px 4px 12px;
+}
+
+.battery-energy-item {
+  margin: 4px 12px;
+  padding: 4px 0;
+}
+
+.battery-status-section {
+  /* background: rgba(255, 255, 255, 0.06); */
+  /* border-radius: 12px; */
+  padding: 2px;
+  /* margin: 8px 0; */
+  /* border: 1px solid rgba(255, 255, 255, 0.08); */
+}
+
+.battery-percentage {
+  font-size: 16px;
+  margin-right: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+#energy-mode-button-clickable {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 1px 0;
+}
+
+#energy-mode-button-clickable:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#energy-mode-icon {
+  border-radius: 50%;
+  padding: 4px;
+  margin-top: -2px;
+  margin-bottom: -2px;
+  margin-right: 6px;
+  margin-left: -6px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#energy-mode-icon.connected {
+  background-color: #007aff;
+  color: #ffffff;
+}
+.battery-power-source {
+  font-size: 12px;
+  margin-bottom: -4px;
+  color: alpha(#ffffff, 0.5);
+}
+.battery-section-title {
+  font-size: 14px;
+  color: alpha(#ffffff, 0.7);
+  margin: 2px 0 0 8px;
+}
+.battery-power-mode {
+  font-size: 13px;
+}
+
+.battery-settings-button:hover {
+  margin-top: -5px;
+  background: alpha(#ffffff, 0.1);
+  min-height: 30px;
+  border-radius: 8px;
+}
+.battery-settings-button {
+  margin-top: -5px;
+  min-height: 30px;
+  border-radius: 8px;
+}
+.battery-settings-button label {
+  font-weight: 500;
+  color: alpha(#ffffff, 1);
+}
+#energy-mode-button:first-child {
+  margin-top: 0;
+}
+#energy-mode-button {
+  margin-top: -8px;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.gamemode-button {
+  font-size: 12px;
+  margin-left: -6px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+#game-mode-button {
+  margin: 2px 0;
+}
+#game-mode-icon {
+  margin-left: -6px;
+}
+
+#game-mode-button-clickable {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 1px 0;
+  /* min-height: 36px; */
+}
+
+#game-mode-button-clickable:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#game-mode-icon {
+  border-radius: 50%;
+  padding: 4px;
+  margin-right: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#game-mode-icon.connected {
+  background-color: #007aff;
+  color: #ffffff;
+}

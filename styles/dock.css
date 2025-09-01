@@ -1,0 +1,98 @@
+#dock {
+  background-color: alpha(#fff, 0.07);
+  padding: 4px 4px;
+  margin: 4px 4px;
+  border: none;
+  border-radius: 16px;
+  transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+#dock.shown {
+  transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+#dock_item_main_container {
+  transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+#dock_item.shown:hover #dock_item_main_container {
+  margin-top: -12px;
+}
+
+#dock_item.shown.semi_hovered #dock_item_main_container {
+  margin-top: -7px;
+}
+/**/
+/* #dock_item.shown.semi_hovered #dock_item_indicator { */
+/*   margin-top: 11px; */
+/* } */
+
+/* #dock_item.shown.activated:hover #dock_item_main_container { */
+/*   margin-top: -12px; */
+/* } */
+/**/
+/* #dock_item.shown.activated:hover #dock_item_indicator { */
+/*   margin-top: 16px; */
+/* } */
+/**/
+/* #dock_item.shown.activated #dock_item_main_container { */
+/*   margin-top: -4px; */
+/* } */
+
+#dock_item.shown.activated #dock_item_icon {
+  opacity: 1;
+  /* background-color: #01458e; */
+}
+
+/* #dock_item.shown.activated #dock_item_indicator { */
+/*   min-width: 4px; */
+/*   margin-top: 8px; */
+/*   background-color: #aac7ff; */
+/* } */
+
+#dock_item_icon {
+  border-radius: 13px;
+  opacity: 0.7;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* #dock_item_indicator { */
+/*   transition: all 0.15s ease-out; */
+/*   min-height: 4px; */
+/*   border-radius: 4px; */
+/* } */
+
+#dock_item {
+  transition: margin 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+#dock_item.shown {
+  padding-left: 4px;
+  opacity: 1;
+}
+
+#dock_item.shown:first-child {
+  padding-left: 0px;
+}
+
+.dock_separator {
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  min-width: 1.5px;
+  min-height: 50px;
+  margin: 0px 4px;
+  border-radius: 2px;
+  background-color: #2b5ea7;
+}
+
+.dock_separator.hidden {
+  min-width: 0px;
+  background-color: transparent;
+  margin: 0px;
+}
+
+/* #dock_item.shown:not(.activated) { */
+/*   min-width: 0px; */
+/*   min-height: 0px; */
+/*   margin-top: 0px; */
+/*   background-color: transparent; */
+/* } */

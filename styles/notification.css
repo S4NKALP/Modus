@@ -1,0 +1,84 @@
+#notification {
+  padding: 10px;
+  background-color: alpha(#fff, 0.03);
+  border-radius: 8px;
+  margin-top: 10px;
+  margin-right: 10px;
+  /* margin: 5px; */
+}
+
+#notification-close-button {
+  background-color: alpha(#999, 0.3);
+  border-radius: 8px;
+}
+#notification-close-button:hover {
+  background-color: alpha(#2369ff, 0.9);
+}
+
+#notification-action-buttons button {
+  background-color: alpha(#999, 0.3);
+  padding: 4px;
+  border-radius: 7px;
+  transition: background-color 0.1s ease;
+}
+
+#notification-action-buttons button:hover {
+  background-color: alpha(#2369ff, 0.9);
+}
+
+#notification-action-buttons button:active {
+  background-color: var(--primary);
+}
+
+#notification-action-buttons button:active #button-label {
+  color: var(--shadow);
+}
+
+#notification-image image {
+  border-radius: 16px;
+  color: var(--on-surface);
+}
+
+#notification-summary,
+#button-label {
+}
+
+#notification-summary {
+  font-weight: bold;
+  font-size: 16px;
+  /* color: var(--primary); */
+}
+
+#notification-app-name {
+  color: var(--outline);
+  font-weight: bold;
+}
+
+#action-button {
+  margin-top: 8px;
+}
+
+#notif-close-button {
+  background-color: var(--surface);
+  border-radius: 16px;
+  padding: 4px;
+  transition: background-color 0.1s ease;
+}
+
+#notif-close-button:hover,
+#notif-close-button:focus {
+  background-color: var(--surface-bright);
+}
+
+#notif-close-button:active {
+  background-color: var(--red-dim);
+}
+
+#notif-close-label {
+  color: var(--red-dim);
+  font-size: 20px;
+}
+
+#notif-close-button:active #notif-close-label {
+  color: var(--shadow);
+}

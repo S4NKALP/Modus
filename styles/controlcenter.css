@@ -1,0 +1,988 @@
+.title {
+  font-size: 16px;
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+}
+#control-center-menu {
+  background-color: transparent;
+  border-radius: 12px;
+  box-shadow: none;
+  margin: 0;
+}
+
+#separator {
+  min-height: 0.09rem;
+  margin: 3px 0;
+  background-color: alpha(#fff, 0.2);
+  border-radius: 8px;
+}
+
+/* #bluetooth-control-window { */
+/* #wifi-control-window, */
+#battery-control-window {
+  margin: 6px;
+  /* background-color: alpha(#fff, 0.09); */
+  border: 1px solid alpha(#111, 0.3);
+  box-shadow: inset 0 0 200px 0 alpha(#111, 0.3);
+  border-radius: 15px;
+}
+
+#bluetooth-title,
+#wifi-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+#control-center-widgets {
+  background-color: alpha(#010101, 0.01);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+  /* border: 1px solid alpha(#111, 0.4); */
+  border-radius: 12px;
+  padding: 0.5rem;
+}
+#focus-widget {
+}
+#wb-widget,
+#brightness-menu {
+  background-color: alpha(#000, 0.08);
+  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 12px;
+}
+/* Widgets */
+#wifi-widget,
+#bluetooth-widget,
+#nightlight-widget {
+  min-width: 140px;
+  padding: 5px 0 0px 0;
+}
+
+.icon {
+  background-color: #2369ff;
+  font-size: 15px;
+  padding: 20px 20px;
+}
+
+#bluetooth-widget-label,
+#wifi-widget-label,
+#nightlight-widget-label {
+  font-size: 12px;
+  margin-left: 5px;
+  font-weight: 500;
+  color: #999;
+}
+
+/* WiFi Password Dialog */
+#wifi-password-dialog {
+  background-color: transparent;
+}
+
+#wifi-dialog-background {
+  background-color: alpha(#fff, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  min-width: 450px;
+}
+
+#wifi-dialog-title-container {
+  /* margin-bottom: 12px; */
+}
+
+#wifi-dialog-icon {
+  color: #007aff;
+  margin-right: 4px;
+}
+
+#wifi-dialog-title {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#wifi-dialog-error {
+  color: #ff4444;
+  font-size: 12px;
+  font-weight: 500;
+  /* margin-bottom: 8px; */
+}
+
+#wifi-dialog-password-container {
+  margin: 5px 0;
+}
+
+#wifi-dialog-password-label {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+#wifi-dialog-password-entry {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+#wifi-dialog-password-entry:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#wifi-dialog-show-password-box {
+  margin-top: 4px;
+}
+
+#wifi-dialog-show-password-button {
+  background-color: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+#wifi-dialog-show-password-button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#wifi-dialog-show-password-button image {
+  color: #ffffff;
+}
+
+#wifi-dialog-show-password-label {
+  color: #ffffff;
+  font-size: 12px;
+}
+
+#wifi-dialog-button-box {
+  margin-top: -15px;
+}
+
+#wifi-dialog-cancel-button,
+#wifi-dialog-join-button {
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 80px;
+  min-height: 30px;
+}
+
+#wifi-dialog-cancel-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+#wifi-dialog-cancel-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#wifi-dialog-join-button {
+  background-color: #007aff;
+  border: 1px solid #007aff;
+  color: #ffffff;
+}
+
+#wifi-dialog-join-button:hover {
+  background-color: #0056cc;
+  border-color: #0056cc;
+}
+
+#wifi-dialog-join-button.disabled {
+  opacity: 0.5;
+  background-color: #555555;
+  border-color: #555555;
+  color: #aaaaaa;
+}
+
+#wifi-dialog-join-button.disabled:hover {
+  background-color: #555555;
+  border-color: #555555;
+  color: #aaaaaa;
+}
+
+#bluetooth-widget-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* #bluetooth-widget-top { */
+/*   padding-bottom: 10px; */
+/*   border-bottom: 1px solid alpha(#aaa, 0.3); */
+/* } */
+
+#device-icon {
+  border-radius: 50%;
+  padding: 5px;
+  margin-bottom: 2.5px;
+  margin-top: 2.5px;
+  margin-right: 10px;
+  background-color: #555;
+}
+
+#devices-title {
+  color: alpha(#fff, 0.6);
+}
+
+#device-icon.paired {
+  background-color: #888;
+}
+
+#device-icon.connected {
+  background-color: #2369ff;
+}
+
+#toggle-button {
+  min-width: 40px;
+  min-height: 20px;
+  background-color: #bababa;
+  border-radius: 15px;
+  padding: 2px;
+  transition: background-color 0.3s ease;
+}
+
+#toggle-button slider {
+  background-color: #fff;
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 8px;
+  transition: background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25);
+}
+
+#toggle-button:checked {
+  background-color: #4487f6;
+}
+
+/* #toggle-button:checked slider { */
+/*   background-color: #fff; */
+/* } */
+/**/
+/* #toggle-button:checked image { */
+/*   opacity: 0; */
+/* } */
+
+.menu {
+  background-color: alpha(#000, 0.08);
+  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 12px;
+  margin: 5px;
+  /* background-color: alpha(#999, 0.1); */
+  /* border: 0.5px solid alpha(#000, 0.4); */
+  /* border-radius: 8px; */
+  padding: 1rem;
+}
+
+.title {
+  padding: 0;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+#bluetooth-widget-name,
+#wifi-widget-name,
+#nightlight-widget-name {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.ct {
+  margin-left: 5px;
+}
+
+#vol-slider-box {
+  /* margin-bottom: 2px; */
+  margin-top: -10px;
+  /* border: 1px solid alpha(#fff, 1); */
+}
+#volume-widget-slider {
+  /* margin-bottom: 2px; */
+}
+#volume-widget-icon {
+  font-size: 22px;
+  margin-top: -35px;
+  margin-right: -36px;
+  color: #000;
+}
+
+#brightness-widget-icon {
+  font-size: 15px;
+  margin-top: -27px;
+  margin-right: -29px;
+  color: #000;
+}
+
+#control-center-menu slider {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
+  border-color: #000;
+  min-width: 28px;
+  min-height: 28px;
+  margin: -2px;
+  border-radius: 50%;
+  /* background-image: none; */
+  /* background-color: transparent; */
+  /* min-width: 4px; */
+  /* min-height: 40px; */
+  /* margin: -9px; */
+}
+
+#control-center-menu slider:hover {
+  border-color: #999;
+  min-width: 30px;
+  min-height: 30px;
+  margin: -3px;
+  border-radius: 50%;
+  /* background-image: none; */
+  /* background-color: transparent; */
+  /* min-width: 4px; */
+  /* min-height: 40px; */
+  /* margin: -9px; */
+}
+#control-center-menu scale {
+  background-color: transparent;
+  margin-top: 10px;
+  border-radius: 20px;
+}
+
+#control-center-menu trough {
+  min-width: 25px;
+  border-radius: 99px;
+  background-color: alpha(#666, 0.5);
+  border: 1px solid alpha(#444, 0.3);
+}
+
+#control-center-menu highlight {
+  background: alpha(#fff, 0.8);
+  border-radius: 99px;
+}
+
+#control-center-menu mark indicator {
+  background: none;
+  background-image: none;
+  color: alpha(#fff, 0.2);
+}
+
+#control-center-menu mark label {
+  background: none;
+  background-image: none;
+  color: alpha(#fff, 0.2);
+}
+
+/* Per-app volume control styles */
+#per-app-volume-control {
+  min-height: 140px;
+  min-width: 350px;
+  /* background-color: alpha(#000, 0.3); */
+  /* background-color: alpha(#999, 0.1); */
+  /* box-shadow: inset 0 0 200px 0 alpha(#111, 0.3); */
+  /* border: 0.5px solid alpha(#000, 0.4); */
+  border-radius: 8px;
+  padding: 1rem;
+
+  /* padding: 1rem; */
+}
+
+#apps-scrolled-container {
+  min-height: 120px;
+  min-width: 120px;
+}
+#back-button {
+  padding: 8px 12px;
+  background-color: alpha(#fff, 0.1);
+  border-radius: 8px;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+#back-button:hover {
+  background-color: alpha(#fff, 0.18);
+}
+
+/* Apple-style app volume items */
+.apple-app-volume-item {
+  margin: 3px 0;
+  padding: 16px;
+  background-color: alpha(#fff, 0.08);
+  border-radius: 12px;
+  border: 1px solid alpha(#fff, 0.12);
+  transition: background-color 0.2s ease;
+}
+
+.apple-app-volume-item:hover {
+  background-color: alpha(#fff, 0.12);
+}
+
+.apple-app-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+/* Apple-style volume slider */
+#apple-volume-slider {
+  background-color: transparent;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  min-height: 32px;
+}
+
+#apple-volume-slider trough {
+  min-width: 28px;
+  min-height: 6px;
+  border-radius: 3px;
+  background-color: alpha(#fff, 0.25);
+  border: none;
+  box-shadow: inset 0 1px 2px alpha(#000, 0.2);
+}
+
+#apple-volume-slider highlight {
+  background: linear-gradient(90deg, #007aff 0%, #0051d0 100%);
+  border-radius: 3px;
+  border: none;
+  box-shadow: 0 1px 3px alpha(#007aff, 0.3);
+}
+
+#apple-volume-slider slider {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  /* border: 2px solid alpha(#007aff, 0.8); */
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+  margin: -10px;
+  box-shadow:
+    0 2px 8px alpha(#000, 0.15),
+    0 1px 3px alpha(#000, 0.2);
+  transition: all 0.15s ease;
+}
+
+#apple-volume-slider slider:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
+  border-color: #007aff;
+  box-shadow:
+    0 4px 12px alpha(#000, 0.2),
+    0 2px 6px alpha(#007aff, 0.3);
+  min-width: 22px;
+  min-height: 22px;
+  margin: -9px;
+}
+
+#apple-volume-slider slider:active {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  min-width: 21px;
+  min-height: 21px;
+  margin: -9px;
+  box-shadow:
+    0 2px 6px alpha(#000, 0.25),
+    0 1px 3px alpha(#007aff, 0.4);
+}
+
+/* Legacy app volume styles (fallback) */
+.app-volume-item {
+  margin: 8px 0;
+  padding: 8px;
+  background-color: alpha(#fff, 0.05);
+  border-radius: 6px;
+  border: 1px solid alpha(#fff, 0.1);
+}
+
+.app-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+#app-volume-slider {
+  background-color: transparent;
+  margin-top: 5px;
+}
+
+#app-volume-slider trough {
+  min-width: 20px;
+  border-radius: 99px;
+  background-color: alpha(#666, 0.5);
+  border: 1px solid alpha(#444, 0.3);
+}
+
+#app-volume-slider highlight {
+  background: alpha(#0078d4, 0.8);
+  border-radius: 99px;
+}
+
+#app-volume-slider slider {
+  background-color: #fff;
+  padding: 2px;
+  min-width: 4px;
+  min-height: 18px;
+  border-radius: 20px;
+}
+
+/* Circle button for per-app volume */
+#per-app-volume-button {
+  background-color: alpha(#fff, 0.15);
+  border: 1px solid alpha(#999, 0.6);
+  /* min-width: 33px; */
+  /* min-height: 30px; */
+  border-radius: 50%;
+}
+
+#per-app-volume-button:hover {
+  background-color: alpha(#fff, 0.25);
+  /* border-color: #007aff; */
+  box-shadow: 0 4px 12px alpha(#000, 0.2);
+}
+
+#per-app-volume-button:active {
+  background-color: alpha(#fff, 0.2);
+  box-shadow: 0 1px 3px alpha(#000, 0.3);
+}
+
+#per-app-volume-icon {
+  background-color: alpha(#fff, 0.15);
+
+  border: 2px solid alpha(#999, 0.6);
+
+  border-radius: 50%;
+
+  min-width: 30px;
+}
+
+/* Apple-style seek bar for expanded player */
+#apple-seek-bar {
+  background-color: transparent;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  min-height: 10px;
+}
+
+#apple-seek-bar trough {
+  min-width: 28px;
+  min-height: 3px;
+  border-radius: 1.5px;
+  background-color: alpha(#fff, 0.3);
+  border: none;
+  box-shadow: inset 0 1px 1px alpha(#000, 0.1);
+}
+
+#apple-seek-bar highlight {
+  background: #007aff;
+  border-radius: 1.5px;
+  border: none;
+  box-shadow: 0 0 2px alpha(#007aff, 0.4);
+}
+
+#apple-seek-bar slider {
+  background: #ffffff;
+  border: 1px solid alpha(#007aff, 0.8);
+  border-radius: 50%;
+  min-width: 12px;
+  min-height: 12px;
+  margin: -4.5px;
+  box-shadow:
+    0 1px 3px alpha(#000, 0.2),
+    0 0 0 1px alpha(#fff, 0.8);
+  transition: all 0.1s ease;
+}
+
+#apple-seek-bar slider:hover {
+  background: #ffffff;
+  border-color: #007aff;
+  min-width: 14px;
+  min-height: 14px;
+  margin: -5.5px;
+  box-shadow:
+    0 2px 6px alpha(#000, 0.25),
+    0 0 0 2px alpha(#007aff, 0.3);
+}
+
+#apple-seek-bar slider:active {
+  background: #f8f9fa;
+  min-width: 13px;
+  min-height: 13px;
+  margin: -5px;
+  box-shadow:
+    0 1px 3px alpha(#000, 0.3),
+    0 0 0 2px alpha(#007aff, 0.5);
+}
+
+/* macOS-style expanded player - more compact */
+#macos-outer-player-box {
+  min-height: 80px; /* Reduced height */
+  min-width: 380px; /* Slightly wider to accommodate expanded track info */
+  /* margin: 10px; */
+  padding: 10px;
+  /* background-color: alpha(#000, 0.4); */
+}
+
+#macos-main-section {
+  margin-left: 5px;
+}
+
+#macos-album-cover-image image {
+  min-width: 70px;
+  min-height: 70px;
+  border-radius: 9px;
+}
+#macos-album-image {
+  min-width: 70px;
+  min-height: 70px;
+  border-radius: 9px;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 2px 8px alpha(#000, 0.3);
+}
+
+#macos-album-image-no {
+  min-width: 90px;
+  min-height: 90px;
+  border-radius: 9px;
+  margin-left: 12px;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 2px 8px alpha(#000, 0.3);
+}
+#macos-album-image image {
+  min-width: 70px;
+  min-height: 70px;
+  border-radius: 9px;
+  box-shadow: 0 2px 8px alpha(#000, 0.3);
+}
+
+/* Track info container that expands to fill available space */
+#macos-track-info {
+  margin-top: 5px;
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
+#macos-player-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+#macos-player-artist {
+  font-weight: 400;
+  margin-top: -2px;
+  font-size: 13px;
+  color: alpha(#999, 0.8);
+}
+
+#macos-player-album {
+  font-weight: 400;
+  margin-top: -4px;
+  font-size: 13px;
+  color: alpha(#999, 0.8);
+  margin-bottom: 8px;
+}
+/* macOS seek bar styling */
+#macos-seek-bar {
+  background-color: transparent;
+  margin: 8px 0 4px 0;
+  min-height: 10px;
+}
+
+#macos-seek-bar trough {
+  min-width: 200px;
+
+  min-height: 2px;
+  border-radius: 2px;
+  background-color: alpha(#fff, 0.25);
+  border: none;
+}
+
+#macos-seek-bar highlight {
+  background: #ffffff;
+  border-radius: 2px;
+  border: none;
+}
+
+#macos-seek-bar slider {
+  background: #ffffff;
+  border: none;
+  border-radius: 20%;
+  min-width: 1px;
+  min-height: 8px;
+  margin: -3px;
+  box-shadow: 0 1px 3px alpha(#000, 0.3);
+  transition: all 0.1s ease;
+}
+
+#macos-seek-bar slider:hover {
+  min-width: 4px;
+  min-height: 14px;
+  margin: -5px;
+  box-shadow: 0 2px 6px alpha(#000, 0.4);
+}
+
+#macos-position-label,
+#macos-length-label {
+  font-size: 11px;
+  color: alpha(#999, 0.9);
+  font-weight: 400;
+}
+
+/* macOS control buttons - more compact */
+#macos-button-box {
+  margin-top: -1px; /* Reduced top margin */
+}
+
+#macos-control-button {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  min-width: 28px; /* Slightly smaller */
+  opacity: 0.7;
+  min-height: 28px;
+  padding: 5px; /* Reduced padding */
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+#macos-control-button:hover {
+  opacity: 1;
+}
+
+#macos-play-button {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  min-width: 36px; /* Slightly smaller */
+  opacity: 0.7;
+  min-height: 36px;
+  padding: 7px; /* Reduced padding */
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+#macos-play-button:hover {
+  opacity: 1;
+}
+
+/* macOS player switcher dots - compact horizontal layout */
+#macos-stack-buttons-box {
+  margin: 2px 5px; /* Minimal margins */
+}
+
+.macos-switcher-dot {
+  background: alpha(#fff, 0.3);
+  /* border: none; */
+  border-radius: 50%;
+  min-width: 12px; /* Smaller dots */
+  min-height: 12px;
+  margin: 2px; /* Reduced margins */
+  /* transition: all 0.2s ease; */
+}
+
+.macos-switcher-dot:hover {
+  background: alpha(#fff, 0.5);
+}
+
+.macos-switcher-dot.active {
+  background: #ffffff;
+  box-shadow: 0 0 0 1px alpha(#fff, 0.3); /* Smaller glow */
+}
+
+/* Per app-volume-item */
+
+.compact-app-volume-item {
+  padding-bottom: 5px;
+  padding-right: 14px;
+  border-bottom: 1px solid alpha(#fff, 0.1);
+}
+#app-icon {
+  margin-top: 8px;
+}
+.app-name-compact {
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+#compact-app-volume-slider scale {
+  margin-right: 8px;
+  padding-right: 8px;
+}
+
+#expanded-seek-bar {
+  background-color: transparent;
+  margin: 8px 0 4px 0;
+  min-height: 10px;
+}
+
+#expanded-seek-bar trough {
+  min-width: 200px;
+
+  min-height: 2px;
+  border-radius: 2px;
+  background-color: alpha(#fff, 0.25);
+  border: none;
+}
+
+#expanded-seek-bar highlight {
+  background: #ffffff;
+  border-radius: 2px;
+  border: none;
+}
+
+#expanded-seek-bar slider {
+  background: #ffffff;
+  border: none;
+  border-radius: 20%;
+  min-width: 1px;
+  min-height: 10px;
+  margin: -3px;
+  box-shadow: 0 1px 3px alpha(#000, 0.3);
+  transition: all 0.1s ease;
+}
+
+#expanded-seek-bar slider:hover {
+  min-width: 4px;
+  min-height: 14px;
+  margin: -5px;
+  box-shadow: 0 2px 6px alpha(#000, 0.4);
+}
+
+/* macOS-style WiFi interface */
+#wifi-connections,
+#bluetooth-connections {
+  /* background-color: rgba(255, 255, 255, 0.08); */
+  background-color: alpha(#fff, 0.05);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 8px;
+  /* padding: 0.5rem; */
+  /* border-radius: 12px; */
+  padding: 10px;
+}
+
+/* WiFi network slots - macOS style */
+#wifi-network-slot button {
+  border-radius: 8px;
+  padding: 4px 4px;
+  /* min-width: 280px; */
+  margin: 2px 0;
+}
+
+#wifi-network-slot button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* WiFi-specific device icon styles */
+#wifi-connections #device-icon {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#wifi-connections #device-icon.connected {
+  background-color: #007aff;
+  color: #ffffff;
+}
+
+#wifi-network-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#wifi-lock-icon {
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 8px;
+}
+
+/* Other Networks and Settings buttons */
+#wifi-other-button {
+  background: transparent;
+  border: none;
+  padding: 8px 6px;
+  margin-bottom: -12px;
+  margin-top: -6px;
+  border-radius: 8px;
+  /* transition: background-color 0.2s ease; */
+}
+
+#wifi-other-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+#wifi-other-button:last-child {
+  margin-bottom: 3px;
+}
+
+#device-button {
+  /* background-color: #000; */
+  border-radius: 8px;
+}
+.device-slot:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.button-hovered {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#wifi-other-device label,
+#wifi-other-button label {
+  font-size: 12px;
+  font-weight: bold;
+}
+#app-volume-header {
+  font-size: 16px;
+  padding-left: 5px;
+  margin-top: -2px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.wifi-icon-box {
+  background-color: #aaaaaa;
+  border-radius: 50%;
+  padding: 2px;
+  /* margin-right: 8px; */
+}
+.wifi-icon-box-connected {
+  background-color: #007aff;
+  border-radius: 50%;
+  padding: 2px;
+  /* margin-right: 8px; */
+}
+
+/* #flight-icon { */
+/*   margin-left: -10px; */
+/* } */
+
+.title-widget {
+  /* margin-top: -14px; */
+  /* margin-left: 5px; */
+  font-size: 13px;
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+}
+.status-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #aaa;
+  /* margin-top: -28px; */
+  /* margin-left: 5px; */
+  font-family: "SF Pro Rounded";
+  /* font-weight: bold; */
+  /* margin-bottom: 2px; */
+}
+
+#app-control-box {
+  min-width: 100px;
+}
+#caffeine-widget,
+#flight-widget {
+  padding: 0px 0 5px 0;
+  min-width: 50px;
+}

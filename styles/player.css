@@ -1,0 +1,178 @@
+#player-stack-button {
+  border-radius: 5px;
+  min-width: 7px;
+  min-height: 7px;
+  margin: 10px 3px;
+}
+
+#button-box-c {
+  /* margin-left: -10px; */
+
+  padding-right: 15px;
+}
+
+#player-stack-button:hover {
+  background-color: #646464;
+  box-shadow: inset rgba(255, 255, 255, 0.5) 0 0 10px;
+}
+
+#player-stack-button.active {
+  border-radius: 5px;
+  background-color: rgb(221.25, 221.25, 223.65);
+}
+
+#outer-player-box {
+  min-height: 110px;
+  min-width: 320px;
+  border-radius: 10px;
+  margin: 0 6px;
+  background-color: alpha(#000, 0.3);
+  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
+}
+
+#outer-player-box-c {
+  min-height: 55px;
+  min-width: 245px;
+  border-radius: 8px;
+  /* margin: 0 6px; */
+  /* background-color: alpha(#000, 0.3); */
+  /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
+}
+#outer-no-player-box-c {
+  min-height: 55px;
+  min-width: 310px;
+  border-radius: 8px;
+  /* margin: 0 6px; */
+  /* background-color: alpha(#000, 0.3); */
+  /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
+}
+#box-c {
+  background-color: alpha(#000, 0.08);
+  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
+  border: 1px solid alpha(#111, 0.4);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-bottom: 0.5rem;
+
+  min-height: 50px;
+  min-width: 330px;
+  /* border-radius: 8px; */
+  /* margin: 0 6px 10px; */
+  /* border: 0.5px solid alpha(#000, 0.4); */
+  /* background-color: alpha(#999, 0.1); */
+  /* box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4); */
+}
+#player-box:disabled highlight,
+#player-box:disabled progress {
+  background-color: rgba(205, 214, 244, 0.6);
+  background-image: none;
+}
+
+#player-info-box-c {
+  margin-left: 10px;
+}
+#player-info-box {
+  margin-left: 10px;
+}
+
+#player-title-c {
+  /* margin-top: 18px; */
+  font-weight: bold;
+  font-size: 14px;
+}
+#player-title {
+  margin-top: 18px;
+  font-weight: 700;
+  font-size: 16px;
+}
+#player-title-no {
+  font-weight: 700;
+  margin-left: 120px;
+  font-size: 16px;
+}
+#player-app-icon {
+  margin-bottom: 10px;
+}
+
+#player-artist-c {
+  margin-top: -5px;
+  color: #999;
+  font-size: 12px;
+}
+#player-artist,
+#player-album {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+#player-controls {
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+
+.player-icon {
+  font-size: 16px;
+}
+
+.player-button {
+  padding: 1px;
+}
+
+#player-box #player-controls #button-box .player-button:disabled {
+  color: #5f5f5f;
+}
+
+#player-button {
+  opacity: 0.5;
+}
+#player-button:hover {
+  opacity: 0.9;
+}
+
+#btn svg {
+  margin: 0 2px;
+}
+.album-image-c {
+  min-width: 50px;
+  min-height: 50px;
+  background-position: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  background-size: cover;
+  margin-left: 10px;
+  border-radius: 5px;
+}
+.album-image {
+  min-width: 70px;
+  min-height: 70px;
+  background-position: center;
+  background-size: cover;
+  margin-left: 12px;
+  border-radius: 9px;
+}
+
+#seek-bar slider {
+  background-image: none;
+  background-color: transparent;
+  padding: 0px;
+}
+
+#seek-bar scale {
+  background-color: transparent;
+  margin-top: 10px;
+  border-radius: 10px;
+}
+
+#seek-bar trough {
+  min-width: 10px;
+  border-radius: 99px;
+  background-color: alpha(#666, 0.5);
+  border: 1px solid alpha(#444, 0.3);
+}
+
+#seek-bar highlight {
+  background: alpha(#fff, 0.8);
+  border-radius: 99px;
+}

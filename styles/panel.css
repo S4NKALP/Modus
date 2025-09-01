@@ -1,0 +1,147 @@
+#panel {
+  background-color: alpha(#fff, 0.07);
+
+  /* border-bottom: 1px solid alpha(#010101, 0.025); */
+  margin-top: -4px;
+  margin-bottom: -4px;
+  transition: all 120ms ease-in-out;
+}
+
+#panel-icon {
+  font-size: 18px;
+}
+#global-title-button {
+  font-weight: bold;
+}
+
+#panel-button {
+  margin: 0 4px 0 4px;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+#panel-button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#menubar {
+  margin: 4px 0;
+}
+
+#menubar label {
+  font-size: 13px;
+  /* font-weight: 400; */
+}
+#battery-label {
+  font-weight: 500;
+  margin-right: 1px;
+}
+#battery-button {
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 8px;
+}
+
+#battery-button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#network-button {
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 8px;
+}
+
+#network-button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#bt-button {
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 8px;
+}
+
+#bt-button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#tray-button {
+  border-radius: 8px;
+  margin: 0 4px 0 0px;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+#tray-button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#date-time {
+  margin: 0 10px;
+  font-weight: 500;
+}
+
+#modules-left,
+#modules-right {
+  margin: 0 5px;
+  padding: 3px 0;
+}
+
+.button {
+  border-radius: 5px;
+  padding: 0 5px;
+  margin: 0 2.5px;
+  background: radial-gradient(alpha(#aaa, 0) 0%, transparent, transparent);
+  transition: all 100ms ease-in-out;
+}
+
+.button:hover {
+  background: radial-gradient(alpha(#aaa, 0.2) 100%, transparent, transparent);
+}
+
+#modus-button label {
+  font-size: 17px;
+  margin: 0 10px;
+}
+
+#workspace-indicator {
+  margin: 0 4px;
+}
+
+#workspaces label {
+  font-family: "SF Pro Rounded";
+  color: white; /* fully transparent text */
+}
+#workspaces > button {
+  padding-top: 0px;
+  padding-right: 16px;
+  font-family: "SF Pro Rounded";
+  padding-left: 16px;
+
+  margin: 6px 0px;
+  min-width: 12px;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+
+#workspaces > button:hover {
+  background-color: alpha(#fff, 0.1);
+}
+
+#workspaces > button.active {
+  background-color: alpha(#fff, 0.9);
+  /* font-weight: bold; */
+}
+
+#workspaces > button.active label {
+  color: alpha(#000, 1);
+  font-family: "SF Pro Rounded";
+}
+#workspaces > button.urgent {
+  background-color: alpha(var(--on-error), 0.7);
+}
+
+#workspaces > button.empty {
+  background-color: transparent;
+}

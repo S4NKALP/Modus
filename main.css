@@ -1,0 +1,34 @@
+@import url("./styles/colors.css");
+@import url("./styles/panel.css");
+@import url("./styles/dock.css");
+@import url("./styles/switcher.css");
+@import url("./styles/launcher.css");
+@import url("./styles/osd.css");
+@import url("./styles/controlcenter.css");
+@import url("./styles/notification.css");
+@import url("./styles/dropdown.css");
+@import url("./styles/about.css");
+@import url("./styles/notification-center.css");
+@import url("./styles/player.css");
+@import url("./styles/widgets.css");
+@import url("./styles/tray.css");
+@import url("./styles/battery-widget.css");
+@import url("./styles/lock.css");
+@import url("./styles/todo.css");
+
+* {
+  all: unset;
+  color: var(--foreground);
+  font-size: unset;
+  font-family: "SF Pro Rounded";
+}
+
+#corner {
+  background-color: var(--shadow);
+  border-radius: 0;
+}
+
+#corner-container {
+  min-width: 20px;
+  min-height: 20px;
+}

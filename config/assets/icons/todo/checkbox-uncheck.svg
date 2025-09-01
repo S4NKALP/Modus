@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   width="800px"
+   height="800px"
+   viewBox="0 0 24 24"
+   fill="none"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="checkbox-uncheck.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.549375"
+     inkscape:cx="334.01593"
+     inkscape:cy="498.74858"
+     inkscape:window-width="954"
+     inkscape:window-height="1045"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Interface / Checkbox_Check" />
+  <g
+     id="Interface / Checkbox_Check">
+    <path
+       id="Vector"
+       d="m 4,16.8002 v -9.6 C 4,6.08009 4,5.51962 4.21799,5.0918 4.40973,4.71547 4.71547,4.40973 5.0918,4.21799 5.51962,4 6.08009,4 7.2002,4 h 9.6 c 1.1201,0 1.6794,0 2.1072,0.21799 0.3763,0.19174 0.6831,0.49748 0.8748,0.87381 C 20,5.5192 20,6.07899 20,7.19691 v 9.60669 c 0,1.1179 0,1.6769 -0.2178,2.1043 -0.1917,0.3763 -0.4985,0.6826 -0.8748,0.8743 C 18.48,20 17.921,20 16.8031,20 H 7.19691 C 6.07899,20 5.5192,20 5.0918,19.7822 4.71547,19.5905 4.40973,19.2842 4.21799,18.9079 4,18.4801 4,17.9203 4,16.8002 Z"
+       stroke="#000000"
+       stroke-width="2"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       sodipodi:nodetypes="ssccssccssccssccs" />
+    <path
+       style="fill:#ffffff;stroke:none;stroke-width:0;stroke-linejoin:round;stroke-dasharray:none"
+       d="m 197.49716,698.05867 c -9.51081,-0.69714 -20.97839,-2.28442 -25.48351,-3.52728 -23.70435,-6.53953 -49.53163,-28.08527 -60.0267,-50.07571 -11.25625,-23.58535 -11.13566,-20.69772 -10.54104,-252.42412 0.50777,-197.87636 0.73145,-210.5848 3.87255,-220.01791 10.98818,-32.99882 33.69637,-55.70701 66.69519,-66.69519 9.43311,-3.1411 22.14155,-3.36478 220.01791,-3.87255 231.59178,-0.59428 228.85346,-0.7082 252.33345,10.49777 15.3635,7.33232 34.26318,25.68875 42.34389,41.12675 12.42777,23.74297 11.88232,14.05756 12.69599,225.43391 0.78039,202.7352 -0.0884,235.68165 -6.71864,254.79581 -9.30619,26.82845 -32.58524,50.14014 -59.23915,59.32223 -6.58312,2.26783 -19.59829,4.44143 -32.76451,5.47182 -24.77577,1.93895 -376.67127,1.90795 -403.18543,-0.0355 z m 416.8785,-66.68447 c 7.41973,-3.34954 16.1894,-13.53942 17.68441,-20.54837 0.76286,-3.5765 1.38703,-99.88158 1.38703,-214.01127 0,-232.19509 1.09029,-213.46397 -13.05322,-224.25175 l -6.68616,-5.09978 H 400.59675 c -209.88362,0 -213.20246,0.0551 -219.15251,3.6405 -3.32285,2.00227 -7.82797,6.50739 -10.01138,10.01137 l -3.96983,6.37088 v 213.11097 213.11097 l 5.07967,6.65981 c 6.00435,7.87211 10.54552,10.61402 20.40383,12.3196 13.0969,2.2659 416.28392,1.0098 421.42913,-1.31293 z"
+       id="path2"
+       transform="scale(0.03)" />
+  </g>
+</svg>
