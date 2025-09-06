@@ -18,7 +18,7 @@ set -u          # Treat unset variables as an error
 set -o pipefail # Prevent errors in a pipeline from being masked
 
 REPO_URL="https://github.com/S4NKALP/Modus.git"
-INSTALL_DIR="$HOME/.config/Modus1"
+INSTALL_DIR="$HOME/.config/Modus"
 
 PACKAGES=(
     python-fabric-git
