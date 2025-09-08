@@ -1,3 +1,4 @@
+from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
 from fabric.system_tray.widgets import SystemTray
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
@@ -6,6 +7,8 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.svg import Svg
+
+import config.data as data
 from modules.controlcenter.main import ModusControlCenter
 from modules.notification.notification_center import NotificationCenter
 from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
@@ -16,12 +19,12 @@ from modules.panel.components.indicators import (
 )
 from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
-from modules.panel.components.workspace import WorkspaceIndicator
 from modules.todo.todo_widget import TodoListCapture
+from services.modus import notification_service
+from utils.functions import is_special_workspace_id
 from utils.roam import modus_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
-from services.modus import notification_service
 
 # Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
@@ -41,6 +44,16 @@ class Panel(Window):
         self.launcher = kwargs.get("launcher", None)
         self.menubar = MenuBar(parent_window=self)
 
+        self.workspace_indicator = HyprlandWorkspaces(
+            name="workspaces",
+            spacing=4,
+            buttons_factory=lambda ws_id: (
+                None
+                if data.HIDE_SPECIAL_WORKSPACE and is_special_workspace_id(ws_id)
+                else WorkspaceButton(id=ws_id, label=str(ws_id))
+            ),
+        )
+
         self.imac = Button(
             name="panel-button",
             child=Svg(
@@ -50,10 +63,7 @@ class Panel(Window):
             on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
         )
 
-        # DND indicator - REMOVED
-
         self.tray = SystemTray(name="system-tray", spacing=4, icon_size=20)
-
         self.tray_revealer = Revealer(
             name="tray-revealer",
             child=self.tray,
@@ -139,9 +149,6 @@ class Panel(Window):
         )
 
         self.recording_indicator = RecordingIndicator()
-
-        # Workspace indicator
-        self.workspace_indicator = WorkspaceIndicator()
 
         self.children = CenterBox(
             name="panel",

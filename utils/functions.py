@@ -66,7 +66,7 @@ def get_wifi_icon_for_strength(strength: int) -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # Get the project root (parent of utils directory)
     project_root = os.path.dirname(current_dir)
-    
+
     if strength >= 80:
         icon_name = "network-wireless-100.svg"
     elif strength >= 60:
@@ -94,20 +94,14 @@ def get_wifi_connecting_icon() -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # Get the project root (parent of utils directory)
     project_root = os.path.dirname(current_dir)
-    
-    return os.path.join(project_root, "config", "assets", "icons", "wifi", "wifi-connecting.svg")
+
+    return os.path.join(
+        project_root, "config", "assets", "icons", "wifi", "wifi-connecting.svg"
+    )
 
 
+# Function to check if a workspace ID is special
 def is_special_workspace_id(ws_id) -> bool:
-    """
-    Check if a workspace ID represents a special workspace.
-    
-    Args:
-        ws_id: Workspace ID (can be int, string, or other types)
-        
-    Returns:
-        True if the workspace is special, False otherwise
-    """
     try:
         # Convert to int if it's a string
         workspace_id = int(ws_id)
@@ -120,33 +114,23 @@ def is_special_workspace_id(ws_id) -> bool:
         return False
 
 
+# Function to check if a client is on a special workspace
 def is_special_workspace(client: dict) -> bool:
-    """
-    Check if a client is in a special workspace.
-    
-    Args:
-        client: Client data dictionary from Hyprland
-        
-    Returns:
-        True if the client is in a special workspace, False otherwise
-    """
     if "workspace" not in client:
         return False
 
     workspace = client["workspace"]
-    
+
     # Check workspace name first
     if "name" in workspace:
-        workspace_name = str(workspace["name"])
-        # Special workspaces typically start with "special:" or have negative IDs
-        if workspace_name.startswith("special:"):
+        workspace_name = workspace["name"]
+        if is_special_workspace_id(workspace_name):
             return True
 
     # Check workspace ID
     if "id" in workspace:
         workspace_id = workspace["id"]
-        # Special workspaces have negative IDs
-        if workspace_id < 0:
+        if is_special_workspace_id(workspace_id):
             return True
 
     return False
@@ -155,20 +139,16 @@ def is_special_workspace(client: dict) -> bool:
 def escape_markup_text(text: str) -> str:
     """
     Escape special characters in text to make it safe for Pango markup.
-    
+
     Args:
         text: Raw text that may contain special characters
-        
+
     Returns:
         Escaped text safe for use in Pango markup
     """
     if not text or not isinstance(text, str):
         return ""
-    
+
     # Use html.escape to escape XML/HTML special characters
     # This handles &, <, >, and quotes
     return html.escape(text)
-
-
-
-

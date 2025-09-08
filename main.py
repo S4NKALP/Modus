@@ -1,7 +1,5 @@
-import gi
 import setproctitle
 from fabric import Application
-from fabric.core import widgets
 from fabric.utils import get_relative_path, monitor_file
 from loguru import logger
 
@@ -13,19 +11,6 @@ from modules.osd import OSD
 from modules.panel.main import Panel
 from modules.switcher import ApplicationSwitcher
 from modules.widget import Deskwidgets
-
-gi.require_version("Gtk", "3.0")
-gi.require_version("Gdk", "3.0")
-
-# Initialize fontconfig early to prevent warnings
-try:
-    import ctypes
-
-    libfontconfig = ctypes.CDLL("libfontconfig.so.1")
-    libfontconfig.FcInit()
-except:
-    pass
-
 
 # from modules.corners import Corners
 
