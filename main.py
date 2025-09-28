@@ -15,16 +15,10 @@ from modules.widget import Deskwidgets
 # from modules.corners import Corners
 
 for log in [
-    "fabric.hyprland.widgets",
-    "fabric.audio.service",
-    "fabric.bluetooth.service",
-    "services.network",
-    "utils.wayland",
-    # "modules.notification.notification",
-    # "modules.notification.notification_center",
-    # "modules.controlcenter.player",
-    # "services.brightness",
-    # "modules.controlcenter.expanded_player",
+    "fabric",
+    "services",
+    "utils",
+    # "modules",
 ]:
     logger.disable(log)
 
