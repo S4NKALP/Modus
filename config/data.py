@@ -7,7 +7,7 @@ from gi.repository import Gdk, GLib
 
 gi.require_version("Gtk", "3.0")
 
-APP_NAME = "modus1"
+APP_NAME = "modus"
 APP_NAME_CAP = "Modus"
 
 
