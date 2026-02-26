@@ -1,10 +1,17 @@
+import ctypes
 import html
 import json
-import os
 import threading
 from typing import Dict, List, Optional
 
-from loguru import logger
+from fabric.utils import logger, os
+
+
+# Function to set the process name
+def set_process_name(name: str):
+    libc = ctypes.CDLL("libc.so.6")
+    libc.prctl(15, name.encode("utf-8"), 0, 0, 0)
+
 
 # Threading helper functions
 
