@@ -339,7 +339,9 @@ class Wifi(Service):
         bulk_connect(
             self._device,
             {
-                "notify::active-access-point": lambda *args: self.on_access_point_activated(),
+                "notify::active-access-point": lambda *args: (
+                    self.on_access_point_activated()
+                ),
                 "access-point-added": lambda _, ap: self.on_access_point_added(ap=ap),
                 "access-point-removed": lambda _, ap: self.on_access_point_removed(
                     ap=ap
