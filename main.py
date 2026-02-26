@@ -2,8 +2,7 @@ from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
 from config.data import APP_NAME
-
-# from modules.notification.notification import ModusNoti
+from modules.notification.notification import ModusNoti
 from modules.panel.main import Panel
 from utils.functions import set_process_name
 
@@ -29,12 +28,8 @@ if __name__ == "__main__":
     config = load_config()
 
     panel = Panel()
-    # modusnoti = ModusNoti()
-    # deskwidget = Deskwidgets()  # Use minimal version for 2-3 MB usage
-
-    # Set corners visibility based on config
-    # corners_visible = config.get("corners_visible", True)
-    # corners.set_visible(corners_visible)
+    modusnoti = ModusNoti()
+    # deskwidget = Deskwidgets()
 
     # Monitor CSS files for changes
     css_file = monitor_file(get_relative_path("styles"))
@@ -44,7 +39,7 @@ if __name__ == "__main__":
     app = Application(
         f"{APP_NAME}",
         panel,
-        # modusnoti,
+        modusnoti,
         # deskwidget,
     )
 
