@@ -1,0 +1,6 @@
+@define-color bg alpha(#fff, 0.07);
+@define-color hover alpha(#fff, 0.1);
+
+@define-color border var(--outline);
+@define-color active alpha(#fff, 0.9);
+@define-color urgent alpha(var(--on-error), 0.7);

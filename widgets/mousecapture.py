@@ -1,12 +1,13 @@
 from typing import Any
 
 import cairo
-from gi.repository import GLib, GtkLayerShell  # type: ignore
-
+from fabric.utils import GLib
 from fabric.widgets.eventbox import EventBox
+from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.widget import Widget
+from gi.repository import GtkLayerShell  # type: ignore
+
 from utils.roam import modus_service
-from widgets.wayland import WaylandWindow as Window
 
 
 class MouseCapture(Window):

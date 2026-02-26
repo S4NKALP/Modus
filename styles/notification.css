@@ -34,7 +34,11 @@
   color: var(--shadow);
 }
 
-#notification-image image {
+#notification-icon {
+  border-radius: 16px;
+}
+
+#notification-image {
   border-radius: 16px;
   color: var(--on-surface);
 }

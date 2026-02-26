@@ -1,11 +1,10 @@
 import contextlib
-import gi  # type: ignore
-from gi.repository import Gdk, Gtk, GtkLayerShell  # type: ignore
 
-from widgets.wayland import WaylandWindow
+from fabric.utils import Gdk, Gtk
+from fabric.widgets.wayland import WaylandWindow
+from gi.repository import GtkLayerShell
+
 from utils.monitors import HyprlandWithMonitors
-
-gi.require_version("GtkLayerShell", "0.1")
 
 
 class PopupWindow(WaylandWindow):
@@ -114,7 +113,10 @@ class PopupWindow(WaylandWindow):
             monitor = self._hyprland.display.get_monitor(current_monitor_id)
             monitor_geometry = monitor.get_geometry()
             monitor_x, monitor_y = monitor_geometry.x, monitor_geometry.y
-            monitor_width, monitor_height = monitor_geometry.width, monitor_geometry.height
+            monitor_width, monitor_height = (
+                monitor_geometry.width,
+                monitor_geometry.height,
+            )
         else:
             # Fallback to default screen
             screen = Gdk.Screen.get_default()
@@ -136,8 +138,7 @@ class PopupWindow(WaylandWindow):
         if self._is_centered:
             # Calculate centered position with boundary checking
             centered_x = (
-                (monitor_width / 2 - self._parent.get_allocated_width() / 2)
-                - width / 2
+                (monitor_width / 2 - self._parent.get_allocated_width() / 2) - width / 2
             ) + coords_centered[0]
 
             # Apply boundary checking only if enabled

@@ -50,6 +50,7 @@
 
 #face-icon image {
   margin-bottom: 10px;
+  border-radius: 99px;
 }
 #face-icon {
   padding-bottom: 10px;

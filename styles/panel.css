@@ -1,147 +1,64 @@
 #panel {
-  background-color: alpha(#fff, 0.07);
-
-  /* border-bottom: 1px solid alpha(#010101, 0.025); */
-  margin-top: -4px;
-  margin-bottom: -4px;
-  transition: all 120ms ease-in-out;
-}
-
-#panel-icon {
-  font-size: 18px;
-}
-#global-title-button {
-  font-weight: bold;
-}
-
-#panel-button {
-  margin: 0 4px 0 4px;
-  min-width: 20px;
-  min-height: 20px;
-}
-
-#panel-button:hover {
-  background-color: alpha(#fff, 0.1);
-}
-
-#menubar {
-  margin: 4px 0;
-}
-
-#menubar label {
-  font-size: 13px;
-  /* font-weight: 400; */
-}
-#battery-label {
-  font-weight: 500;
-  margin-right: 1px;
-}
-#battery-button {
-  padding-right: 3px;
-  padding-left: 3px;
-  border-radius: 8px;
-}
-
-#battery-button:hover {
-  background-color: alpha(#fff, 0.1);
-}
-
-#network-button {
-  padding-right: 3px;
-  padding-left: 3px;
-  border-radius: 8px;
-}
-
-#network-button:hover {
-  background-color: alpha(#fff, 0.1);
-}
-
-#bt-button {
-  padding-right: 3px;
-  padding-left: 3px;
-  border-radius: 8px;
-}
-
-#bt-button:hover {
-  background-color: alpha(#fff, 0.1);
-}
-
-#tray-button {
-  border-radius: 8px;
-  margin: 0 4px 0 0px;
-  min-width: 20px;
-  min-height: 20px;
-}
-
-#tray-button:hover {
-  background-color: alpha(#fff, 0.1);
-}
-
-#date-time {
-  margin: 0 10px;
-  font-weight: 500;
+  background-color: @bg;
+  margin: -4px 0;
 }
 
 #modules-left,
 #modules-right {
   margin: 0 5px;
-  padding: 3px 0;
+  padding: 2px 0;
 }
 
-.button {
-  border-radius: 5px;
-  padding: 0 5px;
-  margin: 0 2.5px;
-  background: radial-gradient(alpha(#aaa, 0) 0%, transparent, transparent);
-  transition: all 100ms ease-in-out;
+#panel-button:hover,
+#battery-button:hover,
+#network-button:hover,
+#bt-button:hover,
+#tray-button:hover,
+#global-menu:hover,
+#workspaces > button:hover {
+  background-color: @hover;
 }
 
-.button:hover {
-  background: radial-gradient(alpha(#aaa, 0.2) 100%, transparent, transparent);
-}
-
-#modus-button label {
-  font-size: 17px;
-  margin: 0 10px;
-}
-
-#workspace-indicator {
-  margin: 0 4px;
-}
-
-#workspaces label {
-  font-family: "SF Pro Rounded";
-  color: white; /* fully transparent text */
-}
-#workspaces > button {
-  padding-top: 0px;
-  padding-right: 16px;
-  font-family: "SF Pro Rounded";
-  padding-left: 16px;
-
-  margin: 6px 0px;
-  min-width: 12px;
-  border: 1px solid var(--outline);
+#panel-button,
+#battery-button,
+#network-button,
+#bt-button,
+#tray-button {
+  margin: 5px 0;
+  padding: 0 2px;
   border-radius: 8px;
 }
 
-#workspaces > button:hover {
-  background-color: alpha(#fff, 0.1);
+#menubar label,
+#battery-label,
+#date-time {
+  font-weight: 500;
+}
+#global-menu {
+  margin: 5px 2px;
+  padding: 0 5px;
+  border-radius: 5px;
+}
+#date-time {
+  margin: 0 4px;
+}
+
+#workspaces > button {
+  margin: 6px 0;
+  padding: 0 16px;
+  border-radius: 8px;
+  min-width: 12px;
+  border: 1px solid @border;
 }
 
 #workspaces > button.active {
-  background-color: alpha(#fff, 0.9);
-  /* font-weight: bold; */
+  background-color: @active;
 }
 
 #workspaces > button.active label {
-  color: alpha(#000, 1);
-  font-family: "SF Pro Rounded";
-}
-#workspaces > button.urgent {
-  background-color: alpha(var(--on-error), 0.7);
+  color: var(--shadow);
 }
 
-#workspaces > button.empty {
-  background-color: transparent;
+#workspaces > button.urgent {
+  background-color: @urgent;
 }
