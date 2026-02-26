@@ -489,12 +489,16 @@ class AppBar(Box):
         try:
             clients = self.get_clients()
             focused_window = self.get_focused_window()
-            focused_address = focused_window.get("address", "") if focused_window else ""
+            focused_address = (
+                focused_window.get("address", "") if focused_window else ""
+            )
 
             current_instance_ids = set()
 
             for client in clients:
-                if client.get("hidden", False) or not self._should_show_app_instance(client):
+                if client.get("hidden", False) or not self._should_show_app_instance(
+                    client
+                ):
                     continue
 
                 instance_address = client.get("address", "")
@@ -519,7 +523,7 @@ class AppBar(Box):
             self._update_separator_visibility()
 
             self._cleanup_removed_instances(current_instance_ids)
-            
+
         except Exception as e:
             logger.error(f"[AppBar] Error in update_dock_apps: {e}")
 
@@ -550,8 +554,11 @@ class AppBar(Box):
         ]
 
         # Clean up removed and orphaned buttons
-        for instance_id in buttons_to_remove + [k for k, v in self.client_buttons.items() 
-                                              if not hasattr(v, 'instance_address') or not v.get_parent()]:
+        for instance_id in buttons_to_remove + [
+            k
+            for k, v in self.client_buttons.items()
+            if not hasattr(v, "instance_address") or not v.get_parent()
+        ]:
             if instance_id in self.client_buttons:
                 button = self.client_buttons.pop(instance_id)
                 try:
@@ -633,9 +640,11 @@ class AppBar(Box):
             self.client_buttons[instance_address] = client_button
             self.running_apps_container.add(client_button)
             self.running_items_pos.append(client_button)
-            
+
         except Exception as e:
-            logger.error(f"[AppBar] Error creating instance button for {app_class}: {e}")
+            logger.error(
+                f"[AppBar] Error creating instance button for {app_class}: {e}"
+            )
 
     def _get_workspace_id(self, client):
         workspace_data = client.get("workspace", {})

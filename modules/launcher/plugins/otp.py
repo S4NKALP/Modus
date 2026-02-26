@@ -167,8 +167,8 @@ class OTPPlugin(PluginBase):
             if current_totp_code != old_code:
                 result_item.result.data["code"] = current_totp_code
                 self._find_and_update_title_label(result_item, current_totp_code)
-                result_item.result.action = (
-                    lambda code=current_totp_code: self._copy_to_clipboard(code)
+                result_item.result.action = lambda code=current_totp_code: (
+                    self._copy_to_clipboard(code)
                 )
 
             new_subtitle_markup = f"{display_name} • {time_display} remaining"
@@ -431,8 +431,8 @@ class OTPPlugin(PluginBase):
                             "type": "totp",
                             "account": account_name,
                             "code": totp_code,
-                            "alt_action": lambda acc=account_name: self._remove_account_and_refresh(
-                                acc
+                            "alt_action": lambda acc=account_name: (
+                                self._remove_account_and_refresh(acc)
                             ),
                         },
                     )
@@ -491,8 +491,8 @@ class OTPPlugin(PluginBase):
                                 "type": "totp",
                                 "account": account_name,
                                 "code": totp_code,
-                                "alt_action": lambda acc=account_name: self._remove_account_and_refresh(
-                                    acc
+                                "alt_action": lambda acc=account_name: (
+                                    self._remove_account_and_refresh(acc)
                                 ),
                             },
                         )
@@ -696,8 +696,8 @@ class OTPPlugin(PluginBase):
                                     time_display
                                 } remaining",
                                 icon_name="user-trash-symbolic",
-                                action=lambda acc=acc_name: self._remove_account_and_refresh(
-                                    acc
+                                action=lambda acc=acc_name: (
+                                    self._remove_account_and_refresh(acc)
                                 ),
                                 relevance=0.9,
                                 plugin_name=self.display_name,
@@ -715,8 +715,8 @@ class OTPPlugin(PluginBase):
                                 title=f"Error: {acc_name}",
                                 subtitle="Press Enter to remove (Invalid secret)",
                                 icon_name="user-trash-symbolic",
-                                action=lambda acc=acc_name: self._remove_account_and_refresh(
-                                    acc
+                                action=lambda acc=acc_name: (
+                                    self._remove_account_and_refresh(acc)
                                 ),
                                 relevance=0.8,
                                 plugin_name=self.display_name,

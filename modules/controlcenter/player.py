@@ -786,7 +786,7 @@ class PlayerBox(Box):
             self.track_artist,
             "label",
             GObject.BindingFlags.DEFAULT,
-            lambda _, x: (", ".join(x) if x and isinstance(x, list) else "No Artist"),  # type: ignore
+            lambda _, x: ", ".join(x) if x and isinstance(x, list) else "No Artist",  # type: ignore
         )
 
         self.track_info = Box(

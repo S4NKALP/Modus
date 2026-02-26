@@ -5,22 +5,22 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
-from modules.panel.components.globalmenu import GlobalMenu
-from modules.panel.components.workspace import WorkspaceIndicator
-from utils.utils import setup_cursor_hover, svg_file
 
 from modules.controlcenter.main import ModusControlCenter
 from modules.notification.notification_center import NotificationCenter
 from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
+from modules.panel.components.globalmenu import GlobalMenu
 from modules.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
     NetworkIndicator,
 )
 from modules.panel.components.recording_indicator import RecordingIndicator
+from modules.panel.components.workspace import WorkspaceIndicator
 from services.config import get_config, on_config_change
 from services.modus import notification_service
 from utils.roam import modus_service
+from utils.utils import setup_cursor_hover, svg_file
 from widgets.mousecapture import MouseCapture
 
 apply_enhanced_system_tray()
@@ -29,12 +29,11 @@ apply_enhanced_system_tray()
 class Panel(Window):
     def __init__(self, **kwargs):
         super().__init__(
-            name="panel-window",
+            name="bar",
             title="modus",
             layer="top",
             anchor="left top right",
             exclusivity="auto",
-            pass_through=False,
             visible=True,
             all_visible=False,
         )

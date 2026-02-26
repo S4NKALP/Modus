@@ -407,8 +407,8 @@ class RemindersPlugin(PluginBase):
                                 target_time_str
                             })",
                             icon_name="alarm-timer",
-                            action=lambda ts=time_str, msg=message: self._create_and_confirm_reminder(
-                                ts, msg
+                            action=lambda ts=time_str, msg=message: (
+                                self._create_and_confirm_reminder(ts, msg)
                             ),
                             relevance=1.0,
                             plugin_name=self.display_name,

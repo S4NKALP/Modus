@@ -212,9 +212,8 @@ class ApplicationSwitcher(Window):
                 if c.get("hidden", False):
                     continue
                 # Skip clients in special workspaces if the setting is enabled
-                if (
-                    data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS
-                    and self._is_special_workspace(c)
+                if data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS and self._is_special_workspace(
+                    c
                 ):
                     continue
                 filtered_windows.append(c)

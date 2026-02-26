@@ -144,8 +144,10 @@ class ExpandableNotificationGroup(Box):
                                     icon_name="close-symbolic", icon_size=18
                                 ),
                                 visible=True,
-                                on_clicked=lambda *_: self._close_single_notification_and_stop_propagation(
-                                    latest_notification
+                                on_clicked=lambda *_: (
+                                    self._close_single_notification_and_stop_propagation(
+                                        latest_notification
+                                    )
                                 ),
                             ),
                             Label(

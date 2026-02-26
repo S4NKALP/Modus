@@ -2,17 +2,18 @@ import math
 import time
 from typing import ClassVar, Literal
 
-from gi.repository import GLib, GObject
-
+# from gi.repository import GLib, GObject
 from fabric.audio import Audio
+from fabric.utils import GLib, GObject
 from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scale import Scale, ScaleMark
 from fabric.widgets.svg import Svg
+from fabric.widgets.wayland import WaylandWindow as Window
+
 from services.brightness import Brightness
 from utils.animator import Animator
-from widgets.wayland import WaylandWindow as Window
 
 
 class AnimatedScale(Scale):

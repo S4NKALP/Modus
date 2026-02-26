@@ -467,8 +467,8 @@ class ScreencapturePlugin(PluginBase):
                             if format_type != "gif"
                             else "image-x-generic-symbolic"
                         ),
-                        action=lambda fp=file_param, ft=format_type: self._run_script_with_file(
-                            ft, fp
+                        action=lambda fp=file_param, ft=format_type: (
+                            self._run_script_with_file(ft, fp)
                         ),
                         relevance=1.0,
                         plugin_name=self.display_name,
