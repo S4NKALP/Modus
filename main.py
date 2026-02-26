@@ -1,30 +1,26 @@
-import setproctitle
 from fabric import Application
-from fabric.utils import get_relative_path, monitor_file
-from loguru import logger
+from fabric.utils import get_relative_path, logger, monitor_file
 
 from config.data import APP_NAME
-from modules.dock import Dock
-from modules.launcher.main import Launcher
-from modules.notification.notification import ModusNoti
-from modules.osd import OSD
-from modules.panel.main import Panel
-from modules.switcher import ApplicationSwitcher
-from modules.widget import Deskwidgets
 
-# from modules.corners import Corners
+# from modules.notification.notification import ModusNoti
+from modules.panel.main import Panel
+from utils.functions import set_process_name
+
+# from modules.desktop.widget import Deskwidgets
+
 
 for log in [
-    "fabric",
-    "services",
-    "utils",
-    # "modules",
+    "fabric.hyprland.widgets",
+    "fabric.audio.service",
+    "fabric.bluetooth.service",
+    "services.network",
+    "utils.wayland",
 ]:
     logger.disable(log)
 
-
 if __name__ == "__main__":
-    setproctitle.setproctitle(APP_NAME)
+    set_process_name(APP_NAME)
 
     # Load configuration
     from config.data import load_config
@@ -33,15 +29,9 @@ if __name__ == "__main__":
     config = load_config()
 
     panel = Panel()
-    # corners = Corners()
-    dock = Dock()
-    modusnoti = ModusNoti()
-    switcher = ApplicationSwitcher()
-    launcher = Launcher()
-    panel.launcher = launcher
-    osd = OSD()
+    # modusnoti = ModusNoti()
+    # deskwidget = Deskwidgets()  # Use minimal version for 2-3 MB usage
 
-    widgets = Deskwidgets()
     # Set corners visibility based on config
     # corners_visible = config.get("corners_visible", True)
     # corners.set_visible(corners_visible)
@@ -52,7 +42,10 @@ if __name__ == "__main__":
 
     # Make sure corners is added to the app
     app = Application(
-        f"{APP_NAME}", panel, dock, switcher, launcher, modusnoti, osd, widgets
+        f"{APP_NAME}",
+        panel,
+        # modusnoti,
+        # deskwidget,
     )
 
     def set_css():

@@ -1,0 +1,24 @@
+[project]
+name = "modus"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fabric",
+    "ijson>=3.5.0",
+    "pam>=0.2.0",
+    "psutil>=7.2.2",
+    "pycairo>=1.29.0",
+    "pydbus>=0.6.0",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstrument>=5.1.2",
+    "ruff>=0.15.2",
+]
+
+[tool.uv.sources]
+fabric = { git = "https://github.com/Fabric-Development/fabric.git" }

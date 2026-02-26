@@ -1,27 +1,29 @@
-from widgets.circle_image import CircleImage as Image
-from modules.panel.components.indicators import (
-    BatteryIndicator,
-    BluetoothIndicator,
-    NetworkIndicator,
-)
+import getpass
+import os
+
+import gi
+import pam
+import setproctitle
+from fabric import Application
+from fabric.utils import get_relative_path
+from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.datetime import DateTime
+from fabric.widgets.entry import Entry
+from fabric.widgets.label import Label
+from fabric.widgets.window import Window
 from gi.repository import (
     Gdk,  # pyright: ignore[reportMissingModuleSource]
     GLib,
     GtkSessionLock,  # pyright: ignore[reportAttributeAccessIssue]
 )
-from fabric.widgets.window import Window
-from fabric.widgets.label import Label
-from fabric.widgets.entry import Entry
-from fabric.widgets.datetime import DateTime
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.box import Box
-from fabric.utils import get_relative_path
-from fabric import Application
-import os
-import getpass
-import setproctitle
-import gi
-import pam
+
+from modules.panel.components.indicators import (
+    BatteryIndicator,
+    BluetoothIndicator,
+    NetworkIndicator,
+)
+from widgets.circle_image import CircleImage as Image
 
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
