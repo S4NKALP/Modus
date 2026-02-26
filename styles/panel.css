@@ -1,12 +1,13 @@
 #panel {
-  background-color: @bg;
-  margin: -4px 0;
+    background-color: @bg;
+    margin: -4px 0;
+    transition: all 120ms ease-in-out;
 }
 
 #modules-left,
 #modules-right {
-  margin: 0 5px;
-  padding: 2px 0;
+    margin: 0 5px;
+    padding: 2px 0;
 }
 
 #panel-button:hover,
@@ -15,8 +16,8 @@
 #bt-button:hover,
 #tray-button:hover,
 #global-menu:hover,
-#workspaces > button:hover {
-  background-color: @hover;
+#workspaces>button:hover {
+    background-color: @hover;
 }
 
 #panel-button,
@@ -24,41 +25,43 @@
 #network-button,
 #bt-button,
 #tray-button {
-  margin: 5px 0;
-  padding: 0 2px;
-  border-radius: 8px;
+    margin: 5px 0;
+    padding: 0 2px;
+    border-radius: 8px;
 }
 
 #menubar label,
 #battery-label,
 #date-time {
-  font-weight: 500;
+    font-weight: 500;
 }
+
 #global-menu {
-  margin: 5px 2px;
-  padding: 0 5px;
-  border-radius: 5px;
+    margin: 5px 2px;
+    padding: 0 5px;
+    border-radius: 5px;
 }
+
 #date-time {
-  margin: 0 4px;
+    margin: 0 4px;
 }
 
-#workspaces > button {
-  margin: 6px 0;
-  padding: 0 16px;
-  border-radius: 8px;
-  min-width: 12px;
-  border: 1px solid @border;
+#workspaces>button {
+    margin: 6px 0;
+    padding: 0 16px;
+    border-radius: 8px;
+    min-width: 12px;
+    border: 1px solid @border;
 }
 
-#workspaces > button.active {
-  background-color: @active;
+#workspaces>button.active {
+    background-color: @active;
 }
 
-#workspaces > button.active label {
-  color: var(--shadow);
+#workspaces>button.active label {
+    color: var(--shadow);
 }
 
-#workspaces > button.urgent {
-  background-color: @urgent;
+#workspaces>button.urgent {
+    background-color: @urgent;
 }
