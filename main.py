@@ -2,12 +2,10 @@ from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
 from config.data import APP_NAME
+from modules.desktop.widget import Deskwidgets
 from modules.notification.notification import ModusNoti
 from modules.panel.main import Panel
 from utils.functions import set_process_name
-
-# from modules.desktop.widget import Deskwidgets
-
 
 for log in [
     "fabric.hyprland.widgets",
@@ -29,18 +27,17 @@ if __name__ == "__main__":
 
     panel = Panel()
     modusnoti = ModusNoti()
-    # deskwidget = Deskwidgets()
+    deskwidget = Deskwidgets()
 
     # Monitor CSS files for changes
     css_file = monitor_file(get_relative_path("styles"))
     _ = css_file.connect("changed", lambda *_: set_css())
 
-    # Make sure corners is added to the app
     app = Application(
         f"{APP_NAME}",
         panel,
         modusnoti,
-        # deskwidget,
+        deskwidget,
     )
 
     def set_css():
