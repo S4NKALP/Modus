@@ -1,8 +1,10 @@
-import psutil
-from gi.repository import GLib
-from pydbus import SystemBus
+from typing import Literal, Optional
 
-from fabric.core import Property, Service, Signal
+from fabric import Service, Signal
+from gi.repository import Gio, GLib
+from loguru import logger
+
+from utils.dbus_helper import GioDBusHelper
 
 DeviceState = {
     0: "UNKNOWN",
@@ -14,238 +16,173 @@ DeviceState = {
     6: "PENDING_DISCHARGE",
 }
 
+PowerProfile = {
+    "power-saver": "Power Saver",
+    "balanced": "Balanced",
+    "performance": "Performance",
+}
 
-class Battery(Service):
-    @staticmethod
-    def seconds_to_hours_minutes(seconds):
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        return f"{hours}h {minutes}m" if hours else f"{minutes}m"
 
-    @staticmethod
-    def get_battery_icon_level(percentage):
-        """Get battery icon level based on percentage"""
-        if percentage >= 90:
-            return "100"
-        elif percentage >= 80:
-            return "090"
-        elif percentage >= 70:
-            return "080"
-        elif percentage >= 60:
-            return "070"
-        elif percentage >= 50:
-            return "060"
-        elif percentage >= 40:
-            return "050"
-        elif percentage >= 30:
-            return "040"
-        elif percentage >= 20:
-            return "030"
-        elif percentage >= 10:
-            return "020"
-        else:
-            return "010"
-
-    @staticmethod
-    def get_battery_icon_file(percentage, is_charging, base_path=""):
-        """Get battery icon file path"""
-        level = Battery.get_battery_icon_level(percentage)
-        suffix = "-charging" if is_charging else ""
-        return f"{base_path}battery/battery-{level}{suffix}.svg"
-
-    @staticmethod
-    def get_profile_display_name(profile: str) -> str:
-        """Get user-friendly display name for power profile"""
-        profile_names = {
-            "power-saver": "Power Saver",
-            "powersave": "Power Saver",
-            "power_saver": "Power Saver",
-            "balanced": "Balanced",
-            "balance": "Balanced",
-            "performance": "Performance",
-            "performance-mode": "Performance",
-        }
-        return profile_names.get(profile, profile.title())
+class BatteryService(Service):
+    """Service to interact with UPower and Power Profiles via GIO D-Bus"""
 
     @Signal
-    def changed(self) -> None: ...
+    def changed(self) -> None:
+        """Signal emitted when battery changes."""
 
     @Signal
-    def profile_changed(self, value: str) -> None: ...
+    def power_profile_changed(self) -> None:
+        """Signal emitted when power profile changes."""
 
-    @Property(int, "readable")
-    def percentage(self):
-        if self._use_psutil_fallback:
-            if self._psutil_battery:
-                return int(self._psutil_battery.percent)
-            return 0
-        return int(self._battery.Percentage)
+    _instance = None
 
-    @Property(str, "readable")
-    def temperature(self):
-        if self._use_psutil_fallback:
-            return "N/A"  # psutil doesn't provide temperature
-        return (
-            f"{self._battery.Temperature}°C"
-            if hasattr(self._battery, "Temperature")
-            else "N/A"
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # UPower D-Bus configuration
+        self.bus_name = "org.freedesktop.UPower"
+        self.object_path = "/org/freedesktop/UPower/devices/DisplayDevice"
+        self.interface_name = "org.freedesktop.UPower.Device"
+
+        self.dbus_helper = GioDBusHelper(
+            bus_type=Gio.BusType.SYSTEM,
+            bus_name=self.bus_name,
+            object_path=self.object_path,
+            interface_name=self.interface_name,
         )
 
-    @Property(str, "readable")
-    def time_to_empty(self):
-        if self._use_psutil_fallback:
-            if self._psutil_battery and hasattr(self._psutil_battery, "secsleft"):
-                return self.seconds_to_hours_minutes(self._psutil_battery.secsleft)
-            return "N/A"
-        return self.seconds_to_hours_minutes(getattr(self._battery, "TimeToEmpty", 0))
+        self.proxy = self.dbus_helper.proxy
 
-    @Property(str, "readable")
-    def time_to_full(self):
-        if self._use_psutil_fallback:
-            return "N/A"  # psutil doesn't provide time to full
-        return self.seconds_to_hours_minutes(getattr(self._battery, "TimeToFull", 0))
+        # Listen for PropertiesChanged signals from UPower
+        self.dbus_helper.listen_signal(
+            member="PropertiesChanged",
+            callback=self.handle_property_change,
+        )
 
-    @Property(str, "readable")
-    def icon_name(self):
-        if self._use_psutil_fallback:
-            return "battery"  # Generic icon name for psutil fallback
-        return self._battery.IconName
+        # Power Profiles D-Bus configuration
+        self.power_profile_bus_name = "net.hadess.PowerProfiles"
+        self.power_profile_object_path = "/net/hadess/PowerProfiles"
+        self.power_profile_interface_name = "net.hadess.PowerProfiles"
 
-    @Property(str, "readable")
-    def state(self):
-        if self._use_psutil_fallback:
-            if self._psutil_battery:
-                # psutil returns power_plugged boolean, convert to state
-                if self._psutil_battery.power_plugged:
-                    if self._psutil_battery.percent >= 100:
-                        return "FULLY_CHARGED"
-                    else:
-                        return "CHARGING"
-                else:
-                    return "DISCHARGING"
-            return "UNKNOWN"
-        return DeviceState.get(self._battery.State, "UNKNOWN")
-
-    @Property(str, "readable")
-    def capacity(self):
-        if self._use_psutil_fallback:
-            return "N/A"  # psutil doesn't provide capacity info
-        return f"{int(self._battery.Capacity)}%"
-
-    @Property(bool, "readable", default_value=False)
-    def is_present(self):
-        if self._use_psutil_fallback:
-            return self._psutil_battery is not None
-        return self._battery.IsPresent
-
-    @Property(str, "readable")
-    def power_profile(self):
-        if hasattr(self, "_profile_proxy") and self._profile_proxy:
-            try:
-                return self._profile_proxy.ActiveProfile
-            except Exception:
-                return None
-        return None
-
-    @Property(list, "readable")
-    def available_profiles(self):
-        if hasattr(self, "_profile_proxy") and self._profile_proxy:
-            try:
-                profiles = []
-                for p in self._profile_proxy.Profiles:
-                    if hasattr(p, "Profile"):
-                        profiles.append(p.Profile)
-                    elif isinstance(p, dict) and "Profile" in p:
-                        profiles.append(p["Profile"])
-                    elif isinstance(p, str):
-                        profiles.append(p)
-                return profiles
-            except Exception:
-                return []
-        return []
-
-    def change_power_profile(self, profile: str) -> bool:
-        if not hasattr(self, "_profile_proxy") or not self._profile_proxy:
-            return False
-
-        # Get available profiles using the same logic as available_profiles property
-        available_profiles = []
         try:
-            for p in self._profile_proxy.Profiles:
-                if hasattr(p, "Profile"):
-                    available_profiles.append(p.Profile)
-                elif isinstance(p, dict) and "Profile" in p:
-                    available_profiles.append(p["Profile"])
-                elif isinstance(p, str):
-                    available_profiles.append(p)
-        except Exception:
+            self.power_profile_helper = GioDBusHelper(
+                bus_type=Gio.BusType.SYSTEM,
+                bus_name=self.power_profile_bus_name,
+                object_path=self.power_profile_object_path,
+                interface_name=self.power_profile_interface_name,
+            )
+
+            self.power_profile_proxy = self.power_profile_helper.proxy
+
+            # Listen for PropertiesChanged signals from Power Profiles
+            self.power_profile_helper.listen_signal(
+                member="PropertiesChanged",
+                callback=self.handle_power_profile_change,
+            )
+
+            self._power_profiles_available = True
+        except Exception as e:
+            logger.warning(f"[Battery] Power Profiles daemon not available: {e}")
+            self.power_profile_helper = None
+            self.power_profile_proxy = None
+            self._power_profiles_available = False
+
+    def get_property(
+        self,
+        property: Literal[
+            "Percentage",
+            "Temperature",
+            "TimeToEmpty",
+            "TimeToFull",
+            "IconName",
+            "State",
+            "Capacity",
+            "IsPresent",
+            "Vendor",
+        ],
+    ):
+        try:
+            result = self.proxy.get_cached_property(property)
+            return result.unpack() if result is not None else None
+        except Exception as e:
+            logger.exception(f"[Battery] Error retrieving '{property}': {e}")
+            return None
+
+    def get_power_profile(self) -> Optional[str]:
+        """Get the current active power profile."""
+        if not self._power_profiles_available:
+            return None
+
+        try:
+            result = self.power_profile_proxy.get_cached_property("ActiveProfile")
+            return result.unpack() if result is not None else None
+        except Exception as e:
+            logger.exception(f"[Battery] Error retrieving active power profile: {e}")
+            return None
+
+    def set_power_profile(
+        self, profile: Literal["power-saver", "balanced", "performance"]
+    ) -> bool:
+        """Set the active power profile."""
+        if not self._power_profiles_available:
+            logger.warning("[Battery] Power Profiles daemon not available")
             return False
 
-        if profile not in available_profiles:
+        if profile not in PowerProfile:
             return False
 
         try:
-            self._profile_proxy.ActiveProfile = profile
-            self.profile_changed.emit(profile)
-            self.changed.emit()
+            self.power_profile_helper.set_property(
+                interface_name=self.power_profile_interface_name,
+                property_name="ActiveProfile",
+                value_variant=GLib.Variant("s", profile),
+            )
             return True
-        except Exception:
+        except Exception as e:
+            logger.exception(
+                f"[Battery] Error setting power profile to '{profile}': {e}"
+            )
             return False
 
-    def __init__(self):
-        super().__init__()
-        self._bus = SystemBus()
-        self._use_psutil_fallback = False
-        self._psutil_battery = None
-        self._profile_proxy = None  # Initialize to None first
+    def get_available_power_profiles(self) -> Optional[list]:
+        """Get list of available power profiles."""
+        if not self._power_profiles_available:
+            return None
 
-        # Battery device
         try:
-            self._battery = self._bus.get(
-                "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/battery_BAT0"
+            result = self.power_profile_proxy.get_cached_property("Profiles")
+            if result is not None:
+                profiles_data = result.unpack()
+                # Extract profile names from the array of dictionaries
+                profiles = []
+                for profile_dict in profiles_data:
+                    if "Profile" in profile_dict:
+                        profiles.append(profile_dict["Profile"])
+                return profiles
+            return None
+        except Exception as e:
+            logger.exception(
+                f"[Battery] Error retrieving available power profiles: {e}"
             )
-            self._battery.onPropertiesChanged = self.handle_battery_change
-        except Exception:
-            # Fallback to psutil if UPower is not available
-            self._use_psutil_fallback = True
-            try:
-                self._psutil_battery = psutil.sensors_battery()
-                if self._psutil_battery is None:
-                    return  # No battery found
-                # Start periodic updates for psutil fallback - increased interval
-                GLib.timeout_add_seconds(10, self._update_psutil_battery)
-            except Exception:
-                return  # psutil battery not available either
+            return None
 
-        # PowerProfiles - Initialize after other attributes
-        try:
-            self._profile_proxy = self._bus.get(
-                "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"
-            )
-            # Use onPropertiesChanged for consistency with battery device
-            self._profile_proxy.onPropertiesChanged = (
-                lambda _, changed, __: self._handle_profile_props_changed(changed)
-            )
-        except Exception:
-            self._profile_proxy = None
+    def is_power_profiles_available(self) -> bool:
+        """Check if power profiles daemon is available."""
+        return self._power_profiles_available
 
-        self.changed.emit()
+    def get_power_profile_display_name(self, profile: str) -> str:
+        """Get display name for a power profile."""
+        return PowerProfile.get(profile, profile.title())
 
-    def _update_psutil_battery(self):
-        """Update psutil battery data periodically"""
-        try:
-            self._psutil_battery = psutil.sensors_battery()
-            self.changed.emit()
-        except Exception:
-            pass  # Continue trying
-        return True  # Keep the timeout active
+    def handle_property_change(self, *_):
+        # You may filter which property changed by checking parameters[1]
+        self.emit("changed")
 
-    def _handle_profile_props_changed(self, changed):
-        """Internal handler for property changes that processes only the changed properties"""
-        if "ActiveProfile" in changed:
-            new_profile = changed["ActiveProfile"]
-            self.profile_changed.emit(new_profile)
-            self.changed.emit()
-
-    def handle_battery_change(self, iface, changed, invalidated):
-        self.changed.emit()
+    def handle_power_profile_change(self, *_):
+        """Handle power profile property changes."""
+        self.emit("power_profile_changed")

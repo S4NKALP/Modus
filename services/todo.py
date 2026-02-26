@@ -166,4 +166,3 @@ class TodoService(Service):
 
 # Global service instance
 todo_service = TodoService()
-

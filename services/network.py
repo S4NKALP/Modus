@@ -1,9 +1,15 @@
-from gi.repository import NM, GLib
+from typing import Optional
+
 import gi
-from typing import List, Optional
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import bulk_connect, get_enum_member_name, snake_case_to_kebab_case
-from loguru import logger
+from fabric.utils import (
+    GLib,
+    bulk_connect,
+    get_enum_member_name,
+    logger,
+    snake_case_to_kebab_case,
+)
+from gi.repository import NM
 
 gi.require_version("NM", "1.0")  # Ensure the correct version is loaded
 

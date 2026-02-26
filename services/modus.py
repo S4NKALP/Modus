@@ -2,7 +2,7 @@ import json
 
 from fabric.core.service import Property, Service, Signal
 from fabric.hyprland.service import Hyprland
-from loguru import logger
+from fabric.utils import logger
 
 from services.custom_notification import CachedNotifications
 
@@ -269,23 +269,24 @@ class ModusService(Service):
     def _setup_active_window_monitoring(self):
         """Setup active window monitoring"""
         try:
-            if not hasattr(self, '_hyprland_connection') or not self._hyprland_connection:
+            if (
+                not hasattr(self, "_hyprland_connection")
+                or not self._hyprland_connection
+            ):
                 return
 
-            # Get initial active window
             self._update_active_window()
-
-            # Note: The HyprlandActiveWindow widget from Fabric library
-            # should handle active window updates automatically.
-            # We just need to ensure the initial state is correct.
-
         except Exception as e:
-            logger.error(f"[ModusService] Failed to setup active window monitoring: {e}")
+            logger.error(
+                f"[ModusService] Failed to setup active window monitoring: {e}"
+            )
 
     def _update_active_window(self):
-        """Update the current active app name based on active window"""
         try:
-            if not hasattr(self, '_hyprland_connection') or not self._hyprland_connection:
+            if (
+                not hasattr(self, "_hyprland_connection")
+                or not self._hyprland_connection
+            ):
                 return
 
             window_data = self._hyprland_connection.send_command("j/activewindow").reply
@@ -297,15 +298,12 @@ class ModusService(Service):
             wmclass = window_info.get("class", "")
             title = window_info.get("title", "")
 
-            # Handle the case when there's no active window
             if not title and not wmclass:
                 self.current_active_app_name = "Finder"
                 return
 
-            # Simple app name formatting without circular import
             name = wmclass if wmclass else title
             if name:
-                # Basic formatting: capitalize first letter and remove file extensions
                 name = str(name).title()
                 if "." in name:
                     name = name.split(".")[-1]
@@ -319,7 +317,6 @@ class ModusService(Service):
             self.current_active_app_name = "Finder"
 
     def _on_workspace_changed(self, obj, signal):
-        """Handle workspace change events from Hyprland"""
         try:
             workspace_name = json.loads(signal.data[0])
             self.current_workspace = str(workspace_name)
