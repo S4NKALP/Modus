@@ -3,7 +3,7 @@ charset-normalizer==3.4.2
 click==8.2.1
 idna==3.10
 loguru==0.7.3
-pillow==11.3.0
+pillow==12.1.1
 psutil==7.0.0
 pycairo==1.28.0
 pydbus==0.6.0
