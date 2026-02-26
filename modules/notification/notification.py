@@ -1,38 +1,33 @@
-import os
 import hashlib
+import os
 import time
-import uuid
 
-from fabric.utils import get_relative_path
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
-from loguru import logger
-
-import config.data as data
-from .unified_cache import (
-    get_unified_cache_key,
-    save_to_cache,
-    get_from_cache,
-    cleanup_cache,
-    get_fallback_icon,
-    ensure_cache_dir
-)
 from fabric.notifications import (
     Notification,
     NotificationAction,
     NotificationCloseReason,
 )
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from utils.roam import modus_service
+from gi.repository import Gdk, GdkPixbuf, GLib  # type: ignore
+from loguru import logger
+
+import config.data as data
+from services.modus import notification_service
 from utils.functions import escape_markup_text
+from utils.roam import modus_service
 from widgets.custom_image import CustomImage
 from widgets.customrevealer import SlideRevealer
 from widgets.wayland import WaylandWindow as Window
-from services.modus import notification_service
+
+from .unified_cache import (
+    get_unified_cache_key,
+)
 
 NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
@@ -92,12 +87,12 @@ def get_unified_cache_key(source_data, size=None, app_name=None):
             # For file paths - create hash-based name
             if source_data.startswith("file://"):
                 source_data = source_data[7:]
-            
+
             # Create hash from file path and size
             hash_input = source_data
             if size:
                 hash_input += f"_{size[0]}x{size[1]}"
-            
+
             return hashlib.md5(hash_input.encode()).hexdigest()[:8]
         else:
             # Fallback to timestamp
@@ -256,11 +251,13 @@ def get_notification_image_cache_key(notification_id, image_pixbuf):
                 try:
                     width = image_pixbuf.get_width()
                     height = image_pixbuf.get_height()
-                    dimension_hash = hashlib.md5(f"{width}x{height}".encode()).hexdigest()[:8]
+                    dimension_hash = hashlib.md5(
+                        f"{width}x{height}".encode()
+                    ).hexdigest()[:8]
                     return dimension_hash
                 except Exception:
                     pass
-        
+
         # Fallback to timestamp for invalid pixbufs
         return str(int(time.time()))[:8]
     except Exception:
@@ -291,7 +288,9 @@ def cache_notification_image(notification_id, image_pixbuf, size=(64, 64)):
             logger.debug(f"Generated and cached notification image: {cache_key}")
             return cache_path, cache_key
         except Exception as scale_error:
-            logger.debug(f"Failed to cache image (temp file likely gone): {scale_error}")
+            logger.debug(
+                f"Failed to cache image (temp file likely gone): {scale_error}"
+            )
             return None, None
 
     except Exception as e:
@@ -328,7 +327,9 @@ def cleanup_notification_image_cache(cache_key=None):
                     filepath = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, filename)
                     try:
                         os.unlink(filepath)
-                        logger.debug(f"Cleaned up cached notification image: {filename}")
+                        logger.debug(
+                            f"Cleaned up cached notification image: {filename}"
+                        )
                     except Exception as e:
                         logger.warning(f"Failed to cleanup cache file {filename}: {e}")
     except Exception as e:
@@ -502,7 +503,9 @@ def preload_notification_assets(notification):
 
         # Cache notification image if available
         if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
-            cache_notification_image(notification.id, notification.image_pixbuf, (35, 35))
+            cache_notification_image(
+                notification.id, notification.image_pixbuf, (35, 35)
+            )
 
     except Exception as e:
         logger.warning(f"Failed to preload notification assets: {e}")
@@ -660,7 +663,9 @@ class NotificationWidget(Box):
                             children=[
                                 Label(
                                     name="notification-summary",
-                                    markup=escape_markup_text(notification.summary.replace("\n", " ")),
+                                    markup=escape_markup_text(
+                                        notification.summary.replace("\n", " ")
+                                    ),
                                     h_align="start",
                                     max_chars_width=40,
                                     ellipsization="end",
@@ -675,7 +680,9 @@ class NotificationWidget(Box):
                         ),
                         (
                             Label(
-                                markup=escape_markup_text(notification.body.replace("\n", " ")),
+                                markup=escape_markup_text(
+                                    notification.body.replace("\n", " ")
+                                ),
                                 h_align="start",
                                 max_chars_width=45,
                                 ellipsization="end",
@@ -755,7 +762,9 @@ class NotificationWidget(Box):
             # Try to get cached notification image first
             if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
                 try:
-                    cache_key = get_notification_image_cache_key(notification_id, notification.image_pixbuf)
+                    cache_key = get_notification_image_cache_key(
+                        notification_id, notification.image_pixbuf
+                    )
                     cached_image = get_cached_notification_image(cache_key)
                     if cached_image:
                         return cached_image
@@ -825,9 +834,9 @@ class NotificationWidget(Box):
                     self, "notification_image_cache_key", None
                 ),
             )
-            logger.debug(f"Cleaned up caches for manually dismissed notification")
+            logger.debug("Cleaned up caches for manually dismissed notification")
         else:
-            logger.debug(f"Preserved caches for timeout/auto-dismissed notification")
+            logger.debug("Preserved caches for timeout/auto-dismissed notification")
         super().destroy()
 
     # @staticmethod
@@ -1088,7 +1097,7 @@ class ModusNoti(Window):
 
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
-        
+
         # Check if notification still exists (might have been removed already)
         if not notification:
             return
@@ -1172,14 +1181,14 @@ class ModusNoti(Window):
             return
 
         notification = self.notification_queue.pop(0)
-        
+
         # Check if notification is still valid (might have been removed)
-        if not notification or not hasattr(notification, 'app_icon'):
+        if not notification or not hasattr(notification, "app_icon"):
             # Skip invalid notifications and try next one
             if self.notification_queue:
                 self._show_next_notification()
             return
-            
+
         self.notification_state = NotificationState.SHOWING
 
         new_box = NotificationRevealer(
