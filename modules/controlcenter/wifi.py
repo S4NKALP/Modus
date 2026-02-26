@@ -1,22 +1,19 @@
-from widgets.wifi_password_dialog import WiFiPasswordDialog
-from services.network import NetworkClient
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.revealer import Revealer
-from fabric.widgets.label import Label
-from fabric.widgets.image import Image
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.button import Button
-from fabric.widgets.box import Box
-from fabric.widgets.svg import Svg
-from fabric.utils import get_relative_path
-from gi.repository import Gdk, GLib, Gtk
-from fabric.widgets.separator import Separator
-from utils.functions import get_wifi_icon_for_strength, get_wifi_connecting_icon
-import gi
 import subprocess
 
-gi.require_version("Gtk", "3.0")
-gi.require_version("Gdk", "3.0")
+from fabric.utils import Gdk, GLib, Gtk
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
+from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.separator import Separator
+
+from services.network import NetworkClient
+from utils.functions import get_wifi_connecting_icon, get_wifi_icon_for_strength
+from utils.utils import svg_file
+from widgets.wifi_password_dialog import WiFiPasswordDialog
 
 
 class WifiNetworkSlot(Box):
@@ -42,11 +39,7 @@ class WifiNetworkSlot(Box):
 
         # Create connection status indicator using dynamic WiFi icon based on signal strength
         wifi_icon_path = get_wifi_icon_for_strength(self.strength)
-        self.dimage = Svg(
-            svg_file=wifi_icon_path,
-            size=28,
-            name="device-icon",
-        )
+        self.dimage = svg_file(wifi_icon_path, size=28)
         self.wifi_icon_box = Box(
             children=[self.dimage],
             style_classes=["wifi-icon-box"],

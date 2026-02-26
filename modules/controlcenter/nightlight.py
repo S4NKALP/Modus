@@ -1,15 +1,11 @@
-# Standard library imports
 import subprocess
 
-# Fabric imports
-from fabric.utils.helpers import get_relative_path
+from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-from fabric.widgets.svg import Svg
 
-# Local imports
-from loguru import logger
+from utils.utils import svg_file
 
 
 class NightLightControl:
@@ -73,12 +69,11 @@ def create_night_light_widget(control_center):
     night_light = NightLightControl()
 
     # Create icon
-    night_light_icon = Svg(
-        name="nightlight-icon",
-        svg_file=get_relative_path(
-            "../../config/assets/icons/applets/redshift-status-on.svg"
+    night_light_icon = svg_file(
+        (
+            "applets/redshift-status-on.svg"
             if night_light.is_active
-            else "../../config/assets/icons/applets/redshift-status-off.svg"
+            else "applets/redshift-status-off.svg"
         ),
         size=42,
     )
@@ -97,12 +92,10 @@ def create_night_light_widget(control_center):
         """Toggle night light and update UI"""
         if night_light.toggle():
             # Update icon
-            night_light_icon.set_from_file(
-                get_relative_path(
-                    "../../config/assets/icons/applets/redshift-status-on.svg"
-                    if night_light.is_active
-                    else "../../config/assets/icons/applets/redshift-status-off.svg"
-                )
+            night_light_icon.dynamic_file(
+                "applets/redshift-status-on.svg"
+                if night_light.is_active
+                else "applets/redshift-status-off.svg"
             )
             # Update status label
             night_light_status_label.set_label("On" if night_light.is_active else "Off")
@@ -143,4 +136,3 @@ def create_night_light_widget(control_center):
     )
 
     return night_light_widget
-

@@ -1,32 +1,32 @@
 from collections import defaultdict
-import time
 
+from fabric.utils import GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
+from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GLib, GdkPixbuf
-from loguru import logger
+from fabric.widgets.wayland import WaylandWindow as Window
 
+from config import data
 from modules.notification.notification import (
     NotificationWidget,
     cache_notification_icon,
-    cache_notification_image,
-    get_cached_notification_image,
-    get_notification_image_cache_key,
-    preload_notification_assets,
     cleanup_all_notification_caches,
     cleanup_notification_specific_caches,
-    get_fallback_notification_icon,
+    get_cached_notification_image,
+    preload_notification_assets,
+)
+from modules.notification.unified_cache import (
+    get_fallback_icon as get_fallback_notification_icon,
 )
 from services.modus import notification_service
 from utils.functions import escape_markup_text
+from widgets.clipping_box import ClippingBox
 from widgets.custom_image import CustomImage
-from widgets.wayland import WaylandWindow as Window
-from config import data
 
 
 class ExpandableNotificationGroup(Box):
@@ -95,9 +95,9 @@ class ExpandableNotificationGroup(Box):
                 name="stack-main-notification",
                 spacing=8,
                 children=[
-                    Box(
+                    ClippingBox(
                         name="notification-image",
-                        children=CustomImage(
+                        children=Image(
                             pixbuf=self._get_notification_pixbuf_for_group(
                                 latest_notification
                             )
@@ -123,9 +123,11 @@ class ExpandableNotificationGroup(Box):
                             ),
                             Label(
                                 name="notification-body",
-                                markup=escape_markup_text(latest_notification._notification.summary.replace(
-                                    "\n", " "
-                                )),
+                                markup=escape_markup_text(
+                                    latest_notification._notification.summary.replace(
+                                        "\n", " "
+                                    )
+                                ),
                                 max_chars_width=25,
                                 h_align="start",
                                 ellipsization="end",
@@ -182,9 +184,6 @@ class ExpandableNotificationGroup(Box):
                         notification_image_cache_key
                     )
                     if cached_image:
-                        logger.debug(
-                            f"Using cached notification image: {notification_image_cache_key}"
-                        )
                         return cached_image
                 except Exception as e:
                     logger.debug(f"Failed to load cached notification image: {e}")
@@ -203,7 +202,6 @@ class ExpandableNotificationGroup(Box):
 
                     cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
                     if cached_app_icon:
-                        # logger.debug(f"Using cached app icon: {app_icon_cache_key}")
                         return cached_app_icon
                 except Exception as e:
                     logger.debug(f"Failed to load cached app icon: {e}")
@@ -214,15 +212,11 @@ class ExpandableNotificationGroup(Box):
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(
-                        f"Using directly cached app icon for: {app_icon_source}"
-                    )
                     return cached_app_icon
         except Exception as e:
             logger.debug(f"Failed to get directly cached app icon: {e}")
 
         # Ultimate fallback
-        logger.debug("Using fallback notification icon")
         return get_fallback_notification_icon((35, 35))
 
     def create_expanded_state(self):
@@ -333,7 +327,6 @@ class ExpandableNotificationGroup(Box):
 
         # Small delay then animate notifications sliding down
         GLib.timeout_add(50, lambda: self.notifications_revealer.set_reveal_child(True))
-        logger.debug(f"Expanded notification group: {self.app_name}")
 
     def collapse(self, *args):
         """Collapse with header sliding up, notifications crossfading, then sliding up"""
@@ -350,8 +343,6 @@ class ExpandableNotificationGroup(Box):
         GLib.timeout_add(
             260, lambda: self.notifications_revealer.set_reveal_child(False)
         )
-
-        logger.debug(f"Collapsed notification group: {self.app_name}")
 
     def _show_collapsed_midway(self):
         """Show collapsed state and hide expanded container to prevent deformation"""
@@ -383,10 +374,6 @@ class ExpandableNotificationGroup(Box):
                     ),
                 )
 
-                logger.debug(
-                    f"Cleaned up caches for notification ID: {notification._notification.id}"
-                )
-
                 notification_service.remove_cached_notification(notification.cache_id)
             except Exception as e:
                 logger.error(
@@ -411,12 +398,7 @@ class ExpandableNotificationGroup(Box):
                 ),
             )
 
-            logger.debug(
-                f"Cleaned up caches for notification ID: {notification._notification.id}"
-            )
-
             notification_service.remove_cached_notification(notification.cache_id)
-            logger.debug(f"Closed single notification: {notification.cache_id}")
         except Exception as e:
             logger.error(
                 f"Error removing single notification {notification.cache_id}: {e}"
@@ -476,9 +458,6 @@ class NotificationCenterWidget(NotificationWidget):
                         notification_image_cache_key
                     )
                     if cached_image:
-                        logger.debug(
-                            f"Using cached notification image: {notification_image_cache_key}"
-                        )
                         return cached_image
                 except Exception as e:
                     logger.debug(f"Failed to load cached notification image: {e}")
@@ -492,7 +471,6 @@ class NotificationCenterWidget(NotificationWidget):
 
                     cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
                     if cached_app_icon:
-                        # logger.debug(f"Using cached app icon: {app_icon_cache_key}")
                         return cached_app_icon
                 except Exception as e:
                     logger.debug(f"Failed to load cached app icon: {e}")
@@ -503,15 +481,11 @@ class NotificationCenterWidget(NotificationWidget):
             if app_icon_source:
                 cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
                 if cached_app_icon:
-                    logger.debug(
-                        f"Using directly cached app icon for: {app_icon_source}"
-                    )
                     return cached_app_icon
         except Exception as e:
             logger.debug(f"Failed to get directly cached app icon: {e}")
 
         # Ultimate fallback
-        logger.debug("Using fallback notification icon")
         return get_fallback_notification_icon((35, 35))
 
     def create_content(self, notification):
@@ -537,11 +511,9 @@ class NotificationCenterWidget(NotificationWidget):
             name="notification-content",
             spacing=8,
             children=[
-                Box(
+                ClippingBox(
                     name="notification-image",
-                    children=CustomImage(
-                        pixbuf=self._get_notification_pixbuf(notification)
-                    ),
+                    children=Image(pixbuf=self._get_notification_pixbuf(notification)),
                 ),
                 Box(
                     name="notification-text",
@@ -554,7 +526,9 @@ class NotificationCenterWidget(NotificationWidget):
                             children=[
                                 Label(
                                     name="notification-summary",
-                                    markup=escape_markup_text(notification.summary.replace("\n", " ")),
+                                    markup=escape_markup_text(
+                                        notification.summary.replace("\n", " ")
+                                    ),
                                     h_align="start",
                                     max_chars_width=25,
                                     ellipsization="end",
@@ -563,7 +537,9 @@ class NotificationCenterWidget(NotificationWidget):
                         ),
                         (
                             Label(
-                                markup=escape_markup_text(notification.body.replace("\n", " ")),
+                                markup=escape_markup_text(
+                                    notification.body.replace("\n", " ")
+                                ),
                                 h_align="start",
                                 max_chars_width=35,
                                 ellipsization="end",
@@ -607,10 +583,6 @@ class NotificationCenterWidget(NotificationWidget):
                 notification_image_cache_key=cache_metadata.get(
                     "notification_image_cache_key"
                 ),
-            )
-
-            logger.debug(
-                f"Cleaned up caches for notification center ID: {self.notification.id}"
             )
 
             notification_service.remove_cached_notification(self.notification_id)
@@ -700,7 +672,6 @@ class NotificationCenter(Window):
         self._rebuild_notification_groups()
 
         self.add_keybinding("Escape", self._on_escape_pressed)
-        self.connect("destroy", self._on_destroy)
 
     def _rebuild_notification_groups(self):
         """Rebuild notification groups from scratch with enhanced asset preloading and debugging"""
@@ -727,12 +698,6 @@ class NotificationCenter(Window):
 
             self.notification_groups[app_name].append(cached_notification)
             rebuild_count += 1
-
-        logger.info(
-            f"Rebuilt {rebuild_count} notifications into {
-                len(self.notification_groups)
-            } groups"
-        )
 
         # Create group widgets and handle limited apps
         for app_name, notifications in self.notification_groups.items():
@@ -813,7 +778,6 @@ class NotificationCenter(Window):
                 self.notifications_box.pack_start(group_widget, False, False, 0)
                 group_widget.show_all()
 
-            logger.debug(f"Added notification to group {app_name}")
         except Exception as e:
             logger.error(f"Error adding notification to group: {e}")
 
@@ -864,7 +828,6 @@ class NotificationCenter(Window):
                 ),
             )
 
-            logger.debug(f"Removed notification from group {app_name}")
         except Exception as e:
             logger.error(f"Error removing notification from group: {e}")
 
@@ -878,7 +841,6 @@ class NotificationCenter(Window):
             cleanup_all_notification_caches()
             for child in self.notifications_box.get_children():
                 child.destroy()
-            logger.debug("Cleared all notification groups and remaining cached images")
         except Exception as e:
             logger.error(f"Error clearing notification groups: {e}")
 
@@ -916,8 +878,3 @@ class NotificationCenter(Window):
             self.main_revealer.set_reveal_child(True)
         else:
             self.main_revealer.set_reveal_child(False)
-        logger.debug(f"Notification center visibility set to: {visible}")
-
-    def _on_destroy(self, *_):
-        # Signals will be automatically disconnected when the object is destroyed
-        pass

@@ -1,32 +1,33 @@
 # Standard library imports
+import gc
 import os
 import re
 import tempfile
+import threading
 import urllib.parse
 import urllib.request
-import threading
 import weakref
-from typing import List, Optional, Dict, Set
-import gc
+from typing import Dict, List, Optional
+
+from fabric.utils import bulk_connect, cooldown, invoke_repeater
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.overlay import Overlay
 
 # Fabric imports
 from fabric.widgets.scale import Scale
-from widgets.wayland import WaylandWindow as Window
-from fabric.widgets.button import Button
-from fabric.widgets.label import Label
-from fabric.widgets.box import Box
-from fabric.utils import bulk_connect, invoke_repeater, cooldown
-from fabric.utils.helpers import get_relative_path
-from fabric.widgets.image import Image
-from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
-from fabric.widgets.svg import Svg
+from fabric.widgets.wayland import WaylandWindow as Window
 from gi.repository import GLib, GObject
 from loguru import logger
 
+import config.data as data
+
 # Local imports
 from services.mpris import MprisPlayer, MprisPlayerManager
-import config.data as data
+from utils.utils import svg_file
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 
@@ -46,18 +47,18 @@ def get_shared_mpris_manager():
 
 
 def cleanup_artwork_cache():
-    """Clean up artwork cache to prevent memory leaks."""
+    """Clean up artwork cache immediately when size limit is reached."""
     global _artwork_cache
     if len(_artwork_cache) > _max_artwork_cache_size:
-        # Keep only the most recent items
+        # Keep only the most recent items immediately
         items = list(_artwork_cache.items())
         _artwork_cache = dict(items[-_max_artwork_cache_size:])
-        # Force garbage collection
+        # Immediate garbage collection
         gc.collect()
 
 
 def cleanup_old_cache_files():
-    """Clean up old artwork cache files aggressively to save memory."""
+    """Clean up old artwork cache files immediately (no lazy loading)."""
     try:
         if not os.path.exists(CACHE_DIR):
             return
@@ -92,7 +93,7 @@ def get_artwork_cached(url: str) -> Optional[str]:
     if url in _artwork_cache:
         return _artwork_cache[url]
 
-    # Clean cache if too large
+    # Clean cache immediately if too large (no lazy loading)
     cleanup_artwork_cache()
 
     try:
@@ -125,18 +126,6 @@ def get_artwork_cached(url: str) -> Optional[str]:
         logger.warning(f"Failed to cache artwork from {url}: {e}")
         return None
 
-        for filename in os.listdir(CACHE_DIR):
-            filepath = os.path.join(CACHE_DIR, filename)
-            try:
-                if os.path.isfile(filepath):
-                    file_mtime = os.path.getmtime(filepath)
-                    if file_mtime < six_hours_ago:
-                        os.unlink(filepath)
-            except Exception:
-                pass  # Ignore individual file errors
-    except Exception:
-        pass  # Ignore all errors in cleanup
-
 
 class EmbeddedExpandedPlayer(Box):
     """Embedded expanded player widget for use inside control center."""
@@ -161,15 +150,6 @@ class EmbeddedExpandedPlayer(Box):
 
         # Create expanded player content
         self.player_content = PlayerBoxStack(self.mpris_manager)
-
-        # Add escape key binding for navigation back
-        self._keybinding_added = False
-        try:
-            if hasattr(self.control_center, "add_keybinding"):
-                self.control_center.add_keybinding("Escape", self._on_back_clicked)
-                self._keybinding_added = True
-        except Exception:
-            pass  # Ignore if keybinding fails
 
         self.children = [
             Box(
@@ -221,14 +201,6 @@ class EmbeddedExpandedPlayer(Box):
                 except Exception as e:
                     logger.warning(f"Failed to destroy child widget: {e}")
 
-            # Clean up keybinding if it was added
-            if hasattr(self, "_keybinding_added") and self._keybinding_added:
-                try:
-                    if hasattr(self.control_center, "remove_keybinding"):
-                        self.control_center.remove_keybinding("Escape")
-                except Exception as e:
-                    logger.warning(f"Failed to remove keybinding: {e}")
-
             # Aggressively clean global caches
             global _widget_cache, _artwork_cache
             _widget_cache.clear()
@@ -250,35 +222,12 @@ class EmbeddedExpandedPlayer(Box):
         finally:
             super().destroy()
 
-    def _periodic_cleanup(self):
-        """Light cleanup for EmbeddedExpandedPlayer reuse"""
-        try:
-            logger.debug("🧹 EmbeddedExpandedPlayer light cleanup starting")
-
-            # Only clean up the player content lightly
-            if hasattr(self, "player_content") and hasattr(
-                self.player_content, "_periodic_cleanup"
-            ):
-                self.player_content._periodic_cleanup()
-
-            # Clean global caches but don't destroy core functionality
-            global _artwork_cache
-            _artwork_cache.clear()
-
-            # Light garbage collection
-            gc.collect()
-
-            logger.debug("🧹 EmbeddedExpandedPlayer light cleanup completed")
-
-        except Exception as e:
-            logger.warning(f"Error during EmbeddedExpandedPlayer light cleanup: {e}")
-
 
 class PlayerBoxStack(Box):
     """Memory-optimized widget that displays current player information."""
 
     def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
-        # Clean up old cache files on startup
+        # Clean up old cache files immediately (no lazy loading)
         cleanup_old_cache_files()
 
         # The player stack with memory-efficient settings
@@ -319,63 +268,16 @@ class PlayerBoxStack(Box):
             self._signal_connections.append((self.mpris_manager, handler_id))
 
         # Process existing players
-        for player in self.mpris_manager.players:  # type: ignore
-            logger.info(
-                f"[PLAYER MANAGER] player found: {player.get_property('player-name')}"
-            )
+        for player in self.mpris_manager.players.values():  # type: ignore
+            logger.info(f"[PLAYER MANAGER] player found: {player.player_name}")
             self.on_new_player(self.mpris_manager, player)
 
-        # Schedule periodic memory cleanup and store source ID
-        self._cleanup_source_id = GLib.timeout_add_seconds(
-            300, self._periodic_cleanup
-        )  # Every 5 minutes
-
-    def _periodic_cleanup(self):
-        """Light cleanup for widget reuse - preserve functionality."""
-        try:
-            logger.debug("Starting light expanded player cleanup for reuse")
-
-            # Clean artwork cache to reduce memory
-            cleanup_artwork_cache()
-
-            # Reset visual state but preserve connections and core functionality
-            # Only clear the player widgets that can be recreated
-            for widget in list(self._player_widgets.values()):
-                try:
-                    if widget and hasattr(widget, "get_parent") and widget.get_parent():
-                        # Only remove from parent, don't destroy (let GTK handle it)
-                        widget.get_parent().remove(widget)
-                except Exception:
-                    pass
-            # Don't clear the _player_widgets dict - just let them be recreated
-
-            # Reset stack to show no_media_box without destroying children
-            try:
-                if hasattr(self, "player_stack") and hasattr(self, "no_media_box"):
-                    self.player_stack.set_visible_child(self.no_media_box)
-                    self.current_stack_pos = 0
-            except Exception:
-                pass
-
-            # Light garbage collection
-            gc.collect()
-
-            logger.debug("Light expanded player cleanup completed")
-
-        except Exception as e:
-            logger.warning(f"Error during light cleanup: {e}")
-
-        return True  # Continue timer
+        # No periodic cleanup - immediate cleanup when needed
 
     def destroy(self):
         """Clean up resources when the widget is destroyed."""
         try:
-            # Cancel any pending cleanup timer
-            if hasattr(self, "_cleanup_source_id") and self._cleanup_source_id:
-                try:
-                    GLib.source_remove(self._cleanup_source_id)
-                except Exception:
-                    pass  # Timer may have already been removed
+            # No periodic cleanup timer to cancel (removed lazy loading)
 
             # Disconnect all signal connections
             for obj, handler_id in self._signal_connections:
@@ -576,7 +478,7 @@ class PlayerBoxStack(Box):
 
         self.set_visible(True)
 
-        new_player_box = PlayerBox(player=MprisPlayer(player), player_stack=self)
+        new_player_box = PlayerBox(player=player, player_stack=self)
         self.player_stack.children = [
             *self.player_stack.children,
             new_player_box,
@@ -602,7 +504,7 @@ class PlayerBoxStack(Box):
         for player_box in players:
             if (
                 hasattr(player_box, "player")
-                and player_box.player.player_name == player_name
+                and player_box.player.bus_name == player_name
             ):
                 player_box_to_remove = player_box
                 break
@@ -789,7 +691,7 @@ class PlayerBox(Box):
         self.seek_bar.connect("value-changed", self._on_scale_value_changed)
         self.seek_bar.connect("button-press-event", self._on_seek_start)
         self.seek_bar.connect("button-release-event", self._on_seek_end)
-        self.player.bind("can-seek", "sensitive", self.seek_bar)
+        self.player.bind_property("can_seek", self.seek_bar, "sensitive")
 
         # Position and length labels for seek bar
         self.position_label = Label(
@@ -878,7 +780,9 @@ class PlayerBox(Box):
             "label",
             GObject.BindingFlags.DEFAULT,
             lambda _, x: (
-                re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Artist"
+                re.sub(r"\r?\n", " ", ", ".join(x))
+                if isinstance(x, list) and len(x) > 0
+                else "No Artist"
             ),  # type: ignore
         )
         self.player.bind_property(
@@ -904,21 +808,9 @@ class PlayerBox(Box):
         self.stack_buttons_box.hide()  # Initially hidden
 
         # Create SVG icons from player directory
-        self.skip_next_icon = Svg(
-            name="btn",
-            style_classes=["control-buttons"],
-            svg_file=get_relative_path("../../config/assets/icons/player/fwd.svg"),
-        )
-        self.skip_prev_icon = Svg(
-            name="btn",
-            style_classes=["control-buttons"],
-            svg_file=get_relative_path("../../config/assets/icons/player/Rewind.svg"),
-        )
-        self.play_pause_icon = Svg(
-            name="btn",
-            style_classes=["control-buttons"],
-            svg_file=get_relative_path("../../config/assets/icons/player/Pause.svg"),
-        )
+        self.skip_next_icon = svg_file("player/fwd.svg", size=22)
+        self.skip_prev_icon = svg_file("player/Rewind.svg", size=22)
+        self.play_pause_icon = svg_file("player/Pause.svg", size=22)
 
         self.play_pause_button = Button(
             style_classes=["control-buttons"],
@@ -943,6 +835,7 @@ class PlayerBox(Box):
             style_classes=["control-buttons"],
             on_clicked=self._on_player_prev,
         )
+        self.player.bind_property("can_go_previous", self.prev_button, "sensitive")
         self.button_box.children = (
             self.prev_button,
             self.play_pause_button,
@@ -989,7 +882,7 @@ class PlayerBox(Box):
         connections = bulk_connect(
             self.player,
             {
-                "exit": self._on_player_exit,
+                "closed": self._on_player_exit,
                 "notify::playback-status": self._on_playback_change,
                 "notify::metadata": self._on_metadata,
             },
@@ -997,6 +890,12 @@ class PlayerBox(Box):
         # Store as (object, handler_id) tuples
         for handler_id in connections:
             self._signal_connections.append((self.player, handler_id))
+
+        # Start seek bar timer immediately for live updates (regardless of playback status)
+        self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
+
+        # Connect to realize signal to initialize seek bar properly
+        self.seek_bar.connect("realize", self._on_seek_bar_realized)
 
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
@@ -1119,14 +1018,24 @@ class PlayerBox(Box):
         self._set_image()
         duration = self.player.length
 
-        if duration:
+        if duration is None:
+            duration = 0
+
+        if duration and duration > 0:
             self.length_label.set_label(self.length_str(duration))
             # Clamp duration to avoid 32-bit integer overflow in the scale widget
             max_int32 = 2147483647  # 2^31 - 1
             safe_duration = min(max_int32, duration)
-            self.seek_bar.set_range(0, safe_duration)
 
-        # Cancel existing timer before starting a new one
+            # Only set range if seek bar is ready
+            if self.seek_bar.get_realized():
+                self.seek_bar.set_range(0, safe_duration)
+        else:
+            self.length_label.set_label("0:00")
+            if self.seek_bar.get_realized():
+                self.seek_bar.set_range(0, 100)
+
+        # Restart timer to ensure it's running with updated metadata
         if self._seekbar_timer_id:
             try:
                 from gi.repository import GLib
@@ -1161,17 +1070,17 @@ class PlayerBox(Box):
         self.player.previous()
 
     def _on_playback_change(self, player, status):
-        status = player.get_property("playback-status")
+        status = player.playback_status
 
-        if status == "paused":
-            self.play_pause_icon.set_from_file(
-                get_relative_path("../../config/assets/icons/player/play.svg")
-            )
+        if status == "Paused":
+            self.play_pause_icon.dynamic_file("player/play.svg")
+            # Keep timer running for live updates even when paused
 
-        if status == "playing":
-            self.play_pause_icon.set_from_file(
-                get_relative_path("../../config/assets/icons/player/Pause.svg")
-            )
+        if status == "Playing":
+            self.play_pause_icon.dynamic_file("player/Pause.svg")
+            # Ensure timer is running for live updates
+            if not self._seekbar_timer_id:
+                self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
 
     def _update_image(self, image_path):
         if image_path and os.path.isfile(image_path):
@@ -1292,7 +1201,14 @@ class PlayerBox(Box):
             return False  # Stop the timer
 
         try:
+            # Check if seek bar is realized and has a valid adjustment
+            if not self.seek_bar.get_realized():
+                return True  # Continue timer, widget not ready yet
+
             position = self.player.position
+            if position is None:
+                position = 0
+
             self.position_label.set_label(self.length_str(position))
 
             # Only update seek bar if user is not currently seeking
@@ -1300,7 +1216,13 @@ class PlayerBox(Box):
                 # Clamp position to avoid 32-bit integer overflow
                 max_int32 = 2147483647  # 2^31 - 1
                 safe_position = min(max_int32, position) if position else 0
-                self.seek_bar.set_value(safe_position)
+
+                # Only set value if seek bar has a valid range
+                if (
+                    self.seek_bar.get_adjustment()
+                    and self.seek_bar.get_adjustment().get_upper() > 0
+                ):
+                    self.seek_bar.set_value(safe_position)
 
         except Exception as e:
             # If any error occurs (widget destroyed, etc), stop the timer
@@ -1318,6 +1240,22 @@ class PlayerBox(Box):
         """User finished seeking - re-enable automatic updates"""
         self._user_seeking = False
         return False
+
+    def _on_seek_bar_realized(self, widget):
+        """Initialize seek bar when it's realized"""
+        try:
+            duration = self.player.length
+            if duration is None:
+                duration = 0
+
+            if duration and duration > 0:
+                max_int32 = 2147483647  # 2^31 - 1
+                safe_duration = min(max_int32, duration)
+                self.seek_bar.set_range(0, safe_duration)
+            else:
+                self.seek_bar.set_range(0, 100)
+        except Exception as e:
+            logger.warning(f"Failed to initialize seek bar: {e}")
 
     def _on_scale_value_changed(self, scale: Scale):
         """Handle seek bar value changes - only when user is seeking"""

@@ -1,14 +1,14 @@
-from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
 from fabric.system_tray.widgets import SystemTray
-from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.svg import Svg
+from fabric.widgets.wayland import WaylandWindow as Window
+from modules.panel.components.globalmenu import GlobalMenu
+from modules.panel.components.workspace import WorkspaceIndicator
+from utils.utils import setup_cursor_hover, svg_file
 
-import config.data as data
 from modules.controlcenter.main import ModusControlCenter
 from modules.notification.notification_center import NotificationCenter
 from modules.panel.components.enhanced_system_tray import apply_enhanced_system_tray
@@ -17,53 +17,38 @@ from modules.panel.components.indicators import (
     BluetoothIndicator,
     NetworkIndicator,
 )
-from modules.panel.components.menubar import MenuBar
 from modules.panel.components.recording_indicator import RecordingIndicator
-from modules.todo.todo_widget import TodoListCapture
+from services.config import get_config, on_config_change
 from services.modus import notification_service
-from utils.functions import is_special_workspace_id
 from utils.roam import modus_service
 from widgets.mousecapture import MouseCapture
-from widgets.wayland import WaylandWindow as Window
 
-# Apply enhanced system tray icon handling
 apply_enhanced_system_tray()
 
 
 class Panel(Window):
     def __init__(self, **kwargs):
         super().__init__(
-            name="bar",
+            name="panel-window",
             title="modus",
             layer="top",
             anchor="left top right",
             exclusivity="auto",
-            visible=False,
+            pass_through=False,
+            visible=True,
+            all_visible=False,
         )
-
-        self.launcher = kwargs.get("launcher", None)
-        self.menubar = MenuBar(parent_window=self)
-
-        self.workspace_indicator = HyprlandWorkspaces(
-            name="workspaces",
-            spacing=4,
-            buttons_factory=lambda ws_id: (
-                None
-                if data.HIDE_SPECIAL_WORKSPACE and is_special_workspace_id(ws_id)
-                else WorkspaceButton(id=ws_id, label=str(ws_id))
-            ),
-        )
+        self.globalmenu = GlobalMenu(parent_window=self)
 
         self.imac = Button(
             name="panel-button",
-            child=Svg(
-                size=16,
-                svg_file=get_relative_path("../../config/assets/icons/misc/logo.svg"),
-            ),
-            on_clicked=lambda *_: self.menubar.show_system_dropdown(self.imac),
+            child=svg_file("misc/logo.svg", size=18),
+            on_clicked=lambda *_: self.globalmenu.show_system_dropdown((self.imac)),
         )
+        setup_cursor_hover(self.imac, "pointer")
 
-        self.tray = SystemTray(name="system-tray", spacing=4, icon_size=20)
+        self.tray = SystemTray(name="panel-button", spacing=4, icon_size=20)
+
         self.tray_revealer = Revealer(
             name="tray-revealer",
             child=self.tray,
@@ -74,110 +59,67 @@ class Panel(Window):
 
         self.chevron_button = Button(
             name="panel-button",
-            child=Svg(
-                size=16,
-                svg_file=get_relative_path(
-                    "../../config/assets/icons/misc/chevron-right.svg"
-                ),
-            ),
+            child=svg_file("misc/chevron-right.svg", size=16),
             on_clicked=self.toggle_tray,
         )
+        setup_cursor_hover(self.chevron_button, "pointer")
 
         self.indicators = Box(
             name="indicators",
             orientation="h",
             spacing=4,
-            children=[
-                BatteryIndicator(),
-                NetworkIndicator(),
-                BluetoothIndicator(),
-            ],
         )
 
         self.search = Button(
-            name="panel-button",
-            on_clicked=lambda *_: self.search_apps(),
-            child=Svg(
-                size=22,
-                svg_file=get_relative_path("../../config/assets/icons/misc/search.svg"),
-            ),
+            name="panel-button", child=svg_file("misc/search.svg", size=22)
         )
+        setup_cursor_hover(self.search, "pointer")
 
         self.control_center = MouseCapture(
             layer="top", child_window=ModusControlCenter()
         )
 
-        self.control_center_button = Button(
-            name="control-center-button",
-            style_classes="button",
+        self.control_center_btn = Button(
+            name="panel-button",
+            child=svg_file("misc/control-center.svg", size=22),
             on_clicked=self.control_center.toggle_mousecapture,
-            child=Svg(
-                size=22,
-                svg_file=get_relative_path(
-                    "../../config/assets/icons/misc/control-center.svg"
-                ),
-            ),
         )
+        setup_cursor_hover(self.control_center_btn, "pointer")
 
-        # Notification Center with MouseCapture
         self.notification_center = MouseCapture(
             layer="overlay", child_window=NotificationCenter()
         )
 
-        # Todo List with MouseCapture
-        self.todo_list = TodoListCapture()
-
-        # Notification Center Icon
-        self.notification_icon = Svg(
-            size=22,
-            svg_file=get_relative_path(
-                "../../config/assets/icons/notifications/notification-inactive.svg"
-            ),
+        self.notification_icon = svg_file(
+            "notifications/notification-inactive.svg", size=22
         )
 
-        self.notification_center_icon_button = Button(
-            name="notification-center-icon-button",
+        self.notification_center_btn = Button(
+            name="panel-button",
             child=self.notification_icon,
             on_clicked=self.on_notification_icon_clicked,
         )
+        setup_cursor_hover(self.notification_center_btn, "pointer")
 
-        # Clickable DateTime for todo list
-        self.datetime_button = Button(
-            name="datetime-button",
+        self.datetime_btn = Button(
+            name="panel-button",
             child=DateTime(name="date-time", formatters=["%a %-d %b %I:%M %P"]),
-            on_clicked=self.on_datetime_clicked,
         )
+        setup_cursor_hover(self.datetime_btn, "pointer")
 
+        self.workspace_indicator = WorkspaceIndicator()
         self.recording_indicator = RecordingIndicator()
+
+        # Create boxes and mount, to allow live updates
+        self.left_box = Box(name="modules-left")
+        self.center_box = Box(name="modules-center", children=self.recording_indicator)
+        self.right_box = Box(name="modules-right", spacing=4, orientation="h")
 
         self.children = CenterBox(
             name="panel",
-            start_children=Box(
-                name="modules-left",
-                children=[
-                    self.imac,
-                    self.menubar,
-                ],
-            ),
-            center_children=Box(
-                name="modules-center",
-                children=self.recording_indicator,
-            ),
-            end_children=Box(
-                name="modules-right",
-                spacing=4,
-                orientation="h",
-                children=[
-                    self.workspace_indicator,
-                    self.tray_revealer,
-                    self.chevron_button,
-                    self.indicators,
-                    self.search,
-                    self.control_center_button,
-                    self.datetime_button,
-                    self.notification_center_icon_button,
-                ],
-            ),
+            start_children=self.left_box,
+            center_children=self.center_box,
+            end_children=self.right_box,
         )
 
         # Connect to DND state changes for notification icon
@@ -191,46 +133,28 @@ class Panel(Window):
         # Set initial notification icon state
         self.update_notification_icon()
 
-        return self.show_all()
+        # Initial layout build
+        self._rebuild_layout_from_config()
 
-    def search_apps(self):
-        self.launcher.show_launcher()
+        # Live updates
+        on_config_change(self._on_config_changed)
 
-    def toggle_tray(self, *_):
-        current_state = self.tray_revealer.child_revealed
-        self.tray_revealer.child_revealed = not current_state
-
-        if self.tray_revealer.child_revealed:
-            self.chevron_button.get_child().set_from_file(
-                get_relative_path("../../config/assets/icons/misc/chevron-left.svg")
-            )
-        else:
-            self.chevron_button.get_child().set_from_file(
-                get_relative_path("../../config/assets/icons/misc/chevron-right.svg")
-            )
+        self.show_all()
 
     def on_dnd_changed(self, _, dnd_state):
-        """Handle DND state changes from the service."""
         self.update_notification_icon()  # Update notification icon when DND changes
 
     def on_notification_count_changed(self, service, *args):
-        """Handle notification count changes from the service."""
         self.update_notification_icon()
 
     def on_notification_icon_clicked(self, *args):
-        """Handle notification icon clicks - only open center if there are notifications."""
         count = notification_service.count
         if count > 0:
             # Only open notification center if there are notifications
             self.notification_center.toggle_mousecapture()
         # Do nothing if no notifications
 
-    def on_datetime_clicked(self, *args):
-        """Handle datetime button clicks - open todo list."""
-        self.todo_list.toggle_mousecapture()
-
     def update_notification_icon(self):
-        """Update the notification icon based on count and DND state."""
         count = notification_service.count
         dnd_enabled = modus_service.dont_disturb
 
@@ -244,7 +168,71 @@ class Panel(Window):
             # No notifications - show inactive icon
             icon_file = "notification-inactive.svg"
 
-        icon_path = get_relative_path(
-            f"../../config/assets/icons/notifications/{icon_file}"
-        )
-        self.notification_icon.set_from_file(icon_path)
+        self.notification_icon.dynamic_file(f"notifications/{icon_file}")
+
+    def _rebuild_layout_from_config(self):
+        # Left
+        left_children = []
+        if get_config("imac_button", True):
+            left_children.append(self.imac)
+        if get_config("global_menu", True):
+            left_children.append(self.globalmenu)
+        self.left_box.children = left_children
+
+        # Indicators (create fresh instances on each rebuild)
+        indicators_children = []
+        if get_config("battery", True):
+            indicators_children.append(BatteryIndicator())
+        if get_config("network", True):
+            indicators_children.append(NetworkIndicator())
+        if get_config("bluetooth", True):
+            indicators_children.append(BluetoothIndicator())
+        self.indicators.children = indicators_children
+
+        # Right
+        right_children = []
+        if get_config("workspace_indicator", True):
+            right_children.append(self.workspace_indicator)
+
+        if get_config("systray", True):
+            right_children.extend([self.tray_revealer, self.chevron_button])
+
+        right_children.append(self.indicators)
+
+        if get_config("search", True):
+            right_children.append(self.search)
+        if get_config("control_center", True):
+            right_children.append(self.control_center_btn)
+        if get_config("date_time", True):
+            right_children.append(self.datetime_btn)
+        if get_config("notification_center", True):
+            right_children.append(self.notification_center_btn)
+
+        self.right_box.children = right_children
+        self.show_all()
+
+    def _on_config_changed(self, new_config, old_config):
+        keys = {
+            "imac_button",
+            "global_menu",
+            "workspace_indicator",
+            "systray",
+            "battery",
+            "network",
+            "bluetooth",
+            "search",
+            "control_center",
+            "date_time",
+            "notification_center",
+        }
+        if any(new_config.get(k) != old_config.get(k) for k in keys):
+            self._rebuild_layout_from_config()
+
+    def toggle_tray(self, *_):
+        current_state = self.tray_revealer.child_revealed
+        self.tray_revealer.child_revealed = not current_state
+
+        if self.tray_revealer.child_revealed:
+            self.chevron_button.get_child().dynamic_file("misc/chevron-left.svg")
+        else:
+            self.chevron_button.get_child().dynamic_file("misc/chevron-right.svg")

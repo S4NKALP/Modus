@@ -1,19 +1,59 @@
 from fabric.bluetooth import BluetoothClient
-from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-from fabric.widgets.svg import Svg
+from fabric.widgets.wayland import WaylandWindow as Window
+from utils.utils import setup_cursor_hover, svg_file
+from widgets.battery_widget import BatteryControl
 
-from modules.controlcenter.battery import BatteryControl
 from modules.controlcenter.bluetooth import BluetoothConnections
 from modules.controlcenter.wifi import WifiConnections
-from services.battery import Battery
+from services.battery import BatteryService, DeviceState
 from services.network import NetworkClient
+from utils.functions import format_duration, get_wifi_icon_for_strength
 from utils.roam import modus_service
-from utils.functions import get_wifi_icon_for_strength, get_wifi_connecting_icon
 from widgets.mousecapture import DropDownMouseCapture
-from widgets.wayland import WaylandWindow as Window
+
+
+def create_control_window(name_prefix):
+    return Window(
+        layer="overlay",
+        title="modus",
+        anchor="top right",
+        margin="2px 10px 0px 0px",
+        exclusivity="auto",
+        keyboard_mode="on-demand",
+        name=f"{name_prefix}-window",
+        visible=False,
+    )
+
+
+def create_mouse_capture(window):
+    return DropDownMouseCapture(layer="top", child_window=window)
+
+
+def setup_control_center(
+    show_window, name_prefix, widget_class, parent, **widget_kwargs
+):
+    if not show_window:
+        return None, None, None
+
+    window = create_control_window(name_prefix)
+    widget = widget_class(parent, **widget_kwargs)
+    window.children = [widget]
+    mouse_capture = create_mouse_capture(window)
+
+    return window, widget, mouse_capture
+
+
+def handle_indicator_click(mouse_capture):
+    if mouse_capture:
+        mouse_capture.toggle_mousecapture()
+
+
+def hide_control_center(mouse_capture):
+    if mouse_capture:
+        mouse_capture.hide_child_window()
 
 
 class BluetoothIndicator(Box):
@@ -22,13 +62,7 @@ class BluetoothIndicator(Box):
         self.show_window = show_window
 
         self.bluetooth = BluetoothClient()
-        self.bt_icon = Svg(
-            name="bt-icon",
-            size=22,
-            svg_file=get_relative_path(
-                "../../../config/assets/icons/applets/bluetooth-clear.svg"
-            ),
-        )
+        self.bt_icon = svg_file("applets/bluetooth-clear.svg", size=22)
 
         self.bt_button = Button(
             name="bt-button", child=self.bt_icon, on_clicked=self.on_bluetooth_clicked
@@ -36,30 +70,21 @@ class BluetoothIndicator(Box):
 
         self.add(self.bt_button)
 
-        # Create Bluetooth control center widget only if show_window is True
-        if self.show_window:
-            self.bluetooth_window = Window(
-                layer="overlay",
-                title="modus",
-                anchor="top right",
-                margin="2px 10px 0px 0px",
-                exclusivity="auto",
-                keyboard_mode="on-demand",
-                name="bluetooth-control-window",
-                visible=False,
-            )
+        # Set pointer cursor on hover
+        setup_cursor_hover(self.bt_button, "pointer")
 
-            self.bluetooth_widget = BluetoothConnections(self, show_back_button=False)
-            self.bluetooth_window.children = [self.bluetooth_widget]
-
-            # Create mouse capture for Bluetooth widget
-            self.bluetooth_mousecapture = DropDownMouseCapture(
-                layer="top", child_window=self.bluetooth_window
-            )
-        else:
-            self.bluetooth_window = None
-            self.bluetooth_widget = None
-            self.bluetooth_mousecapture = None
+        # Setup control center using shared function
+        (
+            self.bluetooth_window,
+            self.bluetooth_widget,
+            self.bluetooth_mousecapture,
+        ) = setup_control_center(
+            self.show_window,
+            "bluetooth",
+            BluetoothConnections,
+            self,
+            show_back_button=False,
+        )
 
         modus_service.connect("bluetooth-changed", self.on_bluetooth_changed)
         self.bluetooth.connect("changed", self.on_bluetooth_direct_changed)
@@ -71,26 +96,14 @@ class BluetoothIndicator(Box):
 
     def update_state(self):
         if not self.bluetooth.enabled:
-            self.bt_icon.set_from_file(
-                get_relative_path(
-                    "../../../config/assets/icons/applets/bluetooth-off-clear.svg"
-                )
-            )
+            self.bt_icon.dynamic_file("applets/bluetooth-off-clear.svg")
             tooltip = "Bluetooth disabled"
         else:
             connected_devices = self.bluetooth.connected_devices
             if connected_devices:
-                self.bt_icon.set_from_file(
-                    get_relative_path(
-                        "../../../config/assets/icons/applets/bluetooth-clear.svg"
-                    )
-                )
+                self.bt_icon.dynamic_file("applets/bluetooth-clear.svg")
                 if len(connected_devices) >= 1:
-                    self.bt_icon.set_from_file(
-                        get_relative_path(
-                            "../../../config/assets/icons/applets/bluetooth-paired.svg"
-                        )
-                    )
+                    self.bt_icon.dynamic_file("applets/bluetooth-paired.svg")
                     device = connected_devices[0]
                     tooltip = f"Connected to {device.alias}"
                     if device.battery_percentage > 0:
@@ -98,11 +111,7 @@ class BluetoothIndicator(Box):
                 else:
                     tooltip = f"Connected to {len(connected_devices)} devices"
             else:
-                self.bt_icon.set_from_file(
-                    get_relative_path(
-                        "../../../config/assets/icons/applets/bluetooth-clear.svg"
-                    )
-                )
+                self.bt_icon.dynamic_file("applets/bluetooth-clear.svg")
                 tooltip = "No devices connected"
 
         self.bt_button.set_tooltip_text(tooltip)
@@ -144,19 +153,13 @@ class BluetoothIndicator(Box):
         modus_service.bluetooth = bluetooth_state
 
     def on_bluetooth_clicked(self, *args):
-        """Handle Bluetooth indicator click"""
-        if self.show_window and self.bluetooth_mousecapture:
-            self.bluetooth_mousecapture.toggle_mousecapture()
+        handle_indicator_click(self.bluetooth_mousecapture)
 
     def close_bluetooth(self, *args):
-        """Close Bluetooth control center"""
-        if self.show_window and self.bluetooth_mousecapture:
-            self.bluetooth_mousecapture.hide_child_window()
+        hide_control_center(self.bluetooth_mousecapture)
 
     def hide_controlcenter(self, *args):
-        """Hide Bluetooth control center"""
-        if self.show_window and self.bluetooth_mousecapture:
-            self.bluetooth_mousecapture.hide_child_window()
+        hide_control_center(self.bluetooth_mousecapture)
 
 
 class NetworkIndicator(Box):
@@ -166,13 +169,7 @@ class NetworkIndicator(Box):
 
         self.network_service = NetworkClient()
 
-        self.network_icon = Svg(
-            name="network-icon",
-            size=22,
-            svg_file=get_relative_path(
-                "../../../config/assets/icons/applets/wifi-clear.svg"
-            ),
-        )
+        self.network_icon = svg_file("applets/wifi-clear.svg", size=22)
 
         self.network_button = Button(
             name="network-button",
@@ -182,30 +179,21 @@ class NetworkIndicator(Box):
 
         self.add(self.network_button)
 
-        # Create WiFi control center widget only if show_window is True
-        if self.show_window:
-            self.wifi_window = Window(
-                layer="overlay",
-                title="modus",
-                anchor="top right",
-                margin="2px 10px 0px 0px",
-                exclusivity="auto",
-                keyboard_mode="on-demand",
-                name="wifi-control-window",
-                visible=False,
-            )
+        # Set pointer cursor on hover
+        setup_cursor_hover(self.network_button, "pointer")
 
-            self.wifi_widget = WifiConnections(self, show_back_button=False)
-            self.wifi_window.children = [self.wifi_widget]
-
-            # Create mouse capture for WiFi widget
-            self.wifi_mousecapture = DropDownMouseCapture(
-                layer="top", child_window=self.wifi_window
-            )
-        else:
-            self.wifi_window = None
-            self.wifi_widget = None
-            self.wifi_mousecapture = None
+        # Setup control center using shared function
+        (
+            self.wifi_window,
+            self.wifi_widget,
+            self.wifi_mousecapture,
+        ) = setup_control_center(
+            self.show_window,
+            "wifi",
+            WifiConnections,
+            self,
+            show_back_button=False,
+        )
 
         modus_service.connect("wlan-changed", self.on_wlan_changed)
         self.network_service.connect("wifi-device-added", self.on_wifi_device_added)
@@ -230,7 +218,6 @@ class NetworkIndicator(Box):
         self.update_state()
 
     def on_ethernet_device_added(self, *args):
-        """Called when Ethernet device is added"""
         if self.network_service.ethernet_device:
             self.network_service.ethernet_device.connect(
                 "changed", self.on_network_direct_changed
@@ -249,7 +236,6 @@ class NetworkIndicator(Box):
     def update_modus_service_wlan_state(self):
         wlan_state = "disconnected"
 
-        # Check WiFi first (prioritize WiFi over Ethernet)
         if self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
             if not wifi.wireless_enabled:
@@ -315,25 +301,17 @@ class NetworkIndicator(Box):
                 icon_file = "network-wired-offline.svg"
                 tooltip = "Ethernet disconnected"
 
-        self.network_icon.set_from_file(
-            get_relative_path(f"../../../config/assets/icons/applets/{icon_file}")
-        )
+        self.network_icon.dynamic_file(f"applets/{icon_file}")
         self.network_button.set_tooltip_text(tooltip)
 
     def on_wifi_clicked(self, *args):
-        """Handle WiFi indicator click"""
-        if self.show_window and self.wifi_mousecapture:
-            self.wifi_mousecapture.toggle_mousecapture()
+        handle_indicator_click(self.wifi_mousecapture)
 
     def close_wifi(self, *args):
-        """Close WiFi control center"""
-        if self.show_window and self.wifi_mousecapture:
-            self.wifi_mousecapture.hide_child_window()
+        hide_control_center(self.wifi_mousecapture)
 
     def hide_controlcenter(self, *args):
-        """Hide WiFi control center"""
-        if self.show_window and self.wifi_mousecapture:
-            self.wifi_mousecapture.hide_child_window()
+        hide_control_center(self.wifi_mousecapture)
 
 
 class BatteryIndicator(Box):
@@ -341,15 +319,9 @@ class BatteryIndicator(Box):
         super().__init__(name="battery-indicator", orientation="h", **kwargs)
         self.show_window = show_window
 
-        self.battery_service = Battery()
+        self.battery_service = BatteryService()
 
-        self.battery_icon = Svg(
-            name="battery-icon",
-            size=23,
-            svg_file=get_relative_path(
-                "../../../config/assets/icons/battery/battery-100.svg"
-            ),
-        )
+        self.battery_icon = svg_file("battery/battery-100.svg", size=23)
 
         self.battery_button = Button(
             name="battery-button",
@@ -362,30 +334,20 @@ class BatteryIndicator(Box):
         self.add(self.battery_label)
         self.add(self.battery_button)
 
-        # Create Battery control center widget only if show_window is True
-        if self.show_window:
-            self.battery_window = Window(
-                layer="top",
-                title="modus",
-                anchor="top right",
-                margin="2px 10px 0px 0px",
-                exclusivity="auto",
-                keyboard_mode="on-demand",
-                name="battery-control-window",
-                visible=False,
-            )
+        # Set pointer cursor on hover
+        setup_cursor_hover(self.battery_button, "pointer")
 
-            self.battery_widget = BatteryControl(self, show_back_button=False)
-            self.battery_window.children = [self.battery_widget]
-
-            # Create mouse capture for Battery widget
-            self.battery_mousecapture = DropDownMouseCapture(
-                layer="top", child_window=self.battery_window
-            )
-        else:
-            self.battery_window = None
-            self.battery_widget = None
-            self.battery_mousecapture = None
+        (
+            self.battery_window,
+            self.battery_widget,
+            self.battery_mousecapture,
+        ) = setup_control_center(
+            self.show_window,
+            "battery",
+            BatteryControl,
+            self,
+            show_back_button=False,
+        )
 
         modus_service.connect("battery-changed", self.on_battery_changed)
         self.battery_service.connect("changed", self.on_battery_direct_changed)
@@ -400,21 +362,46 @@ class BatteryIndicator(Box):
         self.update_modus_service_battery_state()
         self.update_state()
 
+    def _get_percentage(self):
+        return int(self.battery_service.get_property("Percentage") or 0)
+
+    def _get_state(self):
+        state_value = self.battery_service.get_property("State")
+        return DeviceState.get(state_value, "UNKNOWN")
+
+    def _is_present(self):
+        return bool(self.battery_service.get_property("IsPresent"))
+
+    def _get_time_to_empty(self):
+        return int(self.battery_service.get_property("TimeToEmpty") or 0)
+
+    def _get_time_to_full(self):
+        return int(self.battery_service.get_property("TimeToFull") or 0)
+
+    def _format_time(self, seconds: int) -> str:
+        return format_duration(seconds)
+
+    def _get_battery_icon_file(self, percentage: int, is_charging: bool) -> str:
+        clamped = max(0, min(100, percentage))
+        step = (clamped // 10) * 10
+        filename = f"battery-{step:03d}{'-charging' if is_charging else ''}.svg"
+        return f"battery/{filename}"
+
     def update_modus_service_battery_state(self):
-        if not self.battery_service.is_present:
+        if not self._is_present():
             battery_state = "not_present"
         else:
-            percentage = self.battery_service.percentage
-            state = self.battery_service.state.lower()
+            percentage = self._get_percentage()
+            state_str = self._get_state().lower()
 
-            battery_state = f"{state}:{percentage}%"
+            battery_state = f"{state_str}:{percentage}%"
 
-            if state == "discharging":
-                time_to_empty = self.battery_service.time_to_empty
+            if state_str == "discharging":
+                time_to_empty = self._format_time(self._get_time_to_empty())
                 if time_to_empty != "N/A":
                     battery_state += f":{time_to_empty}"
-            elif state == "charging":
-                time_to_full = self.battery_service.time_to_full
+            elif state_str == "charging":
+                time_to_full = self._format_time(self._get_time_to_full())
                 if time_to_full != "N/A":
                     battery_state += f":{time_to_full}"
 
@@ -425,11 +412,11 @@ class BatteryIndicator(Box):
 
         if state == "CHARGING":
             tooltip += " (Charging)"
-            time_to_full = self.battery_service.time_to_full
+            time_to_full = self._format_time(self._get_time_to_full())
             if time_to_full != "N/A":
                 tooltip += f" - {time_to_full} until full"
         elif state == "DISCHARGING":
-            time_to_empty = self.battery_service.time_to_empty
+            time_to_empty = self._format_time(self._get_time_to_empty())
             if time_to_empty != "N/A":
                 tooltip += f" - {time_to_empty} remaining"
         elif state == "FULLY_CHARGED":
@@ -438,40 +425,29 @@ class BatteryIndicator(Box):
         return tooltip
 
     def update_state(self):
-        if not self.battery_service.is_present:
-            # Hide the entire battery component when no battery is present
+        if not self._is_present():
             self.set_visible(False)
             return
         else:
-            # Show the battery component when battery is present
             self.set_visible(True)
 
-            percentage = self.battery_service.percentage
-            state = self.battery_service.state
+            percentage = self._get_percentage()
+            state = self._get_state()
             is_charging = state in ["CHARGING", "FULLY_CHARGED"]
 
-            icon_file = Battery.get_battery_icon_file(
-                percentage, is_charging, base_path="../../../config/assets/icons/"
-            )
+            icon_file = self._get_battery_icon_file(percentage, is_charging)
             tooltip = self.get_battery_tooltip(percentage, state)
             percentage_text = f"{percentage}%"
 
-            # Update icon, tooltip, and percentage label
-            self.battery_icon.set_from_file(get_relative_path(icon_file))
+            self.battery_icon.dynamic_file(icon_file)
             self.battery_button.set_tooltip_text(tooltip)
             self.battery_label.set_label(percentage_text)
 
     def on_battery_clicked(self, *args):
-        """Handle Battery indicator click"""
-        if self.show_window and self.battery_mousecapture:
-            self.battery_mousecapture.toggle_mousecapture()
+        handle_indicator_click(self.battery_mousecapture)
 
     def close_battery(self, *args):
-        """Close Battery control center"""
-        if self.show_window and self.battery_mousecapture:
-            self.battery_mousecapture.hide_child_window()
+        hide_control_center(self.battery_mousecapture)
 
     def hide_controlcenter(self, *args):
-        """Hide Battery control center"""
-        if self.show_window and self.battery_mousecapture:
-            self.battery_mousecapture.hide_child_window()
+        hide_control_center(self.battery_mousecapture)

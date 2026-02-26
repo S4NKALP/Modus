@@ -1,11 +1,8 @@
-import os
 import hashlib
 import time
 import uuid
 
-from fabric.utils import get_relative_path
-from gi.repository import GdkPixbuf
-from loguru import logger
+from fabric.utils import GdkPixbuf, get_relative_path, logger, os
 
 import config.data as data
 
@@ -67,7 +64,6 @@ def save_to_cache(pixbuf, cache_key, size=None):
             )
 
         pixbuf.savev(cache_path, "png", [], [])
-        logger.debug(f"Cached notification asset: {cache_key}")
         return cache_path, cache_key
     except Exception as e:
         logger.warning(f"Failed to cache notification asset: {e}")
@@ -103,7 +99,6 @@ def cleanup_cache(cache_key=None):
             )
             if os.path.exists(cache_path):
                 os.unlink(cache_path)
-                logger.debug(f"Cleaned up cached asset: {cache_key}")
         else:
             # Remove all cached assets
             for filename in os.listdir(UNIFIED_NOTIFICATION_CACHE_DIR):
@@ -111,7 +106,6 @@ def cleanup_cache(cache_key=None):
                     filepath = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, filename)
                     try:
                         os.unlink(filepath)
-                        logger.debug(f"Cleaned up cached asset: {filename}")
                     except Exception as e:
                         logger.warning(f"Failed to cleanup cache file {filename}: {e}")
     except Exception as e:
@@ -134,7 +128,6 @@ def cleanup_old_cache_files():
                     file_mtime = os.path.getmtime(filepath)
                     if file_mtime < week_ago:
                         os.unlink(filepath)
-                        logger.debug(f"Cleaned up old cache: {filename}")
             except Exception as e:
                 logger.warning(f"Failed to cleanup cache file {filename}: {e}")
     except Exception as e:
@@ -153,15 +146,11 @@ def verify_cache_persistence():
                 if f.endswith(".png")
             ]
 
-        logger.info(f"Cache persistence check: {len(cache_files)} assets cached")
-
         # Test loading a few cached items to verify they work
         for cache_file in cache_files[:2]:  # Test first 2 files
             try:
                 cache_path = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, cache_file)
                 test_pixbuf = GdkPixbuf.Pixbuf.new_from_file(cache_path)
-                if test_pixbuf:
-                    logger.debug(f"Successfully verified cached asset: {cache_file}")
             except Exception as e:
                 logger.warning(f"Failed to load cached asset {cache_file}: {e}")
 
@@ -175,7 +164,7 @@ def verify_cache_persistence():
 def get_fallback_icon(size=(48, 48)):
     """Get the fallback notification icon"""
     try:
-        fallback_path = get_relative_path("../../config/assets/icons/notification.png")
+        fallback_path = get_relative_path("../../assets/icons/notification.png")
         return GdkPixbuf.Pixbuf.new_from_file_at_scale(
             fallback_path, size[0], size[1], True
         )
@@ -194,4 +183,3 @@ def get_fallback_icon(size=(48, 48)):
 ensure_cache_dir()
 cleanup_old_cache_files()
 verify_cache_persistence()
-

@@ -1,17 +1,12 @@
 import subprocess
 
-from fabric.utils import idle_add
-from fabric.utils.helpers import (
-    get_relative_path,
-)
+from fabric.utils import Gdk, GLib, get_relative_path, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
-from fabric.widgets.svg import Svg
-from gi.repository import Gdk, GLib
-from loguru import logger
+from fabric.widgets.wayland import WaylandWindow as Window
 
 from modules.controlcenter.bluetooth import (
     BluetoothConnections,
@@ -20,13 +15,12 @@ from modules.controlcenter.bluetooth import (
 from modules.controlcenter.expanded_player import EmbeddedExpandedPlayer
 from modules.controlcenter.nightlight import create_night_light_widget
 from modules.controlcenter.per_app_volume import PerAppVolumeControl
-from modules.controlcenter.player import PlayerBoxStack
+from modules.controlcenter.player import PlayerBoxStack, get_shared_mpris_manager
 from modules.controlcenter.wifi import WifiConnections
 from services.brightness import Brightness
-from services.mpris import MprisPlayerManager
 from services.network import NetworkClient
 from utils.roam import audio_service, modus_service
-from widgets.wayland import WaylandWindow as Window
+from utils.utils import svg_file
 
 brightness_service = Brightness.get_initial()
 
@@ -53,10 +47,10 @@ class ModusControlCenter(Window):
         self.caffeine_mode = False
         self._caffeine_process = None
 
-        # Lazy loading flags
-        self._music_initialized = False
+        # Loading flags - music and expanded player are no longer lazy loaded
         self._per_app_volume_initialized = False
-        self._expanded_player_initialized = False
+        self._signals_connected = False  # Track if signals are connected
+        self._resources_initialized = False  # Track if resources are initialized
 
         # Store references for cleanup - initialize all as None
         self._signal_connections = []
@@ -65,33 +59,22 @@ class ModusControlCenter(Window):
         self._expanded_player_widget = None
         self._mpris_manager = None  # Shared MPRIS manager instance
 
-        # Initialize network service for WiFi toggle
-        self.network_service = NetworkClient()
+        # Initialize network service for WiFi toggle - lazy load
+        self.network_service = None
         self.wifi_service = None
 
-        # Initialize flight mode and caffeine states
-        self._check_initial_states()
+        # Initialize flight mode and caffeine states - lazy load
+        self.caffeine_mode = False
+        self.flight_mode = False
 
-        # Wait for network service to be ready
-
+        # Add keybinding immediately (this is fast)
         self.add_keybinding("Escape", self.hide_controlcenter)
 
         volume = 100
-        wlan = modus_service.sc("wlan-changed", self.wlan_changed)
-        bluetooth = modus_service.sc("bluetooth-changed", self.bluetooth_changed)
-        music = modus_service.sc("music-changed", self.audio_changed)
+        # Get initial values and connect signals - store connection IDs for cleanup
+        wlan = modus_service.wlan if modus_service.wlan else "No Connection"
+        bluetooth = modus_service.bluetooth if modus_service.bluetooth else "Off"
 
-        self.network_service.connect("wifi-device-added", self.on_network_ready)
-        # Store signal connections for cleanup
-        self._signal_connections.extend(
-            [
-                audio_service.connect("changed", self.audio_changed),
-                audio_service.connect("changed", self.volume_changed),
-                modus_service.connect("dont-disturb-changed", self.dnd_changed),
-            ]
-        )
-
-        print(wlan)
         self.wlan_label = Label(
             label=wlan,
             name="wifi-widget-label",
@@ -124,8 +107,6 @@ class ModusControlCenter(Window):
             size=30,
             h_expand=True,
         )
-        self.volume_scale.connect("change-value", self.set_volume)
-        self.volume_scale.connect("scroll-event", self.on_volume_scroll)
 
         current_brightness = brightness_service.screen_brightness
         brightness_percentage = (
@@ -146,43 +127,29 @@ class ModusControlCenter(Window):
 
         # Only connect brightness controls if brightness service is available
         if brightness_service.max_screen > 0:
-            self.brightness_scale.connect("change-value", self.set_brightness)
-            self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
-            self._signal_connections.append(
-                brightness_service.connect("screen", self.brightness_changed)
-            )
+            pass
         else:
             # Disable brightness scale if no backlight device available
             self.brightness_scale.set_sensitive(False)
 
-        # Create placeholder music widget - lazy load content when needed
-        self.music_widget = Box(
-            name="music-widget",
-            h_align="start",
-            children=[],  # Empty initially
-        )
+        self._mpris_manager = get_shared_mpris_manager()
+        self.music_widget = PlayerBoxStack(self._mpris_manager, control_center=self)
 
         self.has_bluetooth_open = False
         self.has_wifi_open = False
         self.has_per_app_volume_open = False
         self.has_expanded_player_open = False
 
-        self.bluetooth_svg = Svg(
-            name="bluetooth-icon",
-            svg_file=get_relative_path(
-                "../../config/assets/icons/applets/bluetooth.svg"
+        self.bluetooth_svg = svg_file(
+            (
+                "applets/bluetooth.svg"
                 if bluetooth != "disabled"
-                else "../../config/assets/icons/applets/bluetooth-off.svg"
+                else "applets/bluetooth-off.svg"
             ),
             size=42,
         )
-        self.wifi_svg = Svg(
-            name="wifi-icon",
-            svg_file=get_relative_path(
-                "../../config/assets/icons/applets/wifi.svg"
-                if wlan != "No Connection"
-                else "../../config/assets/icons/applets/wifi-off.svg"
-            ),
+        self.wifi_svg = svg_file(
+            "applets/wifi.svg" if wlan != "No Connection" else "applets/wifi-off.svg",
             size=42,
         )
 
@@ -244,13 +211,8 @@ class ModusControlCenter(Window):
             ],
         )
 
-        self.focus_icon = Svg(
-            name="focus-icon",
-            svg_file=get_relative_path(
-                "../../config/assets/icons/applets/dnd.svg"
-                if self.focus_mode
-                else "../../config/assets/icons/applets/dnd-off.svg"
-            ),
+        self.focus_icon = svg_file(
+            "applets/dnd.svg" if self.focus_mode else "applets/dnd-off.svg",
             size=42,
         )
 
@@ -287,13 +249,8 @@ class ModusControlCenter(Window):
             on_clicked=self.set_dont_disturb,
         )
 
-        self.flight_icon = Svg(
-            name="flight-icon",
-            svg_file=get_relative_path(
-                "../../config/assets/icons/applets/flight-on.svg"
-                if self.flight_mode
-                else "../../config/assets/icons/applets/flight-off.svg"
-            ),
+        self.flight_icon = svg_file(
+            "applets/flight-on.svg" if self.flight_mode else "applets/flight-off.svg",
             size=42,
         )
 
@@ -318,12 +275,11 @@ class ModusControlCenter(Window):
             on_clicked=self.toggle_flight_mode,
         )
 
-        self.caffeine_icon = Svg(
-            name="caffeine-icon",
-            svg_file=get_relative_path(
-                "../../config/assets/icons/applets/caffeine-on.svg"
+        self.caffeine_icon = svg_file(
+            (
+                "applets/caffeine-on.svg"
                 if self.caffeine_mode
-                else "../../config/assets/icons/applets/caffeine-off.svg"
+                else "applets/caffeine-off.svg"
             ),
             size=42,
         )
@@ -350,16 +306,6 @@ class ModusControlCenter(Window):
                         style_classes="title-widget",
                         h_align="center",
                     ),
-                    # Box(
-                    #     orientation="vertical",
-                    #     v_expand=True,
-                    #     v_align="center",
-                    #     h_align="center",
-                    #     h_expand=True,
-                    #     children=[
-                    #         # self.caffeine_status_label,
-                    #     ],
-                    # ),
                 ],
             ),
             on_clicked=self.toggle_caffeine,
@@ -368,7 +314,7 @@ class ModusControlCenter(Window):
         # Create night light widget
         self.night_light_widget = create_night_light_widget(self)
 
-        # Create main widgets directly without XML
+        # Create main widgets directly without XML - defer heavy operations
         self.widgets = Box(
             orientation="vertical",
             h_expand=True,
@@ -476,12 +422,10 @@ class ModusControlCenter(Window):
                                 Button(
                                     name="per-app-volume-button",
                                     size=(36, 36),
-                                    child=Svg(
-                                        svg_file=get_relative_path(
-                                            "../../config/assets/icons/player/audio-switcher.svg"
-                                        ),
+                                    child=svg_file(
+                                        "player/audio-switcher.svg",
                                         name="per-app-volume-icon",
-                                        sidze=32,
+                                        size=32,
                                     ),
                                     on_clicked=self.open_per_app_volume,
                                 ),
@@ -501,18 +445,32 @@ class ModusControlCenter(Window):
         self.has_bluetooth_open = False
         self.has_wifi_open = False
 
-        # Lazy-loaded widgets - create placeholders
+        # Create expanded player widgets immediately (no lazy loading)
+        self._expanded_player_widget = EmbeddedExpandedPlayer(self)
+        self.expanded_player_widgets = Box(
+            orientation="vertical",
+            h_expand=True,
+            name="control-center-widgets",
+            children=[
+                self._expanded_player_widget,
+            ],
+        )
+
+        # Lazy-loaded widgets - create placeholders for others
         self.bluetooth_widgets = None
         self.wifi_widgets = None
         self.per_app_volume_widgets = None
-        self.expanded_player_widgets = None
 
         # Create main content boxes
         self.center_box = CenterBox(start_children=[self.widgets])
         self.bluetooth_center_box = None
         self.wifi_center_box = None
         self.per_app_volume_center_box = None
-        self.expanded_player_center_box = None
+        # Create expanded player center box immediately
+        self.expanded_player_center_box = CenterBox(
+            start_children=[self.expanded_player_widgets]
+        )
+        self.expanded_player_center_box.set_size_request(300, -1)
 
         # Create revealers for crossfade transitions
 
@@ -527,70 +485,83 @@ class ModusControlCenter(Window):
         self.connect("notify::visible", self._on_visibility_changed)
 
     def _on_visibility_changed(self, widget, param):
-        """Handle visibility changes for memory management"""
+        """Handle visibility changes for resource management"""
         if not self.get_visible():
-            self._cleanup_when_hidden()
+            # Just disconnect signals and reset state flags - don't destroy widgets
+            self._disconnect_signals_when_hidden()
+        else:
+            self._initialize_resources()
 
-    def _cleanup_when_hidden(self):
-        """Aggressively clean up resources when widget is hidden to reduce memory usage"""
+    def _initialize_resources(self):
+        """Initialize resources and connect signals when the control center becomes visible."""
+        if self._resources_initialized:
+            return
+
         try:
-            # Clean up music widget content if it exists
-            if self._music_widget_content:
-                # Remove from the parent container
-                current_children = list(self.music_widget.children)
-                if self._music_widget_content in current_children:
-                    current_children.remove(self._music_widget_content)
-                    self.music_widget.children = current_children
+            logger.debug("Initializing control center resources...")
 
-                # Trigger periodic cleanup before destroying
-                if hasattr(self._music_widget_content, "_periodic_cleanup"):
-                    self._music_widget_content._periodic_cleanup()
+            # Initialize network service lazily
+            if self.network_service is None:
+                self.network_service = NetworkClient()
+                # Connect network signal
+                self.network_service.connect("wifi-device-added", self.on_network_ready)
 
-                # Properly destroy the music widget content
-                try:
-                    self._music_widget_content.destroy()
-                except Exception as e:
-                    logger.warning(f"Failed to destroy music widget content: {e}")
-                self._music_widget_content = None
+            # Check initial states lazily (only when needed)
+            self._check_initial_states()
 
-            # Clean up shared MPRIS manager when hidden to free memory
-            if self._mpris_manager:
-                try:
-                    self._mpris_manager.destroy()
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to destroy MPRIS manager during cleanup: {e}"
-                    )
-                self._mpris_manager = None
+            # Store signal connections for cleanup
+            self._signal_connections.extend(
+                [
+                    audio_service.connect("changed", self.audio_changed),
+                    audio_service.connect("changed", self.volume_changed),
+                    modus_service.connect("wlan-changed", self.wlan_changed),
+                    modus_service.connect("bluetooth-changed", self.bluetooth_changed),
+                    modus_service.connect("dont-disturb-changed", self.dnd_changed),
+                ]
+            )
 
-            # Reset initialization flags to force recreation next time
-            self._music_initialized = False
+            # Connect brightness controls if brightness service is available
+            if brightness_service.max_screen > 0:
+                self.brightness_scale.connect("change-value", self.set_brightness)
+                self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
+                self._signal_connections.append(
+                    brightness_service.connect("screen", self.brightness_changed)
+                )
 
-            # Force garbage collection
-            import gc
+            # Connect volume scale signals
+            self.volume_scale.connect("change-value", self.set_volume)
+            self.volume_scale.connect("scroll-event", self.on_volume_scroll)
 
-            gc.collect()
+            # Mark signals as connected
+            self._signals_connected = True
+            self._resources_initialized = True
 
-            logger.debug("Control center aggressive cleanup completed")
+            logger.debug("Control center resources initialized successfully")
 
         except Exception as e:
-            logger.warning(f"Control center cleanup failed: {e}")
+            logger.error(f"Failed to initialize control center resources: {e}")
+            # Reset flags on failure
+            self._signals_connected = False
+            self._resources_initialized = False
 
-    def _ensure_music_widget(self):
-        """Lazy load music widget content - reuse MPRIS manager"""
-        if not self._music_initialized:
-            # Create shared MPRIS manager if it doesn't exist
-            if self._mpris_manager is None:
-                self._mpris_manager = MprisPlayerManager()
+    def _disconnect_signals_when_hidden(self):
+        """Disconnect signals when hidden to reduce resource usage, but keep widgets intact"""
+        try:
+            # Just disconnect signals and reset flags - don't destroy widgets
+            self._signals_connected = False
+            self._resources_initialized = False
 
-            self._music_widget_content = PlayerBoxStack(
-                self._mpris_manager, control_center=self
-            )
-            # Add to the music widget's children list
-            current_children = list(self.music_widget.children)
-            current_children.append(self._music_widget_content)
-            self.music_widget.children = current_children
-            self._music_initialized = True
+            # Reset state flags
+            self.has_bluetooth_open = False
+            self.has_wifi_open = False
+            self.has_per_app_volume_open = False
+            self.has_expanded_player_open = False
+
+            # Reset current view
+            self.current_view = "main"
+
+        except Exception as e:
+            logger.warning(f"Control center signal disconnection failed: {e}")
 
     def _ensure_bluetooth_widgets(self):
         """Lazy load bluetooth widgets"""
@@ -599,24 +570,7 @@ class ModusControlCenter(Window):
                 orientation="vertical",
                 h_expand=True,
                 v_expand=True,
-                children=[
-                    self.bluetooth_man,
-                    # Box(
-                    #     orientation="horizontal",
-                    #     name="top-widget",
-                    #     h_expand=True,
-                    #     children=[
-                    #         Box(
-                    #             orientation="vertical",
-                    #             name="wb-widget",
-                    #             style_classes="menu",
-                    #             spacing=5,
-                    #             children=[
-                    #             ],
-                    #         ),
-                    #     ],
-                    # ),
-                ],
+                children=[self.bluetooth_man],
             )
             self.bluetooth_center_box = Box(
                 h_expand=True, v_expand=True, children=[self.bluetooth_widgets]
@@ -658,33 +612,18 @@ class ModusControlCenter(Window):
             )
             self.per_app_volume_center_box.set_size_request(300, -1)
 
-    def _ensure_expanded_player_widgets(self):
-        """Lazy load expanded player widgets"""
-        if self.expanded_player_widgets is None:
-            if self._expanded_player_widget is None:
-                self._expanded_player_widget = EmbeddedExpandedPlayer(self)
-
-            self.expanded_player_widgets = Box(
-                orientation="vertical",
-                h_expand=True,
-                name="control-center-widgets",
-                children=[
-                    self._expanded_player_widget,
-                ],
-            )
-            self.expanded_player_center_box = CenterBox(
-                start_children=[self.expanded_player_widgets]
-            )
-            self.expanded_player_center_box.set_size_request(300, -1)
-
     def _check_initial_states(self):
-        # Check if caffeine is already running
+        # Check if caffeine is already running - use faster method
         try:
+            # Use faster check with timeout
             result = subprocess.run(
-                ["pgrep", "-f", "modus-inhibit"], capture_output=True, text=True
+                ["pgrep", "-f", "modus-inhibit"],
+                capture_output=True,
+                text=True,
+                timeout=0.5,  # Add timeout to prevent hanging
             )
             self.caffeine_mode = bool(result.stdout.strip())
-        except Exception:
+        except (subprocess.TimeoutExpired, Exception):
             self.caffeine_mode = False
 
         # Flight mode starts as False (normal mode)
@@ -699,12 +638,8 @@ class ModusControlCenter(Window):
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
         modus_service.dont_disturb = self.focus_mode
-        self.focus_icon.set_from_file(
-            get_relative_path(
-                "../../config/assets/icons/applets/dnd.svg"
-                if self.focus_mode
-                else "../../config/assets/icons/applets/dnd-off.svg"
-            )
+        self.focus_icon.dynamic_file(
+            "applets/dnd.svg" if self.focus_mode else "applets/dnd-off.svg"
         )
         self.focus_status_label.set_label("On" if self.focus_mode else "Off")
 
@@ -730,12 +665,10 @@ class ModusControlCenter(Window):
                     self.bluetooth_man.client.set_enabled(True)
 
             # Update icon
-            self.flight_icon.set_from_file(
-                get_relative_path(
-                    "../../config/assets/icons/applets/flight-on.svg"
-                    if self.flight_mode
-                    else "../../config/assets/icons/applets/flight-off.svg"
-                )
+            self.flight_icon.dynamic_file(
+                "applets/flight-on.svg"
+                if self.flight_mode
+                else "applets/flight-off.svg"
             )
 
         except Exception as e:
@@ -744,7 +677,6 @@ class ModusControlCenter(Window):
     def toggle_caffeine(self, *_):
         try:
             if self.caffeine_mode:
-                # Turn off caffeine
                 inhibit_script = get_relative_path("../../utils/inhibit.py")
                 subprocess.run(["python3", inhibit_script, "off"], check=False)
                 self.caffeine_mode = False
@@ -755,19 +687,16 @@ class ModusControlCenter(Window):
                         pass
                     self._caffeine_process = None
             else:
-                # Turn on caffeine
                 inhibit_script = get_relative_path("../../utils/inhibit.py")
                 self._caffeine_process = subprocess.Popen(
                     ["python3", inhibit_script, "on"], start_new_session=True
                 )
                 self.caffeine_mode = True
 
-            self.caffeine_icon.set_from_file(
-                get_relative_path(
-                    "../../config/assets/icons/applets/caffeine-on.svg"
-                    if self.caffeine_mode
-                    else "../../config/assets/icons/applets/caffeine-off.svg"
-                )
+            self.caffeine_icon.dynamic_file(
+                "applets/caffeine-on.svg"
+                if self.caffeine_mode
+                else "applets/caffeine-off.svg"
             )
             self.caffeine_status_label.set_label("On" if self.caffeine_mode else "Off")
 
@@ -775,18 +704,22 @@ class ModusControlCenter(Window):
             logger.warning(f"Failed to toggle caffeine: {e}")
 
     def set_volume(self, _, __, volume):
+        if not self._signals_connected:
+            return
         self._updating_volume = True
         audio_service.speaker.volume = round(volume)
         self._updating_volume = False
 
     def set_brightness(self, _, __, brightness):
+        if not self._signals_connected:
+            return
         self._updating_brightness = True
         brightness_value = int((brightness / 100) * brightness_service.max_screen)
         brightness_service.screen_brightness = brightness_value
         self._updating_brightness = False
 
     def brightness_changed(self, _, brightness_value):
-        if self._updating_brightness:
+        if not self._signals_connected or self._updating_brightness:
             return
 
         if brightness_service.max_screen > 0:
@@ -799,6 +732,8 @@ class ModusControlCenter(Window):
             )
 
     def on_volume_scroll(self, widget, event):
+        if not self._signals_connected:
+            return False
         current_value = self.volume_scale.get_value()
         scroll_step = 5
         if event.direction == Gdk.ScrollDirection.UP:
@@ -812,6 +747,8 @@ class ModusControlCenter(Window):
         return True
 
     def on_brightness_scroll(self, widget, event):
+        if not self._signals_connected:
+            return False
         current_value = self.brightness_scale.get_value()
         scroll_step = 5
         if event.direction == Gdk.ScrollDirection.UP:
@@ -825,8 +762,9 @@ class ModusControlCenter(Window):
         return True
 
     def toggle_bluetooth(self, *_):
+        if not self._resources_initialized:
+            return
         try:
-            # Access the bluetooth client from the bluetooth manager
             if hasattr(self, "bluetooth_man") and hasattr(self.bluetooth_man, "client"):
                 current_state = self.bluetooth_man.client.enabled
                 set_bluetooth_enabled_with_fallback(
@@ -838,32 +776,26 @@ class ModusControlCenter(Window):
             logger.warning(f"Failed to toggle bluetooth: {e}")
 
     def on_network_ready(self, *_):
-        """Called when network service is ready"""
         self.wifi_service = self.network_service.wifi_device
         if self.wifi_service:
-            # Connect to WiFi state changes to update icon
             self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
 
     def update_wifi_icon(self, *_):
-        """Update WiFi icon based on current state"""
         try:
             if self.wifi_service and hasattr(self, "wifi_svg"):
                 is_enabled = self.wifi_service.wireless_enabled
-                icon_file = (
-                    "../../config/assets/icons/applets/wifi.svg"
-                    if is_enabled
-                    else "../../config/assets/icons/applets/wifi-off.svg"
+                self.wifi_svg.dynamic_file(
+                    "applets/wifi.svg" if is_enabled else "applets/wifi-off.svg"
                 )
-                self.wifi_svg.set_from_file(get_relative_path(icon_file))
         except Exception as e:
             logger.warning(f"Failed to update WiFi icon: {e}")
 
     def toggle_wifi(self, *_):
-        """Toggle wifi on/off"""
+        if not self._resources_initialized:
+            return
         try:
             if self.wifi_service:
                 self.wifi_service.toggle_wifi()
-                # Update icon immediately after toggle
                 GLib.timeout_add(100, self.update_wifi_icon)
             else:
                 logger.warning("WiFi device not available for toggling")
@@ -874,11 +806,15 @@ class ModusControlCenter(Window):
         self.children = children
 
     def open_bluetooth(self, *_):
+        if not self._resources_initialized:
+            return
         self._ensure_bluetooth_widgets()
         idle_add(lambda *_: self.set_children(self.bluetooth_center_box))
         self.has_bluetooth_open = True
 
     def open_wifi(self, *_):
+        if not self._resources_initialized:
+            return
         self._ensure_wifi_widgets()
         idle_add(lambda *_: self.set_children(self.wifi_center_box))
         self.has_wifi_open = True
@@ -898,6 +834,8 @@ class ModusControlCenter(Window):
         self.has_wifi_open = False
 
     def open_per_app_volume(self, *_):
+        if not self._resources_initialized:
+            return
         self._ensure_per_app_volume_widgets()
         if self.current_view == "expanded_player":
             # If coming from expanded player, use crossfade
@@ -923,33 +861,30 @@ class ModusControlCenter(Window):
         self.has_per_app_volume_open = False
 
     def open_expanded_player(self, *_):
-        self._ensure_expanded_player_widgets()
+        if not self._resources_initialized:
+            return
         self._crossfade_to_view("expanded_player")
         self.has_expanded_player_open = True
-        # Refresh the player when opening
         if self._expanded_player_widget:
             self._expanded_player_widget.refresh()
 
     def close_expanded_player(self, *_):
+        # Just hide the expanded player widget, don't destroy it
         self._crossfade_to_view("main")
         self.has_expanded_player_open = False
 
     def _crossfade_to_view(self, view_name):
         """Handle transitions between views"""
         if view_name == "expanded_player":
-            # Show expanded player
-            self._ensure_expanded_player_widgets()
             idle_add(lambda *_: self.set_children(self.expanded_player_center_box))
             self.current_view = "expanded_player"
         elif view_name == "main":
-            # Show main view
             idle_add(lambda *_: self.set_children(self.center_box))
             self.current_view = "main"
 
     def _set_mousecapture(self, visible: bool):
         if visible:
-            # Lazy load music widget when becoming visible
-            self._ensure_music_widget()
+            GLib.idle_add(self._initialize_resources)
 
         self.set_visible(visible)
         if not visible:
@@ -962,7 +897,7 @@ class ModusControlCenter(Window):
         self,
         _,
     ):
-        if self._updating_volume:
+        if not self._signals_connected or self._updating_volume:
             return
 
         GLib.idle_add(
@@ -970,12 +905,10 @@ class ModusControlCenter(Window):
         )
 
     def wlan_changed(self, _, wlan):
-        self.wifi_svg.set_from_file(
-            get_relative_path(
-                "../../config/assets/icons/applets/wifi.svg"
-                if wlan != "No Connection"
-                else "../../config/assets/icons/applets/wifi-off.svg"
-            )
+        if not self._signals_connected:
+            return
+        self.wifi_svg.dynamic_file(
+            "applets/wifi.svg" if wlan != "No Connection" else "applets/wifi-off.svg"
         )
         if wlan != "No Connection":
             if wlan.startswith("connected:"):
@@ -995,12 +928,12 @@ class ModusControlCenter(Window):
             GLib.idle_add(lambda: self.wlan_label.set_property("label", wlan))
 
     def bluetooth_changed(self, _, bluetooth):
-        self.bluetooth_svg.set_from_file(
-            get_relative_path(
-                "../../config/assets/icons/applets/bluetooth.svg"
-                if bluetooth != "disabled"
-                else "../../config/assets/icons/applets/bluetooth-off.svg"
-            )
+        if not self._signals_connected:
+            return
+        self.bluetooth_svg.dynamic_file(
+            "applets/bluetooth.svg"
+            if bluetooth != "disabled"
+            else "applets/bluetooth-off.svg"
         )
         if bluetooth != "disabled":
             if bluetooth.startswith("connected:"):
@@ -1018,61 +951,247 @@ class ModusControlCenter(Window):
             GLib.idle_add(lambda: self.bluetooth_label.set_label("Off"))
 
     def audio_changed(self, *_):
+        if not self._signals_connected:
+            return
         pass
 
     def dnd_changed(self, _, dnd_state):
+        if not self._signals_connected:
+            return
         self.focus_mode = dnd_state
-        self.focus_icon.set_from_file(
-            get_relative_path(
-                "../../config/assets/icons/applets/dnd.svg"
-                if self.focus_mode
-                else "../../config/assets/icons/applets/dnd-off.svg"
-            )
+        self.focus_icon.dynamic_file(
+            "applets/dnd.svg" if self.focus_mode else "applets/dnd-off.svg"
         )
         self.focus_status_label.set_label("On" if self.focus_mode else "Off")
 
     def _init_mousecapture(self, mousecapture):
         self._mousecapture_parent = mousecapture
 
+    def _disconnect_all_signals(self):
+        """Disconnect all signal connections to prevent memory leaks"""
+        try:
+            for connection in self._signal_connections:
+                try:
+                    if connection and hasattr(connection, "disconnect"):
+                        connection.disconnect()
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect signal: {e}")
+
+            self._signal_connections.clear()
+
+            try:
+                self.disconnect_by_func(self._on_visibility_changed)
+            except Exception as e:
+                logger.warning(f"Failed to disconnect visibility signal: {e}")
+
+            try:
+                self.disconnect_by_func(self.hide_controlcenter)
+            except Exception as e:
+                logger.warning(f"Failed to disconnect keybinding: {e}")
+
+            if hasattr(self, "network_service") and self.network_service:
+                try:
+                    self.network_service.disconnect_by_func(self.on_network_ready)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect network signal: {e}")
+
+            if hasattr(self, "brightness_service") and self.brightness_service:
+                try:
+                    self.brightness_service.disconnect_by_func(self.brightness_changed)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect brightness signal: {e}")
+
+            if hasattr(self, "audio_service") and audio_service:
+                try:
+                    audio_service.disconnect_by_func(self.audio_changed)
+                    audio_service.disconnect_by_func(self.volume_changed)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect audio signals: {e}")
+
+            if hasattr(self, "modus_service") and modus_service:
+                try:
+                    modus_service.disconnect_by_func(self.wlan_changed)
+                    modus_service.disconnect_by_func(self.bluetooth_changed)
+                    modus_service.disconnect_by_func(self.dnd_changed)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect modus signals: {e}")
+
+            if hasattr(self, "volume_scale") and self.volume_scale:
+                try:
+                    self.volume_scale.disconnect_by_func(self.set_volume)
+                    self.volume_scale.disconnect_by_func(self.on_volume_scroll)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect volume scale signals: {e}")
+
+            if hasattr(self, "brightness_scale") and self.brightness_scale:
+                try:
+                    self.brightness_scale.disconnect_by_func(self.set_brightness)
+                    self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to disconnect brightness scale signals: {e}"
+                    )
+
+            self._signals_connected = False
+
+            logger.debug("All signals disconnected successfully")
+
+        except Exception as e:
+            logger.warning(f"Signal disconnection failed: {e}")
+
+    def _cleanup_managers(self):
+        """Clean up all manager instances"""
+        try:
+            if hasattr(self, "wifi_man") and self.wifi_man:
+                try:
+                    self.wifi_man.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy WiFi manager: {e}")
+                self.wifi_man = None
+
+            if hasattr(self, "bluetooth_man") and self.bluetooth_man:
+                try:
+                    self.bluetooth_man.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy Bluetooth manager: {e}")
+                self.bluetooth_man = None
+
+            if hasattr(self, "network_service") and self.network_service:
+                try:
+                    self.network_service.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy network service: {e}")
+                self.network_service = None
+
+            if hasattr(self, "wifi_service") and self.wifi_service:
+                try:
+                    self.wifi_service.disconnect_by_func(self.update_wifi_icon)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect WiFi service: {e}")
+                self.wifi_service = None
+
+            self._resources_initialized = False
+
+            logger.debug("All managers cleaned up successfully")
+
+        except Exception as e:
+            logger.warning(f"Manager cleanup failed: {e}")
+
+    def _cleanup_widgets(self):
+        try:
+            # Clean up main widgets
+            if hasattr(self, "widgets") and self.widgets:
+                try:
+                    self.widgets.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy main widgets: {e}")
+                self.widgets = None
+
+            # Clean up center box
+            if hasattr(self, "center_box") and self.center_box:
+                try:
+                    self.center_box.destroy()
+                except Exception as e:
+                    logger.warning(f"Failed to destroy center box: {e}")
+                self.center_box = None
+
+            # Clean up individual widgets
+            widget_attrs = [
+                "wlan_widget",
+                "bluetooth_widget",
+                "focus_widget",
+                "flight_widget",
+                "caffeine_widget",
+                "night_light_widget",
+                "volume_scale",
+                "brightness_scale",
+                "wlan_label",
+                "bluetooth_label",
+                "focus_status_label",
+                "caffeine_status_label",
+                "wlan_svg",
+                "bluetooth_svg",
+                "focus_icon",
+                "flight_icon",
+                "caffeine_icon",
+            ]
+
+            for attr in widget_attrs:
+                if hasattr(self, attr) and getattr(self, attr):
+                    try:
+                        widget = getattr(self, attr)
+                        if hasattr(widget, "destroy"):
+                            widget.destroy()
+                    except Exception as e:
+                        logger.warning(f"Failed to destroy {attr}: {e}")
+                    setattr(self, attr, None)
+
+            logger.debug("All widgets cleaned up successfully")
+
+        except Exception as e:
+            logger.warning(f"Widget cleanup failed: {e}")
+
+    def _cleanup_processes(self):
+        """Clean up any running processes"""
+        try:
+            # Clean up caffeine process
+            if self._caffeine_process:
+                try:
+                    self._caffeine_process.terminate()
+                    self._caffeine_process.wait(timeout=1)
+                except Exception as e:
+                    logger.warning(f"Failed to terminate caffeine process: {e}")
+                finally:
+                    self._caffeine_process = None
+
+            logger.debug("All processes cleaned up successfully")
+
+        except Exception as e:
+            logger.warning(f"Process cleanup failed: {e}")
+
+    def _complete_cleanup(self):
+        """Perform complete cleanup of all resources"""
+        try:
+            logger.debug("Starting complete cleanup...")
+            self._disconnect_all_signals()
+            self._cleanup_managers()
+            self._cleanup_widgets()
+            self._cleanup_processes()
+            self._disconnect_signals_when_hidden()
+
+            # Force garbage collection
+            import gc
+
+            gc.collect()
+
+            logger.debug("Complete cleanup finished successfully")
+
+        except Exception as e:
+            logger.error(f"Complete cleanup failed: {e}")
+
     def hide_controlcenter(self, *_):
-        self._mousecapture_parent.toggle_mousecapture()
-        self.set_visible(False)
+        try:
+            # Just disconnect signals when hiding, don't destroy widgets
+            self._disconnect_signals_when_hidden()
+
+            # Hide the control center
+            if hasattr(self, "_mousecapture_parent"):
+                self._mousecapture_parent.toggle_mousecapture()
+            self.set_visible(False)
+
+        except Exception as e:
+            logger.error(f"Failed to hide control center: {e}")
+            # Still try to hide even if cleanup fails
+            self.set_visible(False)
 
     def destroy(self):
-        """Clean up resources when widget is destroyed"""
-        # Disconnect all signal connections
-        for connection in self._signal_connections:
+        try:
+            self._complete_cleanup()
+            super().destroy()
+            logger.debug("Control center destroyed successfully")
+        except Exception as e:
+            logger.error(f"Failed to destroy control center: {e}")
             try:
-                connection.disconnect()
+                super().destroy()
             except:
                 pass
-
-        # Clean up caffeine process
-        if self._caffeine_process:
-            try:
-                self._caffeine_process.terminate()
-            except:
-                pass
-            self._caffeine_process = None
-
-        # Clean up heavy components
-        if hasattr(self, "wifi_man") and self.wifi_man:
-            self.wifi_man.destroy()
-        if hasattr(self, "bluetooth_man") and self.bluetooth_man:
-            self.bluetooth_man.destroy()
-        if self._music_widget_content:
-            self._music_widget_content.destroy()
-        if self._per_app_volume_widget:
-            self._per_app_volume_widget.destroy()
-        if self._expanded_player_widget:
-            self._expanded_player_widget.destroy()
-
-        # Clean up shared MPRIS manager
-        if self._mpris_manager:
-            try:
-                self._mpris_manager.destroy()
-            except Exception as e:
-                logger.warning(f"Failed to destroy MPRIS manager: {e}")
-            self._mpris_manager = None
-
-        super().destroy()

@@ -1,13 +1,10 @@
-# Standard library imports
-from gi.repository import GLib
-
-# Fabric imports
+from fabric.utils import GLib
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.image import Image
 from fabric.widgets.separator import Separator
 
 # Local imports

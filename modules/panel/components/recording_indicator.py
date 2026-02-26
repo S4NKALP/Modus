@@ -1,13 +1,12 @@
-import os
-import subprocess
 import time
 
-from fabric.utils import get_relative_path
+from fabric.utils import GLib, get_relative_path, os
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-from fabric.widgets.svg import Svg
-from gi.repository import GLib
+from utils.utils import setup_cursor_hover, svg_file
+
+from utils.functions import is_app_running, kill_process
 
 
 class RecordingIndicator(Button):
@@ -24,13 +23,8 @@ class RecordingIndicator(Button):
         self.timer_timeout_id = None
         self.status_timeout_id = None
 
-        self.recording_icon = Svg(
-            name="indicators-icon",
-            size=24,
-            svg_file=get_relative_path(
-                "../../../config/assets/icons/misc/media-record.svg"
-            ),
-        )
+        self.recording_icon = svg_file("misc/media-record.svg", size=24)
+
         self.time_label = Label(
             name="recording-time-label",
             markup="00:00",
@@ -47,9 +41,19 @@ class RecordingIndicator(Button):
 
         self.add(self.recording_box)
 
+        # Prevent container.show_all() from forcing this visible when no recording
+        try:
+            self.set_no_show_all(True)
+        except Exception:
+            pass
+
         self.connect("clicked", self.on_stop_recording)
+        try:
+            setup_cursor_hover(self, "pointer")
+        except Exception:
+            pass
         self.connect("button-press-event", self.on_button_press)
-        self.hide()
+        self.set_visible(False)
 
         GLib.timeout_add(100, self._delayed_init)
 
@@ -58,22 +62,13 @@ class RecordingIndicator(Button):
         return False
 
     def is_recorder_running(self):
-        # add more process names if needed
+        # Check if any recorder process is running
         recorder_processes = ["wf-recorder", "gpu-screen-recorder"]
 
-        try:
-            for proc in recorder_processes:
-                result = subprocess.run(
-                    ["pgrep", "-x", proc],
-                    capture_output=True,
-                    text=True,
-                    timeout=1,
-                )
-                if result.returncode == 0:
-                    return True  # Found a running recorder process
-            return False  # None found running
-        except Exception:
-            return False
+        for proc in recorder_processes:
+            if is_app_running(proc):
+                return True
+        return False
 
     def check_recording_status(self):
         current_time = time.time()
@@ -95,9 +90,9 @@ class RecordingIndicator(Button):
 
                 self.update_timer_display()
             else:
-                if self.get_visible():
-                    self.set_visible(False)
-                    self.cleanup_recording_state()
+                # Ensure it stays hidden when not recording
+                self.set_visible(False)
+                self.cleanup_recording_state()
 
         except Exception as e:
             print(f"[DEBUG] Error checking recording status: {e}")
@@ -172,11 +167,9 @@ class RecordingIndicator(Button):
 
             def send_stop_command():
                 try:
-                    subprocess.Popen(
-                        [self.script_path, "record", "stop"],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
+                    # Kill any running recorder processes
+                    kill_process("wf-recorder")
+                    kill_process("gpu-screen-recorder")
                 except Exception as e:
                     print(f"[DEBUG] Error sending stop command: {e}")
 

@@ -1,8 +1,7 @@
 import subprocess
 
-import gi
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
-from fabric.utils import get_relative_path
+from fabric.utils import Gdk, GLib, Gtk, exec_shell_command, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -11,14 +10,28 @@ from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
-from fabric.widgets.svg import Svg
-from gi.repository import Gdk, GLib, Gtk
-from loguru import logger
 
-from services.battery import Battery
+from utils.utils import svg_file
 
-gi.require_version("Gtk", "3.0")
-gi.require_version("Gdk", "3.0")
+
+def get_battery_icon_file(
+    percentage: int, is_charging: bool, icon_path: str = ""
+) -> str:
+    """
+    Get the battery icon file path based on percentage and charging status.
+
+    Args:
+        percentage: Battery percentage (0-100)
+        is_charging: Whether the device is charging
+        icon_path: Base path for icons (unused, kept for compatibility)
+
+    Returns:
+        Relative path to the battery icon file
+    """
+    clamped = max(0, min(100, percentage))
+    step = (clamped // 10) * 10
+    filename = f"battery-{step:03d}{'-charging' if is_charging else ''}.svg"
+    return svg_file(f"battery/{filename}")
 
 
 def set_bluetooth_enabled_with_fallback(client, enabled: bool):
@@ -27,19 +40,21 @@ def set_bluetooth_enabled_with_fallback(client, enabled: bool):
         client.set_enabled(enabled)
     except Exception as e:
         logger.warning(f"Fabric bluetooth set_enabled({enabled}) failed: {e}")
+
         # Fallback to rfkill to unblock/block bluetooth
         if enabled:
-            command = ["rfkill", "unblock", "bluetooth"]
+            command = "rfkill unblock bluetooth"
         else:
-            command = ["rfkill", "block", "bluetooth"]
+            command = "rfkill block bluetooth"
 
-        try:
-            # Execute the rfkill command
-            subprocess.run(
-                command, capture_output=True, text=True, timeout=10, check=True
-            )
-        except Exception as subprocess_error:
-            logger.error(f"rfkill fallback failed with exception: {subprocess_error}")
+        result = exec_shell_command(command)
+        if result is False:
+            logger.error(f"rfkill fallback failed: command '{command}' returned False")
+        elif isinstance(result, str) and result.strip():
+            # If result is a non-empty string, it might be an error message
+            logger.warning(f"rfkill command output: {result.strip()}")
+        else:
+            logger.info(f"rfkill fallback succeeded: {command}")
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -73,21 +88,16 @@ class BluetoothDeviceSlot(CenterBox):
         )
         self.start_children = [self.device_button]
 
-        # Add battery info if available
+        # # Add battery info if available
         if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
             battery_box = Box(orientation="h", spacing=4)
 
             # Create battery icon
-            battery_icon = Svg(
-                size=16,
-                svg_file=get_relative_path(
-                    Battery.get_battery_icon_file(
-                        device.battery_percentage,
-                        False,  # Not charging for bluetooth devices
-                        "../../config/assets/icons/",
-                    )
-                ),
-                name="battery-icon",
+            battery_icon = svg_file(
+                get_battery_icon_file(
+                    device.battery_percentage,
+                    False,  # Not charging for bluetooth devices
+                )
             )
 
             # Create battery percentage label
@@ -134,16 +144,11 @@ class BluetoothDeviceSlot(CenterBox):
                 battery_box = Box(orientation="h", spacing=4)
 
                 # Create battery icon
-                battery_icon = Svg(
-                    size=16,
-                    svg_file=get_relative_path(
-                        Battery.get_battery_icon_file(
-                            self.device.battery_percentage,
-                            False,  # Not charging for bluetooth devices
-                            "../../config/assets/icons/",
-                        )
-                    ),
-                    name="battery-icon",
+                battery_icon = svg_file(
+                    get_battery_icon_file(
+                        self.device.battery_percentage,
+                        False,  # Not charging for bluetooth devices
+                    )
                 )
 
                 # Create battery percentage label
@@ -160,13 +165,10 @@ class BluetoothDeviceSlot(CenterBox):
                     battery_label = battery_box.children[1]
 
                     # Update battery icon
-                    battery_icon.set_from_file(
-                        get_relative_path(
-                            Battery.get_battery_icon_file(
-                                self.device.battery_percentage,
-                                False,  # Not charging for bluetooth devices
-                                "../../config/assets/icons/",
-                            )
+                    battery_icon.dynamic_file(
+                        get_battery_icon_file(
+                            self.device.battery_percentage,
+                            False,  # Not charging for bluetooth devices
                         )
                     )
 
