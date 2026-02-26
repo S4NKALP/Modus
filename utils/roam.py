@@ -1,8 +1,12 @@
-from loguru import logger
-
 from fabric.audio import Audio
+from fabric.utils import logger
 
-from services.modus import ModusService, notification_service as notification_service_instance
+from services.modus import (
+    ModusService,
+)
+from services.modus import (
+    notification_service as notification_service_instance,
+)
 
 global modus_service
 try:

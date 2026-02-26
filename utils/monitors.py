@@ -1,10 +1,11 @@
 import json
-import warnings
-from typing import Dict
 import time
-from fabric.hyprland import Hyprland
-from gi.repository import Gdk
+import warnings
 from functools import lru_cache
+from typing import Dict
+
+from fabric.hyprland import Hyprland
+from fabric.utils import Gdk
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
