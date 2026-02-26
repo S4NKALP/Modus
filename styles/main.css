@@ -1,8 +1,8 @@
 @import url("./colors.css");
+@import url("./constant.css");
 @import url("./panel.css");
 @import url("./dock.css");
 @import url("./switcher.css");
-@import url("./launcher.css");
 @import url("./osd.css");
 @import url("./controlcenter.css");
 @import url("./notification.css");
@@ -21,14 +21,4 @@
     color: var(--foreground);
     font-size: unset;
     font-family: "SF Pro Rounded";
-}
-
-#corner {
-    background-color: var(--shadow);
-    border-radius: 0;
-}
-
-#corner-container {
-    min-width: 20px;
-    min-height: 20px;
 }
