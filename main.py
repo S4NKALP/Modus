@@ -7,6 +7,7 @@ from modules.launcher.main import Launcher
 from modules.notification.notification import ModusNoti
 from modules.osd import OSD
 from modules.panel.main import Panel
+from modules.switcher import ApplicationSwitcher
 from utils.functions import set_process_name
 
 for log in [
@@ -26,7 +27,7 @@ if __name__ == "__main__":
 
     # About().toggle(None)
     config = load_config()
-
+    switcher = ApplicationSwitcher()
     panel = Panel()
     modusnoti = ModusNoti()
     launcher = Launcher()
@@ -36,7 +37,15 @@ if __name__ == "__main__":
     css_file = monitor_file(get_relative_path("styles"))
     _ = css_file.connect("changed", lambda *_: set_css())
 
-    app = Application(f"{APP_NAME}", panel, modusnoti, deskwidget, osd, launcher)
+    app = Application(
+        f"{APP_NAME}",
+        panel,
+        modusnoti,
+        deskwidget,
+        osd,
+        launcher,
+        switcher,
+    )
 
     def set_css():
         app.set_stylesheet_from_file(

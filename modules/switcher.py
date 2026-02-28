@@ -1,18 +1,18 @@
 import json
 
 import gi
-from gi.repository import Gdk, Glace
-
-import config.data as data
 from fabric.hyprland.widgets import get_hyprland_connection
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
+from fabric.widgets.wayland import WaylandWindow as Window
+from gi.repository import Gdk, Glace
+
+import config.data as data
+from utils.functions import is_special_workspace
 from utils.icon_resolver import IconResolver
 from utils.occlusion import get_screen_dimensions
-from utils.functions import is_special_workspace
-from widgets.wayland import WaylandWindow as Window
 
 gi.require_version("Glace", "0.1")
 

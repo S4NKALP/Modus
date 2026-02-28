@@ -16,6 +16,7 @@
 @import url("./lock.css");
 @import url("./todo.css");
 @import url("./launcher.css");
+@import url("./switcher.css");
 
 * {
     all: unset;
