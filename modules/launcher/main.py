@@ -1,16 +1,16 @@
 from typing import List, Optional, Tuple
 
-from gi.repository import Gdk, GLib
-
 from fabric.core.service import Property
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
+from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.wayland import WaylandWindow as Window
+from gi.repository import Gdk, GLib
+
 from modules.launcher.plugin_manager import PluginManager
 from modules.launcher.result import Result
 from modules.launcher.result_item import ResultItem
 from modules.launcher.trigger_config import TriggerConfig
-from fabric.widgets.scrolledwindow import ScrolledWindow
-from widgets.wayland import WaylandWindow as Window
 
 # Constants
 SEARCH_DEBOUNCE_MS = 50

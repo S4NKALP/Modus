@@ -3,7 +3,6 @@ import os
 
 import gi
 import pam
-import setproctitle
 from fabric import Application
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
@@ -23,6 +22,7 @@ from modules.panel.components.indicators import (
     BluetoothIndicator,
     NetworkIndicator,
 )
+from utils.functions import set_process_name
 from widgets.circle_image import CircleImage as Image
 
 gi.require_version("Gdk", "3.0")
@@ -219,7 +219,7 @@ def initialize():
 
 
 if __name__ == "__main__":
-    setproctitle.setproctitle("lockscreen")
+    set_process_name("lockscreen")
     initialize()
     lockscreen = LockScreen(GtkSessionLock.Lock())
 
@@ -227,7 +227,7 @@ if __name__ == "__main__":
 
     def set_css():
         app.set_stylesheet_from_file(
-            get_relative_path("main.css"),
+            get_relative_path("styles/main.css"),
         )
 
     app.set_css = set_css  # pyright: ignore[reportAttributeAccessIssue]

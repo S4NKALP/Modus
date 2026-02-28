@@ -3,6 +3,7 @@ from fabric.utils import get_relative_path, logger, monitor_file
 
 from config.data import APP_NAME
 from modules.desktop.widget import Deskwidgets
+from modules.launcher.main import Launcher
 from modules.notification.notification import ModusNoti
 from modules.osd import OSD
 from modules.panel.main import Panel
@@ -28,13 +29,14 @@ if __name__ == "__main__":
 
     panel = Panel()
     modusnoti = ModusNoti()
+    launcher = Launcher()
     deskwidget = Deskwidgets()
     osd = OSD()
     # Monitor CSS files for changes
     css_file = monitor_file(get_relative_path("styles"))
     _ = css_file.connect("changed", lambda *_: set_css())
 
-    app = Application(f"{APP_NAME}", panel, modusnoti, deskwidget, osd)
+    app = Application(f"{APP_NAME}", panel, modusnoti, deskwidget, osd, launcher)
 
     def set_css():
         app.set_stylesheet_from_file(
