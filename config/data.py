@@ -2,7 +2,6 @@ import json
 
 from fabric.utils import Gdk, GLib, get_relative_path, os
 
-from services.config import start_config_service
 from utils.functions import parse_timeout_string
 
 APP_NAME = "modus1"
@@ -29,6 +28,8 @@ MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 def load_config():
     """Load the configuration from config.json"""
     try:
+        from services.config import start_config_service
+
         service = start_config_service()
         return service.get_all()
     except ImportError:
