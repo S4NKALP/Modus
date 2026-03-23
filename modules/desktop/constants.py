@@ -87,6 +87,38 @@ WEATHER_EMOJI_MAP = {
     99: "⛈️",  # Thunderstorm with heavy hail
 }
 
+# Weather condition to SVG icon mapping
+WEATHER_ICON_MAP = {
+    0: "weather-clear",
+    1: "weather-few-clouds",
+    2: "weather-clouds",
+    3: "weather-overcast",
+    45: "weather-fog",
+    48: "weather-fog",
+    51: "weather-showers-scattered",
+    53: "weather-showers",
+    55: "weather-showers",
+    61: "weather-showers-scattered",
+    80: "weather-showers-scattered",
+    63: "weather-showers",
+    65: "weather-showers",
+    81: "weather-showers",
+    82: "weather-storm",
+    56: "weather-freezing-rain",
+    57: "weather-freezing-rain",
+    66: "weather-freezing-rain",
+    67: "weather-freezing-rain",
+    71: "weather-snow",
+    73: "weather-snow",
+    75: "weather-snow",
+    77: "weather-hail",
+    85: "weather-snow-scattered",
+    86: "weather-snow-scattered",
+    95: "weather-storm",
+    96: "weather-storm",
+    99: "weather-storm",
+}
+
 # Weather condition descriptions
 WEATHER_DESC_MAP = {
     0: "Clear sky",
