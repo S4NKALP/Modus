@@ -4,9 +4,15 @@ import json
 import os
 import subprocess
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, NamedTuple, Optional, TypeVar
 
-from fabric.utils import exec_shell_command, exec_shell_command_async, logger
+from fabric.utils import (
+    exec_shell_command,
+    exec_shell_command_async,
+    logger,
+)
+
+T = TypeVar("T")
 
 
 def set_process_name(name: str):
@@ -66,7 +72,6 @@ def run_in_thread(func):
     return wrapper
 
 
-# @run_in_thread
 def write_json_file(data: Dict, path: str):
     try:
         with open(path, "w") as f:
@@ -75,7 +80,7 @@ def write_json_file(data: Dict, path: str):
         logger.warning(f"Failed to write json: {e}")
 
 
-def read_json_file(file_path: str) -> Optional[List]:
+def read_json_file(file_path: str) -> Optional[Dict]:
     if not os.path.exists(file_path):
         logger.error(f"JSON file {file_path} does not exist.")
         return None
@@ -253,3 +258,41 @@ def clear_children(container) -> None:
             child.destroy()
     except Exception as e:
         logger.warning(f"clear_children failed: {e}")
+
+
+class CommandResult(NamedTuple):
+    returncode: int
+    stdout: bytes | str
+    stderr: bytes | str
+
+
+def run_command(
+    args: list[str],
+    timeout: float | None = None,
+    cwd: Optional[str] = None,
+    env: Optional[Dict[str, str]] = None,
+    *,
+    input: bytes | str | None = None,
+    text: bool = True,
+) -> CommandResult:
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=text,
+            timeout=timeout,
+            cwd=cwd,
+            env=env,
+            input=input,
+        )
+        return CommandResult(result.returncode, result.stdout, result.stderr)
+    except subprocess.TimeoutExpired as e:
+        return CommandResult(
+            -1,
+            (e.stdout or b"" if not text else e.stdout or ""),
+            (e.stderr or (b"timeout" if not text else "timeout")),
+        )
+    except FileNotFoundError as e:
+        return CommandResult(127, "", str(e))
+    except Exception as e:
+        return CommandResult(1, "", str(e))

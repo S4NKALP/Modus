@@ -164,5 +164,12 @@ class TodoService(Service):
         }
 
 
-# Global service instance
-todo_service = TodoService()
+# Global service instance getter
+_todo_service = None
+
+
+def get_todo_service() -> TodoService:
+    global _todo_service
+    if _todo_service is None:
+        _todo_service = TodoService()
+    return _todo_service

@@ -5,7 +5,7 @@ from config.data import APP_NAME
 from modules.desktop.widget import Deskwidgets
 from modules.launcher.main import Launcher
 from modules.notification.notification import ModusNoti
-from modules.osd import OSD
+from modules.osd.main import OSDWindow
 from modules.panel.main import Panel
 from modules.switcher import ApplicationSwitcher
 from utils.functions import set_process_name
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     modusnoti = ModusNoti()
     launcher = Launcher()
     deskwidget = Deskwidgets()
-    osd = OSD()
+    osd = OSDWindow()
     # Monitor CSS files for changes
     css_file = monitor_file(get_relative_path("styles"))
     _ = css_file.connect("changed", lambda *_: set_css())

@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from fabric import Service, Signal
+from fabric.core.service import Property, Service, Signal
 from fabric.utils import Gio, GLib, logger
 
 from utils.dbus_helper import GioDBusHelper
@@ -178,8 +178,23 @@ class BatteryService(Service):
         """Get display name for a power profile."""
         return PowerProfile.get(profile, profile.title())
 
-    def handle_property_change(self, *_):
-        # You may filter which property changed by checking parameters[1]
+    @Property(int, "readable", default_value=0)
+    def percentage(self) -> int:
+        return self.get_property("Percentage") or 0
+
+    @Property(int, "readable", default_value=0)
+    def state(self) -> int:
+        return self.get_property("State") or 0
+
+    @Property(bool, "readable", default_value=False)
+    def is_present(self) -> bool:
+        return self.get_property("IsPresent") or False
+
+    def handle_property_change(self, *args):
+        # Notify about property changes for OSD and other listeners
+        self.notify("percentage")
+        self.notify("state")
+        self.notify("is-present")
         self.emit("changed")
 
     def handle_power_profile_change(self, *_):

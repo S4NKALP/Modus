@@ -280,7 +280,7 @@ class WiFiPasswordDialog(Window):
             self.password_entry.grab_focus()
             self.password_entry.select_region(0, -1)
             return False
-        except:
+        except Exception:
             return False
 
     def get_password(self):

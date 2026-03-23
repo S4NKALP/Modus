@@ -23,7 +23,12 @@
   "workspace_indicator": true,
   "bluetooth": true,
   "date_time": true,
+  "keyboard_layouts": [
+    "us",
+    "np"
+  ],
   "dock": true,
-  "window_switcher": true
+  "window_switcher": true,
+  "osd": true
 }
 

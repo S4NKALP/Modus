@@ -5,10 +5,10 @@ import re
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk
-from loguru import logger
+from gi.repository import GLib, Gtk  # noqa: E402
+from loguru import logger  # noqa: E402
 
-import config.data as data
+import config.data as data  # noqa: E402
 
 ICON_CACHE_FILE = data.CACHE_DIR + "/icons.json"
 if not os.path.exists(data.CACHE_DIR):
