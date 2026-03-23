@@ -497,7 +497,7 @@ class PasswordPlugin(PluginBase):
                             f"Password '{name}' {action_word} successfully",
                         ]
                     )
-                except:
+                except Exception:
                     pass
             else:
                 print(f"Failed to add password '{name}'")
@@ -524,7 +524,7 @@ class PasswordPlugin(PluginBase):
                             f"Password '{name}' removed successfully",
                         ]
                     )
-                except:
+                except Exception:
                     pass
             else:
                 print(f"Failed to remove password '{name}'")
@@ -564,7 +564,7 @@ class PasswordPlugin(PluginBase):
                             f"Password for '{name}' copied to clipboard",
                         ]
                     )
-                except:
+                except Exception:
                     pass
 
                 # Clear cache to force refresh

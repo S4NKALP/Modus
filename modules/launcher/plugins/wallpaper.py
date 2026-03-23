@@ -314,11 +314,11 @@ class WallpaperPlugin(PluginBase):
         )
         return filename
 
-    def _hsl_to_rgb_hex(self, h: float, s: float = 1.0, l: float = 0.5) -> str:
+    def _hsl_to_rgb_hex(self, h: float, s: float = 1.0, l_val: float = 0.5) -> str:
         """Convert HSL color value to RGB HEX string."""
         # colorsys uses HLS, not HSL, and expects values between 0.0 and 1.0
         hue = h / 360.0
-        r, g, b = colorsys.hls_to_rgb(hue, l, s)  # Note the order: H, L, S
+        r, g, b = colorsys.hls_to_rgb(hue, l_val, s)  # Note the order: H, L, S
         r_int, g_int, b_int = int(r * 255), int(g * 255), int(b * 255)
         return f"#{r_int:02X}{g_int:02X}{b_int:02X}"
 

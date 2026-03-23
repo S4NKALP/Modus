@@ -114,7 +114,6 @@ class PerAppVolumeControl(Box):
             "visual studio code": "vscode",
             "telegram": "telegram-desktop",
             "pulse": "audio-card",
-            "zen": "zen-browser",
             "pipewire": "audio-card",
             "alsa": "audio-card",
             "sink": "audio-speakers",
@@ -323,7 +322,7 @@ class PerAppVolumeControl(Box):
             for connection in self._signal_connections:
                 try:
                     audio_service.disconnect(connection)
-                except:
+                except Exception:
                     pass
 
         self._signal_connections.clear()

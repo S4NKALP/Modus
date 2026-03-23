@@ -170,7 +170,7 @@ class ExpandableNotificationGroup(Box):
     def _get_notification_pixbuf_for_group(self, cached_notification):
         """Get notification pixbuf using cached image key - fallback to app icon"""
         notification = cached_notification._notification
-        notification_id = getattr(notification, "id", None)
+        getattr(notification, "id", None)
 
         # First try to get cached notification image using stored cache key
         if (
@@ -447,7 +447,7 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _get_notification_pixbuf(self, notification):
         """Get notification pixbuf using cached image key - fallback to app icon"""
-        notification_id = getattr(notification, "id", None)
+        getattr(notification, "id", None)
 
         # First try to get cached notification image using stored cache key
         if self.cache_metadata:
@@ -689,7 +689,7 @@ class NotificationCenter(Window):
         rebuild_count = 0
         for cached_notification in notification_service.cached_notifications:
             app_name = cached_notification._notification.app_name
-            notification_id = getattr(cached_notification._notification, "id", None)
+            getattr(cached_notification._notification, "id", None)
 
             # Skip ignored apps during rebuild
             if app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:

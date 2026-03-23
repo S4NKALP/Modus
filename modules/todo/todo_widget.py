@@ -12,7 +12,7 @@ from fabric.widgets.svg import Svg
 from gi.repository import GLib
 
 # Local imports
-from services.todo import todo_service
+from services.todo import get_todo_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
 
@@ -153,14 +153,14 @@ class TodoItem(Box):
 
     def _toggle_completion(self, *_):
         """Toggle todo completion status"""
-        todo_service.toggle_todo(self.todo_data["id"])
+        get_todo_service().toggle_todo(self.todo_data["id"])
 
     def _cycle_priority(self, *_):
         """Cycle through priority levels"""
         priorities = ["low", "medium", "high"]
         current_index = priorities.index(self.todo_data["priority"])
         new_priority = priorities[(current_index + 1) % len(priorities)]
-        todo_service.set_priority(self.todo_data["id"], new_priority)
+        get_todo_service().set_priority(self.todo_data["id"], new_priority)
 
     def _start_edit(self, *_):
         """Start editing the todo text"""
@@ -183,7 +183,7 @@ class TodoItem(Box):
 
         new_text = self.text_entry.get_text().strip()
         if new_text:
-            todo_service.edit_todo(self.todo_data["id"], new_text)
+            get_todo_service().edit_todo(self.todo_data["id"], new_text)
 
         self._cancel_edit()
 
@@ -198,7 +198,7 @@ class TodoItem(Box):
 
     def _delete_todo(self, *_):
         """Delete this todo"""
-        todo_service.delete_todo(self.todo_data["id"])
+        get_todo_service().delete_todo(self.todo_data["id"])
 
     def update_from_data(self, todo_data):
         """Update the widget from new todo data"""
@@ -252,7 +252,7 @@ class TodoListWidget(Window):
         self.todo_items = {}  # Maps todo IDs to TodoItem widgets
 
         # Register callback with todo service
-        todo_service.add_callback(self._on_todo_event)
+        get_todo_service().add_callback(self._on_todo_event)
 
         self._build_ui()
         self._refresh_todos()
@@ -363,12 +363,12 @@ class TodoListWidget(Window):
         """Add a new todo"""
         text = self.new_todo_entry.get_text().strip()
         if text:
-            todo_service.add_todo(text)
+            get_todo_service().add_todo(text)
             self.new_todo_entry.set_text("")
 
     def _clear_completed(self, *_):
         """Clear all completed todos"""
-        todo_service.clear_completed()
+        get_todo_service().clear_completed()
 
     def _on_todo_event(self, event_type, data=None):
         """Handle todo service events via callback"""
@@ -392,7 +392,7 @@ class TodoListWidget(Window):
         self.todos_container.children = []
 
         # Get all todos
-        todos = todo_service.todos
+        todos = get_todo_service().todos
 
         # Sort todos: incomplete first, then by priority, then by creation date
         def sort_key(todo):
@@ -418,7 +418,7 @@ class TodoListWidget(Window):
 
     def _update_stats(self):
         """Update the statistics display"""
-        stats = todo_service.get_stats()
+        stats = get_todo_service().get_stats()
         stats_text = f"{stats['pending']} pending, {stats['completed']} completed"
         self.stats_label.set_label(stats_text)
 
@@ -439,7 +439,7 @@ class TodoListWidget(Window):
     def destroy(self):
         """Clean up when destroyed"""
         # Remove callback from todo service
-        todo_service.remove_callback(self._on_todo_event)
+        get_todo_service().remove_callback(self._on_todo_event)
 
         super().destroy()
 

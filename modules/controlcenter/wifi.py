@@ -699,7 +699,7 @@ class WifiConnections(Box):
         # Make sure other networks revealer is collapsed when closing
         try:
             self.other_networks_revealer.child_revealed = False
-        except:
+        except Exception:
             pass  # Widget might already be destroyed
 
     def close_wifi(self):

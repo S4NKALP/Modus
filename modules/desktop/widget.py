@@ -546,7 +546,7 @@ class CpuInfo(SystemInfoBase):
                             for p in ["package id 0", "core 0", ""]
                         ):
                             return round(entry.current, 1)
-        except:
+        except Exception:
             pass
         return None
 

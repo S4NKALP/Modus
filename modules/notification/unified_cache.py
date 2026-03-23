@@ -150,7 +150,7 @@ def verify_cache_persistence():
         for cache_file in cache_files[:2]:  # Test first 2 files
             try:
                 cache_path = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, cache_file)
-                test_pixbuf = GdkPixbuf.Pixbuf.new_from_file(cache_path)
+                GdkPixbuf.Pixbuf.new_from_file(cache_path)
             except Exception as e:
                 logger.warning(f"Failed to load cached asset {cache_file}: {e}")
 
@@ -175,7 +175,7 @@ def get_fallback_icon(size=(48, 48)):
             return GdkPixbuf.Pixbuf.new(
                 GdkPixbuf.Colorspace.RGB, True, 8, size[0], size[1]
             )
-        except:
+        except Exception:
             return None
 
 

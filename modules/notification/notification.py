@@ -299,14 +299,14 @@ def verify_cache_persistence():
         for cache_file in icon_cache_files[:2]:  # Test first 2 icon files
             try:
                 cache_path = os.path.join(NOTIFICATION_ICON_CACHE_DIR, cache_file)
-                test_pixbuf = GdkPixbuf.Pixbuf.new_from_file(cache_path)
+                GdkPixbuf.Pixbuf.new_from_file(cache_path)
             except Exception as e:
                 logger.warning(f"Failed to load cached icon {cache_file}: {e}")
 
         for cache_file in image_cache_files[:2]:  # Test first 2 image files
             try:
                 cache_path = os.path.join(NOTIFICATION_IMAGE_CACHE_DIR, cache_file)
-                test_pixbuf = GdkPixbuf.Pixbuf.new_from_file(cache_path)
+                GdkPixbuf.Pixbuf.new_from_file(cache_path)
             except Exception as e:
                 logger.warning(f"Failed to load cached image {cache_file}: {e}")
 
@@ -876,7 +876,7 @@ class NotificationRevealer(SlideRevealer):
                 self.notif_box._should_cleanup_cache = True
                 try:
                     self.notification.close("dismissed-by-user")
-                except:
+                except Exception:
                     pass
                 return False
 
@@ -1021,7 +1021,7 @@ class ModusNoti(Window):
         preload_notification_assets(notification)
 
         # Implement smart queue management for smooth transitions
-        current_time = GLib.get_monotonic_time() / 1000
+        GLib.get_monotonic_time() / 1000
 
         # If queue is getting full, remove oldest notifications smoothly
         if len(self.notification_queue) >= self.MAX_QUEUE_SIZE:
@@ -1030,7 +1030,7 @@ class ModusNoti(Window):
                 oldest = self.notification_queue.pop(0)
                 try:
                     oldest.close("dismissed-by-user")
-                except:
+                except Exception:
                     pass
 
         # Add new notification to queue
@@ -1081,7 +1081,7 @@ class ModusNoti(Window):
             # Force close current notification with smooth animation
             try:
                 self.current_notification.notification.close("expired")
-            except:
+            except Exception:
                 pass
 
     def _show_next_notification(self):
@@ -1114,7 +1114,7 @@ class ModusNoti(Window):
         for child in list(self.notifications.children):
             try:
                 self.notifications.remove(child)
-            except:
+            except Exception:
                 pass
 
         self.notifications.children = [new_box]
@@ -1146,7 +1146,7 @@ class ModusNoti(Window):
         try:
             if notification_box in self.notifications.children:
                 self.notifications.remove(notification_box)
-        except:
+        except Exception:
             pass
 
         # Reset state
@@ -1179,7 +1179,7 @@ class ModusNoti(Window):
             for notification in list(self.notification_queue):
                 try:
                     notification.close("dismissed-by-user")
-                except:
+                except Exception:
                     pass
             self.notification_queue.clear()
 
@@ -1223,15 +1223,15 @@ class ModusNoti(Window):
                 timeout_str = new_config["notification_timeout"]
                 # Parse the timeout string to milliseconds
 
-                timeout_ms = parse_timeout_string(timeout_str)
+                parse_timeout_string(timeout_str)
 
             # Handle ignored apps changes
             if "notification_ignored_apps" in new_config:
-                ignored_apps = new_config["notification_ignored_apps"]
+                new_config["notification_ignored_apps"]
 
             # Handle limited apps history changes
             if "notification_limited_apps_history" in new_config:
-                limited_apps = new_config["notification_limited_apps_history"]
+                new_config["notification_limited_apps_history"]
 
             # Update the current config
             self._current_config.update(new_config)

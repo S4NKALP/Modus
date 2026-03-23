@@ -683,7 +683,7 @@ class ModusControlCenter(Window):
                 if self._caffeine_process:
                     try:
                         self._caffeine_process.terminate()
-                    except:
+                    except Exception:
                         pass
                     self._caffeine_process = None
             else:
@@ -1193,5 +1193,5 @@ class ModusControlCenter(Window):
             logger.error(f"Failed to destroy control center: {e}")
             try:
                 super().destroy()
-            except:
+            except Exception:
                 pass

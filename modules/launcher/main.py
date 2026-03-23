@@ -1040,7 +1040,7 @@ class Launcher(Window):
                     return widget
                 # Also check if this is the only Entry in the widget (likely to be the target)
                 return widget
-            except:
+            except Exception:
                 # If focus checking fails, assume this Entry should handle the event
                 return widget
 
@@ -1207,7 +1207,7 @@ class Launcher(Window):
                 allocation = selected_child.get_allocation()
                 item_height = allocation.height if allocation.height > 0 else 68
                 item_y = allocation.y
-            except:
+            except Exception:
                 # Fallback to estimation
                 item_height = DEFAULT_ITEM_HEIGHT
                 item_y = self.selected_index * item_height

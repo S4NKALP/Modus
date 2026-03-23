@@ -911,7 +911,7 @@ class PlayerBox(Box):
                 from gi.repository import GLib
 
                 GLib.source_remove(self._seekbar_timer_id)
-            except:
+            except Exception:
                 pass
             self._seekbar_timer_id = None
 
@@ -1041,7 +1041,7 @@ class PlayerBox(Box):
                 from gi.repository import GLib
 
                 GLib.source_remove(self._seekbar_timer_id)
-            except:
+            except Exception:
                 pass
             self._seekbar_timer_id = None
 

@@ -556,7 +556,6 @@ class PlayerBoxStack(Box):
             self._update_all_player_buttons()
 
     def on_new_player(self, mpris_manager, player):
-        player_name = player.props.player_name
 
         # if player_name in self.config.get("ignore", []):
         #     return

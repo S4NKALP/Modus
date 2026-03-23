@@ -29,7 +29,7 @@ class BookmarkManager:
         try:
             parsed = urlparse(url)
             return f"{parsed.scheme}://{parsed.netloc}/favicon.ico"
-        except:
+        except Exception:
             return ""
 
     def _extract_domain(self, url: str) -> str:
@@ -41,7 +41,7 @@ class BookmarkManager:
             if domain.startswith("www."):
                 domain = domain[4:]
             return domain
-        except:
+        except Exception:
             return url
 
     def _normalize_url(self, url: str) -> str:
@@ -683,7 +683,7 @@ class BookmarksPlugin(PluginBase):
             if domain.startswith("www."):
                 domain = domain[4:]
             return domain
-        except:
+        except Exception:
             return url
 
     def _open_bookmark(self, url: str):

@@ -518,7 +518,7 @@ class BluetoothConnections(Box):
         # Make sure other devices revealer is collapsed when closing
         try:
             self.other_devices_revealer.child_revealed = False
-        except:
+        except Exception:
             pass  # Widget might already be destroyed
 
     def close_bluetooth(self):

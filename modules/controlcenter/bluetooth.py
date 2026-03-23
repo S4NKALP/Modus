@@ -29,9 +29,9 @@ def get_battery_icon_file(
         Relative path to the battery icon file
     """
     clamped = max(0, min(100, percentage))
-    step = (clamped // 10) * 10
+    step = int((clamped // 10) * 10)
     filename = f"battery-{step:03d}{'-charging' if is_charging else ''}.svg"
-    return svg_file(f"battery/{filename}")
+    return f"battery/{filename}"
 
 
 def set_bluetooth_enabled_with_fallback(client, enabled: bool):
@@ -518,7 +518,7 @@ class BluetoothConnections(Box):
         # Make sure other devices revealer is collapsed when closing
         try:
             self.other_devices_revealer.child_revealed = False
-        except:
+        except Exception:
             pass  # Widget might already be destroyed
 
     def close_bluetooth(self):
