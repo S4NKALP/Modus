@@ -1,7 +1,5 @@
-<svg width="32" height="32" version="1.1" xmlns="http://www.w3.org/2000/svg">
- <style id="current-color-scheme" type="text/css">.ColorScheme-Text {
-            color:#f2f2f2;
-        }</style>
- <path class="ColorScheme-Text" d="m4.5 8c-2.493 0-4.5 2.007-4.5 4.5v7c0 2.493 2.007 4.5 4.5 4.5h20c2.493 0 4.5-2.007 4.5-4.5v-7c0-2.493-2.007-4.5-4.5-4.5zm0 1h20c1.939 0 3.5 1.561 3.5 3.5v7c0 1.939-1.561 3.5-3.5 3.5h-20c-1.939 0-3.5-1.561-3.5-3.5v-7c0-1.939 1.561-3.5 3.5-3.5zm25.5 4.5v5a2 2.5 0 0 0 2-2.5 2 2.5 0 0 0-2-2.5z" fill="currentColor" opacity=".45"/>
- <rect class="ColorScheme-Text" x="2" y="10" width="13" height="12" rx="2.5" ry="2.5" fill="currentColor"/>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect opacity="0.35" x="0.5" y="9.5" width="27.875" height="13.4375" rx="4.166" stroke="white"/>
+<path opacity="0.4" d="M29.9062 13.125V18.2812C31.156 17.8445 31.9688 16.8286 31.9688 15.7031C31.9688 14.5776 31.156 13.5617 29.9062 13.125Z" fill="white"/>
+<rect x="2.96875" y="11.7188" width="11" height="9" rx="2.2" fill="white"/>
 </svg>
