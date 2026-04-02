@@ -1,7 +1,12 @@
-<svg width="32" height="32" version="1.1" xmlns="http://www.w3.org/2000/svg">
- <style id="current-color-scheme" type="text/css">.ColorScheme-Text {
-            color:#f2f2f2;
-        }</style>
- <path class="ColorScheme-Text" d="m4.5 8c-2.493 0-4.5 2.007-4.5 4.5v7c0 2.493 2.007 4.5 4.5 4.5h20c2.493 0 4.5-2.007 4.5-4.5v-7c0-2.493-2.007-4.5-4.5-4.5zm0 1h20c1.939 0 3.5 1.561 3.5 3.5v7c0 1.939-1.561 3.5-3.5 3.5h-20c-1.939 0-3.5-1.561-3.5-3.5v-7c0-1.939 1.561-3.5 3.5-3.5zm25.5 4.5v5a2 2.5 0 0 0 2-2.5 2 2.5 0 0 0-2-2.5z" fill="currentColor" opacity=".45"/>
- <rect class="ColorScheme-Text" x="2" y="10" width="7" height="12" rx="2.5" ry="2.5" fill="currentColor"/>
+<svg width="32" height="32" viewBox="0 0 32 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_49_482)">
+<rect opacity="0.35" x="0.5" y="0.5" width="27.875" height="13.4375" rx="4.166" stroke="white"/>
+<path opacity="0.4" d="M29.9062 4.125V9.28125C31.156 8.84455 31.9688 7.82865 31.9688 6.70312C31.9688 5.5776 31.156 4.5617 29.9062 4.125Z" fill="white"/>
+<rect x="3" y="3" width="6" height="9" rx="2.2" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_49_482">
+<rect width="32" height="15" fill="white"/>
+</clipPath>
+</defs>
 </svg>
