@@ -101,13 +101,8 @@ def get_wifi_icon_for_strength(strength: int) -> str:
         strength: Signal strength from 0-100
 
     Returns:
-        Absolute path to the appropriate WiFi icon
+        Relative path to the appropriate WiFi icon
     """
-    # Get the current directory where this script is located
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Get the project root (parent of utils directory)
-    project_root = os.path.dirname(current_dir)
-
     if strength >= 80:
         icon_name = "network-wireless-100.svg"
     elif strength >= 60:
@@ -121,7 +116,7 @@ def get_wifi_icon_for_strength(strength: int) -> str:
     else:
         icon_name = "network-wireless-0.svg"
 
-    return os.path.join(project_root, "assets", "icons", "wifi", icon_name)
+    return f"wifi/{icon_name}"
 
 
 def get_wifi_connecting_icon() -> str:
@@ -129,16 +124,9 @@ def get_wifi_connecting_icon() -> str:
     Get the WiFi connecting icon path.
 
     Returns:
-        Absolute path to the WiFi connecting icon
+        Relative path to the WiFi connecting icon
     """
-    # Get the current directory where this script is located
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Get the project root (parent of utils directory)
-    project_root = os.path.dirname(current_dir)
-
-    return os.path.join(
-        project_root, "config", "assets", "icons", "wifi", "wifi-connecting.svg"
-    )
+    return "wifi/wifi-connecting.svg"
 
 
 def is_special_workspace_id(ws_id) -> bool:
