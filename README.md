@@ -50,20 +50,18 @@ cd ~/.config/Modus
 > ## Post Installation
 > - Install recommended [Icon theme](https://github.com/vinceliuice/MacTahoe-icon-theme) , [GTK theme](https://github.com/vinceliuice/MacTahoe-gtk-theme) and [Cursor Theme](https://github.com/vinceliuice/MacTahoe-icon-theme/tree/main/cursors) <br>
 > - Check `config/hypr/modus.conf` edit it according to your device and copy it to your hyprland config
-> - For Lock Screen Bind keys to `python lock.py`
+> - For Lock Screen Bind keys to `uv run lock.py`
 
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
 ## Manual Installation (WIP)
 
 ```bash
-paru -S glace-git gtk-session-lock python-pyotp python-pillow python-ijson python-setproctitle apple-fonts cinnamon-desktop --needed
+paru -S glace-git gtk-session-lock uv apple-fonts cinnamon-desktop --needed
 git clone https://github.com/S4NKALP/Modus ~/.config/Modus
 cd ~/.config/Modus
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
+uv sync
+uv run main.py
 ```
 
 - [x] Launcher
@@ -80,7 +78,8 @@ pip install --no-deps git+https://github.com/Fabric-Development/fabric.git
 - [x] Panel Widget
 - [x] MacOS like Widget
 - [x] Expandable Notification Centre
-- [ ] Installation Script
+- [x] Installation Script
+- [x] Migrate to a `uv` managed Python virtual environment
 - [ ] Proper Documentation
 - [ ] Pomodoro Timer Widget
 - [x] To-do List Widget
