@@ -3,7 +3,7 @@ import os
 import re
 import subprocess
 
-from fabric.utils.helpers import get_desktop_applications, get_relative_path
+from fabric.utils import get_desktop_applications, get_relative_path, logger, GLib, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
@@ -11,15 +11,13 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
-from gi.repository import GLib, Gtk
-from loguru import logger
 
 import config.data as data
 from services.modus import modus_service
 from utils.functions import read_json_file, write_json_file, is_special_workspace_id
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
-from widgets.wayland import WaylandWindow as Window
+from fabric.widgets.wayland import WaylandWindow as Window
 
 # Pinned apps file
 PINNED_APPS_FILE = get_relative_path("../config/assets/dock.json")

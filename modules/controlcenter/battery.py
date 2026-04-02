@@ -31,7 +31,7 @@ def get_battery_icon_file(
     clamped = max(0, min(100, percentage))
     step = (clamped // 10) * 10
     filename = f"battery-{step:03d}{'-charging' if is_charging else ''}.svg"
-    return svg_file(f"battery/{filename}")
+    return f"battery/{filename}"
 
 
 def set_bluetooth_enabled_with_fallback(client, enabled: bool):

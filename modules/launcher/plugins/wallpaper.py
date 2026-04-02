@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from gi.repository import GdkPixbuf
-from PIL import Image
 
 import config.data as data
 from fabric.utils.helpers import exec_shell_command_async
@@ -179,10 +178,10 @@ class WallpaperPlugin(PluginBase):
 
         if not os.path.exists(cache_path):
             try:
-                with Image.open(full_path) as img:
-                    # Use faster thumbnail creation with smaller size for better performance
-                    img.thumbnail((32, 32), Image.Resampling.LANCZOS)
-                    img.save(cache_path, "PNG", optimize=True)
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    full_path, 32, 32, True
+                )
+                pixbuf.savev(cache_path, "png", [], [])
             except Exception as e:
                 logger.error(f"Error creating thumbnail for {filename}: {e}")
                 return None
@@ -289,7 +288,7 @@ class WallpaperPlugin(PluginBase):
 
         # Always set the wallpaper image
         exec_shell_command_async(
-            f'swww img "{
+            f'awww img "{
                 full_path
             }" -t outer --transition-duration 1.5 --transition-step 255 --transition-fps 60 -f Nearest'
         )

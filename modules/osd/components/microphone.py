@@ -1,7 +1,6 @@
 import math
 from fabric.audio import Audio
-from fabric.utils import get_relative_path
-from fabric.widgets.svg import Svg
+from utils.utils import svg_file
 from fabric.widgets.scale import ScaleMark
 from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer
@@ -17,8 +16,8 @@ class MicrophoneOSDContainer(BaseOSDContainer):
         self._connect_specific_signals()
 
     def _setup_specific_components(self):
-        self.osd_window_image = Svg(
-            get_relative_path("../../../config/assets/icons/mic/microphone.svg"),
+        self.osd_window_image = svg_file(
+            "mic/microphone.svg",
             size=(100, 100),
             name="osd-image",
             h_align="center",
@@ -87,11 +86,7 @@ class MicrophoneOSDContainer(BaseOSDContainer):
             0 if display_volume == 0 else min(int(math.ceil(display_volume / 33)), 3)
         )
 
-        self.osd_window_image.set_from_file(
-            get_relative_path(
-                f"../../../config/assets/icons/mic/microphone-{level}.svg"
-            )
-        )
+        self.osd_window_image.set_from_file(f"mic/microphone-{level}.svg")
 
         if muted or volume == 0:
             self.scale.add_style_class("muted")

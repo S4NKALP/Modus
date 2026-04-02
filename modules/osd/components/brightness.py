@@ -1,7 +1,6 @@
 import math
 from services.brightness import Brightness
-from fabric.utils import get_relative_path
-from fabric.widgets.svg import Svg
+from utils.utils import svg_file
 from fabric.widgets.scale import ScaleMark
 from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer
@@ -15,8 +14,8 @@ class BrightnessOSDContainer(BaseOSDContainer):
         self._connect_specific_signals()
 
     def _setup_specific_components(self):
-        self.osd_window_image = Svg(
-            get_relative_path("../../../config/assets/icons/brightness/brightness.svg"),
+        self.osd_window_image = svg_file(
+            "brightness/brightness.svg",
             size=(100, 100),
             name="osd-image",
             h_align="center",
@@ -51,11 +50,7 @@ class BrightnessOSDContainer(BaseOSDContainer):
         normalized = self._get_normalized_brightness()
         level = 0 if normalized == 0 else min(int(math.ceil(normalized / 33)), 3)
 
-        self.osd_window_image.set_from_file(
-            get_relative_path(
-                f"../../../config/assets/icons/brightness/brightness-{level}.svg"
-            )
-        )
+        self.osd_window_image.set_from_file(f"brightness/brightness-{level}.svg")
 
         self.scale.animate_value(normalized)
 

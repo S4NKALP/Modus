@@ -22,8 +22,8 @@ from modules.desktop.constants import (
     LOCATION_APIS,
     LOCATION_CACHE_TIMEOUT,
     SYSTEM_UPDATE_INTERVAL,
+    WEATHER_CACHE_TIMEOUT,
     WEATHER_DESC_MAP,
-    WEATHER_EMOJI_MAP,
     WEATHER_ICON_MAP,
     WEATHER_GRADIENT_MAP,
     WEATHER_UPDATE_INTERVAL,
@@ -114,18 +114,28 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
 
         weather_code = current["weathercode"]
         is_day = current.get("is_day", 1)  # Default to day if missing
-        
+
         base_icon = WEATHER_ICON_MAP.get(weather_code, "weather-none-available")
-        
+
         # Determine day/night variant if applicable
         icon_name = base_icon
         if not is_day:
             night_variant = f"{base_icon}-night"
-            import os
+
             # Fast check if night variant exists using predefined list or checking the path
             # Since we know the variants from earlier, let's just optimistically build it
             # then logic in svg_file will handle resolution seamlessly (fallbacks can be tricky, but we assume it's correct)
-            if base_icon in ["weather-clear", "weather-clouds", "weather-few-clouds", "weather-overcast", "weather-showers", "weather-showers-scattered", "weather-snow", "weather-snow-scattered", "weather-storm"]:
+            if base_icon in [
+                "weather-clear",
+                "weather-clouds",
+                "weather-few-clouds",
+                "weather-overcast",
+                "weather-showers",
+                "weather-showers-scattered",
+                "weather-snow",
+                "weather-snow-scattered",
+                "weather-storm",
+            ]:
                 icon_name = night_variant
 
         condition = WEATHER_DESC_MAP.get(weather_code, "Unknown")
@@ -226,7 +236,9 @@ class Weather(Box):
             ellipsization="end",
         )
         self.temperature = Label(name="temperature", label="--°", h_align="start")
-        self.condition_em = svg_file("weather/weather-none-available.svg", size=(48, 48), name="condition-emoji")
+        self.condition_em = svg_file(
+            "weather/weather-none-available.svg", size=(48, 48), name="condition-emoji"
+        )
         self.condition = Label(
             name="condition",
             label="Loading...",
@@ -251,16 +263,16 @@ class Weather(Box):
             return
         icon_name, temp, condition, location, maxtemp, mintemp, _ = weather_info
         maxmin = f"H:{maxtemp} L:{mintemp}"
-        
+
         self.city.set_label(location)
         self.temperature.set_label(temp)
-        
+
         # update SVG File
         self.condition_em.dynamic_file(f"weather/{icon_name}.svg")
-        
+
         self.condition.set_label(condition)
         self.feels_like.set_label(maxmin)
-        
+
         self.parent.set_visible(True)
 
 

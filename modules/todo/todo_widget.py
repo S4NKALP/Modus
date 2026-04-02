@@ -2,16 +2,15 @@
 from datetime import datetime
 
 # Fabric imports
-from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.svg import Svg
 from gi.repository import GLib
 
 # Local imports
+from utils.utils import svg_file
 from services.todo import get_todo_service
 from widgets.mousecapture import MouseCapture
 from widgets.wayland import WaylandWindow as Window
@@ -43,12 +42,10 @@ class TodoItem(Box):
             if self.todo_data["completed"]
             else "checkbox-uncheck.svg"
         )
-        self.checkbox_icon = Svg(
+        self.checkbox_icon = svg_file(
+            "todo/" + checkbox_icon,
             name="todo-checkbox-icon",
             size=24,
-            svg_file=get_relative_path(
-                "../../config/assets/icons/todo/" + checkbox_icon
-            ),
         )
         self.checkbox = Button(
             name="todo-checkbox",
@@ -108,10 +105,10 @@ class TodoItem(Box):
         # )
         #
         # Edit button - using SVG icon
-        self.edit_icon = Svg(
+        self.edit_icon = svg_file(
+            "todo/edit.svg",
             name="todo-edit-icon",
             size=12,
-            svg_file=get_relative_path("../../config/assets/icons/todo/edit.svg"),
         )
         self.edit_button = Button(
             name="todo-edit",
@@ -120,12 +117,10 @@ class TodoItem(Box):
         )
 
         # Delete button - using SVG icon
-        self.delete_icon = Svg(
+        self.delete_icon = svg_file(
+            "todo/delete-symbolic.svg",
             name="todo-delete-icon",
             size=12,
-            svg_file=get_relative_path(
-                "../../config/assets/icons/todo/delete-symbolic.svg"
-            ),
         )
         self.delete_button = Button(
             name="todo-delete",
@@ -208,12 +203,10 @@ class TodoItem(Box):
         checkbox_icon = (
             "checkbox-check.svg" if todo_data["completed"] else "checkbox-uncheck.svg"
         )
-        new_checkbox_icon = Svg(
+        new_checkbox_icon = svg_file(
+            "todo/" + checkbox_icon,
             name="todo-checkbox-icon",
             size=20,
-            svg_file=get_relative_path(
-                "../../config/assets/icons/todo/" + checkbox_icon
-            ),
         )
         self.checkbox.set_child(new_checkbox_icon)
         self.checkbox_icon = new_checkbox_icon
@@ -293,12 +286,10 @@ class TodoListWidget(Window):
         self.new_todo_entry.connect("activate", self._add_todo)
 
         # Add button - using SVG icon
-        self.add_icon = Svg(
+        self.add_icon = svg_file(
+            "todo/plus-symbolic.svg",
             name="add-todo-icon",
             size=12,
-            svg_file=get_relative_path(
-                "../../config/assets/icons/todo/plus-symbolic.svg"
-            ),
         )
         self.add_button = Button(
             name="add-todo-button",

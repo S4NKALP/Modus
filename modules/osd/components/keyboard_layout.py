@@ -1,6 +1,5 @@
 from fabric.widgets.label import Label
-from fabric.widgets.svg import Svg
-from fabric.utils import get_relative_path
+from utils.utils import svg_file
 from .base import BaseOSDContainer
 from services.keyboard_layout import KeyboardLayout
 
@@ -13,8 +12,8 @@ class KeyboardLayoutOSDContainer(BaseOSDContainer):
         self._connect_specific_signals()
 
     def _setup_specific_components(self):
-        self.osd_image = Svg(
-            get_relative_path("../../../assets/icons/misc/keyboard-layout.svg"),
+        self.osd_image = svg_file(
+            "misc/keyboard-layout.svg",
             size=(100, 100),
             name="osd-image",
             h_align="center",
