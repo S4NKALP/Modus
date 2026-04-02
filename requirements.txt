@@ -7,6 +7,6 @@ pycairo>=1.29.0
 pydbus>=0.6.0
 pyotp>=2.9.0
 pyzbar>=0.1.9
-requests>=2.32.5
+requests>=2.33.0
 six>=1.17.0
 thefuzz>=0.22.1
