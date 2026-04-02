@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pyotp
-from PIL import Image
+from fabric.utils import GdkPixbuf
 from pyzbar.pyzbar import decode
 
 import config.data as data
@@ -70,15 +70,14 @@ def read_and_save_to_json():
 
     # Open the captured image
     try:
-        img = Image.open(screenshot)
-    except Exception as e:
-        print("Error opening the image:", e)
-        return False
-
-    # Decode QR Code(s) from the image
-    decoded_objects = decode(img)
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(screenshot)
+        pixels = pixbuf.get_pixels()
+        channels = pixbuf.get_n_channels()
+        gray_pixels = pixels[::channels]
+        decoded_objects = decode((gray_pixels, pixbuf.get_width(), pixbuf.get_height()))
+    finally:
+        del pixbuf
     if not decoded_objects:
-        print("No QR Code detected in the selected area.")
         return False
 
     results = []
@@ -279,8 +278,18 @@ def scan_qr_and_add_account(account_name: str, secrets_file_path: str) -> dict:
 
         # Decode QR code
         try:
-            img = Image.open(screenshot_path)
-            decoded_objects = decode(img)
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(screenshot_path)
+                pixels = pixbuf.get_pixels()
+                channels = pixbuf.get_n_channels()
+                gray_pixels = pixels[::channels]
+                decoded_objects = decode(
+                    (gray_pixels, pixbuf.get_width(), pixbuf.get_height())
+                )
+            finally:
+                # Delete pixbuf to free native memory immediately
+                if "pixbuf" in locals():
+                    del pixbuf
 
             if not decoded_objects:
                 return {

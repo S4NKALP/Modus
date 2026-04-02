@@ -21,39 +21,21 @@ REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
 PACKAGES=(
-    python-fabric-git
+    uv
     fabric-cli-git
     glace-git
     cliphist
     gnome-bluetooth-3.0
-    gobject-introspection
     slurp
     ffmpeg
     hypridle
     hyprsunset
     hyprpicker
-    imagemagick
     libnotify
     matugen-bin
     playerctl
-    python-gobject
-    python-pillow
-    python-setproctitle
-    python-toml
-    python-requests
-    python-numpy
-    python-pywayland
-    python-pyxdg
-    python-ijson
-    python-watchdog
-    python-pyotp
-    pyzbar
-    python-psutil
-    python-pydbus
-    python-thefuzz
-    python-pam
     gtk-session-lock
-    swww
+    awww
     apple-fonts
     swappy
     wl-clipboard
@@ -349,7 +331,7 @@ else
 fi
 
 step "Starting Modus..."
-if uwsm app -- python "$INSTALL_DIR/main.py" >/dev/null 2>&1 & then
+if uwsm app -- uv run "$INSTALL_DIR/main.py" >/dev/null 2>&1 & then
     disown
     sleep 1
     if pgrep -f "python.*main.py" >/dev/null; then
