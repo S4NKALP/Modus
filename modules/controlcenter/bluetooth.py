@@ -126,8 +126,8 @@ class BluetoothDeviceSlot(CenterBox):
         try:
             # Update connection and pairing status
             new_styles = [
-                "connected" if self.device.connected else "",
-                "paired" if self.device.paired else "",
+                "connected" if getattr(self.device, "connected", False) else "",
+                "paired" if getattr(self.device, "paired", False) else "",
             ]
 
             self.styles = new_styles
