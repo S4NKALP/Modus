@@ -607,22 +607,13 @@ class CpuInfo(SystemInfoBase):
         return True
 
 
-class Deskwidgets(Window):
+class Deskwidgets:
     """Desktop widgets manager - handles all desktop widgets."""
 
     config = load_config()
 
-    def __init__(self, **kwargs):
-        # Create the main invisible window that manages the widgets
-        super().__init__(
-            name="desktop-widget-manager",
-            layer="bottom",
-            title="modus-desktop-widget-manager",
-            visible=False,  # This window is invisible - just manages the others
-            size=(1, 1),  # Minimal size
-            anchor="top left",
-            **kwargs,
-        )
+    def __init__(self):
+        # This class now just manages other windows instead of being one itself
 
         # Create separate independent windows as attributes
         self.top_left = Window(
