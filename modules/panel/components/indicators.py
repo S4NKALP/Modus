@@ -85,6 +85,8 @@ class BluetoothIndicator(Box):
             self,
             show_back_button=False,
         )
+        if self.bluetooth_window:
+            self.bluetooth_window._pointing_widget = self.bt_button
 
         modus_service.connect("bluetooth-changed", self.on_bluetooth_changed)
         self.bluetooth.connect("changed", self.on_bluetooth_direct_changed)
@@ -194,6 +196,8 @@ class NetworkIndicator(Box):
             self,
             show_back_button=False,
         )
+        if self.wifi_window:
+            self.wifi_window._pointing_widget = self.network_button
 
         modus_service.connect("wlan-changed", self.on_wlan_changed)
         self.network_service.connect("wifi-device-added", self.on_wifi_device_added)
@@ -348,6 +352,8 @@ class BatteryIndicator(Box):
             self,
             show_back_button=False,
         )
+        if self.battery_window:
+            self.battery_window._pointing_widget = self.battery_button
 
         modus_service.connect("battery-changed", self.on_battery_changed)
         self.battery_service.connect("changed", self.on_battery_direct_changed)

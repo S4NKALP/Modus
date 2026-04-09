@@ -34,9 +34,7 @@ def create_menu_button(label, on_clicked=None):
     return button
 
 
-def create_dropdown_with_capture(
-    dropdown_id, parent, dropdown_children, layer="bottom"
-):
+def create_dropdown_with_capture(dropdown_id, parent, dropdown_children, layer="top"):
     dropdown = ModusDropdown(
         dropdown_id=dropdown_id,
         parent=parent,
@@ -140,7 +138,7 @@ class GlobalMenuDropdowns:
 
         self.system_dropdown = SystemDropdown(parent=parent)
         self.menu_button_dropdown = DropDownMouseCapture(
-            layer="bottom", child_window=self.system_dropdown
+            layer="top", child_window=self.system_dropdown
         )
         self.menu_button = Button(
             label="Modus",
