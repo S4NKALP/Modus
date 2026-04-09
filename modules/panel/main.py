@@ -88,6 +88,7 @@ class Panel(Window):
             on_clicked=self.control_center.toggle_mousecapture,
         )
         setup_cursor_hover(self.control_center_btn, "pointer")
+        self.control_center.child_window._pointing_widget = self.control_center_btn
 
         self.notification_center = MouseCapture(
             layer="overlay", child_window=NotificationCenter()
@@ -103,6 +104,9 @@ class Panel(Window):
             on_clicked=self.on_notification_icon_clicked,
         )
         setup_cursor_hover(self.notification_center_btn, "pointer")
+        self.notification_center.child_window._pointing_widget = (
+            self.notification_center_btn
+        )
 
         self.datetime_btn = Button(
             name="panel-button",
