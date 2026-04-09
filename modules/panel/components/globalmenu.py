@@ -60,7 +60,8 @@ def show_about_app(_=None):
         return
 
     app_name = modus_service.current_active_app_name
-    about_window = AboutApp(app_name=app_name, wmclass="")
+    wmclass = getattr(modus_service, "current_active_wm_class", "")
+    about_window = AboutApp(app_name=app_name, wmclass=wmclass)
     about_window.toggle(None)
 
 
