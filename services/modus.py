@@ -32,6 +32,9 @@ class ModusService(Service):
     def current_active_app_name_changed(self, value: str) -> None: ...
 
     @Signal
+    def current_active_wm_class_changed(self, value: str) -> None: ...
+
+    @Signal
     def current_workspace_changed(self, value: str) -> None: ...
 
     @Signal
@@ -61,6 +64,10 @@ class ModusService(Service):
     @Property(str, flags="read-write")
     def current_active_app_name(self) -> str:
         return self._current_active_app_name
+
+    @Property(str, flags="read-write")
+    def current_active_wm_class(self) -> str:
+        return self._current_active_wm_class
 
     @Property(str, flags="read-write")
     def current_workspace(self) -> str:
@@ -123,6 +130,12 @@ class ModusService(Service):
         if value != self._current_active_app_name:
             self._current_active_app_name = value
             self.current_active_app_name_changed(value)
+
+    @current_active_wm_class.setter
+    def current_active_wm_class(self, value: str):
+        if value != self._current_active_wm_class:
+            self._current_active_wm_class = value
+            self.current_active_wm_class_changed(value)
 
     @current_workspace.setter
     def current_workspace(self, value: str):
@@ -231,6 +244,7 @@ class ModusService(Service):
         self._dock_apps = ""
         self._dont_disturb = False
         self._current_active_app_name = "Finder"  # Changed from "Hyprland" to "Finder"
+        self._current_active_wm_class = ""
         self._current_workspace = "1"
         self._music = ""
         self._current_dropdown = None
@@ -311,6 +325,7 @@ class ModusService(Service):
                 name = "Finder"
 
             self.current_active_app_name = name
+            self.current_active_wm_class = wmclass
 
         except Exception as e:
             logger.error(f"[ModusService] Error updating active window: {e}")
