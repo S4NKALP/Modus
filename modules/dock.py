@@ -195,35 +195,87 @@ class AppBar(Box):
         search_terms = []
         if isinstance(app_info, dict):
             search_terms = [
-                app_info.get("name"),
                 app_info.get("window_class"),
+                app_info.get("name"),
                 app_info.get("executable"),
             ]
         else:
             search_terms = [app_info]
 
         search_terms = [s.lower() for s in search_terms if s and isinstance(s, str)]
+        if not search_terms:
+            return None
 
+        # Handle Reverse DNS or decorated names (e.g., org.gnome.Nautilus, float_kitty)
+        expanded_terms = list(search_terms)
+        for term in search_terms:
+            # Handle dots (Reverse DNS)
+            if "." in term:
+                parts = term.split(".")
+                if parts[-1] and parts[-1] not in expanded_terms:
+                    expanded_terms.append(parts[-1])
+
+            # Handle underscores and hyphens (decorated names)
+            for sep in ["_", "-"]:
+                if sep in term:
+                    for part in term.split(sep):
+                        if len(part) > 2 and part not in expanded_terms:
+                            expanded_terms.append(part)
+
+        # Priority 1: Exact matches for window_class
+        for app in desktop_apps:
+            app_class = getattr(app, "window_class", None)
+            if app_class and app_class.lower() in search_terms:
+                return app
+
+        # Priority 2: Exact matches for app name or display name
+        for app in desktop_apps:
+            app_names = [
+                getattr(app, "name", None),
+                getattr(app, "display_name", None),
+            ]
+            app_names = [n.lower() for n in app_names if n]
+            if any(name in expanded_terms for name in app_names):
+                return app
+
+        # Priority 3: Exact matches for executable basename
+        for app in desktop_apps:
+            if app.executable:
+                exe_base = os.path.basename(app.executable).lower()
+                if exe_base in expanded_terms:
+                    # If this is a common terminal or shell, only match if the name also matches
+                    # This prevents Neovim (which uses 'kitty' as its executable wrapper) from overriding Kitty
+                    common_wrappers = [
+                        "kitty",
+                        "bash",
+                        "sh",
+                        "zsh",
+                        "python",
+                        "python3",
+                    ]
+                    if exe_base in common_wrappers:
+                        app_names = [
+                            getattr(app, "name", ""),
+                            getattr(app, "display_name", ""),
+                        ]
+                        if not any(exe_base in n.lower() for n in app_names if n):
+                            continue
+                    return app
+
+        # Priority 4: Fuzzy name matching (containment)
         for app in desktop_apps:
             app_terms = [
-                app.name,
-                getattr(app, "display_name", None),
-                getattr(app, "window_class", None),
-                app.executable,
+                getattr(app, "name", ""),
+                getattr(app, "display_name", ""),
+                getattr(app, "window_class", ""),
             ]
-            app_terms = [a.lower() for a in app_terms if a and isinstance(a, str)]
+            app_terms = [t.lower() for t in app_terms if t]
 
-            # Check for exact matches first
-            if any(term in app_terms for term in search_terms):
-                return app
-
-            # Then check for basename matches on executable
-            if any(
-                os.path.basename(app.executable).lower() == term
-                for term in search_terms
-                if app.executable
-            ):
-                return app
+            for term in expanded_terms:
+                if len(term) < 3:
+                    continue
+                if any(term in app_term for app_term in app_terms):
+                    return app
 
         return None
 
