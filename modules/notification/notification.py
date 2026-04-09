@@ -6,7 +6,7 @@ from fabric.notifications import (
     NotificationAction,
     NotificationCloseReason,
 )
-from fabric.utils import Gdk, GdkPixbuf, GLib, logger, os
+from fabric.utils import Gdk, GdkPixbuf, GLib, logger, os, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -832,8 +832,6 @@ class NotificationRevealer(SlideRevealer):
                 if style_context:
                     # Use CSS provider for smooth transforms
                     if not hasattr(self, "_css_provider") or not self._css_provider:
-                        from gi.repository import Gtk
-
                         self._css_provider = Gtk.CssProvider()
                         style_context.add_provider(
                             self._css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
