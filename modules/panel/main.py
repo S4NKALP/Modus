@@ -63,6 +63,10 @@ class Panel(Window):
         )
         setup_cursor_hover(self.chevron_button, "pointer")
 
+        # Hide tray elements if empty
+        self.tray.connect("add", self._update_tray_visibility)
+        self.tray.connect("remove", self._update_tray_visibility)
+
         self.indicators = Box(
             name="indicators",
             orientation="h",
@@ -138,6 +142,7 @@ class Panel(Window):
         # Live updates
         on_config_change(self._on_config_changed)
 
+        self._update_tray_visibility()
         self.show_all()
 
     def on_dnd_changed(self, _, dnd_state):
@@ -208,6 +213,7 @@ class Panel(Window):
             right_children.append(self.notification_center_btn)
 
         self.right_box.children = right_children
+        self._update_tray_visibility()
         self.show_all()
 
     def _on_config_changed(self, new_config, old_config):
@@ -226,6 +232,28 @@ class Panel(Window):
         }
         if any(new_config.get(k) != old_config.get(k) for k in keys):
             self._rebuild_layout_from_config()
+
+        # Always update tray visibility on config change just in case
+        self._update_tray_visibility()
+
+    def _update_tray_visibility(self, *_):
+        # We check if there are any visible children in the tray
+        visible_children = [
+            child for child in self.tray.get_children() if child.get_visible()
+        ]
+        has_items = len(visible_children) > 0
+
+        self.tray_revealer.set_visible(has_items)
+        self.chevron_button.set_visible(has_items)
+
+        if not has_items:
+            # Reset state if it becomes hidden
+            self.tray_revealer.child_revealed = False
+            self.chevron_button.get_child().dynamic_file("misc/chevron-right.svg")
+            # Add extra spacing between workspace indicator and indicators when tray is hidden
+            self.indicators.set_margin_left(10)
+        else:
+            self.indicators.set_margin_left(0)
 
     def toggle_tray(self, *_):
         current_state = self.tray_revealer.child_revealed
