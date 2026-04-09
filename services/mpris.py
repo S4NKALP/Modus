@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import Gio, GLib, logger
+from fabric.utils import Gio, GLib, logger, GObject
 from fabric.utils.helpers import (
     bulk_connect,
     clamp,
@@ -27,10 +27,7 @@ class MprisPlayer(Service):
     @Signal
     def changed(self) -> None: ...
 
-    # TODO: why??? object
-    # TypeError: can't convert return value to desired type
-    @Signal
-    def seeked(self, position: int) -> object: ...
+    seeked = Signal(name="seeked", arg_types=(GObject.TYPE_INT64,))
 
     @Property(str, "readable")
     def player_name(self):
@@ -256,7 +253,7 @@ class MprisPlayer(Service):
     ):
         # Only One Signal for Mpris
         if signal_name == "Seeked":
-            self.seeked(params[0])
+            self.seeked(params[0].get_int64())
 
     def _proxy_call(self, method_name: str, parameter: Optional[GLib.Variant]):
         self._dbus_helper.proxy.call(
