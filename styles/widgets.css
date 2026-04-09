@@ -1,41 +1,89 @@
-/* Weather Widget CSS */
 #weather-container {
-  background: linear-gradient(to bottom, #202020, #141414);
   margin: 5px 5px 20px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: 16px;
-  transition: background 0.8s ease-in-out;
+  border-radius: 18px;
+  transition: all 0.5s ease-in-out;
+  background: #202020;
 }
 
-#weather-widget label {
-  margin-left: 12px;
+/* Base Weather Layout */
+#weather-widget {
+  padding: 12px 14px;
 }
 
 #city {
-  margin-top: 10px;
-  color: var(--blue-dim);
+  color: rgba(255, 255, 255, 0.85);
   font-weight: 600;
-  font-size: 20px;
+  font-size: 18px;
 }
+
 #temperature {
-  font-size: 50px;
-  font-weight: 400;
+  font-size: 64px;
+  font-weight: 600;
+  color: white;
+  margin-top: -5px;
+  margin-bottom: -5px;
 }
 
 #condition-emoji {
-  margin-top: 5px;
-  font-size: 16px;
+  margin-top: -2px;
 }
 
 #condition {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
+  color: white;
 }
+
 #feels-like {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
 }
+
+/* Weather Condition Gradients */
+.weather-clear {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.weather-mostly-clear {
+  background: linear-gradient(135deg, #439cfb 0%, #6bc1f9 100%);
+}
+
+.weather-partly-cloudy {
+  background: linear-gradient(135deg, #6a85b6 0%, #bac8e0 100%);
+}
+
+.weather-overcast {
+  background: linear-gradient(135deg, #485563 0%, #29323c 100%);
+}
+
+.weather-fog {
+  background: linear-gradient(135deg, #757f9a 0%, #d7dde8 100%);
+}
+
+.weather-light-rain {
+  background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+}
+
+.weather-rain {
+  background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+}
+
+.weather-heavy-rain {
+  background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
+}
+
+.weather-snow,
+.weather-heavy-snow {
+  background: linear-gradient(135deg, #83a4d4 0%, #b6fbff 100%);
+}
+
+.weather-storm {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+}
+
 /* # */
 
 /* Calendar Widget */
@@ -119,6 +167,7 @@
 #date-widget label {
   margin-top: 10px;
 }
+
 #day label,
 #month label {
   color: var(--foreground);
@@ -136,6 +185,7 @@
   font-size: 90px;
   font-weight: 600;
 }
+
 #day label {
   color: alpha(var(--blue-dim), 0.9);
 }
@@ -156,14 +206,17 @@
   min-height: 170px;
   border-radius: 16px;
 }
+
 #ram-progress {
   margin-left: 12px;
   color: var(--foreground);
 }
+
 #progress-label {
   font-weight: 600;
   font-size: 13px;
 }
+
 #progress {
   border: solid 8px var(--blue-dim);
   color: alpha(#aaaaaa, 0.7);
@@ -213,6 +266,7 @@
   font-size: 14px;
   font-weight: 600;
 }
+
 #component-name {
   font-size: 10px;
 }
