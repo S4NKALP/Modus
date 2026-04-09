@@ -12,7 +12,7 @@ from fabric.notifications import (
 )
 
 # Fabric imports
-from fabric.utils import GdkPixbuf, os
+from fabric.utils import GdkPixbuf, os, logger
 
 import config.data as data
 
@@ -295,8 +295,6 @@ class CachedNotifications(Notifications):
         # Don't call super() - we're handling this ourselves
 
         # Import logger at the top of the function
-        from loguru import logger
-
         notification = self.get_notification_from_id(notification_id)
 
         if not notification:

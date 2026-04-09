@@ -8,7 +8,6 @@ from fabric.utils.helpers import (
     pascal_case_to_snake_case,
     snake_case_to_kebab_case,
 )
-from gi.repository.GLib import Variant
 
 from utils.dbus_helper import GioDBusHelper
 
@@ -86,7 +85,9 @@ class MprisPlayer(Service):
 
     @Property(dict, "readable")
     def metadata(self) -> dict:
-        prop: Variant | None = self._dbus_helper.proxy.get_cached_property("Metadata")  # type: ignore
+        prop: GLib.Variant | None = self._dbus_helper.proxy.get_cached_property(
+            "Metadata"
+        )  # type: ignore
         return dict(prop) if prop else {}  # type: ignore
 
     # RELY ON METADATA
@@ -253,7 +254,7 @@ class MprisPlayer(Service):
     ):
         # Only One Signal for Mpris
         if signal_name == "Seeked":
-            self.seeked(params[0].get_int64())
+            self.seeked(params[0])
 
     def _proxy_call(self, method_name: str, parameter: Optional[GLib.Variant]):
         self._dbus_helper.proxy.call(
