@@ -2,7 +2,7 @@ import math
 from typing import cast
 
 import cairo
-from gi.repository import Gtk
+from fabric.utils import Gtk
 
 from fabric.widgets.image import Image
 

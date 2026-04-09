@@ -1,8 +1,5 @@
-from gi.repository import GLib, Gtk
-import gi
+from fabric.utils import GLib, Gtk
 import math
-
-gi.require_version("Gtk", "3.0")
 
 # TODO: UsE BETTER APPROACH IF POSSIBLE
 
