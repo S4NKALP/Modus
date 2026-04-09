@@ -6,15 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fabric",
-    "ijson>=3.5.0",
     "pam>=0.2.0",
-    "pillow>=12.1.1",
     "psutil>=7.2.2",
-    "pycairo>=1.29.0",
-    "pydbus>=0.6.0",
     "pyotp>=2.9.0",
+    "pywayland>=0.4.18",
     "pyzbar>=0.1.9",
-    "requests>=2.32.5",
     "six>=1.17.0",
     "thefuzz>=0.22.1",
 ]
