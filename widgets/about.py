@@ -101,58 +101,79 @@ def get_app_info(wmclass):
         "/usr/local/share/applications",
     ]
 
+    # Search for desktop files
     for path in desktop_paths:
         if not os.path.exists(path):
             continue
 
-        # Try exact match first
-        exact_matches = [
-            f for f in os.listdir(path) if f.lower() == f"{wmclass.lower()}.desktop"
-        ]
+        search_terms = [wmclass]
+        if "." in wmclass:
+            search_terms.append(wmclass.split(".")[-1])
 
-        # Then try starts with
-        startswith_matches = [
-            f
-            for f in os.listdir(path)
-            if f.startswith(wmclass.lower()) and f.endswith(".desktop")
-        ]
+        # Add lowercase versions
+        search_terms = list(dict.fromkeys([s.lower() for s in search_terms]))
 
-        # Finally try contains
-        contains_matches = [
-            f
-            for f in os.listdir(path)
-            if wmclass.lower() in f.lower() and f.endswith(".desktop")
-        ]
+        files = os.listdir(path)
+        desktop_file = None
 
-        # Process matches in order of preference
-        for matches in [exact_matches, startswith_matches, contains_matches]:
-            for filename in matches:
-                desktop_file = os.path.join(path, filename)
+        # 1. Try exact matches with .desktop suffix
+        for term in search_terms:
+            if f"{term}.desktop" in files:
+                desktop_file = os.path.join(path, f"{term}.desktop")
+                break
+
+        # 2. Try prefix matches
+        if not desktop_file:
+            for term in search_terms:
+                matches = [
+                    f for f in files if f.startswith(term) and f.endswith(".desktop")
+                ]
+                if matches:
+                    desktop_file = os.path.join(path, matches[0])
+                    break
+
+        # 3. Try content searching (if no file match found yet)
+        if not desktop_file:
+            for f in files:
+                if not f.endswith(".desktop"):
+                    continue
                 try:
-                    with open(desktop_file, "r", encoding="utf-8") as f:
-                        content = f.read()
+                    full_path = os.path.join(path, f)
+                    with open(full_path, "r", encoding="utf-8") as df:
+                        content = df.read()
+                        if (
+                            f"StartupWMClass={wmclass}" in content
+                            or f"Exec={wmclass}" in content
+                        ):
+                            desktop_file = full_path
+                            break
+                except Exception:
+                    continue
 
-                    name = wmclass.title()
-                    version = ""
-                    comment = ""
-                    icon = wmclass.lower()
-                    exec_cmd = ""
-                    categories = ""
+        if desktop_file:
+            try:
+                with open(desktop_file, "r", encoding="utf-8") as f:
+                    content = f.read()
 
-                    # Parse desktop file
-                    in_desktop_entry = False
-                    for line in content.split("\n"):
-                        line = line.strip()
-                        if line == "[Desktop Entry]":
-                            in_desktop_entry = True
-                            continue
-                        elif line.startswith("[") and line.endswith("]"):
-                            in_desktop_entry = False
-                            continue
+                name = wmclass.title()
+                version = ""
+                comment = ""
+                icon = wmclass.lower()
+                exec_cmd = ""
+                categories = ""
 
-                        if not in_desktop_entry or "=" not in line:
-                            continue
+                # Parse desktop file
+                current_section = None
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
 
+                    if line.startswith("[") and line.endswith("]"):
+                        current_section = line
+                        continue
+
+                    if current_section == "[Desktop Entry]" and "=" in line:
                         key, value = line.split("=", 1)
                         if key == "Name":
                             name = value
@@ -161,7 +182,6 @@ def get_app_info(wmclass):
                         elif key == "Comment":
                             comment = value
                         elif key == "GenericName" and not comment:
-                            # Use GenericName as fallback description
                             comment = value
                         elif key == "Icon":
                             icon = value
@@ -170,21 +190,20 @@ def get_app_info(wmclass):
                         elif key == "Categories":
                             categories = value
 
-                    # Get executable location
-                    location = get_executable_path(exec_cmd)
+                location = get_executable_path(exec_cmd)
 
-                    return {
-                        "name": name,
-                        "version": version,
-                        "comment": comment,
-                        "icon": icon,
-                        "exec": exec_cmd,
-                        "location": location or "",
-                        "categories": categories,
-                        "desktop_file": desktop_file,
-                    }
-                except Exception:
-                    continue
+                return {
+                    "name": name,
+                    "version": version,
+                    "comment": comment,
+                    "icon": icon,
+                    "exec": exec_cmd,
+                    "location": location or "",
+                    "categories": categories,
+                    "desktop_file": desktop_file,
+                }
+            except Exception:
+                continue
 
     # Fallback: try to find executable in PATH
     location = ""
@@ -236,29 +255,32 @@ class AboutApp(Gtk.Window):
 
         # App Icon
         logo_box = Gtk.Box(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+        logo = None
+
         try:
-            # Use IconResolver's get_icon_pixbuf method like other parts of the project
+            # 1. Try resolving via IconResolver
             icon_pixbuf = self.icon_resolver.get_icon_pixbuf(app_info["icon"], 128)
             if icon_pixbuf:
                 logo = Gtk.Image.new_from_pixbuf(icon_pixbuf)
-            else:
-                raise Exception("Icon pixbuf not found")
         except Exception:
-            # Fallback: try direct file path if it's an absolute path
+            pass
+
+        if not logo:
             try:
-                if app_info["icon"].startswith("/") and os.path.exists(
-                    app_info["icon"]
-                ):
+                # 2. Try direct file path
+                icon_path = app_info["icon"]
+                if icon_path.startswith("/") and os.path.exists(icon_path):
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                        app_info["icon"], 128, 128, preserve_aspect_ratio=True
+                        icon_path, 128, 128, True
                     )
                     logo = Gtk.Image.new_from_pixbuf(pixbuf)
-                else:
-                    raise Exception("Direct path failed")
             except Exception:
-                # Final fallback: emoji
-                logo = Gtk.Label()
-                logo.set_markup("<span size='72000'>📱</span>")
+                pass
+
+        if not logo:
+            # 3. Final fallback
+            logo = Gtk.Label()
+            logo.set_markup("<span size='70000'>📦</span>")
 
         logo_box.pack_start(logo, False, False, 0)
         logo_box.set_margin_bottom(15)
