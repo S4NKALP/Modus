@@ -1,11 +1,5 @@
 import json
-import os
-
-import gi
-
-gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk  # noqa: E402
-from loguru import logger  # noqa: E402
+from fabric.utils import GLib, Gtk, logger, os  # noqa: E402
 
 import config.data as data  # noqa: E402
 
