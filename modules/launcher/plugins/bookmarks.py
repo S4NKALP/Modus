@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
+from fabric.utils import GLib
+from fabric.utils.helpers import get_relative_path
 from thefuzz import fuzz
 
-from fabric.utils.helpers import get_relative_path
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -739,7 +740,6 @@ class BookmarksPlugin(PluginBase):
 
                 # Reset to trigger word with space
                 try:
-                    from gi.repository import GLib
 
                     def reset_and_refresh():
                         # Set text to trigger word
@@ -772,7 +772,6 @@ class BookmarksPlugin(PluginBase):
 
                 # Trigger a search to refresh results
                 try:
-                    from gi.repository import GLib
 
                     def refresh():
                         self._launcher_instance._perform_search(current_text)

@@ -1,18 +1,14 @@
 import colorsys
 import hashlib
 import json
-import os
 import random
 import re
 import threading
 import time
 from typing import Dict, List, Optional
-from loguru import logger
-
-from gi.repository import GdkPixbuf
 
 import config.data as data
-from fabric.utils.helpers import exec_shell_command_async
+from fabric.utils import exec_shell_command_async, GdkPixbuf, logger, os, GLib
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -123,7 +119,6 @@ class WallpaperPlugin(PluginBase):
         """Clear the launcher search query and reset to trigger."""
         try:
             # Try to access the launcher through the fabric Application
-            from gi.repository import GLib
 
             from fabric import Application
 

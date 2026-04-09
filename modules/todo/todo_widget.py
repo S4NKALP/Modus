@@ -7,13 +7,13 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GLib
+from fabric.utils import GLib
 
 # Local imports
 from utils.utils import svg_file
 from services.todo import get_todo_service
 from widgets.mousecapture import MouseCapture
-from widgets.wayland import WaylandWindow as Window
+from fabric.widgets.wayland import WaylandWindow as Window
 
 
 class TodoItem(Box):

@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from fabric.utils import get_relative_path
+from fabric.utils import GLib, get_relative_path
+
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 
@@ -676,7 +677,6 @@ class PasswordPlugin(PluginBase):
 
                 # Trigger a search to refresh results
                 try:
-                    from gi.repository import GLib
 
                     def refresh():
                         self._launcher_instance._perform_search(current_text)

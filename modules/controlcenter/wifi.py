@@ -14,6 +14,7 @@ from services.network import NetworkClient
 from utils.functions import get_wifi_connecting_icon, get_wifi_icon_for_strength
 from utils.utils import svg_file
 from widgets.wifi_password_dialog import WiFiPasswordDialog
+from gi.repository import NM
 
 
 class WifiNetworkSlot(Box):
@@ -202,7 +203,6 @@ class WifiNetworkSlot(Box):
                 if success:
                     self.is_connected = True
                     # Remove connecting state after a short delay
-                    from gi.repository import GLib
 
                     GLib.timeout_add(500, lambda: self._reset_connect_state())
 
@@ -544,8 +544,6 @@ class WifiConnections(Box):
                 # Compare SSIDs
                 connection_ssid_bytes = wifi_setting.get_ssid()
                 if connection_ssid_bytes:
-                    from gi.repository import NM
-
                     connection_ssid = NM.utils_ssid_to_utf8(
                         connection_ssid_bytes.get_data()
                     )

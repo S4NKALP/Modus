@@ -5,7 +5,8 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from fabric.utils import get_relative_path
+from fabric.utils import GLib, get_relative_path
+
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
 from services.auth import (
@@ -98,8 +99,6 @@ class OTPPlugin(PluginBase):
         """Update time display in existing OTP result items."""
         try:
             import gc
-
-            from gi.repository import GLib
 
             def do_update():
                 try:
@@ -230,8 +229,6 @@ class OTPPlugin(PluginBase):
     def _trigger_refresh(self):
         """Trigger launcher refresh to return to default OTP view."""
         try:
-            from gi.repository import GLib
-
             # Use a small delay to ensure the action completes first
             def trigger_refresh():
                 try:

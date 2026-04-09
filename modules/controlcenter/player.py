@@ -1,12 +1,7 @@
-import os
 import re
 import time
 from typing import List
 
-from fabric.utils import (
-    bulk_connect,
-)
-from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -14,8 +9,8 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
-from gi.repository import Gio, GLib, GObject
-from loguru import logger
+
+from fabric.utils import GLib, GObject, Gio, logger, bulk_connect, get_relative_path, os
 
 import config.data as data
 from services.mpris import MprisPlayer, MprisPlayerManager

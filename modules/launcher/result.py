@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from gi.repository import GdkPixbuf, Gtk
+from fabric.utils import GdkPixbuf, Gtk
 
 
 @dataclass

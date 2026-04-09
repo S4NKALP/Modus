@@ -5,7 +5,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.wayland import WaylandWindow as Window
-from gi.repository import Gdk, GLib
+from fabric.utils import Gdk, GLib
 
 from modules.launcher.plugin_manager import PluginManager
 from modules.launcher.result import Result

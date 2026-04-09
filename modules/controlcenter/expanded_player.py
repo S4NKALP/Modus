@@ -1,6 +1,5 @@
 # Standard library imports
 import gc
-import os
 import re
 import tempfile
 import threading
@@ -9,7 +8,15 @@ import urllib.request
 import weakref
 from typing import Dict, List, Optional
 
-from fabric.utils import bulk_connect, cooldown, invoke_repeater
+from fabric.utils import (
+    bulk_connect,
+    cooldown,
+    invoke_repeater,
+    GLib,
+    GObject,
+    logger,
+    os,
+)
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -20,8 +27,6 @@ from fabric.widgets.overlay import Overlay
 from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow as Window
-from gi.repository import GLib, GObject
-from loguru import logger
 
 import config.data as data
 
@@ -908,8 +913,6 @@ class PlayerBox(Box):
         # Cancel seek bar timer
         if self._seekbar_timer_id:
             try:
-                from gi.repository import GLib
-
                 GLib.source_remove(self._seekbar_timer_id)
             except Exception:
                 pass
@@ -1038,8 +1041,6 @@ class PlayerBox(Box):
         # Restart timer to ensure it's running with updated metadata
         if self._seekbar_timer_id:
             try:
-                from gi.repository import GLib
-
                 GLib.source_remove(self._seekbar_timer_id)
             except Exception:
                 pass

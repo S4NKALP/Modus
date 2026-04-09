@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
-from gi.repository import GdkPixbuf, GLib
+from fabric.utils import GdkPixbuf, GLib
 
 from modules.launcher.plugin_base import PluginBase
 from modules.launcher.result import Result
@@ -85,7 +85,6 @@ class ClipboardPlugin(PluginBase):
     def _force_launcher_refresh(self):
         """Force the launcher to refresh its results."""
         try:
-            from gi.repository import GLib
 
             def trigger_refresh():
                 try:
