@@ -70,6 +70,7 @@ class AppName:
 
         if update:
             modus_service.current_active_app_name = name
+            modus_service.current_active_wm_class = wmclass
         return name
 
 
