@@ -3,7 +3,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional, Tuple
 
-import requests
+import json
+import urllib.request
+import urllib.error
 
 
 class CurrencyCache:
@@ -79,11 +81,12 @@ class CurrencyCache:
         """Fetch exchange rates in background thread."""
         try:
             url = f"https://www.floatrates.com/daily/{from_code}.json"
-            response = requests.get(url, timeout=self._request_timeout)
-
-            if response.status_code == 200:
-                rates_data = response.json()
-                current_time = time.time()
+            if self._request_timeout is None:
+                self._request_timeout = 5
+            with urllib.request.urlopen(url, timeout=self._request_timeout) as response:
+                if response.getcode() == 200:
+                    rates_data = json.loads(response.read().decode())
+                    current_time = time.time()
 
                 with self._cache_lock:
                     self._cache[from_code] = {
@@ -523,11 +526,15 @@ class Conversion:
             return value
 
         url = f"https://www.floatrates.com/daily/{from_lower}.json"
-        resp = requests.get(url, timeout=5)
-        if resp.status_code != 200:
-            raise ValueError(f"Error getting data from floatrates for {from_code}")
-
-        data = resp.json()
+        try:
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                if resp.getcode() != 200:
+                    raise ValueError(
+                        f"Error getting data from floatrates for {from_code}"
+                    )
+                data = json.loads(resp.read().decode())
+        except Exception as e:
+            raise ValueError(f"Error getting data from floatrates for {from_code}: {e}")
         if to_lower not in data:
             raise ValueError(
                 f"Target currency '{to_code}' not found in floatrates response for '{

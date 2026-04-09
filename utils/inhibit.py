@@ -6,10 +6,15 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
+
+# Add the project root to sys.path to allow absolute imports from 'utils'
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from signal import SIGINT, SIGTERM, signal
 from threading import Event, Timer
 
-import setproctitle
+from utils.functions import set_process_name
 from pywayland.client.display import Display
 from pywayland.protocol.idle_inhibit_unstable_v1.zwp_idle_inhibit_manager_v1 import (
     ZwpIdleInhibitManagerV1,
@@ -182,5 +187,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    setproctitle.setproctitle("modus-inhibit")
+    set_process_name("modus-inhibit")
     main()
