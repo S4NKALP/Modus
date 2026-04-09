@@ -227,17 +227,20 @@ class Weather(Box):
         update_weather(self)
 
     def _create_labels(self):
+        self.header = Box(orientation="h", h_expand=True)
+        self.body = Box(orientation="v", v_expand=True, valign="end")
+
         self.city = Label(
             name="city",
             label="Loading...",
-            justification="right",
+            justification="left",
             h_align="start",
-            max_chars_width=12,
+            max_chars_width=15,
             ellipsization="end",
         )
         self.temperature = Label(name="temperature", label="--°", h_align="start")
         self.condition_em = svg_file(
-            "weather/weather-none-available.svg", size=(48, 48), name="condition-emoji"
+            "weather/weather-none-available.svg", size=(35, 35), name="condition-emoji"
         )
         self.condition = Label(
             name="condition",
@@ -246,23 +249,28 @@ class Weather(Box):
             ellipsization="end",
             h_align="start",
         )
-        self.feels_like = Label(name="feels-like", label="H:-- L:--", h_align="start")
+        self.feels_like = Label(name="feels-like", label="L:-- H:--", h_align="start")
 
     def _layout_labels(self):
-        for label in [
-            self.city,
-            self.temperature,
-            self.condition_em,
-            self.condition,
-            self.feels_like,
-        ]:
-            self.add(label)
+        # Header: City (left) and Icon (right)
+        self.header.add(self.city)
+        self.header.pack_end(self.condition_em, False, False, 0)
+
+        # Body: Temp, Condition, High/Low
+        self.body.add(self.temperature)
+        self.body.add(self.condition)
+        self.body.add(self.feels_like)
+
+        self.add(self.header)
+        self.add(self.body)
 
     def update_labels(self, weather_info: List[str]):
         if not weather_info or len(weather_info) != 7:
             return
-        icon_name, temp, condition, location, maxtemp, mintemp, _ = weather_info
-        maxmin = f"H:{maxtemp} L:{mintemp}"
+        icon_name, temp, condition, location, maxtemp, mintemp, gradient_class = (
+            weather_info
+        )
+        maxmin = f"L:{mintemp} H:{maxtemp}"
 
         self.city.set_label(location)
         self.temperature.set_label(temp)
@@ -272,6 +280,15 @@ class Weather(Box):
 
         self.condition.set_label(condition)
         self.feels_like.set_label(maxmin)
+
+        # Apply gradient class to container
+        if hasattr(self, "parent") and self.parent:
+            # Remove old weather classes
+            for cls in self.parent.get_style_context().list_classes():
+                if cls.startswith("weather-"):
+                    self.parent.remove_style_class(cls)
+            # Add new one
+            self.parent.add_style_class(gradient_class)
 
         self.parent.set_visible(True)
 
