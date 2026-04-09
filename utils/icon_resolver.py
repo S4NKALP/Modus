@@ -1,6 +1,5 @@
 import json
 import os
-import re
 
 import gi
 
@@ -69,38 +68,104 @@ class IconResolver:
 
     def _get_icon_from_desktop_file(self, desktop_file_path: str):
         # Retrieve the icon specified in the [Desktop Entry] section.
-        with open(desktop_file_path) as f:
-            for line in f.readlines():
-                if "Icon=" in line:
-                    return "".join(line[5:].split())
-            return self.default_applicaiton_icon
+        try:
+            with open(desktop_file_path) as f:
+                in_desktop_entry = False
+                for line in f:
+                    line = line.strip()
+                    if line == "[Desktop Entry]":
+                        in_desktop_entry = True
+                    elif line.startswith("[") and line.endswith("]"):
+                        in_desktop_entry = False
+
+                    if in_desktop_entry and line.startswith("Icon="):
+                        return line[5:].strip()
+        except Exception as e:
+            logger.error(f"[ICONS] Error reading desktop file {desktop_file_path}: {e}")
+
+        return self.default_applicaiton_icon
 
     def _get_desktop_file(self, app_id: str) -> str | None:
-        data_dirs = GLib.get_system_data_dirs()
-        for data_dir in data_dirs:
-            data_dir = os.path.join(data_dir, "applications")
-            if os.path.exists(data_dir):
-                files = os.listdir(data_dir)
-                matching = [
-                    s for s in files if "".join(app_id.lower().split()) in s.lower()
-                ]
-                if matching:
-                    return os.path.join(data_dir, matching[0])
-                for word in list(filter(None, re.split(r"-|\.|_|\s", app_id))):
-                    matching = [s for s in files if word.lower() in s.lower()]
-                    if matching:
-                        return os.path.join(data_dir, matching[0])
+        if not app_id:
+            return None
+
+        search_dirs = [os.path.join(GLib.get_user_data_dir(), "applications")] + [
+            os.path.join(d, "applications") for d in GLib.get_system_data_dirs()
+        ]
+
+        # Normalize search IDs (full ID and parts for Reverse DNS or decorated names)
+        search_ids = [app_id.lower()]
+        for sep in [".", "_", "-"]:
+            if sep in app_id:
+                parts = app_id.split(sep)
+                for part in parts:
+                    if part and len(part) > 2 and part.lower() not in search_ids:
+                        search_ids.append(part.lower())
+
+        # 1. Try exact filename matches first (highest priority)
+        for data_dir in search_dirs:
+            if not os.path.exists(data_dir):
+                continue
+
+            files = os.listdir(data_dir)
+            for sid in search_ids:
+                target = f"{sid}.desktop"
+                for f in files:
+                    if f.lower() == target:
+                        return os.path.join(data_dir, f)
+
+                # Try basename match without .desktop
+                for f in files:
+                    basename = f[:-8] if f.lower().endswith(".desktop") else f
+                    if basename.lower() == sid:
+                        return os.path.join(data_dir, f)
+
+        # 2. Try matching StartupWMClass or Name inside desktop files (more expensive)
+        for data_dir in search_dirs:
+            if not os.path.exists(data_dir):
+                continue
+
+            for f in os.listdir(data_dir):
+                if not f.endswith(".desktop"):
+                    continue
+                path = os.path.join(data_dir, f)
+                try:
+                    with open(path, "r", errors="ignore") as file:
+                        for line in file:
+                            line = line.strip()
+                            if line.startswith("StartupWMClass="):
+                                wm_class = line[15:].strip()
+                                if wm_class.lower() == app_id.lower():
+                                    return path
+                            elif line.startswith("Name="):
+                                name = line[5:].strip().lower()
+                                if any(sid == name for sid in search_ids):
+                                    return path
+                except Exception:
+                    continue
+
         return None
 
     def _compositor_find_icon(self, app_id: str):
+        if not app_id:
+            return self.default_applicaiton_icon
+
         icon_theme = Gtk.IconTheme.get_default()
+
+        # Try direct icon name match
         if icon_theme.has_icon(app_id):
             return app_id
-        if icon_theme.has_icon(app_id + "-desktop"):
-            return app_id + "-desktop"
+
+        # Try with common suffixes
+        for suffix in ["-desktop", "-symbolic"]:
+            if icon_theme.has_icon(app_id + suffix):
+                return app_id + suffix
+
+        # Try finding desktop file
         desktop_file = self._get_desktop_file(app_id)
-        return (
-            self._get_icon_from_desktop_file(desktop_file)
-            if desktop_file
-            else self.default_applicaiton_icon
-        )
+        if desktop_file:
+            icon = self._get_icon_from_desktop_file(desktop_file)
+            if icon and icon_theme.has_icon(icon):
+                return icon
+
+        return self.default_applicaiton_icon
