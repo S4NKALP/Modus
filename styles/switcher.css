@@ -1,38 +1,48 @@
 #application-switcher-container {
-    background: var(--shadow);
-    border-radius: 16px;
+    background-color: var(--shadow);
+    border-radius: 20px;
+    padding: 24px;
 }
 
 #application-switcher-view {
-    min-height: 120px;
-    padding: 4px;
+    padding: 0px;
+    margin-bottom: 12px;
 }
 
 #switcher-button {
-    padding: 4px;
+    padding: 12px;
     min-width: 100px;
+    transition: all 0.2s ease;
 }
 
 #window-button {
-    background-color: var(--surface);
-    border-radius: 4px;
-}
-
-#switcher-button:hover {
-    background-color: var(--surface);
+    background-color: transparent;
+    border-radius: 12px;
 }
 
 #window-button.active {
-    background-color: var(--surface-bright);
-    border: 3px solid var(--surface-bright);
+    background-color: var(--surface);
 }
 
-#switcher-button label {
+.switcher-selection-label {
     color: var(--foreground);
-    font-size: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.switcher-workspace-label {
+    color: var(--foreground);
+    opacity: 0.6;
+    font-size: 12px;
     margin-top: 4px;
 }
 
+#switcher-icon-box {
+    border-radius: 12px;
+    padding: 4px;
+}
+
 #window-row {
-    padding: 18px;
+    padding: 0px;
 }
