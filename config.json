@@ -10,8 +10,12 @@
   "hide_special_workspace": true,
   "dock_hide_special_workspace_apps": true,
   "notification_timeout": "5s",
-  "notification_ignored_apps": ["Hyprshot"],
-  "notification_limited_apps_history": ["Spotify"],
+  "notification_ignored_apps": [
+    "Hyprshot"
+  ],
+  "notification_limited_apps_history": [
+    "Spotify"
+  ],
   "imac_button": true,
   "systray": true,
   "control_center": true,
@@ -29,6 +33,6 @@
   ],
   "dock": true,
   "window_switcher": true,
-  "osd": true
+  "osd": true,
+  "systray_ignore": ["blueman", "network"]
 }
-
