@@ -1,12 +1,13 @@
 from typing import Any
 
 import cairo
-from fabric.utils import GLib
+from fabric.utils import Gdk
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.widget import Widget
 from gi.repository import GtkLayerShell  # type: ignore
 
+from utils.monitors import HyprlandWithMonitors
 from utils.roam import modus_service
 
 
@@ -15,7 +16,7 @@ class MouseCapture(Window):
 
     def __init__(self, layer: str, child_window: Window, **kwargs):
         super().__init__(
-            layer="top",  # Use top layer to capture events
+            layer=layer,  # Use the passed layer
             anchor="top bottom left right",
             exclusivity="auto",
             title="modus",
@@ -39,15 +40,31 @@ class MouseCapture(Window):
 
         # Create transparent event box that captures clicks
         self.event_box = EventBox(
-            events=["button-press-event"],
+            events=[
+                "button-press-event",
+                "button-release-event",
+                "pointer-motion-mask",  # Listen for mouse movement
+                "enter-notify-mask",
+            ],
             all_visible=True,
         )
         self.event_box.connect("button-press-event", self.on_overlay_click)
+        self.event_box.connect("motion-notify-event", self.on_mouse_motion)
+        self.event_box.connect("enter-notify-event", self.on_mouse_motion)
         self.children = [self.event_box]
+
+        self._hyprland = HyprlandWithMonitors()
+        self._cursor_pointer = Gdk.Cursor.new_from_name(
+            Gdk.Display.get_default(), "pointer"
+        )
+        self._cursor_default = None  # Resets to default arrow
 
         # Make the overlay transparent
         self.set_app_paintable(True)
         self.connect("draw", self.on_draw)
+        self.connect("size-allocate", lambda *_: self.update_input_region())
+        self.connect("map", lambda *_: self.update_input_region())
+        self.connect("notify::visible", lambda *_: self.update_input_region())
 
         # Add escape key binding to child window
         if hasattr(self.child_window, "add_keybinding"):
@@ -60,38 +77,174 @@ class MouseCapture(Window):
         cr.paint()
         return False
 
+    def _get_child_window_bounds(self) -> tuple[int, int, int, int]:
+        """Calculates absolute screen bounds for the child window using Layer Shell properties"""
+        try:
+            # Get monitor geometry
+            monitor = self._hyprland.display.get_monitor_at_window(
+                self.child_window.get_window()
+            )
+            if not monitor:
+                monitor = self._hyprland.display.get_default_monitor()
+
+            geom = monitor.get_geometry()
+            mx, my, mw, mh = geom.x, geom.y, geom.width, geom.height
+
+            # Get child window properties
+            alloc = self.child_window.get_allocation()
+            ww, wh = alloc.width, alloc.height
+
+            # fabric's WaylandWindow usually has anchor and margin accessible
+            anchor = self.child_window.anchor
+            margin = self.child_window.margin  # (top, right, bottom, left)
+
+            # Calculation logic based on Layer Shell anchors
+            # X coordinate
+            if GtkLayerShell.Edge.LEFT in anchor and GtkLayerShell.Edge.RIGHT in anchor:
+                x = mx + margin[3]
+            elif GtkLayerShell.Edge.LEFT in anchor:
+                x = mx + margin[3]
+            elif GtkLayerShell.Edge.RIGHT in anchor:
+                x = mx + mw - ww - margin[1]
+            else:  # Centered horizontally
+                x = mx + (mw - ww) // 2 + margin[3] - margin[1]
+
+            # Y coordinate
+            if GtkLayerShell.Edge.TOP in anchor and GtkLayerShell.Edge.BOTTOM in anchor:
+                y = my + margin[0]
+            elif GtkLayerShell.Edge.TOP in anchor:
+                y = my + margin[0]
+            elif GtkLayerShell.Edge.BOTTOM in anchor:
+                y = my + mh - wh - margin[2]
+            else:  # Centered vertically
+                y = my + (mh - wh) // 2 + margin[0] - margin[2]
+
+            return x, y, ww, wh
+
+        except Exception as e:
+            print(f"Error calculating child window bounds: {e}")
+            # Fallback to allocation if possible, though likely (0,0)
+            alloc = self.child_window.get_allocation()
+            return 0, 0, alloc.width, alloc.height
+
+    def _get_widget_absolute_bounds(self, widget: Widget) -> tuple[int, int, int, int]:
+        """Calculates absolute screen bounds for a widget in another window"""
+        try:
+            toplevel = widget.get_toplevel()
+            if not toplevel:
+                return 0, 0, 0, 0
+
+            # Get monitor geometry
+            monitor = self._hyprland.display.get_monitor_at_window(
+                toplevel.get_window()
+            )
+            if not monitor:
+                monitor = self._hyprland.display.get_default_monitor()
+
+            geom = monitor.get_geometry()
+            mx, my = geom.x, geom.y
+
+            # Get relative position within toplevel
+            alloc = widget.get_allocation()
+            x, y = widget.translate_coordinates(toplevel, 0, 0) or (0, 0)
+
+            # If the toplevel is a Layer Shell window, its (0,0) is monitor relative
+            # but we need to account for its own margin/anchor if it's not full screen.
+            # However, for the Panel (which is usually top-anchored), (0,0) is (monitor_x, monitor_y).
+            return mx + x, my + y, alloc.width, alloc.height
+        except Exception as e:
+            print(f"Error calculating widget absolute bounds: {e}")
+            return 0, 0, 0, 0
+
+    def update_input_region(self):
+        """Punches holes in the input region for the trigger button and child window"""
+        window = self.get_window()
+        if not window:
+            return
+
+        try:
+            # Full screen region
+            alloc = self.get_allocation()
+            region = cairo.Region(cairo.RectangleInt(0, 0, alloc.width, alloc.height))
+
+            # Punch hole for trigger button (relative to this overlay window)
+            pointing_widget = getattr(self.child_window, "_pointing_widget", None)
+            if pointing_widget:
+                # get_widget_absolute_bounds returns screen-absolute coords.
+                # Since overlay is full screen on its monitor, we just need to subtract its monitor's X/Y
+                px, py, pw, ph = self._get_widget_absolute_bounds(pointing_widget)
+                monitor = self._hyprland.display.get_monitor_at_window(window)
+                if monitor:
+                    mx, my = monitor.get_geometry().x, monitor.get_geometry().y
+                    region.subtract(cairo.RectangleInt(px - mx, py - my, pw, ph))
+
+            # Punch hole for child window
+            cx, cy, cw, ch = self._get_child_window_bounds()
+            monitor = self._hyprland.display.get_monitor_at_window(window)
+            if monitor:
+                mx, my = monitor.get_geometry().x, monitor.get_geometry().y
+                region.subtract(cairo.RectangleInt(cx - mx, cy - my, cw, ch))
+
+            window.input_shape_combine_region(region, 0, 0)
+        except Exception as e:
+            print(f"Error updating input region: {e}")
+
+    def on_mouse_motion(self, _widget, event):
+        """Update cursor feedback based on position"""
+        # (This is mostly redundant now with input regions but kept for extra safety)
+        if not self.child_window.is_visible():
+            return False
+
+        return False
+
     def on_overlay_click(self, _widget, event):
         """Handle overlay clicks - check if click is outside child window"""
         if not self.child_window.is_visible():
             return False
 
-        # Get click coordinates
-        click_x = event.x_root
-        click_y = event.y_root
+        # Support double and triple clicks too
+        if event.type not in [
+            Gdk.EventType.BUTTON_PRESS,
+            Gdk.EventType._2BUTTON_PRESS,
+            Gdk.EventType._3BUTTON_PRESS,
+        ]:
+            return False
 
-        # Get child window bounds
-        try:
-            child_x, child_y = self.child_window.get_position()
-            child_allocation = self.child_window.get_allocation()
+        # Use window-local coordinates for robust detection
+        click_x = event.x
+        click_y = event.y
 
-            # Check if click is inside child window bounds
-            inside_child = (
-                child_x <= click_x <= child_x + child_allocation.width
-                and child_y <= click_y <= child_y + child_allocation.height
-            )
+        # Get window position relative to monitor for absolute -> local conversion
+        window = self.get_window()
+        mx, my = 0, 0
+        if window:
+            monitor = self._hyprland.display.get_monitor_at_window(window)
+            if monitor:
+                geom = monitor.get_geometry()
+                mx, my = geom.x, geom.y
 
-            if not inside_child:
-                # Click is outside child window - hide it with delay
-                GLib.timeout_add(
-                    50, lambda: self.hide_child_window(None, None) or False
-                )
-                return True  # Consume the event
+        # Check if click is on the "trigger" (pointing) widget
+        pointing_widget = getattr(self.child_window, "_pointing_widget", None)
+        if pointing_widget:
+            px_abs, py_abs, pw, ph = self._get_widget_absolute_bounds(pointing_widget)
+            px, py = px_abs - mx, py_abs - my
+            if px <= click_x <= px + pw and py <= click_y <= py + ph:
+                # Clicked the button that opened us - hide and consume
+                self.hide_child_window()
+                return True
 
-        except Exception as e:
-            print(f"Error checking click position: {e}")
-            # If we can't determine position, hide child window to be safe
-            GLib.timeout_add(50, lambda: self.hide_child_window(None, None) or False)
-            return True
+        # Get child window bounds (monitor-relative)
+        cx_abs, cy_abs, cw, ch = self._get_child_window_bounds()
+        cx, cy = cx_abs - mx, cy_abs - my
+
+        # Check if click is inside child window bounds
+        inside_child = cx <= click_x <= cx + cw and cy <= click_y <= cy + ch
+
+        if not inside_child:
+            # Click is outside child window - hide it immediately
+            # No delay to avoid race conditions with toggle buttons
+            self.hide_child_window()
+            return True  # Consume the event
 
         # Click is inside child window - don't consume event
         return False
@@ -109,6 +262,14 @@ class MouseCapture(Window):
         else:
             self.child_window.hide()
             self.hide()
+
+        # Update styling on the trigger button
+        pointing_widget = getattr(self.child_window, "_pointing_widget", None)
+        if pointing_widget:
+            if visible:
+                pointing_widget.add_style_class("active")
+            else:
+                pointing_widget.remove_style_class("active")
 
         if hasattr(self.child_window, "_set_mousecapture"):
             self.child_window._set_mousecapture(visible)

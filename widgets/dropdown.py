@@ -51,7 +51,6 @@ class ModusDropdown(PopupWindow):
         )
 
         self.children = [self.event_box]
-        self.connect("button-press-event", self.hide_dropdown)
         self.add_keybinding("Escape", self.hide_dropdown)
 
     def toggle_dropdown(self, button, parent=None):
