@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 import subprocess
 
@@ -14,7 +15,12 @@ from fabric.widgets.revealer import Revealer
 
 import config.data as data
 from services.modus import modus_service
-from utils.functions import read_json_file, write_json_file, is_special_workspace_id
+from utils.functions import (
+    read_json_file,
+    write_json_file,
+    is_special_workspace_id,
+    clear_children,
+)
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from fabric.widgets.wayland import WaylandWindow as Window
@@ -76,8 +82,7 @@ class AppBar(Box):
         GLib.idle_add(self.update_dock_apps)
 
     def _populate_pinned_apps(self):
-        for child in self.pinned_apps_container.get_children():
-            self.pinned_apps_container.remove(child)
+        clear_children(self.pinned_apps_container)
 
         self.pinned_buttons = {}
         self.pinned_items_pos = []
@@ -94,36 +99,24 @@ class AppBar(Box):
         self._create_trash_button()
 
     def _create_pinned_button(self, app_data, desktop_apps):
-        if isinstance(app_data, dict):
-            app_identifier = app_data.get("name", "") or app_data.get(
-                "window_class", ""
+        app = self._find_desktop_app(app_data, desktop_apps)
+        app_identifier = self._get_app_identifier(app_data)
+        display_name = (
+            app.display_name
+            if app
+            else (
+                app_data.get("display_name", app_identifier)
+                if isinstance(app_data, dict)
+                else app_identifier
             )
-            display_name = app_data.get("display_name", app_identifier)
-            app = self._find_desktop_app_from_data(app_data, desktop_apps)
+        )
 
-            if app:
-                icon_pixbuf = app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
-            else:
-                icon_name = app_data.get("window_class", "") or app_data.get("name", "")
-                icon_pixbuf = self.icon_resolver.get_icon_pixbuf(
-                    icon_name, data.DOCK_ICON_SIZE
-                )
-        else:
-            app_identifier = app_data
-            app = self._find_desktop_app_by_id(app_data, desktop_apps)
-            if not app:
-                return
-
-            display_name = app.display_name or app.name
-            icon_pixbuf = app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
-
-        pinned_image = Image(name="dock_item_icon")
-        pinned_image.set_from_pixbuf(icon_pixbuf)
+        icon_pixbuf = self._get_app_icon(app_data, app)
 
         main_container = Box(
             name="dock_item_main_container",
             orientation="v",
-            children=[pinned_image],
+            children=[Image(name="dock_item_icon", pixbuf=icon_pixbuf)],
         )
 
         pinned_button = Button(
@@ -133,11 +126,11 @@ class AppBar(Box):
             on_button_press_event=lambda _, event: self._handle_pinned_app_click(
                 event, app_data
             ),
-            on_enter_notify_event=lambda *_: self._handle_item_hovered(
-                pinned_button, True
+            on_enter_notify_event=lambda *_: self._set_item_hover_state(
+                pinned_button, True, pinned=True
             ),
-            on_leave_notify_event=lambda *_: self._handle_item_unhovered(
-                pinned_button, True
+            on_leave_notify_event=lambda *_: self._set_item_hover_state(
+                pinned_button, False, pinned=True
             ),
         )
 
@@ -147,20 +140,30 @@ class AppBar(Box):
         self.pinned_apps_container.add(pinned_button)
         self.pinned_items_pos.append(pinned_button)
 
+    def _get_app_icon(self, app_data, app=None):
+        if app:
+            return app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
+
+        icon_name = ""
+        if isinstance(app_data, dict):
+            icon_name = app_data.get("window_class") or app_data.get("name")
+        elif isinstance(app_data, str):
+            icon_name = app_data
+
+        return self.icon_resolver.get_icon_pixbuf(
+            icon_name or "application-x-executable", data.DOCK_ICON_SIZE
+        )
+
     def _create_trash_button(self):
         """Create a trash button that opens the trash in file manager"""
-        # Get trash icon
         trash_icon_pixbuf = self.icon_resolver.get_icon_pixbuf(
             "user-trash", data.DOCK_ICON_SIZE
         )
 
-        trash_image = Image(name="dock_item_icon")
-        trash_image.set_from_pixbuf(trash_icon_pixbuf)
-
         main_container = Box(
             name="dock_item_main_container",
             orientation="v",
-            children=[trash_image],
+            children=[Image(name="dock_item_icon", pixbuf=trash_icon_pixbuf)],
         )
 
         trash_button = Button(
@@ -168,11 +171,11 @@ class AppBar(Box):
             child=main_container,
             tooltip_text="Trash",
             on_button_press_event=lambda _, event: self._handle_trash_click(event),
-            on_enter_notify_event=lambda *_: self._handle_item_hovered(
-                trash_button, True
+            on_enter_notify_event=lambda *_: self._set_item_hover_state(
+                trash_button, True, pinned=True
             ),
-            on_leave_notify_event=lambda *_: self._handle_item_unhovered(
-                trash_button, True
+            on_leave_notify_event=lambda *_: self._set_item_hover_state(
+                trash_button, False, pinned=True
             ),
         )
 
@@ -183,52 +186,45 @@ class AppBar(Box):
         self.pinned_apps_container.add(trash_button)
         self.pinned_items_pos.append(trash_button)
 
-    def _find_desktop_app_from_data(self, app_data: dict, desktop_apps):
-        for app in desktop_apps:
-            if (
-                (
-                    app_data.get("name")
-                    and app.name
-                    and app.name.lower() == app_data["name"].lower()
-                )
-                or (
-                    app_data.get("window_class")
-                    and hasattr(app, "window_class")
-                    and app.window_class
-                    and app.window_class.lower() == app_data["window_class"].lower()
-                )
-                or (
-                    app_data.get("executable")
-                    and app.executable
-                    and (
-                        app.executable.lower() == app_data["executable"].lower()
-                        or os.path.basename(app.executable).lower()
-                        == os.path.basename(app_data["executable"]).lower()
-                    )
-                )
-            ):
-                return app
-        return None
+    def _find_desktop_app(self, app_info, desktop_apps):
+        """Find a desktop app from either a string ID or a data dictionary"""
+        if not app_info:
+            return None
 
-    def _find_desktop_app_by_id(self, app_id: str, desktop_apps):
+        # Extract normalized search terms
+        search_terms = []
+        if isinstance(app_info, dict):
+            search_terms = [
+                app_info.get("name"),
+                app_info.get("window_class"),
+                app_info.get("executable"),
+            ]
+        else:
+            search_terms = [app_info]
+
+        search_terms = [s.lower() for s in search_terms if s and isinstance(s, str)]
+
         for app in desktop_apps:
-            if (
-                (app.name and app.name.lower() == app_id.lower())
-                or (app.display_name and app.display_name.lower() == app_id.lower())
-                or (
-                    hasattr(app, "window_class")
-                    and app.window_class
-                    and app.window_class.lower() == app_id.lower()
-                )
-                or (
-                    app.executable
-                    and (
-                        app.executable.lower() == app_id.lower()
-                        or os.path.basename(app.executable).lower() == app_id.lower()
-                    )
-                )
+            app_terms = [
+                app.name,
+                getattr(app, "display_name", None),
+                getattr(app, "window_class", None),
+                app.executable,
+            ]
+            app_terms = [a.lower() for a in app_terms if a and isinstance(a, str)]
+
+            # Check for exact matches first
+            if any(term in app_terms for term in search_terms):
+                return app
+
+            # Then check for basename matches on executable
+            if any(
+                os.path.basename(app.executable).lower() == term
+                for term in search_terms
+                if app.executable
             ):
                 return app
+
         return None
 
     def show_menu(self, app_id: str, client=None, instance_address=None):
@@ -270,13 +266,12 @@ class AppBar(Box):
             logger.error(f"[AppBar] Error closing window: {e}")
 
     def _handle_pinned_app_click(self, event, app_data):
+        app_identifier = self._get_app_identifier(app_data)
         if event.button == 1:  # Left click - launch app
-            self._launch_app_data(app_data)
+            self._launch_app(app_data)
         elif event.button == 2:  # Middle click - unpin app
-            app_identifier = self._get_app_identifier(app_data)
             self._unpin_app(app_identifier)
         elif event.button == 3:  # Right click - show context menu
-            app_identifier = self._get_app_identifier(app_data)
             self.show_menu(app_identifier)
             self.menu.popup_at_pointer(event)
 
@@ -307,97 +302,60 @@ class AppBar(Box):
             except Exception as e:
                 logger.error(f"[AppBar] Error opening trash: {e}")
 
-    def _handle_item_hovered(self, item, pinned=False):
-        if pinned:
-            try:
-                index = self.pinned_items_pos.index(item)
-                if index > 0:
-                    self.pinned_items_pos[index - 1].add_style_class("semi_hovered")
-                if index < len(self.pinned_items_pos) - 1:
-                    self.pinned_items_pos[index + 1].add_style_class("semi_hovered")
-            except ValueError:
-                pass
-        else:
-            try:
-                index = self.running_items_pos.index(item)
-                if index > 0:
-                    self.running_items_pos[index - 1].add_style_class("semi_hovered")
-                if index < len(self.running_items_pos) - 1:
-                    self.running_items_pos[index + 1].add_style_class("semi_hovered")
-            except ValueError:
-                pass
+    def _set_item_hover_state(self, item, is_hovered, pinned=False):
+        if is_hovered:
+            self._parent.on_hover_enter()
 
-    def _handle_item_unhovered(self, item, pinned=False):
-        if pinned:
-            try:
-                index = self.pinned_items_pos.index(item)
-                if index > 0:
-                    self.pinned_items_pos[index - 1].remove_style_class("semi_hovered")
-                if index < len(self.pinned_items_pos) - 1:
-                    self.pinned_items_pos[index + 1].remove_style_class("semi_hovered")
-            except ValueError:
-                pass
-        else:
-            try:
-                index = self.running_items_pos.index(item)
-                if index > 0:
-                    self.running_items_pos[index - 1].remove_style_class("semi_hovered")
-                if index < len(self.running_items_pos) - 1:
-                    self.running_items_pos[index + 1].remove_style_class("semi_hovered")
-            except ValueError:
-                pass
+        items_list = self.pinned_items_pos if pinned else self.running_items_pos
+        try:
+            index = items_list.index(item)
+            style_class = "semi_hovered"
+            action = "add" if is_hovered else "remove"
+
+            if index > 0:
+                getattr(items_list[index - 1], f"{action}_style_class")(style_class)
+            if index < len(items_list) - 1:
+                getattr(items_list[index + 1], f"{action}_style_class")(style_class)
+        except (ValueError, IndexError):
+            pass
+
+    def _launch_app(self, app_info):
+        """Launch an app using its desktop app instance or a data dictionary"""
+        try:
+            command_line = ""
+            if hasattr(app_info, "command_line"):
+                command_line = app_info.command_line
+            elif isinstance(app_info, dict):
+                command_line = app_info.get("command_line") or app_info.get(
+                    "executable"
+                )
+            elif isinstance(app_info, str):
+                command_line = app_info
+
+            if not command_line:
+                # Fallback to desktop app search if it's just a string class
+                desktop_apps = get_desktop_applications(include_hidden=False)
+                app = self._find_desktop_app(app_info, desktop_apps)
+                if app:
+                    command_line = app.command_line
+
+            if command_line:
+                cleaned_command = re.sub(r"%\w+", "", command_line).strip()
+                final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
+                subprocess.Popen(final_command, shell=True)
+            elif hasattr(app_info, "launch"):
+                app_info.launch()
+            else:
+                logger.error(
+                    f"[AppBar] Could not determine launch command for: {app_info}"
+                )
+        except Exception as e:
+            logger.error(f"[AppBar] Failed to launch app: {e}")
 
     def _get_app_identifier(self, app_data):
         if isinstance(app_data, dict):
             return app_data.get("name", "") or app_data.get("window_class", "")
         return app_data
-
-    def _launch_app_data(self, app_data):
-        try:
-            desktop_apps = get_desktop_applications(include_hidden=False)
-
-            if isinstance(app_data, dict):
-                app = self._find_desktop_app_from_data(app_data, desktop_apps)
-                if app:
-                    self._launch_app(app)
-                else:
-                    self._launch_app_from_data(app_data)
-            else:
-                app = self._find_desktop_app_by_id(app_data, desktop_apps)
-                if app:
-                    self._launch_app(app)
-        except Exception as e:
-            logger.error(f"[AppBar] Failed to launch app: {e}")
-
-    def _launch_app(self, app):
-        try:
-            cleaned_command = re.sub(r"%\w+", "", app.command_line).strip()
-            final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
-            subprocess.Popen(final_command, shell=True)
-        except Exception:
-            try:
-                app.launch()
-            except Exception as fallback_error:
-                logger.error(f"[AppBar] Failed to launch app: {fallback_error}")
-
-    def _launch_app_from_data(self, app_data):
-        try:
-            command_line = app_data.get("command_line", "")
-            if command_line:
-                cleaned_command = re.sub(r"%\w+", "", command_line).strip()
-                final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
-                subprocess.Popen(final_command, shell=True)
-            elif app_data.get("executable"):
-                final_command = (
-                    f"hyprctl dispatch exec 'uwsm app -- {app_data['executable']}'"
-                )
-                subprocess.Popen(final_command, shell=True)
-            else:
-                logger.error(
-                    f"[AppBar] No command or executable found for app: {app_data}"
-                )
-        except Exception as e:
-            logger.error(f"[AppBar] Failed to launch app from data: {e}")
 
     def _pin_app(self, app_class: str):
         if self._is_app_pinned(app_class):
@@ -405,25 +363,17 @@ class AppBar(Box):
 
         try:
             desktop_apps = get_desktop_applications(include_hidden=False)
-            app = self._find_desktop_app_by_id(app_class, desktop_apps)
+            app = self._find_desktop_app(app_class, desktop_apps)
 
-            if app:
-                app_data = {
-                    "name": app.name,
-                    "display_name": app.display_name or app.name,
-                    "window_class": getattr(app, "window_class", None) or app_class,
-                    "executable": app.executable,
-                    "command_line": app.command_line,
-                }
-            else:
-                app_data = {
-                    "name": app_class,
-                    "display_name": app_class,
-                    "window_class": app_class,
-                    "executable": app_class,
-                    "command_line": app_class,
-                }
-
+            app_data = {
+                "name": app.name if app else app_class,
+                "display_name": (app.display_name or app.name) if app else app_class,
+                "window_class": (getattr(app, "window_class", None) or app_class)
+                if app
+                else app_class,
+                "executable": app.executable if app else app_class,
+                "command_line": app.command_line if app else app_class,
+            }
             self.pinned_apps.append(app_data)
         except Exception:
             self.pinned_apps.append(app_class)
@@ -576,15 +526,8 @@ class AppBar(Box):
 
             try:
                 desktop_apps = get_desktop_applications(include_hidden=False)
-                desktop_app = self._find_desktop_app_by_id(app_class, desktop_apps)
-
-                if desktop_app:
-                    pixbuf = desktop_app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
-                else:
-                    pixbuf = self.icon_resolver.get_icon_pixbuf(
-                        app_class, data.DOCK_ICON_SIZE
-                    )
-
+                app = self._find_desktop_app(app_class, desktop_apps)
+                pixbuf = self._get_app_icon(app_class, app)
                 client_image.set_from_pixbuf(pixbuf)
             except Exception as e:
                 logger.warning(f"[AppBar] Could not load icon for {app_class}: {e}")
@@ -621,11 +564,11 @@ class AppBar(Box):
                 on_button_press_event=lambda widget, event: self.handle_instance_click(
                     widget, event
                 ),
-                on_enter_notify_event=lambda *_: self._handle_item_hovered(
-                    client_button, False
+                on_enter_notify_event=lambda *_: self._set_item_hover_state(
+                    client_button, True, pinned=False
                 ),
-                on_leave_notify_event=lambda *_: self._handle_item_unhovered(
-                    client_button, False
+                on_leave_notify_event=lambda *_: self._set_item_hover_state(
+                    client_button, False, pinned=False
                 ),
             )
 
@@ -652,18 +595,14 @@ class AppBar(Box):
             return workspace_data
         return None
 
-    def _is_special_workspace_id(self, ws_id):
-        return is_special_workspace_id(ws_id)
-
     def _should_show_app_instance(self, client):
         if not data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS:
             return True
 
         workspace_id = self._get_workspace_id(client)
-        if workspace_id is None:
-            return True
-
-        return not self._is_special_workspace_id(workspace_id)
+        return (
+            False if workspace_id is None else not is_special_workspace_id(workspace_id)
+        )
 
     def update_instance_button(self, instance_address, client, app_class):
         if instance_address not in self.client_buttons:
@@ -682,27 +621,30 @@ class AppBar(Box):
         existing_label = getattr(button, "workspace_label", None)
 
         container = button.get_child()
-        if hasattr(container, "get_children"):
-            children = container.get_children()
-            if children:
-                image_overlay = children[0]
-                if isinstance(image_overlay, Overlay):
-                    # Remove existing workspace label
-                    if existing_label and existing_label.get_parent():
-                        image_overlay.remove_overlay(existing_label)
+        if not hasattr(container, "get_children"):
+            return
 
-                    # Add new workspace label if needed
-                    if workspace_id is not None:
-                        new_label = Label(
-                            label=str(workspace_id),
-                            name="workspace-indicator",
-                            h_align="end",
-                            v_align="end",
-                        )
-                        image_overlay.add_overlay(new_label)
-                        button.workspace_label = new_label
-                    else:
-                        button.workspace_label = None
+        children = container.get_children()
+        if not children or not isinstance(children[0], Overlay):
+            return
+
+        image_overlay = children[0]
+        # Remove existing workspace label
+        if existing_label and existing_label.get_parent():
+            image_overlay.remove_overlay(existing_label)
+
+        # Add new workspace label if needed
+        if workspace_id is not None:
+            new_label = Label(
+                label=str(workspace_id),
+                name="workspace-indicator",
+                h_align="end",
+                v_align="end",
+            )
+            image_overlay.add_overlay(new_label)
+            button.workspace_label = new_label
+        else:
+            button.workspace_label = None
 
     def handle_instance_click(self, button_widget, event):
         instance_address = getattr(button_widget, "instance_address", None)
@@ -743,23 +685,19 @@ class AppBar(Box):
 
 class Dock(Window):
     def __init__(self):
+        dock_config = self._get_dock_config()
         if not data.DOCK_ENABLED:
-            anchor = self._get_anchor_from_position()
-            super().__init__(layer="top", title="dock", anchor=anchor)
+            super().__init__(layer="top", title="dock", anchor=dock_config["anchor"])
             self.children = Box()  # Empty dock if disabled
             return
 
-        anchor = self._get_anchor_from_position()
-        super().__init__(layer="top", anchor=anchor)
+        super().__init__(layer="top", anchor=dock_config["anchor"])
 
         self.app_bar = AppBar(self)
-
-        transition_type = self._get_transition_type()
-
         self.revealer = Revealer(
             child=Box(children=[self.app_bar], style="padding: 20px 50px 5px 50px;"),
             transition_duration=200,
-            transition_type=transition_type,
+            transition_type=dock_config["transition"],
         )
 
         self.children = EventBox(
@@ -774,7 +712,7 @@ class Dock(Window):
 
         self.dock_height = 100
         self.is_hovered = False
-        self.hide_timeout_id = None
+        self.hide_ticket = 0
 
         # Only setup occlusion monitoring if auto-hide is enabled
         if data.DOCK_AUTO_HIDE:
@@ -782,42 +720,50 @@ class Dock(Window):
 
     def on_hover_enter(self):
         self.is_hovered = True
-        if self.hide_timeout_id:
-            GLib.source_remove(self.hide_timeout_id)
-            self.hide_timeout_id = None
+        self.hide_ticket = random.getrandbits(32)
         self.revealer.set_reveal_child(True)
         self.app_bar.add_style_class("shown")
 
     def on_hover_leave(self):
         self.is_hovered = False
-        # Add small delay before potential hiding to prevent rapid show/hide cycles
-        if self.hide_timeout_id:
-            GLib.source_remove(self.hide_timeout_id)
-        self.hide_timeout_id = GLib.timeout_add(100, lambda: None)
+        self.hide_ticket = random.getrandbits(32)
 
-    def _get_anchor_from_position(self):
-        if data.DOCK_POSITION == "Left":
-            return "left center"
-        elif data.DOCK_POSITION == "Right":
-            return "right center"
-        else:  # Bottom (default)
-            return "bottom center"
+        def delayed_hide(ticket):
+            if ticket == self.hide_ticket and not self.is_hovered:
+                # Only hide if we aren't occluded (or if occlusion logic says so)
+                # For now, just trigger the basic hide if auto-hide is on
+                if data.DOCK_AUTO_HIDE:
+                    # Check if actually occluded before hiding if DOCK_ALWAYS_OCCLUDED is false
+                    occlusion_pos = self._get_dock_config()["occlusion"]
+                    is_occluded = data.DOCK_ALWAYS_OCCLUDED or check_occlusion(
+                        (occlusion_pos, self.dock_height)
+                    )
+                    if is_occluded:
+                        self.revealer.set_reveal_child(False)
+                        self.app_bar.remove_style_class("shown")
+            return False
 
-    def _get_transition_type(self):
-        if data.DOCK_POSITION == "Left":
-            return "slide-right"
-        elif data.DOCK_POSITION == "Right":
-            return "slide-left"
-        else:  # Bottom (default)
-            return "slide-up"
+        GLib.timeout_add(500, delayed_hide, self.hide_ticket)
 
-    def _get_occlusion_position(self):
-        if data.DOCK_POSITION == "Left":
-            return ("left", self.dock_height)
-        elif data.DOCK_POSITION == "Right":
-            return ("right", self.dock_height)
-        else:  # Bottom (default)
-            return ("bottom", self.dock_height)
+    def _get_dock_config(self):
+        config_map = {
+            "Left": {
+                "anchor": "left center",
+                "transition": "slide-right",
+                "occlusion": "left",
+            },
+            "Right": {
+                "anchor": "right center",
+                "transition": "slide-left",
+                "occlusion": "right",
+            },
+            "Bottom": {
+                "anchor": "bottom center",
+                "transition": "slide-up",
+                "occlusion": "bottom",
+            },
+        }
+        return config_map.get(data.DOCK_POSITION, config_map["Bottom"])
 
     def setup_occlusion_monitoring(self):
         def check_dock_occlusion():
@@ -825,8 +771,8 @@ class Dock(Window):
                 if data.DOCK_ALWAYS_OCCLUDED:
                     is_occluded = True
                 else:
-                    occlusion_position = self._get_occlusion_position()
-                    is_occluded = check_occlusion(occlusion_position)
+                    occlusion_pos = self._get_dock_config()["occlusion"]
+                    is_occluded = check_occlusion((occlusion_pos, self.dock_height))
 
                 if (
                     is_occluded
