@@ -11,11 +11,17 @@
 }
 
 #panel-button:hover,
+#panel-button.active,
 #battery-button:hover,
+#battery-button.active,
 #network-button:hover,
+#network-button.active,
 #bt-button:hover,
+#bt-button.active,
 #tray-button:hover,
+#tray-button.active,
 #global-menu:hover,
+#global-menu.active,
 #workspaces>button:hover {
     background-color: @hover;
 }
