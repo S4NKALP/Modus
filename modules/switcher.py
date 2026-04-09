@@ -1,20 +1,16 @@
 import json
 
-import gi
 from fabric.hyprland.widgets import get_hyprland_connection
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.wayland import WaylandWindow as Window
-from gi.repository import Gdk, Glace
+from gi.repository import Gdk
 
 import config.data as data
 from utils.functions import is_special_workspace
 from utils.icon_resolver import IconResolver
-from utils.occlusion import get_screen_dimensions
-
-gi.require_version("Glace", "0.1")
 
 
 class ApplicationSwitcher(Window):
@@ -36,20 +32,8 @@ class ApplicationSwitcher(Window):
         self.current_index = 0
         self.tab_pressed = False
         self.items_per_row = data.WINDOW_SWITCHER_ITEMS_PER_ROW
-        self.icon_size = 64
-
-        # Initialize Glace manager for window previews
-        self._manager = Glace.Manager()
-
-        # Calculate preview size based on screen ratio
-        # Formula: screen_ratio = a:b, width = x, height = (x*b)/a
-        screen_width, screen_height = get_screen_dimensions()
-        preview_width = 150  # Base width
-        preview_height = int((preview_width * screen_height) / screen_width)
-        self.preview_size = [preview_width, preview_height]
-
-        self.glace_clients = {}  # Map window addresses to Glace clients
-        self.window_previews = {}  # Map window addresses to preview images
+        self.icon_size = 96
+        self.items_per_row = 100  # Single row focus
 
         container = Box(
             name="application-switcher-container",
@@ -62,18 +46,32 @@ class ApplicationSwitcher(Window):
 
         self.view = Box(
             name="application-switcher-view",
-            orientation="v",
-            spacing=12,
+            orientation="h",
+            spacing=16,
             h_align="center",
             v_align="center",
         )
         container.add(self.view)
+
+        self.selection_label = Label(
+            name="switcher-selection-label",
+            label="",
+            h_align="center",
+            v_align="center",
+            style_classes=["switcher-selection-label"],
+        )
+        container.add(self.selection_label)
+
+        self.workspace_label = Label(
+            name="switcher-workspace-label",
+            label="",
+            h_align="center",
+            v_align="center",
+            style_classes=["switcher-workspace-label"],
+        )
+        container.add(self.workspace_label)
         self.connect("key-press-event", self.on_key_press)
         self.connect("key-release-event", self.on_key_release)
-
-        # Connect to Glace manager signals to track clients
-        self._manager.connect("client-added", self._on_glace_client_added)
-        self._manager.connect("client-removed", self._on_glace_client_removed)
 
         self.show_all()
         self.hide()
@@ -91,107 +89,20 @@ class ApplicationSwitcher(Window):
         self.hide()
         self.ungrab_keyboard()
 
-    def _on_glace_client_added(self, _, client):
-        """Handle when a Glace client is added"""
-        try:
-            # Map the client by its window address for later lookup
-            # We'll need to match this with Hyprland window data
-            client_id = client.get_id()
-            self.glace_clients[client_id] = client
-        except Exception as e:
-            print(f"Error adding Glace client: {e}")
-
-    def _on_glace_client_removed(self, _, client):
-        """Handle when a Glace client is removed"""
-        try:
-            client_id = client.get_id()
-            if client_id in self.glace_clients:
-                del self.glace_clients[client_id]
-        except Exception as e:
-            print(f"Error removing Glace client: {e}")
-
-    def _find_glace_client_for_window(self, window):
-        """Find the corresponding Glace client for a Hyprland window"""
-        try:
-            window_class = window.get("class", "").lower()
-            window_title = window.get("title", "")
-
-            # Try to match by app_id/class and title
-            for _, client in self.glace_clients.items():
-                try:
-                    client_app_id = client.get_app_id()
-                    client_title = client.get_title()
-
-                    if (
-                        client_app_id
-                        and client_app_id.lower() == window_class
-                        and client_title
-                        and client_title == window_title
-                    ):
-                        return client
-                except Exception:
-                    continue
-
-            # Fallback: try to match by class only
-            for _, client in self.glace_clients.items():
-                try:
-                    client_app_id = client.get_app_id()
-                    if client_app_id and client_app_id.lower() == window_class:
-                        return client
-                except Exception:
-                    continue
-
-        except Exception as e:
-            print(f"Error finding Glace client: {e}")
-
-        return None
-
-    def create_preview_for_window(self, window):
-        """Create a preview image for a specific window"""
-        glace_client = self._find_glace_client_for_window(window)
-
-        # Create a placeholder image first
-        preview_image = Image()
-
-        if glace_client:
-
-            def capture_callback(pbuf, _):
-                try:
-                    scaled_pixbuf = pbuf.scale_simple(
-                        self.preview_size[0],
-                        self.preview_size[1],
-                        2,  # GdkPixbuf.InterpType.BILINEAR
-                    )
-                    preview_image.set_from_pixbuf(scaled_pixbuf)
-                except Exception as e:
-                    print(f"Error setting preview image: {e}")
-
-            try:
-                self._manager.capture_client(
-                    client=glace_client,
-                    overlay_cursor=False,
-                    callback=capture_callback,
-                    user_data=None,
-                )
-            except Exception as e:
-                print(f"Error capturing client preview: {e}")
-                # Fallback to icon if preview fails
-                self._set_fallback_icon(preview_image, window)
-        else:
-            # Use icon as fallback if no Glace client found
-            self._set_fallback_icon(preview_image, window)
-
-        return preview_image
-
-    def _set_fallback_icon(self, image_widget, window):
-        """Set a fallback icon when preview is not available"""
+    def create_icon_for_window(self, window):
+        """Create an icon image for a specific window"""
         class_name = window.get("class", "").lower()
         icon_img = self.icon_resolver.get_icon_pixbuf(class_name, self.icon_size)
         if not icon_img:
             icon_img = self.icon_resolver.get_icon_pixbuf(
                 "application-x-executable-symbolic", self.icon_size
             )
-        image_widget.set_from_pixbuf(icon_img)
+
+        icon_image = Image()
+        if icon_img:
+            icon_image.set_from_pixbuf(icon_img)
+
+        return icon_image
 
     def _is_special_workspace(self, client):
         return is_special_workspace(client)
@@ -235,38 +146,28 @@ class ApplicationSwitcher(Window):
             current_row = Box(
                 name="window-row",
                 orientation="h",
-                spacing=12,
+                spacing=16,
                 h_align="center",
                 v_align="center",
             )
             self.view.add(current_row)
 
             for i, window in enumerate(self.windows):
-                title = window.get("title", "")
-
-                # Create preview image for this window
-                preview_image = self.create_preview_for_window(window)
+                # Create icon image for this window
+                icon_image = self.create_icon_for_window(window)
 
                 button_content = Box(
                     name="switcher-button",
                     orientation="v",
-                    spacing=4,
                     h_align="center",
                     v_align="center",
                     children=[
                         Box(
-                            name="switcher-preview-box",
+                            name="switcher-icon-box",
                             style_classes=["window-basic", "sleek-border"],
-                            children=[preview_image],
+                            children=[icon_image],
                             h_align="center",
                             v_align="center",
-                        ),
-                        Label(
-                            label=title[:15] + "..." if len(title) > 15 else title,
-                            h_align="center",
-                            v_align="center",
-                            max_width_chars=15,
-                            ellipsize="end",
                         ),
                     ],
                 )
@@ -277,16 +178,6 @@ class ApplicationSwitcher(Window):
                     child=button_content,
                 )
                 current_row.add(event_box)
-
-                if (i + 1) % self.items_per_row == 0 and i + 1 < len(self.windows):
-                    current_row = Box(
-                        name="window-row",
-                        orientation="h",
-                        spacing=12,
-                        h_align="center",
-                        v_align="center",
-                    )
-                    self.view.add(current_row)
 
             self.view.show_all()
             self.update_selection()
@@ -370,6 +261,18 @@ class ApplicationSwitcher(Window):
                 index = self.view.get_children().index(row) * self.items_per_row + i
                 if index == self.current_index:
                     child.add_style_class("active")
+                    # Update selection label
+                    current_window = self.windows[self.current_index]
+                    app_class = current_window.get("class", "Unknown")
+                    # capitalize if it's all lowercase
+                    if app_class.islower():
+                        app_class = app_class.capitalize()
+                    self.selection_label.set_label(app_class)
+
+                    # Update workspace label
+                    workspace = current_window.get("workspace", {})
+                    workspace_name = workspace.get("name", "Unknown")
+                    self.workspace_label.set_label(f"Workspace {workspace_name}")
                 else:
                     child.remove_style_class("active")
 
