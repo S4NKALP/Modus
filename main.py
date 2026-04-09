@@ -8,6 +8,7 @@ from modules.notification.notification import ModusNoti
 from modules.osd.main import OSDWindow
 from modules.panel.main import Panel
 from modules.switcher import ApplicationSwitcher
+from modules.dock import Dock
 from utils.functions import set_process_name
 
 for log in [
@@ -32,6 +33,7 @@ if __name__ == "__main__":
     modusnoti = ModusNoti()
     launcher = Launcher()
     deskwidget = Deskwidgets()
+    dock = Dock()
     osd = OSDWindow()
     # Monitor CSS files for changes
     css_file = monitor_file(get_relative_path("styles"))
@@ -46,6 +48,7 @@ if __name__ == "__main__":
         osd,
         launcher,
         switcher,
+        dock,
     )
 
     def set_css():
