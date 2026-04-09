@@ -23,7 +23,6 @@ INSTALL_DIR="$HOME/.config/Modus"
 PACKAGES=(
     uv
     fabric-cli-git
-    glace-git
     cliphist
     gnome-bluetooth-3.0
     slurp
