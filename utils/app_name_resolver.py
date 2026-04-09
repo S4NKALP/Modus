@@ -79,15 +79,11 @@ app_name_resolver = AppName()
 
 
 def format_window(title, wmclass):
-    # Handle the case when HyprlandActiveWindow passes "unknown" instead of empty strings
-    if (not title or title == "unknown") and (not wmclass or wmclass == "unknown"):
-        return "Finder"
-
-    # Clean up "unknown" values
+    # Clean up "unknown" values to ensure they are treated as empty
     if title == "unknown":
         title = ""
     if wmclass == "unknown":
         wmclass = ""
 
-    name = app_name_resolver.format_app_name(title, wmclass, True)
-    return name
+    # Always call format_app_name with update=True to keep service state in sync
+    return app_name_resolver.format_app_name(title, wmclass, True)
