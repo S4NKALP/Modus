@@ -26,17 +26,17 @@
 
 <figure>
   <h2>Home Screen:</h2>
-  <img src="assets/screenshots/home.png" alt="fabric">
+  <img src="src/assets/screenshots/home.png" alt="fabric">
   <br/>
   <h2>Lock Screen:</h2>
-    <img src="assets/screenshots/lock.png" alt="fabric">
+    <img src="src/assets/screenshots/lock.png" alt="fabric">
 </figure>
 <br>
 
-
-## Installation 
+## Installation
 
 > [!CAUTION]
+>
 > - You need a working installation of hyprland and knowledge of how it works
 > - There may not be all packages in your system install them accordingly
 
@@ -47,21 +47,23 @@ cd ~/.config/Modus
 ```
 
 > [!TIP]
+>
 > ## Post Installation
+>
 > - Install recommended [Icon theme](https://github.com/vinceliuice/MacTahoe-icon-theme) , [GTK theme](https://github.com/vinceliuice/MacTahoe-gtk-theme) and [Cursor Theme](https://github.com/vinceliuice/MacTahoe-icon-theme/tree/main/cursors) <br>
 > - Check `config/hypr/modus.conf` edit it according to your device and copy it to your hyprland config
 > - For Lock Screen Bind keys to `uv run lock.py`
 
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
-## Manual Installation (WIP)
+## Manual Installation
 
 ```bash
-paru -S glace-git gtk-session-lock uv apple-fonts cinnamon-desktop --needed
+paru -S fabric-cli-git gtk-session-lock uv apple-fonts cinnamon-desktop hyprshot hypridle hyprpicker grim slurp gnome-bluetooth-3.0 cliphist matugen-bin awww swappy wl-clipboard webp-pixbuf-loader acpi wf-recorder brightnessctl power-profile-daemon uwsm libnotify playerctl ffmpeg --needed
 git clone https://github.com/S4NKALP/Modus ~/.config/Modus
 cd ~/.config/Modus
 uv sync
-uv run main.py
+uv run start
 ```
 
 - [x] Launcher

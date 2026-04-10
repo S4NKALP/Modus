@@ -30,6 +30,8 @@ PACKAGES=(
     hypridle
     hyprsunset
     hyprpicker
+    hyprshot
+    grim
     libnotify
     matugen-bin
     playerctl
@@ -283,20 +285,6 @@ else
     success "All packages are up-to-date"
 fi
 
-# Configuration
-# progress "Running configuration"
-# if [ -f "$INSTALL_DIR/config/config.py" ]; then
-#     step "Initializing Modus configuration..."
-#     if python "$INSTALL_DIR/config/config.py" 2>/dev/null; then
-#         success "Configuration completed"
-#     else
-#         warn "Configuration step failed or was skipped"
-#     fi
-# else
-#     info "No configuration file found, skipping"
-# fi
-
-# Hyprland configuration
 progress "Configuring Hyprland"
 
 HYPR_CONFIG="$HOME/.config/hypr/hyprland.conf"
@@ -330,10 +318,10 @@ else
 fi
 
 step "Starting Modus..."
-if uwsm app -- uv run "$INSTALL_DIR/main.py" >/dev/null 2>&1 & then
+if uwsm app -- uv run --project "$INSTALL_DIR" start >/dev/null 2>&1 & then
     disown
-    sleep 1
-    if pgrep -f "python.*main.py" >/dev/null; then
+    sleep 2
+    if pgrep -x "modus" >/dev/null; then
         success "Modus is now running"
     else
         warn "Modus may not have started correctly"
@@ -347,7 +335,7 @@ fi
 echo ""
 echo -e "${GREEN}${BOLD}╔════════════════════════════════════════╗${RESET}"
 echo -e "${GREEN}${BOLD}║                                        ║${RESET}"
-echo -e "${GREEN}${BOLD}║     Installation completed! 🎉         ║${RESET}"
+echo -e "${GREEN}${BOLD}║     Installation completed!            ║${RESET}"
 echo -e "${GREEN}${BOLD}║                                        ║${RESET}"
 echo -e "${GREEN}${BOLD}╚════════════════════════════════════════╝${RESET}"
 echo ""
