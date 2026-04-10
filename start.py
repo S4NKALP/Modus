@@ -7,13 +7,16 @@ src_path = os.path.join(os.path.dirname(__file__), "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
+
 def run_app():
     from main import main as app_main
+
     app_main()
 
 
 def run_lock():
     from lock import main as lock_main
+
     lock_main()
 
 
