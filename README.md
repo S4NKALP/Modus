@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/modus.png" height="200" alt="Logo">
+  <img src="src/assets/modus.png" height="200" alt="Logo">
 </p>
 
 <p align="center">
