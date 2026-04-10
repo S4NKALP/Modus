@@ -52,7 +52,7 @@ cd ~/.config/Modus
 >
 > - Install recommended [Icon theme](https://github.com/vinceliuice/MacTahoe-icon-theme) , [GTK theme](https://github.com/vinceliuice/MacTahoe-gtk-theme) and [Cursor Theme](https://github.com/vinceliuice/MacTahoe-icon-theme/tree/main/cursors) <br>
 > - Check `config/hypr/modus.conf` edit it according to your device and copy it to your hyprland config
-> - For Lock Screen Bind keys to `uv run lock.py`
+> - For Lock Screen Bind keys to `uv run lock`
 
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
