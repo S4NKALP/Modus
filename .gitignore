@@ -3,18 +3,14 @@
 *.pyc
 *.pyo
 *.pyd
-# config/assets/config.json
-config/assets/dock.json
-config/assets/accounts.json
-config/assets/passwords.json
-config/assets/bookmarks.json
-# config/hypr/modus.conf
+config/config.json
+config/dock.json
+config/accounts.json
+config/passwords.json
+config/bookmarks.json
 config/hypr/colors.conf
-fabric/**
-fabric/
-# styles/colors.css
+src/shared/styles/colors.css
 .aider*
 .venv/*
 .venv/
 
-AGENTS.md
