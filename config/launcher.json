@@ -1,6 +1,9 @@
 {
 	"launcher_config": {
 		"em": {
+			"examples": [
+				"em updatejson"
+			],
 			"icon": "emoji-people-symbolic",
 			"description": "Emoji - Search and copy emojis"
 		},
@@ -87,6 +90,10 @@
 		"tmux": {
 			"icon": "terminal",
 			"description": "Tmux Manager - Create, attach, rename, and kill tmux sessions"
+		},
+		"cp": {
+			"icon": "color-select-symbolic",
+			"description": "Color Picker - Pick colors from the screen (HEX, RGB, HSV)"
 		}
 	},
 	"settings": {
