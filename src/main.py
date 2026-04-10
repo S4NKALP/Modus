@@ -22,6 +22,7 @@ for log in [
 
 
 def main():
+
     # Generate colors.css if it doesn't exist
     colors_css_path = get_relative_path("shared/styles/colors.css")
     if not os.path.exists(colors_css_path):
@@ -41,6 +42,7 @@ def main():
     deskwidget = Deskwidgets()
     dock = Dock()
     osd = OSDWindow()
+
     # Monitor CSS files for changes
     css_file = monitor_file(get_relative_path("shared/styles"))
     _ = css_file.connect("changed", lambda *_: set_css())
@@ -64,6 +66,21 @@ def main():
 
     app.set_css = set_css
     app.set_css()
+
+    # Inject into the executing module's namespace (__main__)
+    # to emulate what happened when this file was run directly.
+    # This allows fabric-cli exec to execute commands flawlessly.
+    import __main__
+
+    __main__.app = app
+    __main__.switcher = switcher
+    __main__.panel = panel
+    __main__.modusnoti = modusnoti
+    __main__.launcher = launcher
+    __main__.deskwidget = deskwidget
+    __main__.dock = dock
+    __main__.osd = osd
+
     app.run()
 
 
