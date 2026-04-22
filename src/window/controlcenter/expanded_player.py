@@ -621,6 +621,8 @@ class PlayerBox(Box):
         self.current_download_thread = None  # Track current download thread
         self._download_cancelled = False  # Flag to cancel downloads
         self._signal_connections = []  # Track signal connections
+        self._property_bindings = []  # Track GObject property bindings
+        self._seekbar_signal_ids = []  # Track seek_bar widget signal IDs
 
         # Use same CSS background approach as small player for consistency
         self.album_cover = Box(
@@ -693,10 +695,18 @@ class PlayerBox(Box):
             size=1,
             h_expand=True,
         )
-        self.seek_bar.connect("value-changed", self._on_scale_value_changed)
-        self.seek_bar.connect("button-press-event", self._on_seek_start)
-        self.seek_bar.connect("button-release-event", self._on_seek_end)
-        self.player.bind_property("can_seek", self.seek_bar, "sensitive")
+        self._seekbar_signal_ids.append(
+            self.seek_bar.connect("value-changed", self._on_scale_value_changed)
+        )
+        self._seekbar_signal_ids.append(
+            self.seek_bar.connect("button-press-event", self._on_seek_start)
+        )
+        self._seekbar_signal_ids.append(
+            self.seek_bar.connect("button-release-event", self._on_seek_end)
+        )
+        self._property_bindings.append(
+            self.player.bind_property("can_seek", self.seek_bar, "sensitive")
+        )
 
         # Position and length labels for seek bar
         self.position_label = Label(
@@ -769,35 +779,41 @@ class PlayerBox(Box):
             ],
         )
 
-        # Bind player properties
-        self.player.bind_property(
-            "title",
-            self.track_title,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: (
-                re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Title"
-            ),  # type: ignore
+        # Bind player properties — track bindings so we can unbind on destroy
+        self._property_bindings.append(
+            self.player.bind_property(
+                "title",
+                self.track_title,
+                "label",
+                GObject.BindingFlags.DEFAULT,
+                lambda _, x: (
+                    re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Title"
+                ),  # type: ignore
+            )
         )
-        self.player.bind_property(
-            "artist",
-            self.track_artist,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: (
-                re.sub(r"\r?\n", " ", ", ".join(x))
-                if isinstance(x, list) and len(x) > 0
-                else "No Artist"
-            ),  # type: ignore
+        self._property_bindings.append(
+            self.player.bind_property(
+                "artist",
+                self.track_artist,
+                "label",
+                GObject.BindingFlags.DEFAULT,
+                lambda _, x: (
+                    re.sub(r"\r?\n", " ", ", ".join(x))
+                    if isinstance(x, list) and len(x) > 0
+                    else "No Artist"
+                ),  # type: ignore
+            )
         )
-        self.player.bind_property(
-            "album",
-            self.track_album,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: (
-                re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Album"
-            ),  # type: ignore
+        self._property_bindings.append(
+            self.player.bind_property(
+                "album",
+                self.track_album,
+                "label",
+                GObject.BindingFlags.DEFAULT,
+                lambda _, x: (
+                    re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Album"
+                ),  # type: ignore
+            )
         )
 
         # Player switcher buttons box (compact, minimal space)
@@ -824,7 +840,9 @@ class PlayerBox(Box):
             on_clicked=self.player.play_pause,
         )
 
-        self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
+        self._property_bindings.append(
+            self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
+        )
 
         self.next_button = Button(
             style_classes=["control-buttons"],
@@ -832,7 +850,9 @@ class PlayerBox(Box):
             child=self.skip_next_icon,
             on_clicked=self._on_player_next,
         )
-        self.player.bind_property("can_go_next", self.next_button, "sensitive")
+        self._property_bindings.append(
+            self.player.bind_property("can_go_next", self.next_button, "sensitive")
+        )
 
         self.prev_button = Button(
             name="macos-control-button",
@@ -840,7 +860,9 @@ class PlayerBox(Box):
             style_classes=["control-buttons"],
             on_clicked=self._on_player_prev,
         )
-        self.player.bind_property("can_go_previous", self.prev_button, "sensitive")
+        self._property_bindings.append(
+            self.player.bind_property("can_go_previous", self.prev_button, "sensitive")
+        )
         self.button_box.children = (
             self.prev_button,
             self.play_pause_button,
@@ -910,7 +932,8 @@ class PlayerBox(Box):
         # Cancel any ongoing downloads immediately
         self._download_cancelled = True
 
-        # Cancel seek bar timer
+        # Cancel seek bar timer — critical: prevents the repeater from holding
+        # a reference to this widget after destruction
         if self._seekbar_timer_id:
             try:
                 GLib.source_remove(self._seekbar_timer_id)
@@ -921,11 +944,30 @@ class PlayerBox(Box):
         # Wait for download thread to finish (with timeout)
         if self.current_download_thread and self.current_download_thread.is_alive():
             try:
-                self.current_download_thread.join(timeout=1.0)  # 1 second timeout
+                self.current_download_thread.join(timeout=1.0)
             except Exception:
                 pass
+        self.current_download_thread = None
 
-        # Disconnect all signal connections
+        # Unbind all GObject property bindings — these keep the player alive
+        # if not explicitly unbound
+        for binding in self._property_bindings:
+            try:
+                binding.unbind()
+            except Exception:
+                pass
+        self._property_bindings.clear()
+
+        # Disconnect seek_bar widget signals
+        for sig_id in self._seekbar_signal_ids:
+            try:
+                if hasattr(self, "seek_bar") and self.seek_bar:
+                    self.seek_bar.disconnect(sig_id)
+            except Exception:
+                pass
+        self._seekbar_signal_ids.clear()
+
+        # Disconnect all player/mpris signal connections
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)
@@ -933,7 +975,7 @@ class PlayerBox(Box):
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
 
-        # Clean up temp files aggressively
+        # Clean up temp artwork files
         self._cleanup_temp_files()
 
         # Clear image references
@@ -942,6 +984,10 @@ class PlayerBox(Box):
                 self.album_cover_image.set_from_pixbuf(None)
             except Exception:
                 pass
+
+        # Drop strong references to avoid reference cycles
+        self.player = None
+        self.player_stack = None
 
         super().destroy()
 
@@ -1018,6 +1064,8 @@ class PlayerBox(Box):
             return f"{minutes}:{seconds:02d}"
 
     def _on_metadata(self, *_):
+        if self.exit or self.player is None:
+            return
         self._set_image()
         duration = self.player.length
 
@@ -1065,12 +1113,16 @@ class PlayerBox(Box):
         self.destroy()
 
     def _on_player_next(self, *_):
-        self.player.next()
+        if self.player is not None:
+            self.player.next()
 
     def _on_player_prev(self, *_):
-        self.player.previous()
+        if self.player is not None:
+            self.player.previous()
 
     def _on_playback_change(self, player, status):
+        if self.exit or self.player is None:
+            return
         status = player.playback_status
 
         if status == "Paused":
@@ -1194,11 +1246,21 @@ class PlayerBox(Box):
         return None
 
     def _move_seekbar(self, *_):
-        if self.player is None or self.exit or self._user_seeking:
-            return True  # Continue the timer but don't update while user is seeking
+        # Stop the timer if the widget is destroyed or exiting
+        if self.exit:
+            self._seekbar_timer_id = None
+            return False  # Remove the GLib source
+
+        if self.player is None:
+            self._seekbar_timer_id = None
+            return False  # Player gone, stop timer
+
+        if self._user_seeking:
+            return True  # Continue timer but skip update while user drags
 
         # Additional safety checks to prevent GTK errors
         if not hasattr(self, "seek_bar") or self.seek_bar is None:
+            self._seekbar_timer_id = None
             return False  # Stop the timer
 
         try:
@@ -1212,22 +1274,21 @@ class PlayerBox(Box):
 
             self.position_label.set_label(self.length_str(position))
 
-            # Only update seek bar if user is not currently seeking
-            if not self._user_seeking:
-                # Clamp position to avoid 32-bit integer overflow
-                max_int32 = 2147483647  # 2^31 - 1
-                safe_position = min(max_int32, position) if position else 0
+            # Clamp position to avoid 32-bit integer overflow
+            max_int32 = 2147483647  # 2^31 - 1
+            safe_position = min(max_int32, position) if position else 0
 
-                # Only set value if seek bar has a valid range
-                if (
-                    self.seek_bar.get_adjustment()
-                    and self.seek_bar.get_adjustment().get_upper() > 0
-                ):
-                    self.seek_bar.set_value(safe_position)
+            # Only set value if seek bar has a valid range
+            if (
+                self.seek_bar.get_adjustment()
+                and self.seek_bar.get_adjustment().get_upper() > 0
+            ):
+                self.seek_bar.set_value(safe_position)
 
         except Exception as e:
             # If any error occurs (widget destroyed, etc), stop the timer
             logger.warning(f"Seek bar update failed, stopping timer: {e}")
+            self._seekbar_timer_id = None
             return False
 
         return True
@@ -1245,6 +1306,8 @@ class PlayerBox(Box):
     def _on_seek_bar_realized(self, widget):
         """Initialize seek bar when it's realized"""
         try:
+            if self.exit or self.player is None:
+                return
             duration = self.player.length
             if duration is None:
                 duration = 0
