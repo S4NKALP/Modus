@@ -509,14 +509,14 @@ class ModusControlCenter(Window):
             # Check initial states lazily (only when needed)
             self._check_initial_states()
 
-            # Store signal connections for cleanup
+            # Store signal connections as (obj, handler_id) tuples for proper cleanup
             self._signal_connections.extend(
                 [
-                    audio_service.connect("changed", self.audio_changed),
-                    audio_service.connect("changed", self.volume_changed),
-                    modus_service.connect("wlan-changed", self.wlan_changed),
-                    modus_service.connect("bluetooth-changed", self.bluetooth_changed),
-                    modus_service.connect("dont-disturb-changed", self.dnd_changed),
+                    (audio_service, audio_service.connect("changed", self.audio_changed)),
+                    (audio_service, audio_service.connect("changed", self.volume_changed)),
+                    (modus_service, modus_service.connect("wlan-changed", self.wlan_changed)),
+                    (modus_service, modus_service.connect("bluetooth-changed", self.bluetooth_changed)),
+                    (modus_service, modus_service.connect("dont-disturb-changed", self.dnd_changed)),
                 ]
             )
 
@@ -525,7 +525,7 @@ class ModusControlCenter(Window):
                 self.brightness_scale.connect("change-value", self.set_brightness)
                 self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
                 self._signal_connections.append(
-                    brightness_service.connect("screen", self.brightness_changed)
+                    (brightness_service, brightness_service.connect("screen", self.brightness_changed))
                 )
 
             # Connect volume scale signals
@@ -970,70 +970,42 @@ class ModusControlCenter(Window):
     def _disconnect_all_signals(self):
         """Disconnect all signal connections to prevent memory leaks"""
         try:
-            for connection in self._signal_connections:
+            # _signal_connections stores (obj, handler_id) tuples
+            for obj, handler_id in self._signal_connections:
                 try:
-                    if connection and hasattr(connection, "disconnect"):
-                        connection.disconnect()
+                    obj.disconnect(handler_id)
                 except Exception as e:
                     logger.warning(f"Failed to disconnect signal: {e}")
-
             self._signal_connections.clear()
 
-            try:
-                self.disconnect_by_func(self._on_visibility_changed)
-            except Exception as e:
-                logger.warning(f"Failed to disconnect visibility signal: {e}")
-
-            try:
-                self.disconnect_by_func(self.hide_controlcenter)
-            except Exception as e:
-                logger.warning(f"Failed to disconnect keybinding: {e}")
-
-            if hasattr(self, "network_service") and self.network_service:
-                try:
-                    self.network_service.disconnect_by_func(self.on_network_ready)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect network signal: {e}")
-
-            if hasattr(self, "brightness_service") and self.brightness_service:
-                try:
-                    self.brightness_service.disconnect_by_func(self.brightness_changed)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect brightness signal: {e}")
-
-            if hasattr(self, "audio_service") and audio_service:
-                try:
-                    audio_service.disconnect_by_func(self.audio_changed)
-                    audio_service.disconnect_by_func(self.volume_changed)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect audio signals: {e}")
-
-            if hasattr(self, "modus_service") and modus_service:
-                try:
-                    modus_service.disconnect_by_func(self.wlan_changed)
-                    modus_service.disconnect_by_func(self.bluetooth_changed)
-                    modus_service.disconnect_by_func(self.dnd_changed)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect modus signals: {e}")
-
+            # Disconnect scale widget signals (connected directly, not tracked)
             if hasattr(self, "volume_scale") and self.volume_scale:
                 try:
                     self.volume_scale.disconnect_by_func(self.set_volume)
+                except Exception:
+                    pass
+                try:
                     self.volume_scale.disconnect_by_func(self.on_volume_scroll)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect volume scale signals: {e}")
+                except Exception:
+                    pass
 
             if hasattr(self, "brightness_scale") and self.brightness_scale:
                 try:
                     self.brightness_scale.disconnect_by_func(self.set_brightness)
+                except Exception:
+                    pass
+                try:
                     self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to disconnect brightness scale signals: {e}"
-                    )
+                except Exception:
+                    pass
+
+            # Disconnect the visibility change signal on self
+            try:
+                self.disconnect_by_func(self._on_visibility_changed)
+            except Exception:
+                pass
 
             self._signals_connected = False
-
             logger.debug("All signals disconnected successfully")
 
         except Exception as e:

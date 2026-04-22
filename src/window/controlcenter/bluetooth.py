@@ -61,9 +61,13 @@ class BluetoothDeviceSlot(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
         super().__init__(h_expand=True, name="device-button", **kwargs)
         self.device = device
-        self.device.connect("changed", self.on_changed)
-        self.device.connect(
-            "notify::closed", lambda *_: self.device.closed and self.destroy()
+        self._destroyed = False
+        self._signal_ids = []
+        self._signal_ids.append(self.device.connect("changed", self.on_changed))
+        self._signal_ids.append(
+            self.device.connect(
+                "notify::closed", lambda *_: self.device.closed and self.destroy()
+            )
         )
 
         self.styles = [
@@ -112,6 +116,20 @@ class BluetoothDeviceSlot(CenterBox):
         self.device_button.connect("leave-notify-event", self.on_button_leave)
         self.device.emit("changed")  # to update display status
 
+    def destroy(self):
+        """Clean up device signal connections to prevent memory leaks."""
+        if self._destroyed:
+            return
+        self._destroyed = True
+        for sig_id in self._signal_ids:
+            try:
+                self.device.disconnect(sig_id)
+            except Exception:
+                pass
+        self._signal_ids.clear()
+        self.device = None
+        super().destroy()
+
     def on_button_enter(self, widget, event):
         self.add_style_class("button-hovered")
 
@@ -123,6 +141,8 @@ class BluetoothDeviceSlot(CenterBox):
         self.device.set_connecting(not self.device.connected)
 
     def on_changed(self, *_):
+        if self._destroyed or self.device is None:
+            return
         try:
             # Update connection and pairing status
             new_styles = [
@@ -197,6 +217,7 @@ class BluetoothConnections(Box):
         self.refresh_timer = None  # Timer for periodic device refresh
         self._update_in_progress = False  # Prevent concurrent updates
         self._destroyed = False  # Track if widget is destroyed
+        self._client_signal_ids = []  # Track BluetoothClient signal IDs
 
         self.client = BluetoothClient(on_device_added=self.on_device_added)
 
@@ -236,19 +257,29 @@ class BluetoothConnections(Box):
             ),
         )
 
-        # Connect client signals
-        self.client.connect(
-            "notify::enabled",
-            lambda *_: self.toggle_button.set_active(self.client.enabled),
+        # Connect client signals — track IDs for disconnect on destroy
+        self._client_signal_ids.append(
+            self.client.connect(
+                "notify::enabled",
+                lambda *_: self.toggle_button.set_active(self.client.enabled),
+            )
         )
-        self.client.connect("notify::scanning", lambda *_: self.update_scan_label())
+        self._client_signal_ids.append(
+            self.client.connect("notify::scanning", lambda *_: self.update_scan_label())
+        )
 
         # Connect to device changes
-        self.client.connect("device-added", self.update_devices)
-        self.client.connect("device-removed", self.update_devices)
+        self._client_signal_ids.append(
+            self.client.connect("device-added", self.update_devices)
+        )
+        self._client_signal_ids.append(
+            self.client.connect("device-removed", self.update_devices)
+        )
 
         # Connect to additional signals for better real-time monitoring
-        self.client.connect("changed", self.on_client_changed)
+        self._client_signal_ids.append(
+            self.client.connect("changed", self.on_client_changed)
+        )
 
         # Create Devices section
         self.paired_devices_label = Label(
@@ -473,20 +504,21 @@ class BluetoothConnections(Box):
 
     def periodic_device_refresh(self):
         """Periodically refresh device list to catch external connections"""
-        # Skip if update in progress, destroyed, or client not available
+        # If destroyed, remove the GLib source by returning False
+        if self._destroyed:
+            self.refresh_timer = None
+            return False
+
+        # Skip if update in progress or client not available/enabled
         if (
             self._update_in_progress
-            or self._destroyed
             or not self.client
             or not self.client.enabled
         ):
             return True  # Continue monitoring
 
         try:
-            # Simple check - just trigger update_devices which has its own safety checks
-            # Don't force signal emissions as that can cause race conditions
             self.update_devices()
-
         except Exception:
             pass
 
@@ -513,13 +545,20 @@ class BluetoothConnections(Box):
         """Cleanup when widget is destroyed"""
         # Mark as destroyed to prevent further updates
         self._destroyed = True
-        # Stop monitoring
+        # Stop monitoring timer
         self.stop_device_monitoring()
-        # Make sure other devices revealer is collapsed when closing
+        # Disconnect all BluetoothClient signals
+        for sig_id in self._client_signal_ids:
+            try:
+                self.client.disconnect(sig_id)
+            except Exception:
+                pass
+        self._client_signal_ids.clear()
+        # Collapse other devices revealer
         try:
             self.other_devices_revealer.child_revealed = False
         except Exception:
-            pass  # Widget might already be destroyed
+            pass
 
     def close_bluetooth(self):
         """Called when Bluetooth panel is being closed"""

@@ -26,6 +26,8 @@ class PerAppVolumeControl(Box):
         self._updating_volumes = set()
         self._app_widgets = {}
         self._signal_connections = []
+        self._destroyed = False
+        self._refresh_timer = None
 
         # Header with back button
         self.header = Box(
@@ -80,6 +82,9 @@ class PerAppVolumeControl(Box):
 
     def _auto_refresh(self):
         """Auto-refresh the application list every 2 seconds"""
+        if self._destroyed:
+            self._refresh_timer = None
+            return False  # Remove GLib source
         self._populate_apps()
         return True  # Continue the timer
 
@@ -306,7 +311,8 @@ class PerAppVolumeControl(Box):
 
     def _on_stream_changed(self, *_):
         """Handle when audio streams are added or removed"""
-        GLib.idle_add(self._populate_apps)
+        if not self._destroyed:
+            GLib.idle_add(self._populate_apps)
 
     def refresh(self):
         """Manually refresh the application list"""
@@ -314,10 +320,17 @@ class PerAppVolumeControl(Box):
 
     def destroy(self):
         """Clean up resources"""
-        if hasattr(self, "_refresh_timer"):
-            GLib.source_remove(self._refresh_timer)
+        self._destroyed = True
 
-        # Disconnect fabric audio service signals
+        # Stop the auto-refresh timer
+        if self._refresh_timer is not None:
+            try:
+                GLib.source_remove(self._refresh_timer)
+            except Exception:
+                pass
+            self._refresh_timer = None
+
+        # Disconnect audio service signals
         if audio_service:
             for connection in self._signal_connections:
                 try:
@@ -328,5 +341,6 @@ class PerAppVolumeControl(Box):
         self._signal_connections.clear()
         self._app_widgets.clear()
         self._updating_volumes.clear()
+        self.control_center = None
 
         super().destroy()

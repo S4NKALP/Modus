@@ -3,6 +3,7 @@
   font-family: "SF Pro Rounded";
   font-weight: bold;
 }
+
 #control-center-menu {
   background-color: transparent;
   border-radius: 12px;
@@ -32,6 +33,7 @@
   font-size: 16px;
   font-weight: bold;
 }
+
 #control-center-widgets {
   background-color: alpha(#010101, 0.01);
   box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
@@ -39,8 +41,9 @@
   border-radius: 12px;
   padding: 0.5rem;
 }
-#focus-widget {
-}
+
+#focus-widget {}
+
 #wb-widget,
 #brightness-menu {
   background-color: alpha(#000, 0.08);
@@ -48,6 +51,7 @@
   border: 1px solid alpha(#111, 0.4);
   border-radius: 12px;
 }
+
 /* Widgets */
 #wifi-widget,
 #bluetooth-widget,
@@ -301,9 +305,11 @@
   margin-top: -10px;
   /* border: 1px solid alpha(#fff, 1); */
 }
+
 #volume-widget-slider {
   /* margin-bottom: 2px; */
 }
+
 #volume-widget-icon {
   font-size: 22px;
   margin-top: -35px;
@@ -344,6 +350,7 @@
   /* min-height: 40px; */
   /* margin: -9px; */
 }
+
 #control-center-menu scale {
   background-color: transparent;
   margin-top: 10px;
@@ -377,7 +384,7 @@
 /* Per-app volume control styles */
 #per-app-volume-control {
   min-height: 140px;
-  min-width: 350px;
+  min-width: 328px;
   /* background-color: alpha(#000, 0.3); */
   /* background-color: alpha(#999, 0.1); */
   /* box-shadow: inset 0 0 200px 0 alpha(#111, 0.3); */
@@ -392,6 +399,7 @@
   min-height: 120px;
   min-width: 120px;
 }
+
 #back-button {
   padding: 8px 12px;
   background-color: alpha(#fff, 0.1);
@@ -402,6 +410,7 @@
   font-weight: 500;
   transition: background-color 0.2s ease;
 }
+
 #back-button:hover {
   background-color: alpha(#fff, 0.18);
 }
@@ -617,8 +626,10 @@
 
 /* macOS-style expanded player - more compact */
 #macos-outer-player-box {
-  min-height: 80px; /* Reduced height */
-  min-width: 380px; /* Slightly wider to accommodate expanded track info */
+  min-height: 80px;
+  /* Reduced height */
+  min-width: 380px;
+  /* Slightly wider to accommodate expanded track info */
   /* margin: 10px; */
   padding: 10px;
   /* background-color: alpha(#000, 0.4); */
@@ -633,6 +644,7 @@
   min-height: 70px;
   border-radius: 9px;
 }
+
 #macos-album-image {
   min-width: 70px;
   min-height: 70px;
@@ -651,6 +663,7 @@
   background-size: cover;
   box-shadow: 0 2px 8px alpha(#000, 0.3);
 }
+
 #macos-album-image image {
   min-width: 70px;
   min-height: 70px;
@@ -686,6 +699,7 @@
   color: alpha(#999, 0.8);
   margin-bottom: 8px;
 }
+
 /* macOS seek bar styling */
 #macos-seek-bar {
   background-color: transparent;
@@ -735,17 +749,20 @@
 
 /* macOS control buttons - more compact */
 #macos-button-box {
-  margin-top: -1px; /* Reduced top margin */
+  margin-top: -1px;
+  /* Reduced top margin */
 }
 
 #macos-control-button {
   background: transparent;
   border: none;
   border-radius: 50%;
-  min-width: 28px; /* Slightly smaller */
+  min-width: 28px;
+  /* Slightly smaller */
   opacity: 0.7;
   min-height: 28px;
-  padding: 5px; /* Reduced padding */
+  padding: 5px;
+  /* Reduced padding */
   color: #ffffff;
   transition: all 0.15s ease;
 }
@@ -758,10 +775,12 @@
   background: transparent;
   border: none;
   border-radius: 50%;
-  min-width: 36px; /* Slightly smaller */
+  min-width: 36px;
+  /* Slightly smaller */
   opacity: 0.7;
   min-height: 36px;
-  padding: 7px; /* Reduced padding */
+  padding: 7px;
+  /* Reduced padding */
   color: #ffffff;
   transition: all 0.15s ease;
 }
@@ -772,16 +791,19 @@
 
 /* macOS player switcher dots - compact horizontal layout */
 #macos-stack-buttons-box {
-  margin: 2px 5px; /* Minimal margins */
+  margin: 2px 5px;
+  /* Minimal margins */
 }
 
 .macos-switcher-dot {
   background: alpha(#fff, 0.3);
   /* border: none; */
   border-radius: 50%;
-  min-width: 12px; /* Smaller dots */
+  min-width: 12px;
+  /* Smaller dots */
   min-height: 12px;
-  margin: 2px; /* Reduced margins */
+  margin: 2px;
+  /* Reduced margins */
   /* transition: all 0.2s ease; */
 }
 
@@ -791,7 +813,8 @@
 
 .macos-switcher-dot.active {
   background: #ffffff;
-  box-shadow: 0 0 0 1px alpha(#fff, 0.3); /* Smaller glow */
+  box-shadow: 0 0 0 1px alpha(#fff, 0.3);
+  /* Smaller glow */
 }
 
 /* Per app-volume-item */
@@ -801,9 +824,11 @@
   padding-right: 14px;
   border-bottom: 1px solid alpha(#fff, 0.1);
 }
+
 #app-icon {
   margin-top: 8px;
 }
+
 .app-name-compact {
   font-size: 14px;
   font-weight: bold;
@@ -914,6 +939,7 @@
 #wifi-other-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
 #wifi-other-button:last-child {
   margin-bottom: 3px;
 }
@@ -922,6 +948,7 @@
   /* background-color: #000; */
   border-radius: 8px;
 }
+
 .device-slot:hover {
   background-color: rgba(255, 255, 255, 0.05);
 }
@@ -935,6 +962,7 @@
   font-size: 12px;
   font-weight: bold;
 }
+
 #app-volume-header {
   font-size: 16px;
   padding-left: 5px;
@@ -949,6 +977,7 @@
   padding: 2px;
   /* margin-right: 8px; */
 }
+
 .wifi-icon-box-connected {
   background-color: #007aff;
   border-radius: 50%;
@@ -967,6 +996,7 @@
   font-family: "SF Pro Rounded";
   font-weight: bold;
 }
+
 .status-label {
   font-size: 11px;
   font-weight: 500;
@@ -981,6 +1011,7 @@
 #app-control-box {
   min-width: 100px;
 }
+
 #caffeine-widget,
 #flight-widget {
   padding: 0px 0 5px 0;

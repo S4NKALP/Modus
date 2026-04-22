@@ -262,9 +262,12 @@ class WifiConnections(Box):
         self.refresh_timer = None  # Timer for periodic network refresh
         self._update_in_progress = False  # Prevent concurrent updates
         self._destroyed = False  # Track if widget is destroyed
+        self._signal_ids = []  # Track all service signal IDs for cleanup
 
-        # Wait for network service to be ready
-        self.network_service.connect("wifi-device-added", self.on_network_ready)
+        # Wait for network service to be ready — track signal ID
+        self._signal_ids.append(
+            (self.network_service, self.network_service.connect("wifi-device-added", self.on_network_ready))
+        )
 
         # Create pull-to-refresh indicator
         self.refresh_indicator = Label(
@@ -387,13 +390,21 @@ class WifiConnections(Box):
             self.toggle_button.set_active(self.wifi_service.wireless_enabled)
             self.toggle_button.connect("notify::active", self.on_toggle_changed)
 
-            # Connect to WiFi service signals
-            self.wifi_service.connect(
-                "notify::wireless-enabled", self.on_wifi_enabled_changed
+            # Connect to WiFi service signals — track IDs for cleanup
+            self._signal_ids.append(
+                (self.wifi_service, self.wifi_service.connect(
+                    "notify::wireless-enabled", self.on_wifi_enabled_changed
+                ))
             )
-            self.wifi_service.connect("changed", self.update_networks)
-            self.wifi_service.connect("ap-added", self.update_networks)
-            self.wifi_service.connect("ap-removed", self.update_networks)
+            self._signal_ids.append(
+                (self.wifi_service, self.wifi_service.connect("changed", self.update_networks))
+            )
+            self._signal_ids.append(
+                (self.wifi_service, self.wifi_service.connect("ap-added", self.update_networks))
+            )
+            self._signal_ids.append(
+                (self.wifi_service, self.wifi_service.connect("ap-removed", self.update_networks))
+            )
 
             # Initial network update
             self.update_networks()
@@ -581,17 +592,20 @@ class WifiConnections(Box):
 
     def periodic_network_refresh(self):
         """Periodically refresh network list to catch external connections"""
-        # Skip if update in progress, destroyed, or wifi service not available
+        # If destroyed, remove the GLib source by returning False
+        if self._destroyed:
+            self.refresh_timer = None
+            return False
+
+        # Skip if update in progress or wifi not available/enabled
         if (
             self._update_in_progress
-            or self._destroyed
             or not self.wifi_service
             or not self.wifi_service.wireless_enabled
         ):
             return True  # Continue monitoring
 
         try:
-            # Simple check - just trigger update_networks which has its own safety checks
             self.update_networks()
         except Exception:
             pass
@@ -692,13 +706,23 @@ class WifiConnections(Box):
         """Cleanup when widget is destroyed"""
         # Mark as destroyed to prevent further updates
         self._destroyed = True
-        # Stop monitoring
+        # Stop monitoring timer
         self.stop_network_monitoring()
-        # Make sure other networks revealer is collapsed when closing
+        # Disconnect all tracked service signals
+        for obj, sig_id in self._signal_ids:
+            try:
+                obj.disconnect(sig_id)
+            except Exception:
+                pass
+        self._signal_ids.clear()
+        # Drop strong references
+        self.wifi_service = None
+        self.network_service = None
+        # Collapse other networks revealer
         try:
             self.other_networks_revealer.child_revealed = False
         except Exception:
-            pass  # Widget might already be destroyed
+            pass
 
     def close_wifi(self):
         """Called when WiFi panel is being closed"""
