@@ -711,6 +711,7 @@ class PlayerBox(Box):
         self.exit = False
         self.skipped = False
         self._signal_connections = []  # Track signal connections
+        self._property_bindings = []  # Track GObject property bindings for unbind on destroy
 
         # Memory management
         self.temp_artwork_files = []  # Track temp files for cleanup
@@ -727,8 +728,10 @@ class PlayerBox(Box):
         )
         self.image_stack.children = [self.album_cover]
 
-        # Connect to arturl changes
-        self.player.connect("notify::arturl", self.set_image)
+        # Connect to arturl changes — track so we can disconnect on destroy
+        self._signal_connections.append(
+            (self.player, self.player.connect("notify::arturl", self.set_image))
+        )
 
         self.app_icon = Box(
             children=Image(
@@ -766,21 +769,25 @@ class PlayerBox(Box):
             visible=True,
         )
 
-        self.player.bind_property(
-            "title",
-            self.track_title,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: (
-                re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Title"
-            ),  # type: ignore
+        self._property_bindings.append(
+            self.player.bind_property(
+                "title",
+                self.track_title,
+                "label",
+                GObject.BindingFlags.DEFAULT,
+                lambda _, x: (
+                    re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Title"
+                ),  # type: ignore
+            )
         )
-        self.player.bind_property(
-            "artist",
-            self.track_artist,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: ", ".join(x) if x and isinstance(x, list) else "No Artist",  # type: ignore
+        self._property_bindings.append(
+            self.player.bind_property(
+                "artist",
+                self.track_artist,
+                "label",
+                GObject.BindingFlags.DEFAULT,
+                lambda _, x: ", ".join(x) if x and isinstance(x, list) else "No Artist",  # type: ignore
+            )
         )
 
         self.track_info = Box(
@@ -814,16 +821,18 @@ class PlayerBox(Box):
         )
         # Set consistent button size
 
-        self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
+        self._property_bindings.append(
+            self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
+        )
 
         self.next_button = Button(
             name="player-button",
             child=self.skip_next_icon,
             on_clicked=self._on_player_next,
         )
-        # Set consistent button size
-        # self.next_button.set_size_request(32, 32)
-        self.player.bind_property("can_go_next", self.next_button, "sensitive")
+        self._property_bindings.append(
+            self.player.bind_property("can_go_next", self.next_button, "sensitive")
+        )
 
         self.button_box.children = (
             self.play_pause_button,
@@ -897,10 +906,21 @@ class PlayerBox(Box):
 
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""
-        # Cancel any ongoing downloads
+        # Set exit flag first — stops all callbacks from doing work
+        self.exit = True
+
+        # Cancel any ongoing async artwork downloads
         self._download_cancelled = True
 
-        # Disconnect all signal connections
+        # Unbind all GObject property bindings — these keep self.player alive
+        for binding in self._property_bindings:
+            try:
+                binding.unbind()
+            except Exception:
+                pass
+        self._property_bindings.clear()
+
+        # Disconnect all signal connections (includes arturl notify)
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)
@@ -908,8 +928,13 @@ class PlayerBox(Box):
                 logger.warning(f"Failed to disconnect signal: {e}")
         self._signal_connections.clear()
 
-        # Clean up temp files
+        # Clean up temp artwork files
         self._cleanup_temp_files()
+
+        # Drop strong references to avoid reference cycles
+        self.player = None
+        self.player_stack = None
+        self.control_center = None
 
         super().destroy()
 
@@ -947,6 +972,8 @@ class PlayerBox(Box):
         pass
 
     def _on_metadata(self, *_):
+        if self.exit or self.player is None:
+            return
         self.set_image()
 
     def _cleanup_temp_files(self):
@@ -961,16 +988,20 @@ class PlayerBox(Box):
 
     def _on_player_exit(self, _, value):
         self.exit = value
-        self._cleanup_temp_files()  # Clean up temp files before destroying
+        self._cleanup_temp_files()
         self.destroy()
 
     def _on_player_next(self, *_):
-        self.player.next()
+        if self.player is not None:
+            self.player.next()
 
     def _on_player_prev(self, *_):
-        self.player.previous()
+        if self.player is not None:
+            self.player.previous()
 
     def _on_playback_change(self, player, status):
+        if self.exit or self.player is None:
+            return
         status = player.get_property("playback-status")
         status_l = str(status).lower() if isinstance(status, str) else status
 
@@ -980,7 +1011,7 @@ class PlayerBox(Box):
         if status_l == "playing":
             self.play_pause_icon.dynamic_file("player/Pause.svg")
 
-        # Always notify the player stack about playback status changes
+        # Notify the player stack about playback status changes
         if self.player_stack and hasattr(
             self.player_stack, "on_player_playback_changed"
         ):
@@ -988,15 +1019,22 @@ class PlayerBox(Box):
 
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
         try:
+            # Guard: widget may have been destroyed before the async copy finished
+            if self.exit:
+                return
             if os.path.isfile(self.cover_path):
                 self.update_image()
         except ValueError:
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
+        if self.exit:
+            return
         self.album_cover.set_style(f"background-image:url('{self.cover_path}')")
 
     def set_image(self, *args):
+        if self.exit or self.player is None:
+            return
         url = self.player.arturl
 
         if url is None or url == "":
