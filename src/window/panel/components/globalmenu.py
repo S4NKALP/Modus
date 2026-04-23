@@ -307,6 +307,32 @@ class GlobalMenuDropdowns:
         active_button = self.dropdown_button_map.get(dropdown_id)
         manage_button_style_classes(self.all_menu_buttons, active_button)
 
+    def destroy(self):
+        """Clean up all dropdowns and signal connections"""
+        try:
+            modus_service.disconnect_by_func(self._on_active_app_changed)
+            modus_service.disconnect_by_func(self.changed_dropdown)
+            modus_service.disconnect_by_func(self.hide_dropdowns)
+        except Exception:
+            pass
+
+        # Destroy all dropdown captures
+        dropdown_captures = [
+            getattr(self, "menu_button_dropdown", None),
+            getattr(self, "global_menu_title", None),
+            getattr(self, "global_menu_view", None),
+            getattr(self, "global_menu_window", None),
+            getattr(self, "global_menu_help", None),
+        ]
+        for capture in dropdown_captures:
+            try:
+                if capture and hasattr(capture, "destroy"):
+                    capture.destroy()
+            except Exception:
+                pass
+
+        super().destroy()
+
 
 class GlobalMenu(Box):
     def __init__(self, parent_window=None, **kwargs):
@@ -335,3 +361,12 @@ class GlobalMenu(Box):
         )
         mouse_capture = self.dropdown_system.menu_button_dropdown
         mouse_capture.set_child_window_visible(not mouse_capture.is_visible())
+
+    def destroy(self):
+        """Clean up the global menu and its dropdowns"""
+        if hasattr(self, "dropdown_system") and self.dropdown_system:
+            try:
+                self.dropdown_system.destroy()
+            except Exception:
+                pass
+        super().destroy()

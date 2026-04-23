@@ -771,6 +771,7 @@ class NotificationRevealer(SlideRevealer):
         # Animation state
         self._animation_in_progress = False
         self._spring_timer_id = None
+        self._anim_timeout_id = None
         self._css_provider = None
 
         # Wrap notification in EventBox for swipe detection
@@ -791,8 +792,8 @@ class NotificationRevealer(SlideRevealer):
 
         smooth_revealer_animation(self)
 
-        # Connect our own handler that manages the slide animation
-        self.notification.connect("closed", self.on_resolved)
+        # Connect our own handler that manages the slide animation - track ID for cleanup
+        self._closed_handler_id = self.notification.connect("closed", self.on_resolved)
 
         self._animation_in_progress = True
 
@@ -924,12 +925,37 @@ class NotificationRevealer(SlideRevealer):
         self.hide()
         # Consistent timing for smooth transitions
         timeout_duration = self.duration + 50
-        GLib.timeout_add(timeout_duration, lambda: self._on_animation_complete(True))
+        self._anim_timeout_id = GLib.timeout_add(
+            timeout_duration, lambda: self._on_animation_complete(True)
+        )
 
     def destroy(self):
         # Clean up CSS provider and timers
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
+            self._spring_timer_id = None
+        if self._anim_timeout_id:
+            GLib.source_remove(self._anim_timeout_id)
+            self._anim_timeout_id = None
+
+        # Disconnect notification signal
+        if hasattr(self, "_closed_handler_id") and self._closed_handler_id:
+            try:
+                self.notification.disconnect(self._closed_handler_id)
+            except Exception:
+                pass
+            self._closed_handler_id = 0
+
+        # Clean up CSS provider from style context
+        if self._css_provider:
+            try:
+                style_context = self.notif_box.get_style_context()
+                if style_context:
+                    style_context.remove_provider(self._css_provider)
+            except Exception:
+                pass
+            self._css_provider = None
+
         super().destroy()
 
 

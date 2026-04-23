@@ -45,3 +45,11 @@ class CapsLockOSDContainer(BaseOSDContainer):
     def update(self, *_):
         # We don't need a separate display update here as it's handled in the signal
         super().update()
+
+    def destroy(self):
+        """Disconnect signals from CapsLock service"""
+        try:
+            self.capslock.disconnect_by_func(self._on_caps_lock_state_changed)
+        except Exception:
+            pass
+        super().destroy()

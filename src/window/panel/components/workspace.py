@@ -69,7 +69,9 @@ class WorkspaceIndicator(Box):
     def update_config(self, new_config: dict):
         if "hide_special_workspace" in new_config:
             button_factory = self._get_button_factory()
-            self.remove(self.workspaces)
+            if hasattr(self, "workspaces") and self.workspaces:
+                self.workspaces.destroy()
+
             self.workspaces = HyprlandWorkspaces(
                 name="workspaces",
                 spacing=4,
@@ -77,3 +79,15 @@ class WorkspaceIndicator(Box):
             )
             self.add(self.workspaces)
             self.workspaces.show_all()
+
+    def destroy(self):
+        try:
+            from services.config import _config_handlers
+
+            if self._on_config_changed in _config_handlers:
+                _config_handlers.remove(self._on_config_changed)
+        except Exception:
+            pass
+        if hasattr(self, "workspaces") and self.workspaces:
+            self.workspaces.destroy()
+        Box.destroy(self)

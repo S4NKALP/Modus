@@ -29,6 +29,10 @@ class BaseOSDContainer(Box):
         self.window.connect("leave-notify-event", self._on_leave_notify)
         return False
 
+    def destroy(self):
+        self.cleanup_all_handlers()
+        super().destroy()
+
     def _on_enter_notify(self, widget, event):
         if event.detail != Gdk.NotifyType.INFERIOR:
             self._is_hovered = True

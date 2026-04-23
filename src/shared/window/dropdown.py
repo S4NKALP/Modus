@@ -88,3 +88,16 @@ class ModusDropdown(PopupWindow):
             return
         self.set_visible(False)
         modus_service.dropdowns_hide = not modus_service.dropdowns_hide
+
+    def destroy(self):
+        """Clean up resources and global references"""
+        global dropdowns
+        if self in dropdowns:
+            dropdowns.remove(self)
+
+        try:
+            modus_service.disconnect_by_func(self.hide_dropdown)
+        except Exception:
+            pass
+
+        super().destroy()

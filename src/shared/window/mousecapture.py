@@ -299,3 +299,25 @@ class DropDownMouseCapture(MouseCapture):
             if modus_service.current_dropdown == self.child_window.id:
                 return
         return self.hide_child_window(widget, event)
+
+    def destroy(self):
+        """Clean up signal connections"""
+        try:
+            modus_service.disconnect_by_func(self.dropdowns_hide_changed)
+        except Exception:
+            pass
+        super().destroy()
+
+
+def add_destroy_to_mousecapture():
+    # Base MouseCapture
+    def mc_destroy(self):
+        # Child window should be destroyed by its owner, but we should null references
+        self.child_window = None
+        Window.destroy(self)
+
+    MouseCapture.destroy = mc_destroy
+
+
+# Apply destroy to base class
+add_destroy_to_mousecapture()

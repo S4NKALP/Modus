@@ -57,3 +57,13 @@ class BrightnessOSDContainer(BaseOSDContainer):
     def update(self, *_):
         self._update_display()
         super().update()
+
+    def destroy(self):
+        """Disconnect signals from Brightness service"""
+        try:
+            self.brightness_service.disconnect_by_func(
+                self._on_screen_brightness_changed
+            )
+        except Exception:
+            pass
+        super().destroy()

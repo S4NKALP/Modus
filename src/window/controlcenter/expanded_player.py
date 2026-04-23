@@ -184,6 +184,20 @@ class EmbeddedExpandedPlayer(Box):
         # This will automatically update as MPRIS players change
         pass
 
+    def suspend(self):
+        """Suspend updates when control center is hidden"""
+        if hasattr(self, "player_stack") and self.player_stack:
+            for child in self.player_stack.get_children():
+                if hasattr(child, "suspend"):
+                    child.suspend()
+
+    def resume(self):
+        """Resume updates when control center is shown"""
+        if hasattr(self, "player_stack") and self.player_stack:
+            for child in self.player_stack.get_children():
+                if hasattr(child, "resume"):
+                    child.resume()
+
     def destroy(self):
         """Clean up resources and prevent memory leaks"""
         logger.debug("🗑️ EmbeddedExpandedPlayer cleanup starting")
@@ -787,7 +801,9 @@ class PlayerBox(Box):
                 "label",
                 GObject.BindingFlags.DEFAULT,
                 lambda _, x: (
-                    re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Title"
+                    re.sub(r"\r?\n", " ", x)
+                    if x != "" and x is not None
+                    else "No Title"
                 ),  # type: ignore
             )
         )
@@ -811,7 +827,9 @@ class PlayerBox(Box):
                 "label",
                 GObject.BindingFlags.DEFAULT,
                 lambda _, x: (
-                    re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Album"
+                    re.sub(r"\r?\n", " ", x)
+                    if x != "" and x is not None
+                    else "No Album"
                 ),  # type: ignore
             )
         )
@@ -1096,6 +1114,27 @@ class PlayerBox(Box):
 
         # Start new timer and store its ID
         self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
+
+    def suspend(self):
+        """Stop timer and other active updates when hidden"""
+        if self._seekbar_timer_id:
+            try:
+                GLib.source_remove(self._seekbar_timer_id)
+            except Exception:
+                pass
+            self._seekbar_timer_id = None
+        logger.debug(
+            f"[PlayerBox] Suspended timer for {self.player.player_name if self.player else 'unknown'}"
+        )
+
+    def resume(self):
+        """Restart timer and updates when shown"""
+        if self.exit or self.player is None:
+            return
+
+        if not self._seekbar_timer_id:
+            self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
+        logger.debug(f"[PlayerBox] Resumed timer for {self.player.player_name}")
 
     def _cleanup_temp_files(self):
         """Clean up temporary artwork files."""

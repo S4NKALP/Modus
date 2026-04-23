@@ -43,7 +43,12 @@ def http_get_json(
 ) -> Optional[Dict]:
     """Helper to perform GET requests and return JSON using built-in urllib."""
     try:
-        req = urllib.request.Request(url, headers=headers or {})
+        # Some APIs require a User-Agent or they will return 403 Forbidden
+        default_headers = {"User-Agent": "Modus-Desktop/1.0"}
+        if headers:
+            default_headers.update(headers)
+
+        req = urllib.request.Request(url, headers=default_headers)
         with urllib.request.urlopen(req, timeout=timeout) as response:
             if response.status == 200:
                 return json.loads(response.read().decode("utf-8"))
@@ -53,13 +58,23 @@ def http_get_json(
 
 
 def get_location() -> str:
-    """Get current location using multiple IP geolocation APIs with fallback."""
+    """Get current location from config or multiple IP geolocation APIs with fallback."""
+    # Try to get location from config first
+    try:
+        config = load_config()
+        manual_location = config.get("weather_location")
+        if manual_location:
+            return manual_location
+    except Exception:
+        pass
+
+    # Fallback to IP geolocation APIs
     for api_url in LOCATION_APIS:
         data = http_get_json(api_url, timeout=2)
         if data:
             city = data.get("city", "")
             if city:
-                return city.replace(" ", "")
+                return city
 
     print("All location APIs failed")
     return ""
@@ -197,8 +212,14 @@ def update_weather(widget):
         debounced_perform_fetch()
         return True
 
-    GLib.timeout_add_seconds(WEATHER_UPDATE_INTERVAL, fetch_and_update)
-    fetch_and_update()
+    def initial_fetch():
+        debounced_perform_fetch()
+        return False
+
+    # Trigger first fetch immediately - MUST return False to not loop in idle
+    GLib.idle_add(initial_fetch)
+
+    return GLib.timeout_add_seconds(WEATHER_UPDATE_INTERVAL, fetch_and_update)
 
 
 def update_widget(widget, weather_info):
@@ -221,9 +242,10 @@ class Weather(Box):
         )
         self.parent = parent
         self.weatherinfo = None
+        self._weather_timer_id = None
         self._create_labels()
         self._layout_labels()
-        update_weather(self)
+        self._weather_timer_id = update_weather(self)
 
     def _create_labels(self):
         self.header = Box(orientation="h", h_expand=True)
@@ -290,6 +312,13 @@ class Weather(Box):
             self.parent.add_style_class(gradient_class)
 
         self.parent.set_visible(True)
+
+    def destroy(self):
+        """Cleanup weather update timer"""
+        if self._weather_timer_id:
+            GLib.source_remove(self._weather_timer_id)
+            self._weather_timer_id = None
+        super().destroy()
 
 
 class WeatherContainer(Box):
@@ -363,7 +392,16 @@ class Calendar(Box):
         self.add(self.month_label)
         self.add(self.days_header)
         self.add(self.calendar_grid)
-        invoke_repeater(CALENDAR_UPDATE_INTERVAL, self.update_calendar_if_needed)
+        self._calendar_timer_id = invoke_repeater(
+            CALENDAR_UPDATE_INTERVAL, self.update_calendar_if_needed
+        )
+
+    def destroy(self):
+        """Cleanup calendar update timer"""
+        if hasattr(self, "_calendar_timer_id") and self._calendar_timer_id:
+            GLib.source_remove(self._calendar_timer_id)
+            self._calendar_timer_id = None
+        super().destroy()
 
     def _update_current_date(self):
         now = datetime.datetime.now()
@@ -520,7 +558,14 @@ class SystemInfoBase(Box):
         )
 
     def start_updates(self):
-        invoke_repeater(SYSTEM_UPDATE_INTERVAL, self.update)
+        self._system_timer_id = invoke_repeater(SYSTEM_UPDATE_INTERVAL, self.update)
+
+    def destroy(self):
+        """Cleanup system info update timer"""
+        if hasattr(self, "_system_timer_id") and self._system_timer_id:
+            GLib.source_remove(self._system_timer_id)
+            self._system_timer_id = None
+        super().destroy()
 
     def create_info_line(
         self, indicator_name: str, info_text: str, value_text: str

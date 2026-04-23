@@ -266,7 +266,12 @@ class WifiConnections(Box):
 
         # Wait for network service to be ready — track signal ID
         self._signal_ids.append(
-            (self.network_service, self.network_service.connect("wifi-device-added", self.on_network_ready))
+            (
+                self.network_service,
+                self.network_service.connect(
+                    "wifi-device-added", self.on_network_ready
+                ),
+            )
         )
 
         # Create pull-to-refresh indicator
@@ -392,18 +397,30 @@ class WifiConnections(Box):
 
             # Connect to WiFi service signals — track IDs for cleanup
             self._signal_ids.append(
-                (self.wifi_service, self.wifi_service.connect(
-                    "notify::wireless-enabled", self.on_wifi_enabled_changed
-                ))
+                (
+                    self.wifi_service,
+                    self.wifi_service.connect(
+                        "notify::wireless-enabled", self.on_wifi_enabled_changed
+                    ),
+                )
             )
             self._signal_ids.append(
-                (self.wifi_service, self.wifi_service.connect("changed", self.update_networks))
+                (
+                    self.wifi_service,
+                    self.wifi_service.connect("changed", self.update_networks),
+                )
             )
             self._signal_ids.append(
-                (self.wifi_service, self.wifi_service.connect("ap-added", self.update_networks))
+                (
+                    self.wifi_service,
+                    self.wifi_service.connect("ap-added", self.update_networks),
+                )
             )
             self._signal_ids.append(
-                (self.wifi_service, self.wifi_service.connect("ap-removed", self.update_networks))
+                (
+                    self.wifi_service,
+                    self.wifi_service.connect("ap-removed", self.update_networks),
+                )
             )
 
             # Initial network update

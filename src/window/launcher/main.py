@@ -720,7 +720,10 @@ class Launcher(Window):
 
         # Clear existing results
         for child in self.results_box.get_children():
-            self.results_box.remove(child)
+            if isinstance(child, ResultItem):
+                child.destroy()
+            else:
+                self.results_box.remove(child)
 
         # Add new results
         for i, result in enumerate(self.results):
@@ -790,7 +793,10 @@ class Launcher(Window):
         self.results = []
         self.selected_index = 0
         for child in self.results_box.get_children():
-            self.results_box.remove(child)
+            if isinstance(child, ResultItem):
+                child.destroy()
+            else:
+                self.results_box.remove(child)
         # Keep the results scroll visible even when empty
 
     def _handle_escape_key(self) -> bool:

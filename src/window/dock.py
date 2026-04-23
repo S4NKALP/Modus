@@ -84,8 +84,20 @@ class AppBar(Box):
                 logger.error(f"[AppBar] Error updating apps: {e}")
             return True
 
-        GLib.timeout_add(250, update_running_apps)
+        self._app_monitor_timer_id = GLib.timeout_add(250, update_running_apps)
         GLib.idle_add(self.update_dock_apps)
+
+    def destroy(self):
+        """Clean up timers and children"""
+        if hasattr(self, "_app_monitor_timer_id") and self._app_monitor_timer_id:
+            GLib.source_remove(self._app_monitor_timer_id)
+            self._app_monitor_timer_id = None
+
+        # Destroy context menu
+        if self.menu:
+            self.menu.destroy()
+
+        super().destroy()
 
     def _populate_pinned_apps(self):
         clear_children(self.pinned_apps_container)
@@ -851,4 +863,15 @@ class Dock(Window):
 
             return True
 
-        GLib.timeout_add(300, check_dock_occlusion)
+        self._occlusion_timer_id = GLib.timeout_add(300, check_dock_occlusion)
+
+    def destroy(self):
+        """Clean up timers and children"""
+        if hasattr(self, "_occlusion_timer_id") and self._occlusion_timer_id:
+            GLib.source_remove(self._occlusion_timer_id)
+            self._occlusion_timer_id = None
+
+        if hasattr(self, "app_bar") and self.app_bar:
+            self.app_bar.destroy()
+
+        super().destroy()

@@ -510,11 +510,7 @@ class BluetoothConnections(Box):
             return False
 
         # Skip if update in progress or client not available/enabled
-        if (
-            self._update_in_progress
-            or not self.client
-            or not self.client.enabled
-        ):
+        if self._update_in_progress or not self.client or not self.client.enabled:
             return True  # Continue monitoring
 
         try:

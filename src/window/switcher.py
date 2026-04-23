@@ -109,7 +109,7 @@ class ApplicationSwitcher(Window):
 
     def update_windows(self) -> None:
         for child in self.view.get_children():
-            self.view.remove(child)
+            child.destroy()
 
         try:
             clients_data = self.conn.send_command("j/clients").reply

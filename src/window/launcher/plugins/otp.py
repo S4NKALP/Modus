@@ -95,29 +95,36 @@ class OTPPlugin(PluginBase):
     def _selective_force_refresh(self):
         """Update time display in existing OTP result items."""
         try:
-            import gc
+            from fabric import Application
 
             def do_update():
                 try:
-                    for obj in gc.get_objects():
-                        if (
-                            hasattr(obj, "__class__")
-                            and obj.__class__.__name__ == "Launcher"
-                            and hasattr(obj, "results_box")
-                            and hasattr(obj, "visible")
-                            and obj.visible
-                            and hasattr(obj, "results")
-                            and obj.results
-                        ):
-                            has_otp_results = any(
-                                result.data and result.data.get("type") == "totp"
-                                for result in obj.results
-                                if hasattr(result, "data") and result.data
-                            )
+                    app = Application.get_default()
+                    if not app:
+                        return False
 
-                            if has_otp_results:
-                                self._update_existing_result_labels(obj.results_box)
-                                return False
+                    launcher = None
+                    for window in app.get_windows():
+                        if window.get_name() == "launcher-window":
+                            launcher = window
+                            break
+
+                    if (
+                        launcher
+                        and hasattr(launcher, "results_box")
+                        and hasattr(launcher, "visible")
+                        and launcher.visible
+                        and hasattr(launcher, "results")
+                        and launcher.results
+                    ):
+                        has_otp_results = any(
+                            result.data and result.data.get("type") == "totp"
+                            for result in launcher.results
+                            if hasattr(result, "data") and result.data
+                        )
+
+                        if has_otp_results:
+                            self._update_existing_result_labels(launcher.results_box)
                 except Exception:
                     pass
                 return False

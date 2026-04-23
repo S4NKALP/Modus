@@ -259,6 +259,20 @@ class PlayerBoxStack(Box):
 
         super().destroy()
 
+    def suspend(self):
+        """Suspend all child players when hidden"""
+        for child in self.player_stack.get_children():
+            if hasattr(child, "suspend"):
+                child.suspend()
+        logger.debug("[PlayerBoxStack] Suspended child players")
+
+    def resume(self):
+        """Resume all child players when shown"""
+        for child in self.player_stack.get_children():
+            if hasattr(child, "resume"):
+                child.resume()
+        logger.debug("[PlayerBoxStack] Resumed child players")
+
     def _periodic_cleanup(self):
         """Enhanced cleanup for reuse - clean internal state and free memory"""
         try:
@@ -776,7 +790,9 @@ class PlayerBox(Box):
                 "label",
                 GObject.BindingFlags.DEFAULT,
                 lambda _, x: (
-                    re.sub(r"\r?\n", " ", x) if x != "" and x is not None else "No Title"
+                    re.sub(r"\r?\n", " ", x)
+                    if x != "" and x is not None
+                    else "No Title"
                 ),  # type: ignore
             )
         )
@@ -903,6 +919,37 @@ class PlayerBox(Box):
         # Store as (object, handler_id) tuples
         for handler_id in connections:
             self._signal_connections.append((self.player, handler_id))
+
+    def suspend(self):
+        """Disconnect signals when hidden"""
+        self.exit = True
+        for obj, handler_id in self._signal_connections:
+            try:
+                obj.disconnect(handler_id)
+            except Exception:
+                pass
+        self._signal_connections.clear()
+        logger.debug(
+            f"[PlayerBox] Suspended signals for {self.player.player_name if self.player else 'unknown'}"
+        )
+
+    def resume(self):
+        """Reconnect signals when shown"""
+        if self.player is None:
+            return
+        self.exit = False
+        if not self._signal_connections:
+            connections = bulk_connect(
+                self.player,
+                {
+                    "closed": self._on_player_exit,
+                    "notify::playback-status": self._on_playback_change,
+                    "notify::metadata": self._on_metadata,
+                },
+            )
+            for handler_id in connections:
+                self._signal_connections.append((self.player, handler_id))
+        logger.debug(f"[PlayerBox] Resumed signals for {self.player.player_name}")
 
     def destroy(self):
         """Clean up all resources when the widget is destroyed."""

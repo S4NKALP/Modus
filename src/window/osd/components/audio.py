@@ -98,3 +98,13 @@ class AudioOSDContainer(BaseOSDContainer):
     def update(self, *_):
         self._update_display()
         super().update()
+
+    def destroy(self):
+        """Disconnect signals from Audio service"""
+        try:
+            self.audio.disconnect_by_func(self._on_speaker_changed)
+            if self.audio.speaker:
+                self.audio.speaker.disconnect_by_func(self._on_speaker_stream_changed)
+        except Exception:
+            pass
+        super().destroy()

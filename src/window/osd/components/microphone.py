@@ -98,3 +98,15 @@ class MicrophoneOSDContainer(BaseOSDContainer):
     def update(self, *_):
         self._update_display()
         super().update()
+
+    def destroy(self):
+        """Disconnect signals from Audio service"""
+        try:
+            self.audio.disconnect_by_func(self._on_microphone_changed)
+            if self.audio.microphone:
+                self.audio.microphone.disconnect_by_func(
+                    self._on_microphone_stream_changed
+                )
+        except Exception:
+            pass
+        super().destroy()

@@ -8,6 +8,10 @@ from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.wayland import WaylandWindow as Window
 
+from services.brightness import Brightness
+from services.network import NetworkClient
+from utils.roam import audio_service, modus_service
+from utils.utils import svg_file
 from window.controlcenter.bluetooth import (
     BluetoothConnections,
     set_bluetooth_enabled_with_fallback,
@@ -17,10 +21,6 @@ from window.controlcenter.nightlight import create_night_light_widget
 from window.controlcenter.per_app_volume import PerAppVolumeControl
 from window.controlcenter.player import PlayerBoxStack, get_shared_mpris_manager
 from window.controlcenter.wifi import WifiConnections
-from services.brightness import Brightness
-from services.network import NetworkClient
-from utils.roam import audio_service, modus_service
-from utils.utils import svg_file
 
 brightness_service = Brightness.get_initial()
 
@@ -487,10 +487,26 @@ class ModusControlCenter(Window):
     def _on_visibility_changed(self, widget, param):
         """Handle visibility changes for resource management"""
         if not self.get_visible():
+            # Suspend player updates
+            if hasattr(self, "music_widget") and hasattr(self.music_widget, "suspend"):
+                self.music_widget.suspend()
+            if hasattr(self, "_expanded_player_widget") and hasattr(
+                self._expanded_player_widget, "suspend"
+            ):
+                self._expanded_player_widget.suspend()
+
             # Just disconnect signals and reset state flags - don't destroy widgets
             self._disconnect_signals_when_hidden()
         else:
             self._initialize_resources()
+
+            # Resume player updates
+            if hasattr(self, "music_widget") and hasattr(self.music_widget, "resume"):
+                self.music_widget.resume()
+            if hasattr(self, "_expanded_player_widget") and hasattr(
+                self._expanded_player_widget, "resume"
+            ):
+                self._expanded_player_widget.resume()
 
     def _initialize_resources(self):
         """Initialize resources and connect signals when the control center becomes visible."""
@@ -512,11 +528,28 @@ class ModusControlCenter(Window):
             # Store signal connections as (obj, handler_id) tuples for proper cleanup
             self._signal_connections.extend(
                 [
-                    (audio_service, audio_service.connect("changed", self.audio_changed)),
-                    (audio_service, audio_service.connect("changed", self.volume_changed)),
-                    (modus_service, modus_service.connect("wlan-changed", self.wlan_changed)),
-                    (modus_service, modus_service.connect("bluetooth-changed", self.bluetooth_changed)),
-                    (modus_service, modus_service.connect("dont-disturb-changed", self.dnd_changed)),
+                    (
+                        audio_service,
+                        audio_service.connect("changed", self.audio_changed),
+                    ),
+                    (
+                        audio_service,
+                        audio_service.connect("changed", self.volume_changed),
+                    ),
+                    (
+                        modus_service,
+                        modus_service.connect("wlan-changed", self.wlan_changed),
+                    ),
+                    (
+                        modus_service,
+                        modus_service.connect(
+                            "bluetooth-changed", self.bluetooth_changed
+                        ),
+                    ),
+                    (
+                        modus_service,
+                        modus_service.connect("dont-disturb-changed", self.dnd_changed),
+                    ),
                 ]
             )
 
@@ -525,7 +558,10 @@ class ModusControlCenter(Window):
                 self.brightness_scale.connect("change-value", self.set_brightness)
                 self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
                 self._signal_connections.append(
-                    (brightness_service, brightness_service.connect("screen", self.brightness_changed))
+                    (
+                        brightness_service,
+                        brightness_service.connect("screen", self.brightness_changed),
+                    )
                 )
 
             # Connect volume scale signals
@@ -547,7 +583,28 @@ class ModusControlCenter(Window):
     def _disconnect_signals_when_hidden(self):
         """Disconnect signals when hidden to reduce resource usage, but keep widgets intact"""
         try:
-            # Just disconnect signals and reset flags - don't destroy widgets
+            # Actually disconnect the signals we tracked
+            for obj, handler_id in self._signal_connections:
+                try:
+                    obj.disconnect(handler_id)
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect signal: {e}")
+            self._signal_connections.clear()
+
+            # Disconnect direct scale signals (connected in _initialize_resources)
+            if hasattr(self, "volume_scale"):
+                try:
+                    self.volume_scale.disconnect_by_func(self.set_volume)
+                    self.volume_scale.disconnect_by_func(self.on_volume_scroll)
+                except Exception:
+                    pass
+            if hasattr(self, "brightness_scale"):
+                try:
+                    self.brightness_scale.disconnect_by_func(self.set_brightness)
+                    self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
+                except Exception:
+                    pass
+
             self._signals_connected = False
             self._resources_initialized = False
 
@@ -559,6 +616,8 @@ class ModusControlCenter(Window):
 
             # Reset current view
             self.current_view = "main"
+
+            logger.debug("Control center signals disconnected while hidden")
 
         except Exception as e:
             logger.warning(f"Control center signal disconnection failed: {e}")

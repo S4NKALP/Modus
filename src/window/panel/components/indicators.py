@@ -457,3 +457,102 @@ class BatteryIndicator(Box):
 
     def hide_controlcenter(self, *args):
         hide_control_center(self.battery_mousecapture)
+
+    def destroy(self):
+        """Clean up resources when the indicator is destroyed."""
+        # Disconnect signals
+        try:
+            modus_service.disconnect_by_func(self.on_battery_changed)
+            if hasattr(self, "battery_service") and self.battery_service:
+                self.battery_service.disconnect_by_func(self.on_battery_direct_changed)
+        except Exception:
+            pass
+
+        # Destroy window and widget
+        try:
+            if hasattr(self, "battery_widget") and self.battery_widget:
+                self.battery_widget.destroy()
+            if hasattr(self, "battery_window") and self.battery_window:
+                self.battery_window.destroy()
+            if hasattr(self, "battery_mousecapture") and self.battery_mousecapture:
+                self.battery_mousecapture.destroy()
+        except Exception:
+            pass
+
+        super().destroy()
+
+
+# Add destroy methods to other classes in this file as well
+def add_destroy_to_indicators():
+    # BluetoothIndicator
+
+    def bt_destroy(self):
+        try:
+            modus_service.disconnect_by_func(self.on_bluetooth_changed)
+            if hasattr(self, "bluetooth") and self.bluetooth:
+                self.bluetooth.disconnect_by_func(self.on_bluetooth_direct_changed)
+                self.bluetooth.disconnect_by_func(self.on_device_added)
+                self.bluetooth.disconnect_by_func(self.on_device_removed)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "bluetooth_widget") and self.bluetooth_widget:
+                self.bluetooth_widget.destroy()
+            if hasattr(self, "bluetooth_window") and self.bluetooth_window:
+                self.bluetooth_window.destroy()
+            if hasattr(self, "bluetooth_mousecapture") and self.bluetooth_mousecapture:
+                self.bluetooth_mousecapture.destroy()
+        except Exception:
+            pass
+        Box.destroy(self)
+
+    BluetoothIndicator.destroy = bt_destroy
+
+    # NetworkIndicator
+    def net_destroy(self):
+        try:
+            modus_service.disconnect_by_func(self.on_wlan_changed)
+            if hasattr(self, "network_service") and self.network_service:
+                self.network_service.disconnect_by_func(self.on_wifi_device_added)
+                self.network_service.disconnect_by_func(self.on_ethernet_device_added)
+                self.network_service.disconnect_by_func(self.on_network_changed)
+
+                # Also disconnect from the devices themselves if they exist
+                if (
+                    hasattr(self.network_service, "wifi_device")
+                    and self.network_service.wifi_device
+                ):
+                    try:
+                        self.network_service.wifi_device.disconnect_by_func(
+                            self.on_network_direct_changed
+                        )
+                    except Exception:
+                        pass
+                if (
+                    hasattr(self.network_service, "ethernet_device")
+                    and self.network_service.ethernet_device
+                ):
+                    try:
+                        self.network_service.ethernet_device.disconnect_by_func(
+                            self.on_network_direct_changed
+                        )
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "wifi_widget") and self.wifi_widget:
+                self.wifi_widget.destroy()
+            if hasattr(self, "wifi_window") and self.wifi_window:
+                self.wifi_window.destroy()
+            if hasattr(self, "wifi_mousecapture") and self.wifi_mousecapture:
+                self.wifi_mousecapture.destroy()
+        except Exception:
+            pass
+        Box.destroy(self)
+
+    NetworkIndicator.destroy = net_destroy
+
+
+# Apply the destroy methods
+add_destroy_to_indicators()

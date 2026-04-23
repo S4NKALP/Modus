@@ -188,6 +188,14 @@ class Panel(Window):
         self.left_box.children = left_children
 
         # Indicators (create fresh instances on each rebuild)
+        # First, destroy old indicators to prevent memory leaks
+        for child in list(self.indicators.get_children()):
+            try:
+                child.destroy()
+            except Exception:
+                pass
+        self.indicators.children = []
+
         indicators_children = []
         if get_config("battery", True):
             indicators_children.append(BatteryIndicator())
@@ -267,3 +275,36 @@ class Panel(Window):
             self.chevron_button.get_child().dynamic_file("misc/chevron-left.svg")
         else:
             self.chevron_button.get_child().dynamic_file("misc/chevron-right.svg")
+
+    def destroy(self):
+        """Clean up all signals and components"""
+        try:
+            modus_service.disconnect_by_func(self.on_dnd_changed)
+            notification_service.disconnect_by_func(self.on_notification_count_changed)
+            from services.config import _config_handlers
+
+            if self._on_config_changed in _config_handlers:
+                _config_handlers.remove(self._on_config_changed)
+        except Exception:
+            pass
+
+        # Destroy components
+        for component in [
+            self.globalmenu,
+            self.workspace_indicator,
+            self.recording_indicator,
+            self.indicators,
+        ]:
+            try:
+                component.destroy()
+            except Exception:
+                pass
+
+        # Destroy MouseCapture windows
+        for mc in [self.control_center, self.notification_center]:
+            try:
+                mc.destroy()
+            except Exception:
+                pass
+
+        super().destroy()

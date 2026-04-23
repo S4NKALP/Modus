@@ -170,7 +170,12 @@ class PerAppVolumeControl(Box):
 
     def _populate_apps(self):
         """Populate the widget with current audio applications"""
-        # Clear existing widgets
+        # Clear and DESTROY existing widgets to prevent memory leaks
+        for child in list(self.apps_container.get_children()):
+            try:
+                child.destroy()
+            except Exception:
+                pass
         self.apps_container.children = []
         self._app_widgets.clear()
 

@@ -37,3 +37,11 @@ class KeyboardLayoutOSDContainer(BaseOSDContainer):
     def update(self, *_):
         self.label.set_text(self.keyboard_layout.current_layout)
         super().update()
+
+    def destroy(self):
+        """Disconnect signals from KeyboardLayout service"""
+        try:
+            self.keyboard_layout.disconnect_by_func(self._on_layout_changed)
+        except Exception:
+            pass
+        super().destroy()
