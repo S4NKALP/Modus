@@ -79,7 +79,6 @@ class PluginManager:
         default_plugins = [
             "applications",
             "calculator",
-            "system",
             "clipboard",
             "power",
             "caffeine",
@@ -87,12 +86,6 @@ class PluginManager:
             "emoji",
             "wallpaper",
             "websearch",
-            "reminders",
-            "otp",
-            "password",
-            "bookmarks",
-            "tmux",
-            "colorpicker",
         ]
 
         for plugin_name in default_plugins:

@@ -24,10 +24,6 @@
 			"icon": "apps",
 			"description": "Applications - Launch installed applications"
 		},
-		"bin": {
-			"icon": "terminal",
-			"description": "Bins - Search and run executable binaries"
-		},
 		"power": {
 			"icon": "shutdown",
 			"description": "Power - System power management and session control"
@@ -58,42 +54,6 @@
 				"? google cats",
 				"? youtube music"
 			]
-		},
-		"remind": {
-			"icon": "alarm-timer",
-			"description": "Reminders - Set time-based reminders with notifications"
-		},
-		"otp": {
-			"icon": "auth-otp-symbolic",
-			"description": "Manage TOTP codes and 2FA authentication"
-		},
-		"pass": {
-			"icon": "nextcloud-password-client",
-			"description": "Password Manager - Search and manage passwords"
-		},
-		"bm": {
-			"icon": "bookmark-add-symbolic",
-			"description": "Bookmarks - Search and manage bookmarks"
-		},
-		"script": {
-			"icon": "terminal",
-			"description": "Bash Scripts - Manage and execute bash scripts"
-		},
-		"bash": {
-			"icon": "terminal",
-			"description": "Bash Scripts - Manage and execute bash scripts"
-		},
-		"sh": {
-			"icon": "terminal",
-			"description": "Bash Scripts - Manage and execute bash scripts"
-		},
-		"tmux": {
-			"icon": "terminal",
-			"description": "Tmux Manager - Create, attach, rename, and kill tmux sessions"
-		},
-		"cp": {
-			"icon": "color-select-symbolic",
-			"description": "Color Picker - Pick colors from the screen (HEX, RGB, HSV)"
 		}
 	},
 	"settings": {
