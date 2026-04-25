@@ -853,8 +853,11 @@ class Launcher(Window):
                     if should_exit_trigger:
                         self.triggered_plugin = None
                         self.active_trigger = ""
-                        self._clear_results()
-                        # Don't clear the text - let the user's edit stand
+
+                        # Trigger a search with the new text instead of just clearing results
+                        # This ensures we show applications if empty, or normal search results if not
+                        self.query = new_text
+                        GLib.timeout_add(50, self._perform_search, new_text)
 
                     # If we're still in trigger mode but the text changed, update the search
                     elif self.triggered_plugin and new_text != current_text:
