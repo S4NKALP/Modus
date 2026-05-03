@@ -48,7 +48,7 @@ class CalculatorPlugin(PluginBase):
         self.expression_pattern = re.compile(r"[\d+\-*/^()=]")
         self.number_pattern = re.compile(r"\d")
         self.conversion_pattern = re.compile(
-            r"(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*(?:to|in|=)\s*([a-zA-Z]+)"
+            r"(\d+(?:\.\d+)?)\s*([^0-9\s]+)\s*(?:to|in|=)\s*([^0-9\s]+)"
         )
 
         # Cache for conversion results
@@ -89,7 +89,11 @@ class CalculatorPlugin(PluginBase):
                     subtitle = f"{value} {from_unit} = {result:.6g} {to_unit}"
                 else:
                     # Use the conversion utility
-                    result = self.converter.convert(value, from_unit, to_unit)
+                    from_unit_clean = self.converter.clean_type(from_unit)
+                    to_unit_clean = self.converter.clean_type(to_unit)
+                    result = self.converter.convert(
+                        value, from_unit_clean, to_unit_clean
+                    )
                     # Cache the result
                     self._conversion_cache[cache_key] = result
                     subtitle = f"{value} {from_unit} = {result:.6g} {to_unit}"
