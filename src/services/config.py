@@ -40,6 +40,7 @@ class ConfigService:
         self.RELOAD_DELAY_MS: int = 100
 
         self._load_config()
+        self._last_notified_config = self._config.copy()
         self._setup_monitors()
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -50,6 +51,24 @@ class ConfigService:
 
     def has_changed(self, key: str, old_config: Dict[str, Any]) -> bool:
         return self._config.get(key) != old_config.get(key)
+
+    def set(self, key: str, value: Any) -> None:
+        """Set a config value (local state only)."""
+        self._config[key] = value
+
+    def save(self) -> bool:
+        """Persist the current config state to disk and trigger reloads."""
+        try:
+            os.makedirs(os.path.dirname(self._config_file), exist_ok=True)
+            with open(self._config_file, "w") as f:
+                json.dump(self._config, f, indent=4)
+
+            # Manually trigger a reload to notify listeners immediately
+            GLib.idle_add(self._reload_config)
+            return True
+        except Exception as e:
+            logger.error(f"[ConfigService] Failed to save config: {e}")
+            return False
 
     def register_reload_callback(
         self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
@@ -97,7 +116,7 @@ class ConfigService:
             self._config = {}
 
     def _setup_monitors(self) -> None:
-        files_to_watch = [self._config_file]
+        files_to_watch = [self._config_file, os.path.dirname(self._config_file)]
         for file_path in files_to_watch:
             if not os.path.exists(file_path):
                 continue
@@ -110,26 +129,32 @@ class ConfigService:
                 logger.error(f"[ConfigService] Failed to monitor {file_path}: {e}")
 
     def _on_file_changed(self, monitor, file, other_file, event_type, file_path: str):
-        if (
-            event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT
-            and not self._reload_pending
-        ):
+        # Trigger on various change events to be more robust across editors/OSs
+        valid_events = [
+            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            Gio.FileMonitorEvent.CHANGED,
+            Gio.FileMonitorEvent.CREATED,
+            Gio.FileMonitorEvent.DELETED,
+        ]
+        if event_type in valid_events and not self._reload_pending:
             self._reload_pending = True
             GLib.timeout_add(self.RELOAD_DELAY_MS, self._reload_config)
 
     def _reload_config(self) -> bool:
         try:
-            old_config = self._config.copy()
+            self._reload_pending = False
+            old_config = self._last_notified_config.copy()
             self._load_config()
 
+            # Always notify listeners on reload request to be safe
             for callback in list(self._reload_callbacks):
                 try:
                     callback(self._config, old_config)
                 except Exception as e:
                     logger.error(f"[ConfigService] Callback failed: {e}")
 
-            self._reload_pending = False
-            return True
+            self._last_notified_config = self._config.copy()
+            return False
         except Exception as e:
             logger.error(f"[ConfigService] Failed to reload configuration: {e}")
             self._reload_pending = False
@@ -164,8 +189,8 @@ def get_config(key: str, default: Any = None) -> Any:
     return start_config_service().get(key, default)
 
 
-def get_all_config() -> Dict[str, Any]:
-    """Get all config values from the singleton service."""
+def get_config_all() -> Dict[str, Any]:
+    """Get the entire current configuration state."""
     return start_config_service().get_all()
 
 

@@ -11,6 +11,7 @@ from fabric.notifications import (
 from fabric.utils import GdkPixbuf, logger, os, time
 
 import shared.data as data
+from services.config import config, on_config_change
 
 NOTIFICATION_CACHE_FILE = f"{data.CACHE_DIR}/notification_history.json"
 
@@ -222,10 +223,42 @@ class CachedNotifications(Notifications):
 
         self.load_cached_notifications()
 
-        # Connect to the notification_added signal to cache new notifications
-        # Note: self here refers to the CachedNotifications service, which inherits from Notifications
-        # So we connect to our own notification_added signal
         super().notification_added.connect(self.on_notification_added)
+
+        # Listen for config changes to prune history if needed
+        on_config_change(self._on_config_changed)
+
+    def _on_config_changed(self, new_config, old_config):
+        # If ignored apps changed, remove them from history
+        if config().has_changed("notification_ignored_apps", old_config):
+            ignored_apps = new_config.get("notification_ignored_apps", [])
+            ids_to_remove = [
+                cid
+                for cid, cnotif in self._cached_notifications.items()
+                if cnotif.app_name in ignored_apps
+            ]
+            for cid in ids_to_remove:
+                self.remove_cached_notification(cid)
+            if ids_to_remove:
+                logger.debug(
+                    f"Hot-reload: Removed {len(ids_to_remove)} notifications from ignored apps"
+                )
+
+        # If limited apps changed, prune duplicates
+        if config().has_changed("notification_limited_apps_history", old_config):
+            limited_apps = new_config.get("notification_limited_apps_history", [])
+            for app in limited_apps:
+                app_notifs = [
+                    (cid, cnotif.timestamp)
+                    for cid, cnotif in self._cached_notifications.items()
+                    if cnotif.app_name == app
+                ]
+                if len(app_notifs) > 1:
+                    # Sort by timestamp descending and keep only the first (latest)
+                    app_notifs.sort(key=lambda x: x[1], reverse=True)
+                    for cid, _ in app_notifs[1:]:
+                        self.remove_cached_notification(cid)
+                    logger.debug(f"Hot-reload: Pruned history for limited app {app}")
 
     def load_cached_notifications(self) -> dict[int, CachedNotification]:
         """Load cached notifications from a JSON file (deserialization)."""
@@ -309,7 +342,8 @@ class CachedNotifications(Notifications):
         )
 
         # Check if this app should be ignored for history (don't cache)
-        if notification.app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
+        ignored_apps = config().get("notification_ignored_apps", [])
+        if notification.app_name in ignored_apps:
             # Don't cache notifications from ignored apps, but still allow popup display
             logger.debug(
                 f"Ignoring notification from {notification.app_name} (in ignore list)"
@@ -346,6 +380,20 @@ class CachedNotifications(Notifications):
         logger.debug(
             f"Caching new notification: ID={notification.id}, App={notification.app_name}, Summary={notification.summary[:50]}..."
         )
+
+        # Handle limited history apps - remove previous notifications from same app
+        limited_apps = config().get("notification_limited_apps_history", [])
+        if notification.app_name in limited_apps:
+            ids_to_remove = [
+                cid
+                for cid, cnotif in self._cached_notifications.items()
+                if cnotif.app_name == notification.app_name
+            ]
+            for cid in ids_to_remove:
+                self.remove_cached_notification(cid)
+            logger.debug(
+                f"Pruned {len(ids_to_remove)} old notifications for limited app {notification.app_name}"
+            )
 
         # GUARANTEED STORAGE: Always create and store notification to history first
         cache_id = self._next_cache_id
