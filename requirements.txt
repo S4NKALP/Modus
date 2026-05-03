@@ -6,3 +6,4 @@ pywayland==0.4.18
 pyzbar>=0.1.9
 six>=1.17.0
 thefuzz>=0.22.1
+httpx>=0.28.1
