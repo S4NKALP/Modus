@@ -4,7 +4,7 @@ import re
 import tempfile
 import threading
 import urllib.parse
-import urllib.request
+import httpx
 import weakref
 from typing import Dict, List, Optional
 
@@ -123,9 +123,12 @@ def get_artwork_cached(url: str) -> Optional[str]:
                 return cache_file
 
         # Download and cache
-        urllib.request.urlretrieve(url, cache_file)
-        _artwork_cache[url] = cache_file
-        return cache_file
+        response = httpx.get(url, timeout=10, follow_redirects=True)
+        if response.status_code == 200:
+            with open(cache_file, "wb") as f:
+                f.write(response.content)
+            _artwork_cache[url] = cache_file
+            return cache_file
 
     except Exception as e:
         logger.warning(f"Failed to cache artwork from {url}: {e}")
@@ -1246,10 +1249,13 @@ class PlayerBox(Box):
             parsed = urllib.parse.urlparse(arturl)
             suffix = os.path.splitext(parsed.path)[1] or ".png"
 
-            with urllib.request.urlopen(arturl, timeout=10) as response:  # Add timeout
-                if self._download_cancelled:
-                    return
-                data = response.read()
+            response = httpx.get(arturl, timeout=10, follow_redirects=True)
+            if self._download_cancelled:
+                return
+            if response.status_code == 200:
+                data = response.content
+            else:
+                return
 
             # Check one more time if cancelled
             if self._download_cancelled:
