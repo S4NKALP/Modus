@@ -8,7 +8,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.wayland import WaylandWindow as Window
 
-import shared.data as data
+from services.config import config, on_config_change
 from utils.functions import is_special_workspace
 from utils.icon_resolver import IconResolver
 
@@ -31,9 +31,10 @@ class ApplicationSwitcher(Window):
         self.windows = []
         self.current_index = 0
         self.tab_pressed = False
-        self.items_per_row = data.WINDOW_SWITCHER_ITEMS_PER_ROW
         self.icon_size = 96
-        self.items_per_row = 100  # Single row focus
+
+        # Subscribe to config changes
+        on_config_change(self._on_config_changed)
 
         container = Box(
             name="application-switcher-container",
@@ -70,11 +71,24 @@ class ApplicationSwitcher(Window):
             style_classes=["switcher-workspace-label"],
         )
         container.add(self.workspace_label)
+
         self.connect("key-press-event", self.on_key_press)
         self.connect("key-release-event", self.on_key_release)
 
         self.show_all()
         self.hide()
+
+    @property
+    def items_per_row(self):
+        return config().get("window_switcher_items_per_row", 10)
+
+    def _on_config_changed(self, new_config, old_config):
+        # Refresh windows if settings that affect display change
+        if config().has_changed(
+            "hide_special_workspace", old_config
+        ) or config().has_changed("window_switcher_items_per_row", old_config):
+            if self.get_visible():
+                self.update_windows()
 
     def show_switcher(self) -> None:
         self.update_windows()
@@ -119,13 +133,13 @@ class ApplicationSwitcher(Window):
 
             # Filter out hidden windows and optionally special workspace windows
             filtered_windows = []
+            hide_special = config().get("hide_special_workspace", True)
+
             for c in clients:
                 if c.get("hidden", False):
                     continue
                 # Skip clients in special workspaces if the setting is enabled
-                if data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS and self._is_special_workspace(
-                    c
-                ):
+                if hide_special and self._is_special_workspace(c):
                     continue
                 filtered_windows.append(c)
 
@@ -143,16 +157,24 @@ class ApplicationSwitcher(Window):
                         self.current_index = i
                         break
 
-            current_row = Box(
-                name="window-row",
-                orientation="h",
-                spacing=16,
-                h_align="center",
-                v_align="center",
-            )
-            self.view.add(current_row)
+            # Create vertical container for rows
+            rows_box = Box(orientation="v", spacing=16)
+            self.view.add(rows_box)
+
+            current_row = None
+            items_per_row = self.items_per_row
 
             for i, window in enumerate(self.windows):
+                if i % items_per_row == 0:
+                    current_row = Box(
+                        name="window-row",
+                        orientation="h",
+                        spacing=16,
+                        h_align="center",
+                        v_align="center",
+                    )
+                    rows_box.add(current_row)
+
                 # Create icon image for this window
                 icon_image = self.create_icon_for_window(window)
 
@@ -256,25 +278,30 @@ class ApplicationSwitcher(Window):
         return False
 
     def update_selection(self):
-        for row in self.view.get_children():
-            for i, child in enumerate(row.get_children()):
-                index = self.view.get_children().index(row) * self.items_per_row + i
-                if index == self.current_index:
-                    child.add_style_class("active")
-                    # Update selection label
-                    current_window = self.windows[self.current_index]
-                    app_class = current_window.get("class", "Unknown")
-                    # capitalize if it's all lowercase
-                    if app_class.islower():
-                        app_class = app_class.capitalize()
-                    self.selection_label.set_label(app_class)
+        # Flatten all buttons from all rows to find them by index
+        all_buttons = []
+        rows_box = self.view.get_children()[0] if self.view.get_children() else None
+        if rows_box:
+            for row in rows_box.get_children():
+                all_buttons.extend(row.get_children())
 
-                    # Update workspace label
-                    workspace = current_window.get("workspace", {})
-                    workspace_name = workspace.get("name", "Unknown")
-                    self.workspace_label.set_label(f"Workspace {workspace_name}")
-                else:
-                    child.remove_style_class("active")
+        for i, child in enumerate(all_buttons):
+            if i == self.current_index:
+                child.add_style_class("active")
+                # Update selection label
+                current_window = self.windows[self.current_index]
+                app_class = current_window.get("class", "Unknown")
+                # capitalize if it's all lowercase
+                if app_class.islower():
+                    app_class = app_class.capitalize()
+                self.selection_label.set_label(app_class)
+
+                # Update workspace label
+                workspace = current_window.get("workspace", {})
+                workspace_name = workspace.get("name", "Unknown")
+                self.workspace_label.set_label(f"Workspace {workspace_name}")
+            else:
+                child.remove_style_class("active")
 
     def activate_selected(self):
         if not self.windows or self.current_index >= len(self.windows):

@@ -20,7 +20,7 @@ from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
-import shared.data as data
+from services.config import config, on_config_change
 from services.modus import modus_service
 from utils.functions import (
     clear_children,
@@ -44,15 +44,10 @@ class AppBar(Box):
         self.pinned_items_pos = []
         self._parent = parent
 
-        # Set orientation based on dock position
-        orientation = (
-            "vertical" if data.DOCK_POSITION in ["Left", "Right"] else "horizontal"
-        )
-
         super().__init__(
             spacing=0,
             name="dock",
-            orientation=orientation,
+            orientation="horizontal",
             children=[],
         )
         self.icon_resolver = IconResolver()
@@ -86,6 +81,39 @@ class AppBar(Box):
 
         self._app_monitor_timer_id = GLib.timeout_add(250, update_running_apps)
         GLib.idle_add(self.update_dock_apps)
+
+    def update_icon_size(self):
+        """Update all icons in the dock to the current config size"""
+        desktop_apps = get_desktop_applications(include_hidden=False)
+
+        # Update pinned apps
+        for app_id, button in self.pinned_buttons.items():
+            if hasattr(button, "icon_image"):
+                if app_id == "trash" or getattr(button, "is_trash", False):
+                    icon_size = config().get("dock_icon_size", 52)
+                    pixbuf = self.icon_resolver.get_icon_pixbuf("user-trash", icon_size)
+                    button.icon_image.set_from_pixbuf(pixbuf)
+                else:
+                    # Find app data to get icon
+                    app_data = next(
+                        (
+                            a
+                            for a in self.pinned_apps
+                            if self._matches_app_identifier(a, app_id)
+                        ),
+                        app_id,
+                    )
+                    app = self._find_desktop_app(app_id, desktop_apps)
+                    pixbuf = self._get_app_icon(app_data, app)
+                    button.icon_image.set_from_pixbuf(pixbuf)
+
+        # Update running apps
+        for addr, button in self.client_buttons.items():
+            if hasattr(button, "icon_image"):
+                app_class = getattr(button, "app_class", "")
+                app = self._find_desktop_app(app_class, desktop_apps)
+                pixbuf = self._get_app_icon(app_class, app)
+                button.icon_image.set_from_pixbuf(pixbuf)
 
     def destroy(self):
         """Clean up timers and children"""
@@ -131,10 +159,11 @@ class AppBar(Box):
 
         icon_pixbuf = self._get_app_icon(app_data, app)
 
+        icon_image = Image(name="dock_item_icon", pixbuf=icon_pixbuf)
         main_container = Box(
             name="dock_item_main_container",
             orientation="v",
-            children=[Image(name="dock_item_icon", pixbuf=icon_pixbuf)],
+            children=[icon_image],
         )
 
         pinned_button = Button(
@@ -153,14 +182,16 @@ class AppBar(Box):
         )
 
         pinned_button.add_style_class("shown")
+        pinned_button.icon_image = icon_image
 
         self.pinned_buttons[app_identifier] = pinned_button
         self.pinned_apps_container.add(pinned_button)
         self.pinned_items_pos.append(pinned_button)
 
     def _get_app_icon(self, app_data, app=None):
+        icon_size = config().get("dock_icon_size", 52)
         if app:
-            return app.get_icon_pixbuf(data.DOCK_ICON_SIZE)
+            return app.get_icon_pixbuf(icon_size)
 
         icon_name = ""
         if isinstance(app_data, dict):
@@ -169,19 +200,19 @@ class AppBar(Box):
             icon_name = app_data
 
         return self.icon_resolver.get_icon_pixbuf(
-            icon_name or "application-x-executable", data.DOCK_ICON_SIZE
+            icon_name or "application-x-executable", icon_size
         )
 
     def _create_trash_button(self):
         """Create a trash button that opens the trash in file manager"""
-        trash_icon_pixbuf = self.icon_resolver.get_icon_pixbuf(
-            "user-trash", data.DOCK_ICON_SIZE
-        )
+        icon_size = config().get("dock_icon_size", 52)
+        trash_icon_pixbuf = self.icon_resolver.get_icon_pixbuf("user-trash", icon_size)
 
+        trash_icon_image = Image(name="dock_item_icon", pixbuf=trash_icon_pixbuf)
         main_container = Box(
             name="dock_item_main_container",
             orientation="v",
-            children=[Image(name="dock_item_icon", pixbuf=trash_icon_pixbuf)],
+            children=[trash_icon_image],
         )
 
         trash_button = Button(
@@ -199,6 +230,7 @@ class AppBar(Box):
 
         trash_button.add_style_class("shown")
         trash_button.is_trash = True
+        trash_button.icon_image = trash_icon_image
 
         self.pinned_buttons["trash"] = trash_button
         self.pinned_apps_container.add(trash_button)
@@ -646,6 +678,7 @@ class AppBar(Box):
             client_button.client_data = client
             client_button.app_class = app_class
             client_button.workspace_label = workspace_label
+            client_button.icon_image = client_image
             client_button.add_style_class("shown")
 
             self.client_buttons[instance_address] = client_button
@@ -666,7 +699,7 @@ class AppBar(Box):
         return None
 
     def _should_show_app_instance(self, client):
-        if not data.DOCK_HIDE_SPECIAL_WORKSPACE_APPS:
+        if not config().get("dock_hide_special_workspace_apps", True):
             return True
 
         workspace_id = self._get_workspace_id(client)
@@ -755,19 +788,13 @@ class AppBar(Box):
 
 class Dock(Window):
     def __init__(self):
-        dock_config = self._get_dock_config()
-        if not data.DOCK_ENABLED:
-            super().__init__(layer="top", title="dock", anchor=dock_config["anchor"])
-            self.children = Box()  # Empty dock if disabled
-            return
-
-        super().__init__(layer="top", anchor=dock_config["anchor"])
+        super().__init__(layer="top", anchor="bottom center", title="modus-dock")
 
         self.app_bar = AppBar(self)
         self.revealer = Revealer(
             child=Box(children=[self.app_bar], style="padding: 20px 50px 5px 50px;"),
             transition_duration=200,
-            transition_type=dock_config["transition"],
+            transition_type="slide-up",
         )
 
         self.children = EventBox(
@@ -777,16 +804,50 @@ class Dock(Window):
             on_leave_notify_event=lambda *_: self.on_hover_leave(),
         )
 
-        self.revealer.set_reveal_child(True)
-        self.app_bar.add_style_class("shown")
+        self._update_visibility()
 
         self.dock_height = 100
         self.is_hovered = False
         self.hide_ticket = 0
 
-        # Only setup occlusion monitoring if auto-hide is enabled
-        if data.DOCK_AUTO_HIDE:
+        # Subscribe to config changes for hot-reloading
+        on_config_change(self._on_config_change)
+
+        if config().get("dock_auto_hide", True):
             self.setup_occlusion_monitoring()
+
+    def _on_config_change(self, new_config, old_config):
+        # Handle dock visibility
+        if config().has_changed("dock_enabled", old_config):
+            self._update_visibility()
+
+        # Handle icon size changes
+        if config().has_changed("dock_icon_size", old_config):
+            self.app_bar.update_icon_size()
+
+        # Handle auto-hide changes
+        if config().has_changed("dock_auto_hide", old_config):
+            if new_config.get("dock_auto_hide", True):
+                self.setup_occlusion_monitoring()
+            else:
+                if hasattr(self, "_occlusion_timer_id") and self._occlusion_timer_id:
+                    GLib.source_remove(self._occlusion_timer_id)
+                    self._occlusion_timer_id = None
+                self.revealer.set_reveal_child(True)
+                self.app_bar.add_style_class("shown")
+
+        # Handle special workspace apps visibility
+        if config().has_changed("dock_hide_special_workspace_apps", old_config):
+            self.app_bar.update_dock_apps()
+
+    def _update_visibility(self):
+        enabled = config().get("dock_enabled", True)
+        if enabled:
+            self.show()
+            self.revealer.set_reveal_child(True)
+            self.app_bar.add_style_class("shown")
+        else:
+            self.hide()
 
     def on_hover_enter(self):
         self.is_hovered = True
@@ -800,14 +861,10 @@ class Dock(Window):
 
         def delayed_hide(ticket):
             if ticket == self.hide_ticket and not self.is_hovered:
-                # Only hide if we aren't occluded (or if occlusion logic says so)
-                # For now, just trigger the basic hide if auto-hide is on
-                if data.DOCK_AUTO_HIDE:
-                    # Check if actually occluded before hiding if DOCK_ALWAYS_OCCLUDED is false
-                    occlusion_pos = self._get_dock_config()["occlusion"]
-                    is_occluded = data.DOCK_ALWAYS_OCCLUDED or check_occlusion(
-                        (occlusion_pos, self.dock_height)
-                    )
+                if config().get("dock_auto_hide", True):
+                    is_occluded = config().get(
+                        "dock_always_occluded", False
+                    ) or check_occlusion(("bottom", self.dock_height))
                     if is_occluded:
                         self.revealer.set_reveal_child(False)
                         self.app_bar.remove_style_class("shown")
@@ -815,34 +872,18 @@ class Dock(Window):
 
         GLib.timeout_add(500, delayed_hide, self.hide_ticket)
 
-    def _get_dock_config(self):
-        config_map = {
-            "Left": {
-                "anchor": "left center",
-                "transition": "slide-right",
-                "occlusion": "left",
-            },
-            "Right": {
-                "anchor": "right center",
-                "transition": "slide-left",
-                "occlusion": "right",
-            },
-            "Bottom": {
-                "anchor": "bottom center",
-                "transition": "slide-up",
-                "occlusion": "bottom",
-            },
-        }
-        return config_map.get(data.DOCK_POSITION, config_map["Bottom"])
-
     def setup_occlusion_monitoring(self):
+        # Remove existing timer if any
+        if hasattr(self, "_occlusion_timer_id") and self._occlusion_timer_id:
+            GLib.source_remove(self._occlusion_timer_id)
+            self._occlusion_timer_id = None
+
         def check_dock_occlusion():
             try:
-                if data.DOCK_ALWAYS_OCCLUDED:
+                if config().get("dock_always_occluded", False):
                     is_occluded = True
                 else:
-                    occlusion_pos = self._get_dock_config()["occlusion"]
-                    is_occluded = check_occlusion((occlusion_pos, self.dock_height))
+                    is_occluded = check_occlusion(("bottom", self.dock_height))
 
                 if (
                     is_occluded
