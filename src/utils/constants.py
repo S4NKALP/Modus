@@ -1,7 +1,5 @@
 DEFAULT = {
     "wallpapers_dir": "~/Pictures/Wallpapers/",
-    "dock_position": "Bottom",
-    "terminal_command": "kitty -e",
     "dock_enabled": True,
     "dock_auto_hide": True,
     "dock_always_occluded": False,
@@ -24,7 +22,6 @@ DEFAULT = {
     "bluetooth": True,
     "date_time": True,
     "keyboard_layouts": ["us", "np"],
-    "dock": True,
     "window_switcher": True,
     "osd": True,
     "systray_ignore": ["blueman", "network"],
