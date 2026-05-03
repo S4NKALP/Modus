@@ -6,7 +6,7 @@ from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
-from services.config import get_config, on_config_change
+from services.config import on_config_change, get_config_all
 from services.modus import notification_service
 from shared.window.mousecapture import MouseCapture
 from utils.roam import modus_service
@@ -117,7 +117,23 @@ class Panel(Window):
         self.workspace_indicator = WorkspaceIndicator()
         self.recording_indicator = RecordingIndicator()
 
-        # Create boxes and mount, to allow live updates
+        # Create persistent indicators
+        self.battery_indicator = BatteryIndicator()
+        self.network_indicator = NetworkIndicator()
+        self.bluetooth_indicator = BluetoothIndicator()
+
+        self.indicators = Box(
+            name="indicators",
+            orientation="h",
+            spacing=4,
+            children=[
+                self.battery_indicator,
+                self.network_indicator,
+                self.bluetooth_indicator,
+            ],
+        )
+
+        # Create boxes and mount
         self.left_box = Box(name="window-left")
         self.center_box = Box(name="window-center", children=self.recording_indicator)
         self.right_box = Box(name="window-right", spacing=4, orientation="h")
@@ -141,13 +157,13 @@ class Panel(Window):
         self.update_notification_icon()
 
         # Initial layout build
-        self._rebuild_layout_from_config()
+        self._rebuild_layout_from_config(get_config_all())
 
         # Live updates
         on_config_change(self._on_config_changed)
 
         self._update_tray_visibility()
-        self.show_all()
+        self.show()
 
     def on_dnd_changed(self, _, dnd_state):
         self.update_notification_icon()  # Update notification icon when DND changes
@@ -178,57 +194,76 @@ class Panel(Window):
 
         self.notification_icon.dynamic_file(f"notifications/{icon_file}")
 
-    def _rebuild_layout_from_config(self):
+    def _rebuild_layout_from_config(self, config_data=None):
+        if config_data is None:
+            config_data = get_config_all()
+
+        print(f"[Panel] Rebuilding layout with config: {config_data}")
+
+        # Update indicator visibility directly
+        battery_visible = config_data.get("battery", True)
+        network_visible = config_data.get("network", True)
+        bluetooth_visible = config_data.get("bluetooth", True)
+
+        self.battery_indicator.set_visible(battery_visible)
+        self.network_indicator.set_visible(network_visible)
+        self.bluetooth_indicator.set_visible(bluetooth_visible)
+
+        # Ensure they update their internal state
+        if battery_visible:
+            self.battery_indicator.update_state()
+        if network_visible:
+            self.network_indicator.update_state()
+        if bluetooth_visible:
+            self.bluetooth_indicator.update_state()
+
         # Left
         left_children = []
-        if get_config("imac_button", True):
+        if config_data.get("imac_button", True):
             left_children.append(self.imac)
-        if get_config("global_menu", True):
+        if config_data.get("global_menu", True):
             left_children.append(self.globalmenu)
+
+        for child in left_children:
+            child.show()
         self.left_box.children = left_children
-
-        # Indicators (create fresh instances on each rebuild)
-        # First, destroy old indicators to prevent memory leaks
-        for child in list(self.indicators.get_children()):
-            try:
-                child.destroy()
-            except Exception:
-                pass
-        self.indicators.children = []
-
-        indicators_children = []
-        if get_config("battery", True):
-            indicators_children.append(BatteryIndicator())
-        if get_config("network", True):
-            indicators_children.append(NetworkIndicator())
-        if get_config("bluetooth", True):
-            indicators_children.append(BluetoothIndicator())
-        self.indicators.children = indicators_children
 
         # Right
         right_children = []
-        if get_config("workspace_indicator", True):
+        if config_data.get("workspace_indicator", True):
             right_children.append(self.workspace_indicator)
 
-        if get_config("systray", True):
+        if config_data.get("systray", True):
             right_children.extend([self.tray_revealer, self.chevron_button])
 
         right_children.append(self.indicators)
 
-        if get_config("search", True):
+        if config_data.get("search", True):
             right_children.append(self.search)
-        if get_config("control_center", True):
+        if config_data.get("control_center", True):
             right_children.append(self.control_center_btn)
-        if get_config("date_time", True):
+        if config_data.get("date_time", True):
             right_children.append(self.datetime_btn)
-        if get_config("notification_center", True):
+        if config_data.get("notification_center", True):
             right_children.append(self.notification_center_btn)
 
+        for child in right_children:
+            child.show()
         self.right_box.children = right_children
+
+        self.indicators.show()
         self._update_tray_visibility()
-        self.show_all()
+        self.show()
+
+        # Force a layout recalculation
+        self.queue_resize()
+
+        print(
+            f"[Panel] Battery visibility state: {self.battery_indicator.get_visible()}"
+        )
 
     def _on_config_changed(self, new_config, old_config):
+        print("[Panel] Config changed, checking keys...")
         keys = {
             "imac_button",
             "global_menu",
@@ -242,10 +277,11 @@ class Panel(Window):
             "date_time",
             "notification_center",
         }
-        if any(new_config.get(k) != old_config.get(k) for k in keys):
-            self._rebuild_layout_from_config()
+        changed_keys = [k for k in keys if new_config.get(k) != old_config.get(k)]
+        if changed_keys:
+            print(f"[Panel] Rebuilding due to changes in: {changed_keys}")
+            self._rebuild_layout_from_config(new_config)
 
-        # Always update tray visibility on config change just in case
         self._update_tray_visibility()
 
     def _update_tray_visibility(self, *_):

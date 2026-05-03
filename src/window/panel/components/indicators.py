@@ -432,6 +432,7 @@ class BatteryIndicator(Box):
 
     def update_state(self):
         if not self._is_present():
+            print("[Battery] No battery detected, hiding indicator")
             self.set_visible(False)
             return
         else:

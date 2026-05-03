@@ -5,12 +5,13 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
-from shared.dialogs.about import About, AboutApp
+from shared.dialogs.about import AboutApp, get_about_window
 from shared.window.dropdown import ModusDropdown, dropdown_divider, dropdowns
 from shared.window.mousecapture import DropDownMouseCapture
 from utils.app_name_resolver import format_window
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover
+from window.settings.main import get_settings_window
 
 
 def has_active_window():
@@ -111,13 +112,12 @@ class SystemDropdown(ModusDropdown):
             parent=parent,
             dropdown_children=[
                 dropdown_option(
-                    "About this PC", on_clicked=lambda _: About().toggle(_)
+                    "About this PC", on_clicked=lambda _: get_about_window().toggle()
                 ),
                 dropdown_divider("---------------------"),
                 dropdown_option(
                     "System Settings...",
-                    # TODO: Open Modus own setting
-                    # on_click="xdg-open settings",
+                    on_clicked=lambda _: get_settings_window().toggle(),
                 ),
                 dropdown_divider("---------------------"),
                 dropdown_option("Force Quit", "", "hyprctl kill"),
