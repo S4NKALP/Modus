@@ -1,8 +1,7 @@
 import calendar
 import datetime
-import json
 import urllib.parse
-import urllib.request
+import httpx
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -41,17 +40,17 @@ _location_cache: Dict[str, Tuple[float, float, float]] = {}
 def http_get_json(
     url: str, timeout: int = 3, headers: Optional[Dict] = None
 ) -> Optional[Dict]:
-    """Helper to perform GET requests and return JSON using built-in urllib."""
+    """Helper to perform GET requests and return JSON using httpx."""
     try:
         # Some APIs require a User-Agent or they will return 403 Forbidden
         default_headers = {"User-Agent": "Modus-Desktop/1.0"}
         if headers:
             default_headers.update(headers)
-
-        req = urllib.request.Request(url, headers=default_headers)
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            if response.status == 200:
-                return json.loads(response.read().decode("utf-8"))
+        response = httpx.get(
+            url, headers=default_headers, timeout=timeout, follow_redirects=True
+        )
+        if response.status_code == 200:
+            return response.json()
     except Exception as e:
         print(f"HTTP Request to {url} failed: {e}")
     return None
