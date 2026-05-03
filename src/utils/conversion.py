@@ -3,9 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional, Tuple
 
-import json
-import urllib.request
-import urllib.error
+import httpx
 
 
 class CurrencyCache:
@@ -83,16 +81,31 @@ class CurrencyCache:
             url = f"https://www.floatrates.com/daily/{from_code}.json"
             if self._request_timeout is None:
                 self._request_timeout = 5
-            with urllib.request.urlopen(url, timeout=self._request_timeout) as response:
-                if response.getcode() == 200:
-                    rates_data = json.loads(response.read().decode())
+            response = httpx.get(
+                url,
+                timeout=10,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                },
+            )
+            if response.status_code == 200:
+                try:
+                    rates_data = response.json()
                     current_time = time.time()
-
-                with self._cache_lock:
-                    self._cache[from_code] = {
-                        "rates": rates_data,
-                        "timestamp": current_time,
-                    }
+                    with self._cache_lock:
+                        self._cache[from_code] = {
+                            "rates": rates_data,
+                            "timestamp": current_time,
+                        }
+                except Exception as je:
+                    print(f"Failed to parse JSON for {from_code}: {je}")
+            else:
+                print(
+                    f"Background fetch for {from_code} returned status {
+                        response.status_code
+                    }"
+                )
 
         except Exception as e:
             print(f"Background currency fetch failed for {from_code}: {e}")
@@ -420,6 +433,18 @@ class Units:
             "mm2": 1e-6,
         }
 
+        self.CURRENCY_SYMBOLS: dict[str, str] = {
+            "$": "USD",
+            "€": "EUR",
+            "£": "GBP",
+            "¥": "JPY",
+            "₹": "INR",
+            "C$": "CAD",
+            "A$": "AUD",
+            "₣": "CHF",
+            "元": "CNY",
+        }
+
         # We no longer use currency_converter here.
 
 
@@ -527,12 +552,21 @@ class Conversion:
 
         url = f"https://www.floatrates.com/daily/{from_lower}.json"
         try:
-            with urllib.request.urlopen(url, timeout=5) as resp:
-                if resp.getcode() != 200:
-                    raise ValueError(
-                        f"Error getting data from floatrates for {from_code}"
-                    )
-                data = json.loads(resp.read().decode())
+            resp = httpx.get(
+                url,
+                timeout=10,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                },
+            )
+            if resp.status_code != 200:
+                raise ValueError(
+                    f"Error getting data from floatrates for {from_code}: Status {
+                        resp.status_code
+                    }"
+                )
+            data = resp.json()
         except Exception as e:
             raise ValueError(f"Error getting data from floatrates for {from_code}: {e}")
         if to_lower not in data:
@@ -585,9 +619,12 @@ class Conversion:
 
     def clean_type(self, type: str) -> str:
         """
+        If it's currency symbol, convert to code.
         If it's currency (3 letters), convert to uppercase.
         If it ends in 's' (and is not 'celsius'), remove the 's' for
         other units."""
+        if type in self.units.CURRENCY_SYMBOLS:
+            return self.units.CURRENCY_SYMBOLS[type]
         if len(type) == 3 and type.isalpha():
             return type.upper()
         if type.endswith("s") and type.lower() != "celsius":
