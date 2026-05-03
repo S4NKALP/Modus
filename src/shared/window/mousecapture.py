@@ -1,4 +1,4 @@
-from fabric.utils import Any, Gdk, cairo
+from fabric.utils import Any, Gdk, cairo, GLib
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.widget import Widget
@@ -75,52 +75,25 @@ class MouseCapture(Window):
         return False
 
     def _get_child_window_bounds(self) -> tuple[int, int, int, int]:
-        """Calculates absolute screen bounds for the child window using Layer Shell properties"""
+        """Calculates absolute screen bounds for the child window using Gdk origin"""
         try:
-            # Get monitor geometry
-            monitor = self._hyprland.display.get_monitor_at_window(
-                self.child_window.get_window()
-            )
-            if not monitor:
-                monitor = self._hyprland.display.get_default_monitor()
+            window = self.child_window.get_window()
+            if not window:
+                # Fallback to allocation if window isn't mapped yet
+                alloc = self.child_window.get_allocation()
+                return 0, 0, alloc.width, alloc.height
 
-            geom = monitor.get_geometry()
-            mx, my, mw, mh = geom.x, geom.y, geom.width, geom.height
+            # get_origin provides absolute screen coordinates
+            success, x, y = window.get_origin()
+            if not success:
+                alloc = self.child_window.get_allocation()
+                return 0, 0, alloc.width, alloc.height
 
-            # Get child window properties
             alloc = self.child_window.get_allocation()
-            ww, wh = alloc.width, alloc.height
-
-            # fabric's WaylandWindow usually has anchor and margin accessible
-            anchor = self.child_window.anchor
-            margin = self.child_window.margin  # (top, right, bottom, left)
-
-            # Calculation logic based on Layer Shell anchors
-            # X coordinate
-            if GtkLayerShell.Edge.LEFT in anchor and GtkLayerShell.Edge.RIGHT in anchor:
-                x = mx + margin[3]
-            elif GtkLayerShell.Edge.LEFT in anchor:
-                x = mx + margin[3]
-            elif GtkLayerShell.Edge.RIGHT in anchor:
-                x = mx + mw - ww - margin[1]
-            else:  # Centered horizontally
-                x = mx + (mw - ww) // 2 + margin[3] - margin[1]
-
-            # Y coordinate
-            if GtkLayerShell.Edge.TOP in anchor and GtkLayerShell.Edge.BOTTOM in anchor:
-                y = my + margin[0]
-            elif GtkLayerShell.Edge.TOP in anchor:
-                y = my + margin[0]
-            elif GtkLayerShell.Edge.BOTTOM in anchor:
-                y = my + mh - wh - margin[2]
-            else:  # Centered vertically
-                y = my + (mh - wh) // 2 + margin[0] - margin[2]
-
-            return x, y, ww, wh
+            return x, y, alloc.width, alloc.height
 
         except Exception as e:
             print(f"Error calculating child window bounds: {e}")
-            # Fallback to allocation if possible, though likely (0,0)
             alloc = self.child_window.get_allocation()
             return 0, 0, alloc.width, alloc.height
 
@@ -128,27 +101,19 @@ class MouseCapture(Window):
         """Calculates absolute screen bounds for a widget in another window"""
         try:
             toplevel = widget.get_toplevel()
-            if not toplevel:
+            if not toplevel or not toplevel.get_window():
                 return 0, 0, 0, 0
 
-            # Get monitor geometry
-            monitor = self._hyprland.display.get_monitor_at_window(
-                toplevel.get_window()
-            )
-            if not monitor:
-                monitor = self._hyprland.display.get_default_monitor()
-
-            geom = monitor.get_geometry()
-            mx, my = geom.x, geom.y
+            # Get the origin of the window containing the widget
+            success, wx, wy = toplevel.get_window().get_origin()
+            if not success:
+                return 0, 0, 0, 0
 
             # Get relative position within toplevel
             alloc = widget.get_allocation()
-            x, y = widget.translate_coordinates(toplevel, 0, 0) or (0, 0)
+            rx, ry = widget.translate_coordinates(toplevel, 0, 0) or (0, 0)
 
-            # If the toplevel is a Layer Shell window, its (0,0) is monitor relative
-            # but we need to account for its own margin/anchor if it's not full screen.
-            # However, for the Panel (which is usually top-anchored), (0,0) is (monitor_x, monitor_y).
-            return mx + x, my + y, alloc.width, alloc.height
+            return wx + rx, wy + ry, alloc.width, alloc.height
         except Exception as e:
             print(f"Error calculating widget absolute bounds: {e}")
             return 0, 0, 0, 0
@@ -250,13 +215,23 @@ class MouseCapture(Window):
         self.set_child_window_visible(True)
 
     def hide_child_window(self, widget: Widget = None, event: Any = None) -> None:
+
         self.set_child_window_visible(False)
 
     def set_child_window_visible(self, visible: bool) -> None:
         if visible:
+            # Connect to child window size changes to keep input region in sync
+            self._size_handler = self.child_window.connect(
+                "size-allocate", lambda *_: self.update_input_region()
+            )
             self.child_window.show()
             self.show()
+            # Force update with a small delay to ensure window is mapped
+            GLib.timeout_add(50, self.update_input_region)
         else:
+            if hasattr(self, "_size_handler") and self._size_handler:
+                self.child_window.disconnect(self._size_handler)
+                self._size_handler = None
             self.child_window.hide()
             self.hide()
 

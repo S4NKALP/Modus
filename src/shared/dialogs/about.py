@@ -431,6 +431,7 @@ class AboutApp(Gtk.Window):
 class About(Gtk.Window):
     def __init__(self):
         super().__init__(title="About Menu")
+        self.set_wmclass("modus-about", "Modus")
         self.set_default_size(300, 550)
         self.set_size_request(300, 500)
         self.set_resizable(False)
@@ -447,7 +448,7 @@ class About(Gtk.Window):
         # Logo
         logo_box = Gtk.Box(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
         pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-            get_relative_path("../assets/icons/misc/imac.svg"),
+            get_relative_path("../../assets/icons/misc/imac.svg"),
             158,
             108,
             preserve_aspect_ratio=True,
@@ -555,8 +556,19 @@ class About(Gtk.Window):
         # TODO: Implement the logic to open more information
         pass
 
-    def toggle(self, b):
+    def toggle(self, b=None):
         if self.get_visible():
             self.hide()
         else:
             self.show_all()
+            self.present()
+
+
+_about_window = None
+
+
+def get_about_window():
+    global _about_window
+    if _about_window is None:
+        _about_window = About()
+    return _about_window

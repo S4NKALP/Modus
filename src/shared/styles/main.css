@@ -17,6 +17,7 @@
 @import url("./todo.css");
 @import url("./launcher.css");
 @import url("./switcher.css");
+@import url("./settings.css");
 
 * {
     all: unset;

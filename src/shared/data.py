@@ -72,17 +72,17 @@ if os.path.exists(CONFIG_FILE):
     )
 
     PANEL_COMPONENTS_VISIBILITY = {
-        "imac_button": config.get("imac_button_visible", True),
-        "systray": config.get("systray_visible", True),
-        "control_center": config.get("control_center_visible", True),
-        "search": config.get("search_visible", True),
-        "global_menu": config.get("global_menu_visible", True),
-        "network": config.get("network_visible", True),
-        "battery": config.get("battery_visible", True),
-        "notification_center": config.get("notification_center_visible", True),
-        "workspace_indicator": config.get("workspace_indicator_visible", True),
-        "bluetooth": config.get("bluetooth_visible", True),
-        "date_time": config.get("date_time_visible", True),
+        "imac_button": config.get("imac_button", True),
+        "systray": config.get("systray", True),
+        "control_center": config.get("control_center", True),
+        "search": config.get("search", True),
+        "global_menu": config.get("global_menu", True),
+        "network": config.get("network", True),
+        "battery": config.get("battery", True),
+        "notification_center": config.get("notification_center", True),
+        "workspace_indicator": config.get("workspace_indicator", True),
+        "bluetooth": config.get("bluetooth", True),
+        "date_time": config.get("date_time", True),
     }
 
 else:
