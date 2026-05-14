@@ -288,7 +288,7 @@ fi
 progress "Configuring Hyprland"
 
 HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
-MODUS_MODULE_LINE='require("modus")'
+MODUS_MODULE_LINE='dofile("/home/sankalp/.config/Modus/config/hypr/modus.lua")'
 
 if [ -f "$HYPR_CONFIG" ]; then
     step "Checking Hyprland Lua configuration..."
@@ -319,6 +319,47 @@ if killall modus 2>/dev/null; then
     sleep 1
 else
     info "No existing instance found"
+fi
+
+
+progress "Configuring Matugen"
+MATUGEN_CONFIG="$HOME/.config/matugen/config.toml"
+
+MODUS_BLOCK='[templates.modus]
+input_path = "~/.config/Modus/config/matugen/templates/modus.css"
+output_path = "~/.config/Modus/src/shared/styles/colors.css"
+post_hook = "fabric-cli exec modus '\''app.set_css()'\'' &"'
+
+HYPR_BLOCK='[templates.hyprland]
+input_path = "~/.config/Modus/config/matugen/templates/hyprland-colors.lua"
+output_path = "~/.config/Modus/config/matugen/colors.lua"'
+
+if [ -f "$MATUGEN_CONFIG" ]; then
+    step "Checking matugen config..."
+
+    # ---- Modus1 ----
+    if grep -qF "[templates.modus]" "$MATUGEN_CONFIG"; then
+        success "modus1 template already exists"
+    else
+        step "Adding modus1 template..."
+        echo "" >> "$MATUGEN_CONFIG"
+        echo "$MODUS_BLOCK" >> "$MATUGEN_CONFIG"
+        success "modus template added"
+    fi
+
+    # ---- Hyprland ----
+    if grep -qF "[templates.hyprland]" "$MATUGEN_CONFIG"; then
+        success "hyprland template already exists"
+    else
+        step "Adding hyprland template..."
+        echo "" >> "$MATUGEN_CONFIG"
+        echo "$HYPR_BLOCK" >> "$MATUGEN_CONFIG"
+        success "hyprland template added"
+    fi
+
+else
+    warn "matugen config not found at $MATUGEN_CONFIG"
+    info "Create it first or install matugen"
 fi
 
 step "Starting Modus..."
