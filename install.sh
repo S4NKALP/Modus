@@ -287,25 +287,29 @@ fi
 
 progress "Configuring Hyprland"
 
-HYPR_CONFIG="$HOME/.config/hypr/hyprland.conf"
-MODUS_CONF_LINE="source= ~/.config/Modus/config/hypr/modus.conf"
+HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
+MODUS_MODULE_LINE='require("modus")'
 
 if [ -f "$HYPR_CONFIG" ]; then
-    step "Checking Hyprland configuration..."
-    if grep -qF "$MODUS_CONF_LINE" "$HYPR_CONFIG"; then
-        success "Modus configuration already sourced"
+    step "Checking Hyprland Lua configuration..."
+
+    if grep -qF "$MODUS_MODULE_LINE" "$HYPR_CONFIG"; then
+        success "Modus module already loaded"
     else
-        step "Adding Modus configuration to Hyprland..."
-        echo "" >> "$HYPR_CONFIG"
-        echo "# Modus configuration" >> "$HYPR_CONFIG"
-        echo "$MODUS_CONF_LINE" >> "$HYPR_CONFIG"
-        success "Modus configuration added to Hyprland"
+        step "Adding Modus module to Hyprland Lua config..."
+
+        {
+            echo ""
+            echo "-- Modus configuration"
+            echo "$MODUS_MODULE_LINE"
+        } >> "$HYPR_CONFIG"
+
+        success "Modus configuration added"
     fi
 else
-    warn "Hyprland config not found at $HYPR_CONFIG"
-    info "You may need to manually add: $MODUS_CONF_LINE"
+    warn "Hyprland Lua config not found at $HYPR_CONFIG"
+    info "You may need to manually add: $MODUS_MODULE_LINE"
 fi
-
 # Launch Modus
 progress "Launching Modus"
 
