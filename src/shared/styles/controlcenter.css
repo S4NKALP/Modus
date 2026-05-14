@@ -6,7 +6,7 @@
 
 #control-center-menu {
   background-color: transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: none;
   margin: 0;
 }
@@ -14,18 +14,18 @@
 #separator {
   min-height: 0.09rem;
   margin: 3px 0;
-  background-color: alpha(#fff, 0.2);
-  border-radius: 8px;
+  background-color: alpha(@text-main, 0.2);
+  border-radius: var(--radius-sm);
 }
 
 /* #bluetooth-control-window { */
 /* #wifi-control-window, */
 #battery-control-window {
   margin: 6px;
-  /* background-color: alpha(#fff, 0.09); */
-  border: 1px solid alpha(#111, 0.3);
-  box-shadow: inset 0 0 200px 0 alpha(#111, 0.3);
-  border-radius: 15px;
+  /* background-color: alpha(@text-main, 0.09); */
+  border: 1px solid @border-subtle;
+  box-shadow: inset 0 0 200px 0 @border-subtle;
+  border-radius: var(--radius-md);
 }
 
 #bluetooth-title,
@@ -36,9 +36,9 @@
 
 #control-center-widgets {
   background-color: alpha(#010101, 0.01);
-  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
-  /* border: 1px solid alpha(#111, 0.4); */
-  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
+  /* border: 1px solid @border-strong; */
+  border-radius: var(--radius-md);
   padding: 0.5rem;
 }
 
@@ -46,10 +46,10 @@
 
 #wb-widget,
 #brightness-menu {
-  background-color: alpha(#000, 0.08);
-  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
-  border: 1px solid alpha(#111, 0.4);
-  border-radius: 12px;
+  background-color: @bg-darker;
+  box-shadow: inset 0 0 0 0.5px alpha(@text-dim, 0.4);
+  border: 1px solid @border-strong;
+  border-radius: var(--radius-md);
 }
 
 /* Widgets */
@@ -72,7 +72,7 @@
   font-size: 12px;
   margin-left: 5px;
   font-weight: 500;
-  color: #999;
+  color: @text-dim;
 }
 
 /* WiFi Password Dialog */
@@ -81,8 +81,8 @@
 }
 
 #wifi-dialog-background {
-  background-color: alpha(#fff, 0.05);
-  border-radius: 12px;
+  background-color: alpha(@text-main, 0.05);
+  border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 20px;
   min-width: 450px;
@@ -93,12 +93,12 @@
 }
 
 #wifi-dialog-icon {
-  color: #007aff;
+  color: @accent;
   margin-right: 4px;
 }
 
 #wifi-dialog-title {
-  color: #ffffff;
+  color: @text-main;
   font-size: 14px;
   font-weight: 500;
 }
@@ -115,7 +115,7 @@
 }
 
 #wifi-dialog-password-label {
-  color: #ffffff;
+  color: @text-main;
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 4px;
@@ -124,14 +124,14 @@
 #wifi-dialog-password-entry {
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   padding: 8px 12px;
-  color: #ffffff;
+  color: @text-main;
   font-size: 13px;
 }
 
 #wifi-dialog-password-entry:focus {
-  border-color: #007aff;
+  border-color: @accent;
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
   background-color: rgba(255, 255, 255, 0.15);
 }
@@ -144,21 +144,21 @@
   background-color: transparent;
   border: none;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   min-width: 24px;
   min-height: 24px;
 }
 
 #wifi-dialog-show-password-button:hover {
-  background-color: alpha(#fff, 0.1);
+  background-color: @hover;
 }
 
 #wifi-dialog-show-password-button image {
-  color: #ffffff;
+  color: @text-main;
 }
 
 #wifi-dialog-show-password-label {
-  color: #ffffff;
+  color: @text-main;
   font-size: 12px;
 }
 
@@ -168,7 +168,7 @@
 
 #wifi-dialog-cancel-button,
 #wifi-dialog-join-button {
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   font-size: 13px;
   font-weight: 500;
   min-width: 80px;
@@ -178,7 +178,7 @@
 #wifi-dialog-cancel-button {
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  color: @text-main;
 }
 
 #wifi-dialog-cancel-button:hover {
@@ -186,14 +186,14 @@
 }
 
 #wifi-dialog-join-button {
-  background-color: #007aff;
-  border: 1px solid #007aff;
-  color: #ffffff;
+  background-color: @accent;
+  border: 1px solid @accent;
+  color: @text-main;
 }
 
 #wifi-dialog-join-button:hover {
-  background-color: #0056cc;
-  border-color: #0056cc;
+  background-color: @accent-hover;
+  border-color: @accent-hover;
 }
 
 #wifi-dialog-join-button.disabled {
@@ -212,7 +212,7 @@
 #bluetooth-widget-title {
   font-size: 12px;
   font-weight: 500;
-  color: #fff;
+  color: @text-main;
 }
 
 /* #bluetooth-widget-top { */
@@ -221,7 +221,7 @@
 /* } */
 
 #device-icon {
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   padding: 5px;
   margin-bottom: 2.5px;
   margin-top: 2.5px;
@@ -230,7 +230,7 @@
 }
 
 #devices-title {
-  color: alpha(#fff, 0.6);
+  color: @text-secondary;
 }
 
 #device-icon.paired {
@@ -245,14 +245,14 @@
   min-width: 40px;
   min-height: 20px;
   background-color: #bababa;
-  border-radius: 15px;
+  border-radius: var(--radius-md);
   padding: 2px;
   transition: background-color 0.3s ease;
 }
 
 #toggle-button slider {
-  background-color: #fff;
-  border-radius: 50%;
+  background-color: @text-main;
+  border-radius: var(--radius-full);
   min-width: 16px;
   min-height: 8px;
   transition: background-color 0.1s cubic-bezier(0.5, 0.25, 0, 1.25);
@@ -263,7 +263,7 @@
 }
 
 /* #toggle-button:checked slider { */
-/*   background-color: #fff; */
+/*   background-color: @text-main; */
 /* } */
 /**/
 /* #toggle-button:checked image { */
@@ -271,14 +271,14 @@
 /* } */
 
 .menu {
-  background-color: alpha(#000, 0.08);
-  box-shadow: inset 0 0 0 0.5px alpha(#aaa, 0.4);
-  border: 1px solid alpha(#111, 0.4);
-  border-radius: 12px;
+  background-color: @bg-darker;
+  box-shadow: inset 0 0 0 0.5px alpha(@text-dim, 0.4);
+  border: 1px solid @border-strong;
+  border-radius: var(--radius-md);
   margin: 5px;
-  /* background-color: alpha(#999, 0.1); */
+  /* background-color: alpha(@text-dim, 0.1); */
   /* border: 0.5px solid alpha(#000, 0.4); */
-  /* border-radius: 8px; */
+  /* border-radius: var(--radius-sm); */
   padding: 1rem;
 }
 
@@ -303,7 +303,7 @@
 #vol-slider-box {
   /* margin-bottom: 2px; */
   margin-top: -10px;
-  /* border: 1px solid alpha(#fff, 1); */
+  /* border: 1px solid alpha(@text-main, 1); */
 }
 
 #volume-widget-slider {
@@ -325,12 +325,12 @@
 }
 
 #control-center-menu slider {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
+  background: linear-gradient(135deg, @text-main 0%, #f0f1f2 100%);
   border-color: #000;
   min-width: 28px;
   min-height: 28px;
   margin: -2px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   /* background-image: none; */
   /* background-color: transparent; */
   /* min-width: 4px; */
@@ -339,11 +339,11 @@
 }
 
 #control-center-menu slider:hover {
-  border-color: #999;
+  border-color: @text-dim;
   min-width: 30px;
   min-height: 30px;
   margin: -3px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   /* background-image: none; */
   /* background-color: transparent; */
   /* min-width: 4px; */
@@ -354,42 +354,42 @@
 #control-center-menu scale {
   background-color: transparent;
   margin-top: 10px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
 }
 
 #control-center-menu trough {
   min-width: 25px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   background-color: alpha(#666, 0.5);
   border: 1px solid alpha(#444, 0.3);
 }
 
 #control-center-menu highlight {
-  background: alpha(#fff, 0.8);
-  border-radius: 99px;
+  background: alpha(@text-main, 0.8);
+  border-radius: var(--radius-full);
 }
 
 #control-center-menu mark indicator {
   background: none;
   background-image: none;
-  color: alpha(#fff, 0.2);
+  color: alpha(@text-main, 0.2);
 }
 
 #control-center-menu mark label {
   background: none;
   background-image: none;
-  color: alpha(#fff, 0.2);
+  color: alpha(@text-main, 0.2);
 }
 
 /* Per-app volume control styles */
 #per-app-volume-control {
   min-height: 140px;
   min-width: 328px;
-  /* background-color: alpha(#000, 0.3); */
-  /* background-color: alpha(#999, 0.1); */
-  /* box-shadow: inset 0 0 200px 0 alpha(#111, 0.3); */
+  /* background-color: @shadow-color; */
+  /* background-color: alpha(@text-dim, 0.1); */
+  /* box-shadow: inset 0 0 200px 0 @border-subtle; */
   /* border: 0.5px solid alpha(#000, 0.4); */
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 1rem;
 
   /* padding: 1rem; */
@@ -402,37 +402,37 @@
 
 #back-button {
   padding: 8px 12px;
-  background-color: alpha(#fff, 0.1);
-  border-radius: 8px;
+  background-color: @hover;
+  border-radius: var(--radius-sm);
   border: none;
-  color: #fff;
+  color: @text-main;
   font-size: 13px;
   font-weight: 500;
   transition: background-color 0.2s ease;
 }
 
 #back-button:hover {
-  background-color: alpha(#fff, 0.18);
+  background-color: alpha(@text-main, 0.18);
 }
 
 /* Apple-style app volume items */
 .apple-app-volume-item {
   margin: 3px 0;
   padding: 16px;
-  background-color: alpha(#fff, 0.08);
-  border-radius: 12px;
-  border: 1px solid alpha(#fff, 0.12);
-  transition: background-color 0.2s ease;
+  background-color: alpha(@text-main, 0.08);
+  border-radius: var(--radius-md);
+  border: 1px solid alpha(@text-main, 0.12);
+  transition: background-color var(--transition-fast);
 }
 
 .apple-app-volume-item:hover {
-  background-color: alpha(#fff, 0.12);
+  background-color: alpha(@text-main, 0.12);
 }
 
 .apple-app-name {
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: @text-main;
   margin-bottom: 4px;
   letter-spacing: -0.01em;
 }
@@ -449,22 +449,22 @@
   min-width: 28px;
   min-height: 6px;
   border-radius: 3px;
-  background-color: alpha(#fff, 0.25);
+  background-color: alpha(@text-main, 0.25);
   border: none;
   box-shadow: inset 0 1px 2px alpha(#000, 0.2);
 }
 
 #apple-volume-slider highlight {
-  background: linear-gradient(90deg, #007aff 0%, #0051d0 100%);
+  background: linear-gradient(90deg, @accent 0%, #0051d0 100%);
   border-radius: 3px;
   border: none;
-  box-shadow: 0 1px 3px alpha(#007aff, 0.3);
+  box-shadow: 0 1px 3px alpha(@accent, 0.3);
 }
 
 #apple-volume-slider slider {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  /* border: 2px solid alpha(#007aff, 0.8); */
-  border-radius: 50%;
+  /* border: 2px solid alpha(@accent, 0.8); */
+  border-radius: var(--radius-full);
   min-width: 20px;
   min-height: 20px;
   margin: -10px;
@@ -475,11 +475,11 @@
 }
 
 #apple-volume-slider slider:hover {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f1f2 100%);
-  border-color: #007aff;
+  background: linear-gradient(135deg, @text-main 0%, #f0f1f2 100%);
+  border-color: @accent;
   box-shadow:
     0 4px 12px alpha(#000, 0.2),
-    0 2px 6px alpha(#007aff, 0.3);
+    0 2px 6px alpha(@accent, 0.3);
   min-width: 22px;
   min-height: 22px;
   margin: -9px;
@@ -492,22 +492,22 @@
   margin: -9px;
   box-shadow:
     0 2px 6px alpha(#000, 0.25),
-    0 1px 3px alpha(#007aff, 0.4);
+    0 1px 3px alpha(@accent, 0.4);
 }
 
 /* Legacy app volume styles (fallback) */
 .app-volume-item {
   margin: 8px 0;
   padding: 8px;
-  background-color: alpha(#fff, 0.05);
-  border-radius: 6px;
-  border: 1px solid alpha(#fff, 0.1);
+  background-color: alpha(@text-main, 0.05);
+  border-radius: var(--radius-xs);
+  border: 1px solid alpha(@text-main, 0.1);
 }
 
 .app-name {
   font-size: 13px;
   font-weight: 500;
-  color: #fff;
+  color: @text-main;
   margin-bottom: 5px;
 }
 
@@ -518,50 +518,50 @@
 
 #app-volume-slider trough {
   min-width: 20px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   background-color: alpha(#666, 0.5);
   border: 1px solid alpha(#444, 0.3);
 }
 
 #app-volume-slider highlight {
   background: alpha(#0078d4, 0.8);
-  border-radius: 99px;
+  border-radius: var(--radius-full);
 }
 
 #app-volume-slider slider {
-  background-color: #fff;
+  background-color: @text-main;
   padding: 2px;
   min-width: 4px;
   min-height: 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
 }
 
 /* Circle button for per-app volume */
 #per-app-volume-button {
-  background-color: alpha(#fff, 0.15);
-  border: 1px solid alpha(#999, 0.6);
+  background-color: alpha(@text-main, 0.15);
+  border: 1px solid alpha(@text-dim, 0.6);
   /* min-width: 33px; */
   /* min-height: 30px; */
-  border-radius: 50%;
+  border-radius: var(--radius-full);
 }
 
 #per-app-volume-button:hover {
-  background-color: alpha(#fff, 0.25);
-  /* border-color: #007aff; */
+  background-color: alpha(@text-main, 0.25);
+  /* border-color: @accent; */
   box-shadow: 0 4px 12px alpha(#000, 0.2);
 }
 
 #per-app-volume-button:active {
-  background-color: alpha(#fff, 0.2);
+  background-color: alpha(@text-main, 0.2);
   box-shadow: 0 1px 3px alpha(#000, 0.3);
 }
 
 #per-app-volume-icon {
-  background-color: alpha(#fff, 0.15);
+  background-color: alpha(@text-main, 0.15);
 
-  border: 2px solid alpha(#999, 0.6);
+  border: 2px solid alpha(@text-dim, 0.6);
 
-  border-radius: 50%;
+  border-radius: var(--radius-full);
 
   min-width: 30px;
 }
@@ -578,40 +578,40 @@
   min-width: 28px;
   min-height: 3px;
   border-radius: 1.5px;
-  background-color: alpha(#fff, 0.3);
+  background-color: alpha(@text-main, 0.3);
   border: none;
   box-shadow: inset 0 1px 1px alpha(#000, 0.1);
 }
 
 #apple-seek-bar highlight {
-  background: #007aff;
+  background: @accent;
   border-radius: 1.5px;
   border: none;
-  box-shadow: 0 0 2px alpha(#007aff, 0.4);
+  box-shadow: 0 0 2px alpha(@accent, 0.4);
 }
 
 #apple-seek-bar slider {
   background: #ffffff;
-  border: 1px solid alpha(#007aff, 0.8);
-  border-radius: 50%;
+  border: 1px solid alpha(@accent, 0.8);
+  border-radius: var(--radius-full);
   min-width: 12px;
   min-height: 12px;
   margin: -4.5px;
   box-shadow:
     0 1px 3px alpha(#000, 0.2),
-    0 0 0 1px alpha(#fff, 0.8);
+    0 0 0 1px alpha(@text-main, 0.8);
   transition: all 0.1s ease;
 }
 
 #apple-seek-bar slider:hover {
-  background: #ffffff;
-  border-color: #007aff;
+  background: @text-main;
+  border-color: @accent;
   min-width: 14px;
   min-height: 14px;
   margin: -5.5px;
   box-shadow:
     0 2px 6px alpha(#000, 0.25),
-    0 0 0 2px alpha(#007aff, 0.3);
+    0 0 0 2px alpha(@accent, 0.3);
 }
 
 #apple-seek-bar slider:active {
@@ -621,7 +621,7 @@
   margin: -5px;
   box-shadow:
     0 1px 3px alpha(#000, 0.3),
-    0 0 0 2px alpha(#007aff, 0.5);
+    0 0 0 2px alpha(@accent, 0.5);
 }
 
 /* macOS-style expanded player - more compact */
@@ -681,7 +681,7 @@
 #macos-player-title {
   font-weight: 600;
   font-size: 16px;
-  color: #ffffff;
+  color: @text-main;
   margin-bottom: 2px;
 }
 
@@ -689,14 +689,14 @@
   font-weight: 400;
   margin-top: -2px;
   font-size: 13px;
-  color: alpha(#999, 0.8);
+  color: alpha(@text-dim, 0.8);
 }
 
 #macos-player-album {
   font-weight: 400;
   margin-top: -4px;
   font-size: 13px;
-  color: alpha(#999, 0.8);
+  color: alpha(@text-dim, 0.8);
   margin-bottom: 8px;
 }
 
@@ -712,12 +712,12 @@
 
   min-height: 2px;
   border-radius: 2px;
-  background-color: alpha(#fff, 0.25);
+  background-color: alpha(@text-main, 0.25);
   border: none;
 }
 
 #macos-seek-bar highlight {
-  background: #ffffff;
+  background: @text-main;
   border-radius: 2px;
   border: none;
 }
@@ -743,7 +743,7 @@
 #macos-position-label,
 #macos-length-label {
   font-size: 11px;
-  color: alpha(#999, 0.9);
+  color: alpha(@text-dim, 0.9);
   font-weight: 400;
 }
 
@@ -756,15 +756,15 @@
 #macos-control-button {
   background: transparent;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   min-width: 28px;
   /* Slightly smaller */
   opacity: 0.7;
   min-height: 28px;
   padding: 5px;
   /* Reduced padding */
-  color: #ffffff;
-  transition: all 0.15s ease;
+  color: @text-main;
+  transition: all var(--transition-fast) ease;
 }
 
 #macos-control-button:hover {
@@ -774,15 +774,15 @@
 #macos-play-button {
   background: transparent;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   min-width: 36px;
   /* Slightly smaller */
   opacity: 0.7;
   min-height: 36px;
   padding: 7px;
   /* Reduced padding */
-  color: #ffffff;
-  transition: all 0.15s ease;
+  color: @text-main;
+  transition: all var(--transition-fast) ease;
 }
 
 #macos-play-button:hover {
@@ -796,9 +796,9 @@
 }
 
 .macos-switcher-dot {
-  background: alpha(#fff, 0.3);
+  background: alpha(@text-main, 0.3);
   /* border: none; */
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   min-width: 12px;
   /* Smaller dots */
   min-height: 12px;
@@ -808,12 +808,12 @@
 }
 
 .macos-switcher-dot:hover {
-  background: alpha(#fff, 0.5);
+  background: alpha(@text-main, 0.5);
 }
 
 .macos-switcher-dot.active {
-  background: #ffffff;
-  box-shadow: 0 0 0 1px alpha(#fff, 0.3);
+  background: @text-main;
+  box-shadow: 0 0 0 1px alpha(@text-main, 0.3);
   /* Smaller glow */
 }
 
@@ -822,7 +822,7 @@
 .compact-app-volume-item {
   padding-bottom: 5px;
   padding-right: 14px;
-  border-bottom: 1px solid alpha(#fff, 0.1);
+  border-bottom: 1px solid @hover;
 }
 
 #app-icon {
@@ -851,7 +851,7 @@
 
   min-height: 2px;
   border-radius: 2px;
-  background-color: alpha(#fff, 0.25);
+  background-color: alpha(@text-main, 0.25);
   border: none;
 }
 
@@ -883,18 +883,18 @@
 #wifi-connections,
 #bluetooth-connections {
   /* background-color: rgba(255, 255, 255, 0.08); */
-  background-color: alpha(#fff, 0.05);
-  box-shadow: inset 0 0 0 1px alpha(#aaa, 0.4);
-  border: 1px solid alpha(#111, 0.4);
-  border-radius: 8px;
+  background-color: alpha(@text-main, 0.05);
+  box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
+  border: 1px solid @border-strong;
+  border-radius: var(--radius-sm);
   /* padding: 0.5rem; */
-  /* border-radius: 12px; */
+  /* border-radius: var(--radius-md); */
   padding: 10px;
 }
 
 /* WiFi network slots - macOS style */
 #wifi-network-slot button {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 4px 4px;
   /* min-width: 280px; */
   margin: 2px 0;
@@ -910,12 +910,12 @@
 }
 
 #wifi-connections #device-icon.connected {
-  background-color: #007aff;
-  color: #ffffff;
+  background-color: @accent;
+  color: @text-main;
 }
 
 #wifi-network-name {
-  color: #ffffff;
+  color: @text-main;
   font-size: 14px;
   font-weight: 500;
 }
@@ -932,7 +932,7 @@
   padding: 8px 6px;
   margin-bottom: -12px;
   margin-top: -6px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   /* transition: background-color 0.2s ease; */
 }
 
@@ -946,7 +946,7 @@
 
 #device-button {
   /* background-color: #000; */
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .device-slot:hover {
@@ -968,19 +968,19 @@
   padding-left: 5px;
   margin-top: -2px;
   font-weight: bold;
-  color: #ffffff;
+  color: @text-main;
 }
 
 .wifi-icon-box {
   background-color: #aaaaaa;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   padding: 2px;
   /* margin-right: 8px; */
 }
 
 .wifi-icon-box-connected {
-  background-color: #007aff;
-  border-radius: 50%;
+  background-color: @accent;
+  border-radius: var(--radius-full);
   padding: 2px;
   /* margin-right: 8px; */
 }

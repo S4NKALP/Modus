@@ -1,7 +1,7 @@
 tooltip {
   border: #474747 solid 1px;
   border-radius: 0.75rem;
-  background-color: alpha(#fff, 0.05);
+  background-color: alpha(@text-main, 0.05);
 }
 
 @keyframes tooltipShow {
@@ -23,7 +23,7 @@ menu {
   border: #474747 solid 1px;
   border-radius: 0.75rem;
   transition: all 100ms ease-in-out;
-  background-color: alpha(#fff, 0.05);
+  background-color: alpha(@text-main, 0.05);
 }
 
 menu > menuitem {
@@ -39,12 +39,12 @@ menu > menuitem:last-child {
 menu > menuitem:hover {
   transition: all 20ms ease-in-out;
   font-size: 13px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   color: #222;
   background-color: alpha(#2369ff, 1);
 }
 
 menu > menuitem:hover > label {
-  color: #fff;
+  color: @text-main;
   font-weight: 400;
 }

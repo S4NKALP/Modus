@@ -11,8 +11,8 @@
   transition: all 0.7s ease-in-out;
 }
 #password-entry {
-  background-color: alpha(#fff, 0.4);
-  border-radius: 20px;
+  background-color: alpha(@text-main, 0.4);
+  border-radius: var(--radius-xl);
   color: white;
   min-width: 220px;
   min-height: 40px;
@@ -33,7 +33,7 @@
 }
 #lock-date label {
   background-color: transparent;
-  color: alpha(#fff, 0.6);
+  color: alpha(@text-main, 0.6);
   border: none;
   font-size: 30px;
   margin-top: 80px;
@@ -41,7 +41,7 @@
 }
 #lock-clock label {
   background-color: transparent;
-  color: alpha(#fff, 0.6);
+  color: alpha(@text-main, 0.6);
   border: none;
   font-size: 120px;
   margin-top: -20px;
@@ -50,7 +50,7 @@
 
 #face-icon image {
   margin-bottom: 10px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
 }
 #face-icon {
   padding-bottom: 10px;
@@ -61,6 +61,6 @@
 }
 #unlock-text {
   font-size: 15px;
-  color: alpha(#fff, 0.6);
+  color: alpha(@text-main, 0.6);
   font-weight: bold;
 }

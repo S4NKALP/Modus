@@ -2,8 +2,8 @@
   margin: 5px 5px 20px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: 18px;
-  transition: all 0.5s ease-in-out;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-slow);
   background: #202020;
 }
 
@@ -92,7 +92,7 @@
   margin: 5px 20px 20px 10px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 #calendar-widget {
@@ -113,7 +113,7 @@
 #calendar-day-header {
   font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: @text-main;
   min-width: 18px;
   min-height: 10px;
 }
@@ -130,7 +130,7 @@
   font-size: 12px;
   margin: 1.4px 0px 1.4px 0px;
   font-weight: 500;
-  color: #ffffff;
+  color: @text-main;
   min-width: 18px;
   min-height: 10px;
 }
@@ -148,7 +148,7 @@
   font-weight: 700;
   color: #191919;
   background-color: var(--blue-dim);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   min-width: 18px;
   min-height: 16px;
   padding: 2px;
@@ -174,12 +174,12 @@
   padding: 5px;
   margin-top: 10px;
   font-size: 30px;
-  color: alpha(#fff, 0.9);
+  color: alpha(@text-main, 0.9);
   font-weight: 600;
 }
 
 #date label {
-  color: alpha(#fff, 0.9);
+  color: alpha(@text-main, 0.9);
 
   margin-top: -10px;
   font-size: 90px;
@@ -195,7 +195,7 @@
   margin: 5px 10px 20px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 /* System Info Widget CSS  */
@@ -204,7 +204,7 @@
   margin: 5px 5px 5px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 #ram-progress {
@@ -252,7 +252,7 @@
 #info-value {
   font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: @text-main;
 }
 
 #info-container {

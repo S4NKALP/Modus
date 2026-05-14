@@ -3,8 +3,8 @@
     padding: 4px 4px;
     margin: 4px 4px;
     border: none;
-    border-radius: 16px;
-    transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast) cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 #dock.shown {
@@ -54,13 +54,13 @@
 #dock_item_icon {
     border-radius: 13px;
     opacity: 0.7;
-    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: all var(--transition-fast) cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 /* #dock_item_indicator { */
 /*   transition: all 0.15s ease-out; */
 /*   min-height: 4px; */
-/*   border-radius: 4px; */
+/*   border-radius: var(--radius-xs); */
 /* } */
 
 #dock_item {
@@ -82,7 +82,7 @@
     min-height: 50px;
     margin: 0px 4px;
     border-radius: 2px;
-    background-color: #2b5ea7;
+    background-color: @accent;
 }
 
 .dock_separator.hidden {

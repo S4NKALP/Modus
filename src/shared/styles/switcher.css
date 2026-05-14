@@ -1,6 +1,6 @@
 #application-switcher-container {
     background-color: var(--shadow);
-    border-radius: 20px;
+    border-radius: var(--radius-xl);
     padding: 24px;
 }
 
@@ -17,7 +17,7 @@
 
 #window-button {
     background-color: transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
 }
 
 #window-button.active {
@@ -39,7 +39,7 @@
 }
 
 #switcher-icon-box {
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 4px;
 }
 

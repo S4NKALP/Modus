@@ -1,6 +1,32 @@
 @define-color bg alpha(#fff, 0.07);
 @define-color hover alpha(#fff, 0.1);
-
 @define-color border var(--outline);
 @define-color active alpha(#fff, 0.9);
 @define-color urgent alpha(var(--on-error), 0.7);
+
+/* New common colors */
+@define-color accent #007aff;
+@define-color accent-hover #0056cc;
+@define-color bg-lighter alpha(#fff, 0.12);
+@define-color bg-darker alpha(#000, 0.08);
+@define-color text-main #ffffff;
+@define-color text-secondary alpha(#fff, 0.6);
+@define-color text-dim #999;
+@define-color shadow-color alpha(#000, 0.3);
+
+/* Border and Shadow specific */
+@define-color border-subtle alpha(#111, 0.3);
+@define-color border-strong alpha(#111, 0.4);
+@define-color inner-shadow alpha(#000, 0.3);
+
+/* Constants */
+:vars {
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-full: 999px;
+    --transition-fast: 0.15s ease;
+    --transition-slow: 0.3s ease;
+}
