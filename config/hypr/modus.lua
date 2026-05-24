@@ -1,4 +1,4 @@
-local modus = "/home/sankalp/.config/Modus"
+local modus = "$HOME/.config/Modus"
 
 hl.on("hyprland.start", function()
 	local cmds = {
@@ -54,7 +54,7 @@ for _, rule in ipairs(layer_rules) do
 	hl.layer_rule(rule)
 end
 
--- Keybinds
+
 local fabricSend = "fabric-cli exec modus1"
 
 -- Reload Modus
