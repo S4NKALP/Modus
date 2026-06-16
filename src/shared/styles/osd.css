@@ -4,7 +4,7 @@
     margin: 70px;
     min-width: 180px;
     min-height: 200px;
-    border-radius: var(--radius-lg);
+    border-radius: apply(radius-lg);
 }
 
 #osd-container scale {
@@ -16,11 +16,11 @@
     min-height: 15px;
     margin-right: 4px;
     transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border-radius: var(--radius-lg);
+    border-radius: apply(radius-lg);
 }
 
 #osd-container trough highlight {
-    border-radius: var(--radius-full);
+    border-radius: apply(radius-full);
     background: var(--primary);
     transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }

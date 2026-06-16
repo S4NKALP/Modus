@@ -33,7 +33,7 @@
 #tray-button {
     margin: 5px 0;
     padding: 0 2px;
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
 }
 
 #menubar label,
@@ -45,7 +45,7 @@
 #global-menu {
     margin: 5px 2px;
     padding: 0 5px;
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
 }
 
 #date-time {
@@ -55,7 +55,7 @@
 #workspaces>button {
     margin: 6px 0;
     padding: 0 16px;
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
     min-width: 12px;
     border: 1px solid @border;
 }

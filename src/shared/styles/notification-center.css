@@ -2,7 +2,7 @@
   background-color: transparent;
 
   /* border: 1px solid @border-subtle; */
-  border-radius: var(--radius-xl);
+  border-radius: apply(radius-xl);
   margin-right: 10px;
   /* padding: 20px; */
   /* margin: 6px; */
@@ -14,7 +14,7 @@
   min-height: 25px;
   min-width: 70px;
   border: 1px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   margin-top: 10px;
 }
 
@@ -35,7 +35,7 @@
 #single-notification-content {
   background-color: alpha(#1c2328, 0.05);
   border: 1.5px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   padding: 12px;
   transition: all 0.2s ease;
 }
@@ -55,7 +55,7 @@
 #stack-shadow-bottom {
   background-color: alpha(#1c2328, 0.05);
   border-top: 1px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   opacity: 1;
   min-height: 16px;
   margin-left: 20px;
@@ -68,7 +68,7 @@
   background-color: alpha(#1c2328, 0.05);
 
   border-top: 1px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   opacity: 1;
   min-height: 20px;
   margin-left: 10px;
@@ -81,7 +81,7 @@
   background-color: alpha(#1c2328, 0.05);
 
   border: 1.2px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   padding: 12px;
   transition: all 0.2s ease;
 }
@@ -104,7 +104,7 @@
 #notification-content-collapsed {
   background-color: alpha(#000, 0.05);
   border: 1px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   padding: 12px;
   margin: 2px 0;
   transition: all 0.2s ease;
@@ -145,7 +145,7 @@
   background-color: transparent;
   color: rgba(255, 255, 255, 0.7);
   border: 1px solid alpha(@text-main, 0.2);
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
   padding: 2px 8px;
   font-size: 11px;
   margin-right: 8px;
@@ -160,7 +160,7 @@
   background-color: transparent;
   color: rgba(255, 255, 255, 0.7);
   border: 1px solid alpha(@text-main, 0.2);
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
   padding: 2px 8px;
   font-size: 12px;
   min-width: 24px;
@@ -191,7 +191,7 @@
 .stacked-notification-item {
   background-color: alpha(#000, 0.05);
   border: 1px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -226,7 +226,7 @@
 /* Make expanded notifications clickable with subtle hover effect */
 #expanded-notification-list:hover {
   background-color: alpha(#111, 0.9);
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
   transition: background-color 0.2s ease;
 }
 
@@ -239,13 +239,13 @@
   background-color: alpha(#1c2328, 0.05);
   font-size: 12px;
   margin: 10px;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
 }
 
 #notification-close-all {
   margin: 10px 10px 10px 0;
   background-color: alpha(#1c2328, 0.05);
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
 }
 
 #notif-close-button {
@@ -270,7 +270,7 @@
   min-height: 40px;
   padding: 10px;
   border: 1px solid #525155;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
 }
 
 #notification-centre-notifs:last-child {
@@ -284,13 +284,13 @@
 #notification-close-header {
   min-width: 23px;
   min-height: 23px;
-  border-radius: var(--radius-full);
+  border-radius: apply(radius-full);
 }
 #notification-close:hover {
   background-color: alpha(#666, 0.8);
   min-width: 23px;
   min-height: 23px;
-  border-radius: var(--radius-full);
+  border-radius: apply(radius-full);
 }
 #notification-close-summery:hover .notification-close-header button {
   background-color: transparent;

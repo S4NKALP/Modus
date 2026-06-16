@@ -2,8 +2,8 @@
   margin: 5px 5px 20px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-slow);
+  border-radius: apply(radius-lg);
+  transition: all apply(transition-slow);
   background: #202020;
 }
 
@@ -92,7 +92,7 @@
   margin: 5px 20px 20px 10px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: var(--radius-lg);
+  border-radius: apply(radius-lg);
 }
 
 #calendar-widget {
@@ -148,7 +148,7 @@
   font-weight: 700;
   color: #191919;
   background-color: var(--blue-dim);
-  border-radius: var(--radius-full);
+  border-radius: apply(radius-full);
   min-width: 18px;
   min-height: 16px;
   padding: 2px;
@@ -195,7 +195,7 @@
   margin: 5px 10px 20px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: var(--radius-lg);
+  border-radius: apply(radius-lg);
 }
 
 /* System Info Widget CSS  */
@@ -204,7 +204,7 @@
   margin: 5px 5px 5px 5px;
   min-width: 170px;
   min-height: 170px;
-  border-radius: var(--radius-lg);
+  border-radius: apply(radius-lg);
 }
 
 #ram-progress {

@@ -1,6 +1,6 @@
 #settings-window {
     background-color: var(--background);
-    border-radius: var(--radius-md);
+    border-radius: apply(radius-md);
     border: 1px solid var(--border);
     min-width: 850px;
     min-height: 600px;
@@ -19,7 +19,7 @@
 
 #settings-sidebar-button {
     padding: 10px 15px;
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
     margin-bottom: 2px;
 }
 
@@ -53,7 +53,7 @@
 
 #settings-row {
     padding: 12px 15px;
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
     background-color: rgba(255, 255, 255, 0.03);
     margin-bottom: 2px;
 }
@@ -71,7 +71,7 @@
 #settings-switch {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 6px 12px;
-    border-radius: var(--radius-xl);
+    border-radius: apply(radius-xl);
     min-width: 50px;
     transition: all 0.2s ease;
 }
@@ -84,7 +84,7 @@
 #settings-entry {
     background-color: rgba(255, 255, 255, 0.05);
     padding: 8px 12px;
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
     border: 1px solid var(--border);
     min-width: 200px;
     color: var(--foreground);
@@ -97,7 +97,7 @@
 #settings-combo {
     background-color: rgba(255, 255, 255, 0.05);
     padding: 4px 8px;
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
     border: 1px solid var(--border);
     min-width: 150px;
     color: var(--foreground);
@@ -113,7 +113,7 @@
 
 #settings-list-tag {
     background-color: rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
+    border-radius: apply(radius-md);
     padding: 4px 10px;
     margin-right: 5px;
     margin-bottom: 5px;
@@ -141,6 +141,6 @@
     background-color: rgba(255, 255, 255, 0.03);
     border: 1px dashed var(--border);
     padding: 6px 12px;
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
     font-size: 13px;
 }

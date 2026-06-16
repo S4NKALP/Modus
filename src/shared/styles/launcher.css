@@ -1,7 +1,7 @@
 #launcher {
     background-color: @shadow-color;
     padding: 0;
-    border-radius: var(--radius-md);
+    border-radius: apply(radius-md);
     min-width: 640px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -17,7 +17,7 @@
 #close-button,
 #config-button {
     background-color: transparent;
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
     padding: 6px;
     transition: all 0.15s ease;
 }
@@ -27,13 +27,13 @@
 #config-button:hover,
 #config-button:focus {
     background-color: rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
 }
 
 #close-button.focused,
 #config-button.focused {
     background-color: rgba(0, 122, 255, 0.2);
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
     box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.4);
 }
 
@@ -47,7 +47,7 @@
 
 #close-button:active {
     background-color: rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
 }
 
 #close-label {
@@ -61,7 +61,7 @@
 
 #config-button:active {
     background-color: rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xs);
+    border-radius: apply(radius-xs);
 }
 
 #config-label {
@@ -134,11 +134,11 @@
 }
 
 #launcher-result-item {
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
     padding: 12px 16px;
     margin: 2px 0;
     min-height: 64px;
-    transition: all var(--transition-fast);
+    transition: all apply(transition-fast);
     background: transparent;
 }
 
@@ -156,7 +156,7 @@
 #launcher-result-item:selected,
 #launcher-result-item:hover,
 #launcher-result-item.selected {
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
     background-color: alpha(@accent, 0.8);
     padding: 12px 16px;
     margin: 2px 0;
@@ -187,7 +187,7 @@
     min-width: 56px;
     min-height: 56px;
     margin-right: 16px;
-    border-radius: var(--radius-md);
+    border-radius: apply(radius-md);
 }
 
 #result-item-title {
@@ -218,7 +218,7 @@
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.9);
     padding: 12px;
-    border-radius: var(--radius-sm);
+    border-radius: apply(radius-sm);
     margin-bottom: 8px;
     font-size: 14px;
 }

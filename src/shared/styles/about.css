@@ -12,7 +12,7 @@
 
 #about-options {
   background-color: alpha(#333, 0.9);
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   padding: 2rem;
 }
 
@@ -61,7 +61,7 @@
 
 #more-info-button {
   background-color: #888888;
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
   padding: 0px 10px;
   margin: 1px 2px;
   transition: all 200ms ease-in-out;

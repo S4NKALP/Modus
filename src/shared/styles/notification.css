@@ -1,7 +1,7 @@
 #notification {
   padding: 10px;
   background-color: alpha(@text-main, 0.03);
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
   margin-top: 10px;
   margin-right: 10px;
   /* margin: 5px; */
@@ -9,7 +9,7 @@
 
 #notification-close-button {
   background-color: alpha(@text-dim, 0.3);
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
 }
 #notification-close-button:hover {
   background-color: alpha(@accent, 0.9);
@@ -18,8 +18,8 @@
 #notification-action-buttons button {
   background-color: alpha(@text-dim, 0.3);
   padding: 4px;
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast);
+  border-radius: apply(radius-sm);
+  transition: background-color apply(transition-fast);
 }
 
 #notification-action-buttons button:hover {
@@ -35,11 +35,11 @@
 }
 
 #notification-icon {
-  border-radius: var(--radius-lg);
+  border-radius: apply(radius-lg);
 }
 
 #notification-image {
-  border-radius: var(--radius-lg);
+  border-radius: apply(radius-lg);
   color: var(--on-surface);
 }
 
@@ -64,9 +64,9 @@
 
 #notif-close-button {
   background-color: var(--surface);
-  border-radius: var(--radius-lg);
+  border-radius: apply(radius-lg);
   padding: 4px;
-  transition: background-color var(--transition-fast);
+  transition: background-color apply(transition-fast);
 }
 
 #notif-close-button:hover,

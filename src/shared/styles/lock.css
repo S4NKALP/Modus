@@ -12,7 +12,7 @@
 }
 #password-entry {
   background-color: alpha(@text-main, 0.4);
-  border-radius: var(--radius-xl);
+  border-radius: apply(radius-xl);
   color: white;
   min-width: 220px;
   min-height: 40px;
@@ -50,7 +50,7 @@
 
 #face-icon image {
   margin-bottom: 10px;
-  border-radius: var(--radius-full);
+  border-radius: apply(radius-full);
 }
 #face-icon {
   padding-bottom: 10px;

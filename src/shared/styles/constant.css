@@ -20,13 +20,12 @@
 @define-color inner-shadow alpha(#000, 0.3);
 
 /* Constants */
-:vars {
-    --radius-xs: 4px;
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 20px;
-    --radius-full: 999px;
-    --transition-fast: 0.15s ease;
-    --transition-slow: 0.3s ease;
-}
+/* :vars replaced by defines */
+    @define radius-xs 4px;
+    @define radius-sm 8px;
+    @define radius-md 12px;
+    @define radius-lg 16px;
+    @define radius-xl 20px;
+    @define radius-full 999px;
+    @define transition-fast 0.15s;
+    @define transition-slow 0.3s;

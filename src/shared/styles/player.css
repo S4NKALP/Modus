@@ -1,5 +1,5 @@
 #player-stack-button {
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
   min-width: 7px;
   min-height: 7px;
   margin: 10px 3px;
@@ -17,14 +17,14 @@
 }
 
 #player-stack-button.active {
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
   background-color: rgb(221.25, 221.25, 223.65);
 }
 
 #outer-player-box {
   min-height: 110px;
   min-width: 320px;
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
   margin: 0 6px;
   background-color: @shadow-color;
   box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
@@ -33,7 +33,7 @@
 #outer-player-box-c {
   min-height: 55px;
   min-width: 245px;
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
   /* margin: 0 6px; */
   /* background-color: @shadow-color; */
   /* box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4); */
@@ -41,7 +41,7 @@
 #outer-no-player-box-c {
   min-height: 55px;
   min-width: 345px;
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
   /* margin: 0 6px; */
   /* background-color: @shadow-color; */
   /* box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4); */
@@ -50,7 +50,7 @@
   background-color: @bg-darker;
   box-shadow: inset 0 0 0 0.5px alpha(@text-dim, 0.4);
   border: 1px solid @border-strong;
-  border-radius: var(--radius-md);
+  border-radius: apply(radius-md);
   margin-top: 0.5rem;
   margin-left: 4px;
   margin-right: 4px;
@@ -58,7 +58,7 @@
 
   min-height: 50px;
   min-width: 330px;
-  /* border-radius: var(--radius-sm); */
+  /* border-radius: apply(radius-sm); */
   /* margin: 0 6px 10px; */
   /* border: 0.5px solid alpha(#000, 0.4); */
   /* background-color: alpha(@text-dim, 0.1); */
@@ -142,7 +142,7 @@
   margin-bottom: 10px;
   background-size: cover;
   margin-left: 10px;
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
 }
 .album-image {
   min-width: 70px;
@@ -162,17 +162,17 @@
 #seek-bar scale {
   background-color: transparent;
   margin-top: 10px;
-  border-radius: var(--radius-sm);
+  border-radius: apply(radius-sm);
 }
 
 #seek-bar trough {
   min-width: 10px;
-  border-radius: var(--radius-full);
+  border-radius: apply(radius-full);
   background-color: alpha(#666, 0.5);
   border: 1px solid alpha(#444, 0.3);
 }
 
 #seek-bar highlight {
   background: alpha(@text-main, 0.8);
-  border-radius: var(--radius-full);
+  border-radius: apply(radius-full);
 }

@@ -39,7 +39,7 @@ menu > menuitem:last-child {
 menu > menuitem:hover {
   transition: all 20ms ease-in-out;
   font-size: 13px;
-  border-radius: var(--radius-xs);
+  border-radius: apply(radius-xs);
   color: #222;
   background-color: alpha(#2369ff, 1);
 }
