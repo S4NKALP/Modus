@@ -47,6 +47,7 @@ PACKAGES=(
     power-profiles-daemon
     uwsm
     cinnamon-desktop
+    ddcutil
 )
 
 # Colors and formatting
