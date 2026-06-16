@@ -1,8 +1,13 @@
 import json
-import subprocess
 from typing import List
 
-from fabric.utils import DesktopApp, get_desktop_applications, get_relative_path, re
+from fabric.utils import (
+    DesktopApp,
+    get_desktop_applications,
+    get_relative_path,
+    re,
+    exec_shell_command_async,
+)
 
 from utils.roam import modus_service
 from window.launcher.plugin_base import PluginBase
@@ -146,8 +151,10 @@ class ApplicationsPlugin(PluginBase):
         cleaned_command = re.sub(r"%\w+", "", app.command_line).strip()
 
         # Final command with hyprctl dispatch
-        final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
-        subprocess.Popen(final_command, shell=True)
+        final_command = (
+            f"hyprctl dispatch 'hl.dsp.exec_cmd([[uwsm app -- {cleaned_command}]])'"
+        )
+        exec_shell_command_async(final_command)
 
         # app.launch()
 

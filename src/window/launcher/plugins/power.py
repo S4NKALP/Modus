@@ -99,4 +99,4 @@ class PowerPlugin(PluginBase):
         exec_shell_command_async("systemctl suspend")
 
     def logout(self, *args) -> None:
-        exec_shell_command_async("hyprctl dispatch exit")
+        exec_shell_command_async("hyprctl dispatch 'hl.dsp.exit()'")
