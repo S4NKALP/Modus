@@ -1,4 +1,5 @@
 import os
+
 from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
@@ -24,7 +25,7 @@ for log in [
 def main():
 
     # Generate colors.css if it doesn't exist
-    colors_css_path = get_relative_path("shared/styles/colors.css")
+    colors_css_path = get_relative_path("styles/colors.css")
     if not os.path.exists(colors_css_path):
         from utils.utils import generate_colors_from_wallpaper
 
@@ -44,7 +45,7 @@ def main():
     osd = OSDWindow()
 
     # Monitor CSS files for changes
-    css_file = monitor_file(get_relative_path("shared/styles"))
+    css_file = monitor_file(get_relative_path("styles"))
     _ = css_file.connect("changed", lambda *_: set_css())
 
     app = Application(
@@ -61,7 +62,7 @@ def main():
 
     def set_css():
         app.set_stylesheet_from_file(
-            get_relative_path("shared/styles/main.css"),
+            get_relative_path("styles/main.css"),
         )
 
     app.set_css = set_css
