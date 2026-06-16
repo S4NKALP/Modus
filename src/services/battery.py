@@ -1,9 +1,5 @@
-import gi
 from fabric.core.service import Property, Service, Signal
-from gi.repository import Gio, GLib
-from loguru import logger
-
-gi.require_version("Gtk", "3.0")
+from fabric.utils import Gio, GLib, logger
 
 BATTERY_BUS_NAME = "org.freedesktop.UPower"
 BATTERY_BUS_PATH = "/org/freedesktop/UPower/devices/DisplayDevice"
