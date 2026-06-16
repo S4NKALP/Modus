@@ -616,13 +616,23 @@ class ModusControlCenter(AppletWindow):
             self.has_per_app_volume_open = False
             self.has_expanded_player_open = False
 
-            # Reset current view
-            self.current_view = "main"
+            # Instantly reset the view
+            self._delayed_reset_view()
 
             logger.debug("Control center signals disconnected while hidden")
 
         except Exception as e:
             logger.warning(f"Control center signal disconnection failed: {e}")
+
+    def _delayed_reset_view(self):
+        if not self.get_visible():
+            self.has_bluetooth_open = False
+            self.has_wifi_open = False
+            self.has_per_app_volume_open = False
+            self.has_expanded_player_open = False
+            self.current_view = "main"
+            self.set_children(self.center_box)
+        return False
 
     def _ensure_bluetooth_widgets(self):
         """Lazy load bluetooth widgets"""
@@ -949,10 +959,13 @@ class ModusControlCenter(AppletWindow):
 
         self.set_visible(visible)
         if not visible:
-            self.close_bluetooth()
-            self.close_wifi()
-            self.close_per_app_volume()
-            self.close_expanded_player()
+            # Simply reset views without multiple overlapping set_children calls
+            self.has_bluetooth_open = False
+            self.has_wifi_open = False
+            self.has_per_app_volume_open = False
+            self.has_expanded_player_open = False
+            self.current_view = "main"
+            self.set_children(self.center_box)
 
     def volume_changed(
         self,

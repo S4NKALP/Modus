@@ -1,20 +1,9 @@
-# Standard library imports
-import gc
-import re
-import tempfile
-import threading
-import urllib.parse
-import httpx
 import weakref
-from typing import Dict, List, Optional
 
 from fabric.utils import (
-    bulk_connect,
-    cooldown,
-    invoke_repeater,
     GLib,
-    GObject,
-    logger,
+    bulk_connect,
+    get_relative_path,
     os,
 )
 from fabric.widgets.box import Box
@@ -22,122 +11,27 @@ from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-
-# Fabric imports
 from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow as Window
 
 import shared.data as data
-
-# Local imports
-from services.mpris import MprisPlayer, MprisPlayerManager
+from services.mpris import PlayerManager, PlayerService
 from utils.utils import svg_file
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
-
-# Global memory management
 _shared_mpris_manager = None
-_widget_cache = weakref.WeakValueDictionary()
 _artwork_cache = {}
-_max_artwork_cache_size = 10  # Limit artwork cache to prevent memory bloat
 
 
 def get_shared_mpris_manager():
-    """Get shared MPRIS manager instance to reduce memory usage."""
     global _shared_mpris_manager
     if _shared_mpris_manager is None:
-        _shared_mpris_manager = MprisPlayerManager()
+        _shared_mpris_manager = PlayerManager()
     return _shared_mpris_manager
 
 
-def cleanup_artwork_cache():
-    """Clean up artwork cache immediately when size limit is reached."""
-    global _artwork_cache
-    if len(_artwork_cache) > _max_artwork_cache_size:
-        # Keep only the most recent items immediately
-        items = list(_artwork_cache.items())
-        _artwork_cache = dict(items[-_max_artwork_cache_size:])
-        # Immediate garbage collection
-        gc.collect()
-
-
-def cleanup_old_cache_files():
-    """Clean up old artwork cache files immediately (no lazy loading)."""
-    try:
-        if not os.path.exists(CACHE_DIR):
-            return
-
-        import time
-
-        current_time = time.time()
-        # Clean files older than 2 hours (more aggressive)
-        two_hours_ago = current_time - (2 * 60 * 60)
-
-        for filename in os.listdir(CACHE_DIR):
-            filepath = os.path.join(CACHE_DIR, filename)
-            try:
-                if os.path.isfile(filepath):
-                    file_mod_time = os.path.getmtime(filepath)
-                    if file_mod_time < two_hours_ago:
-                        os.remove(filepath)
-                        logger.debug(f"Cleaned up old cache file: {filename}")
-            except Exception as e:
-                logger.warning(f"Failed to clean up cache file {filename}: {e}")
-
-    except Exception as e:
-        logger.error(f"Error during cache cleanup: {e}")
-
-
-def get_artwork_cached(url: str) -> Optional[str]:
-    """Get artwork with memory-efficient caching."""
-    if not url:
-        return None
-
-    # Check memory cache first
-    if url in _artwork_cache:
-        return _artwork_cache[url]
-
-    # Clean cache immediately if too large (no lazy loading)
-    cleanup_artwork_cache()
-
-    try:
-        # Create cache directory if it doesn't exist
-        os.makedirs(CACHE_DIR, exist_ok=True)
-
-        # Generate cache filename
-        safe_filename = re.sub(
-            r"[^\w\-_.]", "_", urllib.parse.urlparse(url).path.split("/")[-1]
-        )
-        if not safe_filename:
-            safe_filename = f"artwork_{hash(url)}"
-
-        cache_file = os.path.join(CACHE_DIR, safe_filename)
-
-        # Check if cached file exists and is recent (within 2 hours)
-        if os.path.exists(cache_file):
-            import time
-
-            if time.time() - os.path.getmtime(cache_file) < 7200:  # 2 hours
-                _artwork_cache[url] = cache_file
-                return cache_file
-
-        # Download and cache
-        response = httpx.get(url, timeout=10, follow_redirects=True)
-        if response.status_code == 200:
-            with open(cache_file, "wb") as f:
-                f.write(response.content)
-            _artwork_cache[url] = cache_file
-            return cache_file
-
-    except Exception as e:
-        logger.warning(f"Failed to cache artwork from {url}: {e}")
-        return None
-
-
 class EmbeddedExpandedPlayer(Box):
-    """Embedded expanded player widget for use inside control center."""
-
     def __init__(self, control_center, **kwargs):
         super().__init__(
             orientation="vertical",
@@ -145,219 +39,68 @@ class EmbeddedExpandedPlayer(Box):
             name="embedded-expanded-player",
             **kwargs,
         )
-
         self.control_center = control_center
         self.mpris_manager = get_shared_mpris_manager()
-
-        # Create back button (hidden in header)
-        self.back_button = Button(
-            name="back-button",
-            child=Label(label="← Back"),
-            on_clicked=self._on_back_clicked,
-        )
-
-        # Create expanded player content
         self.player_content = PlayerBoxStack(self.mpris_manager)
-
-        self.children = [
-            Box(
-                orientation="horizontal",
-                h_expand=True,
-                style_classes="menu",
-                visible=False,  # Hide header to remove title and back button
-                children=[
-                    self.back_button,
-                    Box(h_expand=True),  # Spacer
-                    Label(label="Now Playing", style_classes="title"),
-                    Box(h_expand=True),  # Spacer
-                ],
-            ),
-            self.player_content,
-        ]
-
-    def _on_back_clicked(self, *_):
-        """Handle back button click"""
-        if self.control_center and hasattr(
-            self.control_center, "close_expanded_player"
-        ):
-            self.control_center.close_expanded_player()
+        self.children = [self.player_content]
 
     def refresh(self):
-        """Refresh the player content"""
-        # This will automatically update as MPRIS players change
         pass
 
     def suspend(self):
-        """Suspend updates when control center is hidden"""
-        if hasattr(self, "player_stack") and self.player_stack:
-            for child in self.player_stack.get_children():
-                if hasattr(child, "suspend"):
-                    child.suspend()
+        for child in self.player_content.player_stack.get_children():
+            if hasattr(child, "suspend"):
+                child.suspend()
 
     def resume(self):
-        """Resume updates when control center is shown"""
-        if hasattr(self, "player_stack") and self.player_stack:
-            for child in self.player_stack.get_children():
-                if hasattr(child, "resume"):
-                    child.resume()
+        for child in self.player_content.player_stack.get_children():
+            if hasattr(child, "resume"):
+                child.resume()
 
     def destroy(self):
-        """Clean up resources and prevent memory leaks"""
-        logger.debug("🗑️ EmbeddedExpandedPlayer cleanup starting")
-
-        try:
-            # Destroy player content (PlayerBoxStack)
-            if hasattr(self, "player_content") and hasattr(
-                self.player_content, "destroy"
-            ):
-                self.player_content.destroy()
-
-            # Clean up back button
-            if hasattr(self, "back_button") and hasattr(self.back_button, "destroy"):
-                self.back_button.destroy()
-
-            # Clean up any other widgets we might have
-            for child in list(self.get_children()):
-                try:
-                    child.destroy()
-                except Exception as e:
-                    logger.warning(f"Failed to destroy child widget: {e}")
-
-            # Aggressively clean global caches
-            global _widget_cache, _artwork_cache
-            _widget_cache.clear()
-            _artwork_cache.clear()
-            logger.debug("🗑️ Cleared global widget and artwork caches")
-
-            # Clear references
-            if hasattr(self, "control_center"):
-                self.control_center = None
-            if hasattr(self, "mpris_manager"):
-                self.mpris_manager = None
-
-            # Force garbage collection
-            gc.collect()
-            logger.debug("🗑️ EmbeddedExpandedPlayer cleanup completed")
-
-        except Exception as e:
-            logger.error(f"Error during EmbeddedExpandedPlayer cleanup: {e}")
-        finally:
-            super().destroy()
+        if hasattr(self, "player_content") and hasattr(self.player_content, "destroy"):
+            self.player_content.destroy()
+        super().destroy()
 
 
 class PlayerBoxStack(Box):
-    """Memory-optimized widget that displays current player information."""
-
-    def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
-        # Clean up old cache files immediately (no lazy loading)
-        cleanup_old_cache_files()
-
-        # The player stack with memory-efficient settings
-        self.player_stack = Stack(
-            name="player-stack",
-            # Disable transitions to reduce memory usage
-            transition_type="none",
-        )
+    def __init__(self, mpris_manager: PlayerManager, **kwargs):
+        self.player_stack = Stack(name="player-stack", transition_type="none")
         self.current_stack_pos = 0
-
-        # Store player buttons - cleaned up via explicit removal
         self.player_buttons: list[Button] = []
-        self._player_widgets: Dict[str, Box] = weakref.WeakValueDictionary()
-
-        # Track signal connections for cleanup using weak references
+        self._player_widgets = weakref.WeakValueDictionary()
         self._signal_connections = []
-
-        # Create a lightweight "No media playing" placeholder
         self.no_media_box = self._create_no_media_box()
 
         super().__init__(orientation="v", name="media", children=[self.player_stack])
-
-        # Show the no media box initially
         self.player_stack.children = [self.no_media_box]
         self.set_visible(True)
-
         self.mpris_manager = mpris_manager
 
-        # Track connections for cleanup
         connections = bulk_connect(
             self.mpris_manager,
-            {
-                "player-appeared": self.on_new_player,
-                "player-vanished": self.on_lost_player,
-            },
+            {"new-player": self.on_new_player, "player-vanish": self.on_lost_player},
         )
         for handler_id in connections:
             self._signal_connections.append((self.mpris_manager, handler_id))
 
-        # Process existing players
-        for player in self.mpris_manager.players.values():  # type: ignore
-            logger.info(f"[PLAYER MANAGER] player found: {player.player_name}")
-            self.on_new_player(self.mpris_manager, player)
-
-        # No periodic cleanup - immediate cleanup when needed
+        for name, player in self.mpris_manager.get_all_services().items():
+            self.on_new_player(self.mpris_manager, name, player)
 
     def destroy(self):
-        """Clean up resources when the widget is destroyed."""
-        try:
-            # No periodic cleanup timer to cancel (removed lazy loading)
-
-            # Disconnect all signal connections
-            for obj, handler_id in self._signal_connections:
-                try:
-                    if obj and hasattr(obj, "disconnect"):
-                        obj.disconnect(handler_id)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect signal: {e}")
-            self._signal_connections.clear()
-
-            # Clean up player widgets
-            for widget in list(self._player_widgets.values()):
-                try:
-                    if widget and hasattr(widget, "destroy"):
-                        widget.destroy()
-                except Exception:
-                    pass
-            self._player_widgets.clear()
-
-            # Clean up player buttons explicitly
-            for button in list(self.player_buttons):
-                try:
-                    if button and hasattr(button, "destroy"):
-                        button.destroy()
-                except Exception:
-                    pass
-
-            # Clean up stack children
-            for child in self.player_stack.get_children():
-                if hasattr(child, "destroy") and child != self.no_media_box:
-                    try:
-                        child.destroy()
-                    except Exception:
-                        pass
-
-            # Force final garbage collection
-            gc.collect()
-
-        except Exception as e:
-            logger.error(f"Error during PlayerBoxStack cleanup: {e}")
-        finally:
-            super().destroy()
+        for obj, handler_id in self._signal_connections:
+            try:
+                obj.disconnect(handler_id)
+            except Exception:
+                pass
+        self._signal_connections.clear()
+        super().destroy()
 
     def _create_no_media_box(self):
-        """Create a placeholder box for when no media is playing."""
-        fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
-
-        # Album cover with fallback image using Image widget
-
-        album_cover = Box(
-            name="macos-album-image-no",
-        )
+        fallback_cover_path = get_relative_path("../../assets/icons/music.svg")
+        album_cover = Box(name="macos-album-image-no")
         album_cover.set_style(f"background-image:url('{fallback_cover_path}')")
 
-        image_stack = Box(h_align="start", v_align="center", name="player-image-stack")
-        image_stack.children = [album_cover]
-
-        # Track info showing "No media playing"
         track_title = Label(
             label="No media playing",
             name="player-title-no",
@@ -366,131 +109,98 @@ class PlayerBoxStack(Box):
             ellipsization="end",
             h_align="start",
         )
-
-        track_artist = Label(
-            label="",
-            name="player-artist",
-            justification="left",
-            max_chars_width=12,
-            ellipsization="end",
-            h_align="start",
-            visible=False,  # Hide artist and album when no media
-        )
-
-        track_album = Label(
-            label="",
-            name="player-album",
-            justification="left",
-            max_chars_width=12,
-            ellipsization="end",
-            h_align="start",
-            visible=False,  # Hide artist and album when no media
-        )
-
         track_info = Box(
             name="track-info",
             spacing=5,
             orientation="v",
             v_align="start",
             h_align="start",
-            children=[track_title, track_artist, track_album],
+            children=[track_title],
         )
 
-        # No control buttons for no media state - just an empty box
-        controls_box = Box(
-            name="player-controls",
-            visible=False,  # Hide controls when no media
-        )
-
-        player_info_box = Box(
-            name="player-info-box",
-            v_align="center",
-            h_align="start",
-            orientation="v",
-            h_expand=True,
-            children=[track_info, controls_box],
-        )
-
-        inner_box = Box(
-            name="inner-player-box",
-            v_align="center",
-            h_align="start",
-        )
-
-        outer_box = Box(
-            name="outer-player-box",
-            h_align="start",
-        )
-
-        overlay_box = Overlay(
-            child=outer_box,
-            overlays=[
-                inner_box,
-                player_info_box,
-                image_stack,
-            ],
-        )
-
-        no_media_box = Box(
+        return Box(
             h_align="center",
             name="player-box",
             h_expand=True,
-            children=[overlay_box],
+            children=[
+                Overlay(
+                    child=Box(name="outer-player-box", h_align="start"),
+                    overlays=[
+                        Box(name="inner-player-box", v_align="center", h_align="start"),
+                        Box(
+                            name="player-info-box",
+                            v_align="center",
+                            h_align="start",
+                            orientation="v",
+                            h_expand=True,
+                            children=[track_info],
+                        ),
+                        Box(
+                            h_align="start",
+                            v_align="center",
+                            name="player-image-stack",
+                            children=[album_cover],
+                        ),
+                    ],
+                )
+            ],
         )
 
-        return no_media_box
+    def _find_playing_player_index(self):
+        players = self.player_stack.get_children()
+        for i, player_box in enumerate(players):
+            if (
+                hasattr(player_box, "player")
+                and str(player_box.player.playback_status).lower() == "playing"
+            ):
+                return i
+        return None
 
-    def on_player_clicked(self, type):
-        # unset active from prev active button
-        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
-            self.player_buttons[self.current_stack_pos].remove_style_class("active")
+    def _check_and_update_playing_state(self):
+        players = [
+            p for p in self.player_stack.get_children() if p != self.no_media_box
+        ]
+        if len(players) > 0:
+            if self.no_media_box in self.player_stack.get_children():
+                self.player_stack.remove(self.no_media_box)
+            playing_index = self._find_playing_player_index()
+            if playing_index is not None:
+                self.on_player_clicked_by_index(playing_index)
+            return
 
-        if type == "next":
-            self.current_stack_pos = (
-                self.current_stack_pos + 1
-                if self.current_stack_pos != len(self.player_stack.get_children()) - 1
-                else 0
-            )
-        elif type == "prev":
-            self.current_stack_pos = (
-                self.current_stack_pos - 1
-                if self.current_stack_pos != 0
-                else len(self.player_stack.get_children()) - 1
-            )
+        if (
+            len(self.player_stack.get_children()) == 1
+            and self.player_stack.get_children()[0] == self.no_media_box
+        ):
+            return
 
-        # set new active button
-        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
-            self.player_buttons[self.current_stack_pos].add_style_class("active")
-            self.player_stack.set_visible_child(
-                self.player_stack.get_children()[self.current_stack_pos],
-            )
+        self.player_stack.children = [self.no_media_box]
+        self.current_stack_pos = 0
+        self.player_stack.set_visible_child(self.no_media_box)
+
+    def on_player_playback_changed(self, player_box, status):
+        status = str(status).lower()
+        if status == "playing":
+            players = self.player_stack.get_children()
+            for i, pb in enumerate(players):
+                if pb == player_box and i != self.current_stack_pos:
+                    self.on_player_clicked_by_index(i)
+                    break
+        elif status in ["paused", "stopped"]:
+            self._check_and_update_playing_state()
 
     def on_player_clicked_by_index(self, index):
-        """Switch to player at given index"""
         if 0 <= index < len(self.player_buttons):
-            # unset active from prev active button
-            if self.player_buttons and self.current_stack_pos < len(
-                self.player_buttons
-            ):
+            if self.current_stack_pos < len(self.player_buttons):
                 self.player_buttons[self.current_stack_pos].remove_style_class("active")
-            # set new position
             self.current_stack_pos = index
-            # set new active button
-            if self.player_buttons and self.current_stack_pos < len(
-                self.player_buttons
-            ):
-                self.player_buttons[self.current_stack_pos].add_style_class("active")
-                self.player_stack.set_visible_child(
-                    self.player_stack.get_children()[self.current_stack_pos],
-                )
-            # Update all player boxes with new button state
+            self.player_buttons[self.current_stack_pos].add_style_class("active")
+            self.player_stack.set_visible_child(
+                self.player_stack.get_children()[self.current_stack_pos]
+            )
             self._update_all_player_buttons()
 
-    def on_new_player(self, mpris_manager, player):
-        # if player_name in self.config.get("ignore", []):
-        #     return
-
-        # Remove the no media box if it's the only child
+    def on_new_player(self, mpris_manager, name, player):
         if (
             len(self.player_stack.get_children()) == 1
             and self.player_stack.get_children()[0] == self.no_media_box
@@ -499,209 +209,114 @@ class PlayerBoxStack(Box):
             self.current_stack_pos = 0
 
         self.set_visible(True)
-
         new_player_box = PlayerBox(player=player, player_stack=self)
-        self.player_stack.children = [
-            *self.player_stack.children,
-            new_player_box,
-        ]
-
-        self.make_new_player_button(self.player_stack.get_children()[-1])
-        logger.info(
-            f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
-        )
-        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
+        self.player_stack.children = [*self.player_stack.children, new_player_box]
+        self.make_new_player_button(new_player_box)
+        if self.player_buttons:
             self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
-
-        # Update all player boxes with current button state
+        self._check_and_update_playing_state()
         self._update_all_player_buttons()
 
     def on_lost_player(self, mpris_manager, player_name):
-        # the playerBox is automatically removed from mprisbox children on being removed
-        logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
-        players: List[PlayerBox] = self.player_stack.get_children()
-
-        # Find and properly destroy the player box
         player_box_to_remove = None
-        for player_box in players:
+        for player_box in self.player_stack.get_children():
             if (
                 hasattr(player_box, "player")
-                and player_box.player.bus_name == player_name
+                and player_box.player.player_name == player_name
             ):
                 player_box_to_remove = player_box
                 break
 
         if player_box_to_remove:
-            try:
-                player_box_to_remove.destroy()
-            except Exception as e:
-                logger.warning(f"Failed to destroy player box: {e}")
+            player_box_to_remove.destroy()
 
-        # Check if this was the last player
         remaining_players = [
             p for p in self.player_stack.get_children() if p != player_box_to_remove
         ]
         if len(remaining_players) == 0:
-            # Show the no media box instead of hiding
             self.player_stack.children = [self.no_media_box]
             self.current_stack_pos = 0
-            self.player_buttons = []  # Clear player buttons
+            self.player_buttons = []
             return
 
-        # Adjust current position if needed
         if self.current_stack_pos >= len(self.player_stack.get_children()):
             self.current_stack_pos = max(0, len(self.player_stack.get_children()) - 1)
 
-        # Set active button if we have buttons and a valid position
         if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
             self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
-            if self.player_stack.get_children():
-                self.player_stack.set_visible_child(
-                    self.player_stack.get_children()[self.current_stack_pos],
-                )
+            self.player_stack.set_visible_child(
+                self.player_stack.get_children()[self.current_stack_pos]
+            )
 
-        # Update all player boxes with current button state
         self._update_all_player_buttons()
 
     def make_new_player_button(self, player_box):
         new_button = Button(name="player-stack-button")
 
         def on_player_button_click(button: Button):
-            if self.player_buttons and self.current_stack_pos < len(
-                self.player_buttons
-            ):
+            if self.current_stack_pos < len(self.player_buttons):
                 self.player_buttons[self.current_stack_pos].remove_style_class("active")
             if button in self.player_buttons:
                 self.current_stack_pos = self.player_buttons.index(button)
                 button.add_style_class("active")
                 self.player_stack.set_visible_child(player_box)
 
-        new_button.connect(
-            "clicked",
-            on_player_button_click,
-        )
+        new_button.connect("clicked", on_player_button_click)
         self.player_buttons.append(new_button)
-
-        # This will automatically destroy our used button
-        def cleanup_button(*_):
-            try:
-                if new_button in self.player_buttons:
-                    self.player_buttons.remove(new_button)
-                new_button.destroy()
-            except Exception as e:
-                logger.warning(f"Failed to cleanup button: {e}")
-
-        player_box.connect("destroy", cleanup_button)
+        player_box.connect(
+            "destroy",
+            lambda *_: (
+                self.player_buttons.remove(new_button)
+                if new_button in self.player_buttons
+                else None
+            ),
+        )
 
     def _update_all_player_buttons(self):
-        """Update all player boxes with the current button state"""
-        players: List[PlayerBox] = self.player_stack.get_children()
-        logger.info(
-            f"[PlayerBoxStack] Updating buttons for {len(players)} players, {
-                len(self.player_buttons)
-            } buttons"
-        )
+        players = self.player_stack.get_children()
         for player_box in players:
             if hasattr(player_box, "update_buttons"):
                 player_box.update_buttons(self.player_buttons, len(players) > 1)
-            else:
-                logger.warning(
-                    "[PlayerBoxStack] PlayerBox missing update_buttons method"
-                )
 
 
 class PlayerBox(Box):
-    """A widget that displays the current player information."""
-
-    def __init__(self, player: MprisPlayer, player_stack=None, **kwargs):
-        super().__init__(
-            h_align="center",
-            name="player-box",
-            **kwargs,
-            h_expand=True,
-        )
-        # Setup
-        self.player: MprisPlayer = player
+    def __init__(self, player: PlayerService, player_stack=None, **kwargs):
+        super().__init__(h_align="center", name="player-box", h_expand=True, **kwargs)
+        self.player = player
         self.player_stack = player_stack
-        self.fallback_cover_path = f"{data.HOME_DIR}/.current.wall"
-
-        self.icon_size = 15
-
-        # State
+        self.fallback_cover_path = get_relative_path("../../assets/icons/music.svg")
+        self.cover_path = self.fallback_cover_path
         self.exit = False
-        self.skipped = False
-        self._user_seeking = False  # Flag to prevent choppy seeking
-        self._seekbar_timer_id = None  # Track timer ID for cleanup
+        self._user_seeking = False
+        self._signal_connections = []
+        self._property_bindings = []
+        self._seekbar_signal_ids = []
 
-        # Memory management
-        self.temp_artwork_files = []  # Track temp files for cleanup
-        self.current_download_thread = None  # Track current download thread
-        self._download_cancelled = False  # Flag to cancel downloads
-        self._signal_connections = []  # Track signal connections
-        self._property_bindings = []  # Track GObject property bindings
-        self._seekbar_signal_ids = []  # Track seek_bar widget signal IDs
-
-        # Use same CSS background approach as small player for consistency
-        self.album_cover = Box(
-            name="macos-album-image",
-        )
+        self.album_cover = Box(name="macos-album-image")
         self.album_cover.set_style(
             f"background-image:url('{self.fallback_cover_path}')"
         )
         self.album_cover.set_size_request(70, 70)
 
-        self.image_stack = Box(
-            h_align="start", v_align="center", name="player-image-stack"
-        )
-        self.image_stack.children = [*self.image_stack.children, self.album_cover]
-
-        # Track Info
-        self.track_title = Label(
-            label="No Title",
-            name="macos-player-title",
-            justification="left",
-            max_chars_width=30,
-            ellipsization="end",
-            h_align="start",
-            h_expand=True,
-        )
-
-        self.track_artist = Label(
-            label="No Artist",
-            name="macos-player-artist",
-            justification="left",
-            max_chars_width=25,
-            ellipsization="end",
-            h_align="start",
-            h_expand=True,
-            visible=True,
-        )
-        self.track_album = Label(
-            label="No Album",
-            name="macos-player-album",
-            justification="left",
-            max_chars_width=25,
-            ellipsization="end",
-            h_align="start",
-            visible=True,  # Hide artist and album when no media
-        )
-
-        self.app_icon = Box(
-            children=Image(
-                icon_name=self.player.player_name, name="player-app-icon", icon_size=20
-            ),
-            h_align="end",
-            v_align="end",
-            tooltip_text=self.player.player_name,  # type: ignore
-        )
         self.image = Overlay(
-            child=self.image_stack,
+            child=Box(
+                h_align="start",
+                v_align="center",
+                name="player-image-stack",
+                children=[self.album_cover],
+            ),
             overlays=[
-                self.app_icon,
+                Box(
+                    children=Image(
+                        icon_name=self.player.player_name,
+                        name="player-app-icon",
+                        icon_size=20,
+                    ),
+                    h_align="end",
+                    v_align="end",
+                )
             ],
         )
-        # Seek bar should not update automatically during user interaction
-        self._user_seeking = False
 
         self.seek_bar = Scale(
             value=0,
@@ -725,52 +340,118 @@ class PlayerBox(Box):
             self.player.bind_property("can_seek", self.seek_bar, "sensitive")
         )
 
-        # Position and length labels for seek bar
         self.position_label = Label(
             label="0:00",
             name="macos-position-label",
             justification="left",
             h_align="start",
         )
-
         self.length_label = Label(
             label="0:00",
             name="macos-length-label",
             justification="right",
             h_align="end",
         )
-
-        # Labels box for position and length below seek bar
-        self.labels_box = Box(
-            name="macos-labels-box",
-            orientation="h",
-            children=[
-                self.position_label,
-                Box(h_expand=True),  # Spacer to push labels to ends
-                self.length_label,
-            ],
-        )
-
-        # Seek bar with position labels below
         self.seek_box = Box(
             name="macos-seek-box",
             orientation="v",
             spacing=2,
             children=[
                 self.seek_bar,
-                self.labels_box,
+                Box(
+                    name="macos-labels-box",
+                    orientation="h",
+                    children=[
+                        self.position_label,
+                        Box(h_expand=True),
+                        self.length_label,
+                    ],
+                ),
             ],
         )
 
-        # Define buttons first
+        self.track_title = Label(
+            label=self.player.title or "No Title",
+            name="macos-player-title",
+            justification="left",
+            max_chars_width=24,
+            ellipsization="end",
+            h_align="start",
+            h_expand=True,
+        )
+        self.track_artist = Label(
+            label=", ".join(self.player.artist) if self.player.artist else "No Artist",
+            name="macos-player-artist",
+            justification="left",
+            max_chars_width=24,
+            ellipsization="end",
+            h_align="start",
+            h_expand=True,
+            visible=True,
+        )
+        self.track_album = Label(
+            label=self.player.album or "No Album",
+            name="macos-player-album",
+            justification="left",
+            max_chars_width=24,
+            ellipsization="end",
+            h_align="start",
+            visible=True,
+        )
+
+        self.track_info = Box(
+            name="macos-track-info",
+            spacing=4,
+            orientation="v",
+            v_align="start",
+            h_align="fill",
+            h_expand=True,
+            v_expand=True,
+            children=[self.track_title, self.track_artist, self.track_album],
+        )
+
+        self.stack_buttons_box = Box(
+            h_expand=False,
+            v_expand=True,
+            name="macos-stack-buttons-box",
+            spacing=4,
+            orientation="h",
+            h_align="center",
+            v_align="end",
+        )
+        self.stack_buttons_box.hide()
+
+        initial_status = str(self.player.playback_status).lower()
+        icon_file = (
+            "player/play.svg" if initial_status == "paused" else "player/Pause.svg"
+        )
+        self.play_pause_icon = svg_file(icon_file, size=22)
+        self.play_pause_button = Button(
+            style_classes=["control-buttons"],
+            name="macos-play-button",
+            child=self.play_pause_icon,
+            on_clicked=self.player.play_pause,
+        )
+        self.next_button = Button(
+            style_classes=["control-buttons"],
+            name="macos-control-button",
+            child=svg_file("player/fwd.svg", size=22),
+            on_clicked=self._on_player_next,
+        )
+        self.prev_button = Button(
+            name="macos-control-button",
+            child=svg_file("player/Rewind.svg", size=22),
+            style_classes=["control-buttons"],
+            on_clicked=self._on_player_prev,
+        )
+
         self.button_box = Box(
             name="macos-button-box",
             h_align="center",
             h_expand=True,
-            spacing=10,  # Reduced spacing for macOS look
+            spacing=10,
+            children=[self.prev_button, self.play_pause_button, self.next_button],
         )
-
-        # Define controls_box BEFORE using it in track_info
         self.controls_box = Box(
             name="macos-player-controls",
             orientation="v",
@@ -780,637 +461,257 @@ class PlayerBox(Box):
             children=[self.button_box],
         )
 
-        # Track info with inline controls - expands to fill available space
-        self.track_info = Box(
-            name="macos-track-info",
-            spacing=4,  # Reduced spacing
-            orientation="v",
-            v_align="start",
-            h_align="fill",  # Fill all available horizontal space
-            h_expand=True,  # Expand horizontally to take maximum space
-            v_expand=True,  # Also expand vertically
-            children=[
-                self.track_title,
-                self.track_artist,
-                self.track_album,
-            ],
-        )
-
-        # Bind player properties — track bindings so we can unbind on destroy
-        self._property_bindings.append(
-            self.player.bind_property(
-                "title",
-                self.track_title,
-                "label",
-                GObject.BindingFlags.DEFAULT,
-                lambda _, x: (
-                    re.sub(r"\r?\n", " ", x)
-                    if x != "" and x is not None
-                    else "No Title"
-                ),  # type: ignore
+        self.children = [
+            Box(
+                name="macos-outer-player-box",
+                orientation="v",
+                spacing=10,
+                h_expand=True,
+                v_expand=True,
+                v_align="center",
+                h_align="fill",
+                children=[
+                    Box(
+                        orientation="v",
+                        h_expand=False,
+                        h_align="center",
+                        children=[
+                            Box(
+                                orientation="horizontal",
+                                children=[self.image, self.track_info],
+                            ),
+                            self.seek_box,
+                            self.controls_box,
+                        ],
+                    ),
+                    self.stack_buttons_box,
+                ],
             )
-        )
-        self._property_bindings.append(
-            self.player.bind_property(
-                "artist",
-                self.track_artist,
-                "label",
-                GObject.BindingFlags.DEFAULT,
-                lambda _, x: (
-                    re.sub(r"\r?\n", " ", ", ".join(x))
-                    if isinstance(x, list) and len(x) > 0
-                    else "No Artist"
-                ),  # type: ignore
-            )
-        )
-        self._property_bindings.append(
-            self.player.bind_property(
-                "album",
-                self.track_album,
-                "label",
-                GObject.BindingFlags.DEFAULT,
-                lambda _, x: (
-                    re.sub(r"\r?\n", " ", x)
-                    if x != "" and x is not None
-                    else "No Album"
-                ),  # type: ignore
-            )
-        )
+        ]
+        self.get_children()[0].set_size_request(352, -1)
 
-        # Player switcher buttons box (compact, minimal space)
-        self.stack_buttons_box = Box(
-            h_expand=False,  # Fixed width, don't expand
-            v_expand=True,
-            name="macos-stack-buttons-box",
-            spacing=4,  # Reduced spacing
-            orientation="h",  # Vertical layout for compactness
-            h_align="center",
-            v_align="end",
-        )
-        self.stack_buttons_box.hide()  # Initially hidden
-
-        # Create SVG icons from player directory
-        self.skip_next_icon = svg_file("player/fwd.svg", size=22)
-        self.skip_prev_icon = svg_file("player/Rewind.svg", size=22)
-        self.play_pause_icon = svg_file("player/Pause.svg", size=22)
-
-        self.play_pause_button = Button(
-            style_classes=["control-buttons"],
-            name="macos-play-button",
-            child=self.play_pause_icon,
-            on_clicked=self.player.play_pause,
-        )
-
-        self._property_bindings.append(
-            self.player.bind_property("can_pause", self.play_pause_button, "sensitive")
-        )
-
-        self.next_button = Button(
-            style_classes=["control-buttons"],
-            name="macos-control-button",
-            child=self.skip_next_icon,
-            on_clicked=self._on_player_next,
-        )
-        self._property_bindings.append(
-            self.player.bind_property("can_go_next", self.next_button, "sensitive")
-        )
-
-        self.prev_button = Button(
-            name="macos-control-button",
-            child=self.skip_prev_icon,
-            style_classes=["control-buttons"],
-            on_clicked=self._on_player_prev,
-        )
-        self._property_bindings.append(
-            self.player.bind_property("can_go_previous", self.prev_button, "sensitive")
-        )
-        self.button_box.children = (
-            self.prev_button,
-            self.play_pause_button,
-            self.next_button,
-        )
-
-        self.box = Box(
-            orientation="horizontal",
-            children=[
-                self.image,  # Album art on left (fixed width)
-                # Contains title, artist, seek bar AND controls (expands)
-                self.track_info,
-            ],
-        )
-        self.inner_box = Box(
-            orientation="v",
-            h_expand=True,
-            h_align="fill",  # Fill available space
-            children=[
-                self.box,  # Track info and album art
-                self.seek_box,  # Seek bar with position labels
-                self.controls_box,  # Controls now inline with track info
-            ],
-        )
-        # Compact macOS layout: album art on left, expanded track info+controls, minimal switcher
-        self.outer_box = Box(
-            name="macos-outer-player-box",
-            orientation="v",
-            spacing=10,  # Reduced spacing between elements
-            h_expand=True,
-            v_expand=True,
-            v_align="center",
-            h_align="fill",  # Fill available space
-            children=[
-                self.inner_box,  # Track info and controls
-                # Compact switcher in corner (fixed width)
-                self.stack_buttons_box,
-            ],
-        )
-
-        self.children = [*self.children, self.outer_box]
-
-        # Track signal connections for cleanup - store (object, handler_id) tuples
         connections = bulk_connect(
             self.player,
             {
-                "closed": self._on_player_exit,
-                "notify::playback-status": self._on_playback_change,
-                "notify::metadata": self._on_metadata,
+                "play": self._on_playback_change,
+                "pause": self._on_playback_change,
+                "meta-change": self._on_metadata,
+                "track-position": self._on_track_position,
+                "artwork-change": self._on_artwork_change,
             },
         )
-        # Store as (object, handler_id) tuples
         for handler_id in connections:
             self._signal_connections.append((self.player, handler_id))
 
-        # Start seek bar timer immediately for live updates (regardless of playback status)
-        self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
-
-        # Connect to realize signal to initialize seek bar properly
         self.seek_bar.connect("realize", self._on_seek_bar_realized)
 
-    def destroy(self):
-        """Clean up all resources when the widget is destroyed."""
-        # Set exit flag FIRST to stop any running timers
-        self.exit = True
-
-        # Cancel any ongoing downloads immediately
-        self._download_cancelled = True
-
-        # Cancel seek bar timer — critical: prevents the repeater from holding
-        # a reference to this widget after destruction
-        if self._seekbar_timer_id:
-            try:
-                GLib.source_remove(self._seekbar_timer_id)
-            except Exception:
-                pass
-            self._seekbar_timer_id = None
-
-        # Wait for download thread to finish (with timeout)
-        if self.current_download_thread and self.current_download_thread.is_alive():
-            try:
-                self.current_download_thread.join(timeout=1.0)
-            except Exception:
-                pass
-        self.current_download_thread = None
-
-        # Unbind all GObject property bindings — these keep the player alive
-        # if not explicitly unbound
-        for binding in self._property_bindings:
-            try:
-                binding.unbind()
-            except Exception:
-                pass
-        self._property_bindings.clear()
-
-        # Disconnect seek_bar widget signals
-        for sig_id in self._seekbar_signal_ids:
-            try:
-                if hasattr(self, "seek_bar") and self.seek_bar:
-                    self.seek_bar.disconnect(sig_id)
-            except Exception:
-                pass
-        self._seekbar_signal_ids.clear()
-
-        # Disconnect all player/mpris signal connections
-        for obj, handler_id in self._signal_connections:
-            try:
-                obj.disconnect(handler_id)
-            except Exception as e:
-                logger.warning(f"Failed to disconnect signal: {e}")
-        self._signal_connections.clear()
-
-        # Clean up temp artwork files
-        self._cleanup_temp_files()
-
-        # Clear image references
-        if hasattr(self, "album_cover_image"):
-            try:
-                self.album_cover_image.set_from_pixbuf(None)
-            except Exception:
-                pass
-
-        # Drop strong references to avoid reference cycles
-        self.player = None
-        self.player_stack = None
-
-        super().destroy()
-
-    def __del__(self):
-        """Ensure cleanup happens even if player exits unexpectedly."""
-        try:
-            self._cleanup_temp_files()
-        except Exception:
-            pass  # Ignore errors during cleanup in destructor
+        initial_art = self.player.get_artwork()
+        if initial_art:
+            self.album_cover.set_style(f"background-image:url('{initial_art}')")
+        else:
+            self.set_image()
 
     def update_buttons(self, player_buttons, show_buttons):
-        """Update the stack switcher buttons in this player box"""
-        logger.info(
-            f"[PlayerBox] update_buttons called: show_buttons={
-                show_buttons
-            }, num_buttons={len(player_buttons)}"
-        )
-
-        # Clear existing buttons
-        for child in self.stack_buttons_box.get_children():
-            try:
-                child.destroy()
-            except Exception:
-                pass
-
+        self.stack_buttons_box.children = []
         if show_buttons and len(player_buttons) > 1:
-            logger.info(f"[PlayerBox] Creating {len(player_buttons)} stack buttons")
-            # Create macOS-style dot indicators for each player
             for i, button in enumerate(player_buttons):
-                # Create a macOS-style dot button
                 dot_button = Button(
                     name="macos-player-switcher-dot",
                     style_classes=["macos-switcher-dot"],
                 )
-
-                # Set active state based on original button
                 if button.get_style_context().has_class("active"):
                     dot_button.add_style_class("active")
-
-                # Connect click handler to switch to this player
-                def make_click_handler(index):
-                    return lambda *_: self.player_stack.on_player_clicked_by_index(
-                        index
-                    )
-
-                dot_button.connect("clicked", make_click_handler(i))
+                dot_button.connect(
+                    "clicked",
+                    lambda *_, idx=i: self.player_stack.on_player_clicked_by_index(idx),
+                )
                 self.stack_buttons_box.children = [
                     *self.stack_buttons_box.children,
                     dot_button,
                 ]
-                logger.info(f"[PlayerBox] Added dot button {i}")
-
             self.stack_buttons_box.show_all()
-            logger.info("[PlayerBox] Stack buttons box shown")
         else:
             self.stack_buttons_box.hide()
-            logger.info("[PlayerBox] Stack buttons box hidden")
 
     def length_str(self, length):
-        """Convert length in microseconds to MM:SS or H:MM:SS format like real media players."""
         if length is None or length <= 0:
             return "0:00"
-
-        # Convert microseconds to seconds
         length_seconds = length / 1000000
-
         hours = int(length_seconds // 3600)
         minutes = int((length_seconds % 3600) // 60)
         seconds = int(length_seconds % 60)
-
-        if hours > 0:
-            return f"{hours}:{minutes:02d}:{seconds:02d}"
-        else:
-            return f"{minutes}:{seconds:02d}"
+        return (
+            f"{hours}:{minutes:02d}:{seconds:02d}"
+            if hours > 0
+            else f"{minutes}:{seconds:02d}"
+        )
 
     def _on_metadata(self, *_):
         if self.exit or self.player is None:
             return
-        self._set_image()
-        duration = self.player.length
-
-        if duration is None:
-            duration = 0
-
-        if duration and duration > 0:
+        self.track_title.set_label(self.player.title or "No Title")
+        self.track_artist.set_label(
+            ", ".join(self.player.artist) if self.player.artist else "No Artist"
+        )
+        self.track_album.set_label(self.player.album or "No Album")
+        self.set_image()
+        duration = self.player.length or 0
+        if duration > 0:
             self.length_label.set_label(self.length_str(duration))
-            # Clamp duration to avoid 32-bit integer overflow in the scale widget
-            max_int32 = 2147483647  # 2^31 - 1
-            safe_duration = min(max_int32, duration)
-
-            # Only set range if seek bar is ready
             if self.seek_bar.get_realized():
-                self.seek_bar.set_range(0, safe_duration)
+                self.seek_bar.set_range(0, min(2147483647, duration))
         else:
             self.length_label.set_label("0:00")
             if self.seek_bar.get_realized():
                 self.seek_bar.set_range(0, 100)
 
-        # Restart timer to ensure it's running with updated metadata
-        if self._seekbar_timer_id:
-            try:
-                GLib.source_remove(self._seekbar_timer_id)
-            except Exception:
-                pass
-            self._seekbar_timer_id = None
-
-        # Start new timer and store its ID
-        self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
-
     def suspend(self):
-        """Stop timer and other active updates when hidden"""
-        if self._seekbar_timer_id:
-            try:
-                GLib.source_remove(self._seekbar_timer_id)
-            except Exception:
-                pass
-            self._seekbar_timer_id = None
-        logger.debug(
-            f"[PlayerBox] Suspended timer for {self.player.player_name if self.player else 'unknown'}"
-        )
+        pass
 
     def resume(self):
-        """Restart timer and updates when shown"""
-        if self.exit or self.player is None:
-            return
+        pass
 
-        if not self._seekbar_timer_id:
-            self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
-        logger.debug(f"[PlayerBox] Resumed timer for {self.player.player_name}")
-
-    def _cleanup_temp_files(self):
-        """Clean up temporary artwork files."""
-        for temp_file in self.temp_artwork_files:
+    def destroy(self):
+        self.exit = True
+        self.suspend()
+        for obj, handler_id in self._signal_connections:
             try:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
-            except Exception as e:
-                logger.warning(f"Failed to cleanup temp file {temp_file}: {e}")
-        self.temp_artwork_files.clear()
-
-    def _on_player_exit(self, _, value):
-        self.exit = value
-        self._cleanup_temp_files()  # Clean up temp files before destroying
-        self.destroy()
+                obj.disconnect(handler_id)
+            except Exception:
+                pass
+        super().destroy()
 
     def _on_player_next(self, *_):
-        if self.player is not None:
+        if self.player:
             self.player.next()
 
     def _on_player_prev(self, *_):
-        if self.player is not None:
+        if self.player:
             self.player.previous()
 
-    def _on_playback_change(self, player, status):
+    def refresh_icon(self):
+        """Poll-based icon refresh - works even when browser doesn't fire signals."""
+        if self.player is None:
+            return
+        try:
+            status = str(self.player.playback_status).lower()
+            self.play_pause_icon.dynamic_file(
+                "player/play.svg" if status == "paused" else "player/Pause.svg"
+            )
+        except Exception:
+            pass
+
+    def _on_playback_change(self, *_):
         if self.exit or self.player is None:
             return
-        status = player.playback_status
+        status = str(self.player.playback_status).lower()
+        self.play_pause_icon.dynamic_file(
+            "player/play.svg" if status == "paused" else "player/Pause.svg"
+        )
+        if self.player_stack:
+            self.player_stack.on_player_playback_changed(self, status)
 
-        if status == "Paused":
-            self.play_pause_icon.dynamic_file("player/play.svg")
-            # Keep timer running for live updates even when paused
-
-        if status == "Playing":
-            self.play_pause_icon.dynamic_file("player/Pause.svg")
-            # Ensure timer is running for live updates
-            if not self._seekbar_timer_id:
-                self._seekbar_timer_id = invoke_repeater(1000, self._move_seekbar)
-
-    def _update_image(self, image_path):
-        if image_path and os.path.isfile(image_path):
-            self.album_cover.set_style(f"background-image:url('{image_path}')")
-        else:
-            self.album_cover.set_style(
-                f"background-image:url('{self.fallback_cover_path}')"
+    def _on_artwork_change(self, service, local_path, *_):
+        if not self.exit and local_path:
+            GLib.idle_add(
+                lambda: (
+                    self.album_cover.set_style(f"background-image:url('{local_path}')")
+                    if os.path.isfile(local_path)
+                    else None
+                )
             )
 
-    def _set_image(self, *_):
-        art_url = self.player.arturl
-
-        # If no art URL or empty/None, use fallback
-        if not art_url:
-            self._update_image(None)
+    def set_image(self, service=None, path=None, *_):
+        if self.exit or self.player is None:
             return
-
-        parsed = urllib.parse.urlparse(art_url)
-        if parsed.scheme == "file":
-            local_arturl = urllib.parse.unquote(parsed.path)
-            self._update_image(local_arturl)
-        elif parsed.scheme in ("http", "https"):
-            # Cancel any existing download to prevent memory buildup
-            self._download_cancelled = True
-
-            # Use threading.Thread instead of GLib.Thread for better control
-            if self.current_download_thread and self.current_download_thread.is_alive():
-                # Thread will check _download_cancelled flag and exit early
-                pass
-
-            self._download_cancelled = False
-            self.current_download_thread = threading.Thread(
-                target=self._download_and_set_artwork,
-                args=(art_url,),
-                daemon=True,  # Dies with main thread
+        if path:
+            self.cover_path = path
+            self.album_cover.set_style(f"background-image:url('{self.cover_path}')")
+            return
+        url = self.player.arturl
+        if url:
+            new_cover_path = (
+                (
+                    CACHE_DIR
+                    + "/"
+                    + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
+                )
+                if "file://" != url[0:7]
+                else url[7:]
             )
-            self.current_download_thread.start()
-        else:
-            print(art_url)
-            self._update_image(art_url)
+            if new_cover_path != self.cover_path:
+                self.cover_path = new_cover_path
+                if os.path.exists(self.cover_path):
+                    self.album_cover.set_style(
+                        f"background-image:url('{self.cover_path}')"
+                    )
+                    return
+                from fabric.utils import Gio
 
-    def _download_and_set_artwork(self, arturl):
-        """
-        Download the artwork from the given URL asynchronously and update the cover
-        using GLib.idle_add to ensure UI updates occur on the main thread.
-        """
-        local_arturl = self.fallback_cover_path
-        temp_file_path = None
+                Gio.File.new_for_uri(uri=url).copy_async(
+                    Gio.File.new_for_path(self.cover_path),
+                    Gio.FileCopyFlags.OVERWRITE,
+                    GLib.PRIORITY_DEFAULT,
+                    None,
+                    None,
+                    lambda src, res, *_: (
+                        self.album_cover.set_style(
+                            f"background-image:url('{self.cover_path}')"
+                        )
+                        if not self.exit and os.path.isfile(self.cover_path)
+                        else None
+                    ),
+                )
 
-        try:
-            # Check if download was cancelled
-            if self._download_cancelled:
-                return
-
-            # Clean up old temp files first (keep only last 1 to reduce memory)
-            if len(self.temp_artwork_files) > 1:
-                old_files = self.temp_artwork_files[:-1]
-                for old_file in old_files:
-                    try:
-                        if os.path.exists(old_file):
-                            os.unlink(old_file)
-                    except Exception:
-                        pass
-                self.temp_artwork_files = self.temp_artwork_files[-1:]
-
-            # Check again if cancelled
-            if self._download_cancelled:
-                return
-
-            # Download artwork
-            parsed = urllib.parse.urlparse(arturl)
-            suffix = os.path.splitext(parsed.path)[1] or ".png"
-
-            response = httpx.get(arturl, timeout=10, follow_redirects=True)
-            if self._download_cancelled:
-                return
-            if response.status_code == 200:
-                data = response.content
-            else:
-                return
-
-            # Check one more time if cancelled
-            if self._download_cancelled:
-                return
-
-            # Create temp file in cache directory instead of system temp
-            os.makedirs(CACHE_DIR, exist_ok=True)
-            with tempfile.NamedTemporaryFile(
-                delete=False, suffix=suffix, dir=CACHE_DIR
-            ) as temp_file:
-                temp_file.write(data)
-                temp_file_path = temp_file.name
-                local_arturl = temp_file_path
-
-            # Track temp file for cleanup
-            if temp_file_path and not self._download_cancelled:
-                self.temp_artwork_files.append(temp_file_path)
-
-        except Exception as e:
-            if not self._download_cancelled:
-                logger.warning(f"Failed to download artwork from {arturl}: {e}")
-            # Clean up failed temp file
-            if temp_file_path and os.path.exists(temp_file_path):
-                try:
-                    os.unlink(temp_file_path)
-                except Exception:
-                    pass
+    def _on_track_position(self, service, pos: float, dur: float):
+        if self.exit or self._user_seeking:
             return
-
-        # Only update UI if not cancelled
-        if not self._download_cancelled:
-            GLib.idle_add(self._update_image, local_arturl)
-        return None
-
-    def _move_seekbar(self, *_):
-        # Stop the timer if the widget is destroyed or exiting
-        if self.exit:
-            self._seekbar_timer_id = None
-            return False  # Remove the GLib source
-
-        if self.player is None:
-            self._seekbar_timer_id = None
-            return False  # Player gone, stop timer
-
-        if self._user_seeking:
-            return True  # Continue timer but skip update while user drags
-
-        # Additional safety checks to prevent GTK errors
-        if not hasattr(self, "seek_bar") or self.seek_bar is None:
-            self._seekbar_timer_id = None
-            return False  # Stop the timer
-
         try:
-            # Check if seek bar is realized and has a valid adjustment
-            if not self.seek_bar.get_realized():
-                return True  # Continue timer, widget not ready yet
+            position_micros = int(pos * 1_000_000)
+            duration_micros = int(dur * 1_000_000)
 
-            position = self.player.position
-            if position is None:
-                position = 0
+            self.position_label.set_label(self.length_str(position_micros))
 
-            self.position_label.set_label(self.length_str(position))
+            if duration_micros > 0:
+                self.length_label.set_label(self.length_str(duration_micros))
 
-            # Clamp position to avoid 32-bit integer overflow
-            max_int32 = 2147483647  # 2^31 - 1
-            safe_position = min(max_int32, position) if position else 0
-
-            # Only set value if seek bar has a valid range
-            if (
-                self.seek_bar.get_adjustment()
-                and self.seek_bar.get_adjustment().get_upper() > 0
-            ):
-                self.seek_bar.set_value(safe_position)
-
+            if self.seek_bar.get_realized() and self.seek_bar.get_adjustment():
+                if (
+                    duration_micros > 0
+                    and self.seek_bar.get_adjustment().get_upper() <= 100
+                ):
+                    self.seek_bar.set_range(0, min(2147483647, duration_micros))
+                if self.seek_bar.get_adjustment().get_upper() > 0:
+                    self.seek_bar.set_value(min(2147483647, position_micros))
         except Exception as e:
-            # If any error occurs (widget destroyed, etc), stop the timer
-            logger.warning(f"Seek bar update failed, stopping timer: {e}")
-            self._seekbar_timer_id = None
-            return False
-
-        return True
+            print(f"[_on_track_position] Error: {e}")
 
     def _on_seek_start(self, widget, event):
-        """User started seeking - disable automatic updates"""
         self._user_seeking = True
         return False
 
     def _on_seek_end(self, widget, event):
-        """User finished seeking - re-enable automatic updates"""
         self._user_seeking = False
         return False
 
     def _on_seek_bar_realized(self, widget):
-        """Initialize seek bar when it's realized"""
-        try:
-            if self.exit or self.player is None:
-                return
-            duration = self.player.length
-            if duration is None:
-                duration = 0
-
-            if duration and duration > 0:
-                max_int32 = 2147483647  # 2^31 - 1
-                safe_duration = min(max_int32, duration)
-                self.seek_bar.set_range(0, safe_duration)
-            else:
-                self.seek_bar.set_range(0, 100)
-        except Exception as e:
-            logger.warning(f"Failed to initialize seek bar: {e}")
-
-    def _on_scale_value_changed(self, scale: Scale):
-        """Handle seek bar value changes - only when user is seeking"""
-        if self.player and not self.exit and self._user_seeking:
-            try:
-                new_position = int(scale.get_value())
-                # Clamp to 32-bit signed integer range to avoid overflow
-                max_int32 = 2147483647  # 2^31 - 1
-                min_int32 = -2147483648  # -2^31
-                new_position = max(min_int32, min(max_int32, new_position))
-                self.player.position = new_position
-                self.position_label.set_label(self.length_str(new_position))
-            except Exception as e:
-                # If setting position fails, just update the label
-                try:
-                    self.position_label.set_label(self.length_str(new_position))
-                except Exception:
-                    logger.warning(f"Failed to update position label: {e}")
-
-    @cooldown(0.1)
-    def _on_scale_move(self, scale: Scale, event, pos: int):
         try:
             if not self.exit and self.player:
-                self.player.position = pos
-                self.position_label.set_label(self.length_str(pos))
-                self.seek_bar.set_value(pos)
-        except Exception as e:
-            logger.warning(f"Failed to update seek position: {e}")
+                duration = self.player.length or 0
+                self.seek_bar.set_range(
+                    0, min(2147483647, duration) if duration > 0 else 100
+                )
+        except Exception:
+            pass
 
-
-class Thing(Box):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="thing",
-            size=(480, 160),
-            orientation="vertical",
-            spacing=0,
-            children=[
-                Label(
-                    name="thing-label",
-                    label="This is a thing",
-                    style="font-size: 16px; padding: 10px;",
-                ),
-            ],
-            **kwargs,
-        )
+    def _on_scale_value_changed(self, scale: Scale):
+        if self.player and not self.exit and self._user_seeking:
+            try:
+                new_position = max(-2147483648, min(2147483647, int(scale.get_value())))
+                self.player.position = new_position
+                self.position_label.set_label(self.length_str(new_position))
+            except Exception:
+                pass
 
 
 class ExpandedPlayer(Window):
@@ -1424,19 +725,12 @@ class ExpandedPlayer(Window):
             child=PlayerBoxStack(get_shared_mpris_manager()),
             visible=False,
         )
-        self.add_keybinding("Escape", self.set_child_visible(False))
+        self.add_keybinding("Escape", lambda *_: self.set_visible(False))
 
     def destroy(self):
-        """Clean up resources when the window is destroyed."""
-        # Clean up the child PlayerBoxStack
         if hasattr(self, "child") and hasattr(self.child, "destroy"):
-            try:
-                self.child.destroy()
-            except Exception as e:
-                logger.warning(f"Failed to destroy child PlayerBoxStack: {e}")
-
+            self.child.destroy()
         super().destroy()
 
     def hide_controlcenter(self, *_):
-        # self._mousecapture_parent.toggle_mousecapture()
         self.set_visible(False)
