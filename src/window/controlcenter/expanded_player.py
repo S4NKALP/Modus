@@ -1,10 +1,7 @@
 import weakref
 
 from fabric.utils import (
-    GLib,
     bulk_connect,
-    get_relative_path,
-    os,
 )
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -15,20 +12,13 @@ from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow as Window
 
-import shared.data as data
 from services.mpris import PlayerManager, PlayerService
 from utils.utils import svg_file
-
-CACHE_DIR = f"{data.CACHE_DIR}/media"
-_shared_mpris_manager = None
-_artwork_cache = {}
-
-
-def get_shared_mpris_manager():
-    global _shared_mpris_manager
-    if _shared_mpris_manager is None:
-        _shared_mpris_manager = PlayerManager()
-    return _shared_mpris_manager
+from window.controlcenter.player import (
+    apply_player_art,
+    get_shared_mpris_manager,
+    PLAYER_FALLBACK_ART,
+)
 
 
 class EmbeddedExpandedPlayer(Box):
@@ -97,8 +87,8 @@ class PlayerBoxStack(Box):
         super().destroy()
 
     def _create_no_media_box(self):
-        fallback_cover_path = get_relative_path("../../assets/icons/music.svg")
-        album_cover = Box(name="macos-album-image-no")
+        fallback_cover_path = PLAYER_FALLBACK_ART
+        album_cover = Box(style_classes="album-image-c")
         album_cover.set_style(f"background-image:url('{fallback_cover_path}')")
 
         track_title = Label(
@@ -284,7 +274,7 @@ class PlayerBox(Box):
         super().__init__(h_align="center", name="player-box", h_expand=True, **kwargs)
         self.player = player
         self.player_stack = player_stack
-        self.fallback_cover_path = get_relative_path("../../assets/icons/music.svg")
+        self.fallback_cover_path = PLAYER_FALLBACK_ART
         self.cover_path = self.fallback_cover_path
         self.exit = False
         self._user_seeking = False
@@ -292,7 +282,7 @@ class PlayerBox(Box):
         self._property_bindings = []
         self._seekbar_signal_ids = []
 
-        self.album_cover = Box(name="macos-album-image")
+        self.album_cover = Box(style_classes="album-image-c")
         self.album_cover.set_style(
             f"background-image:url('{self.fallback_cover_path}')"
         )
@@ -505,11 +495,9 @@ class PlayerBox(Box):
 
         self.seek_bar.connect("realize", self._on_seek_bar_realized)
 
-        initial_art = self.player.get_artwork()
-        if initial_art:
-            self.album_cover.set_style(f"background-image:url('{initial_art}')")
-        else:
-            self.set_image()
+        result = apply_player_art(self.album_cover, self.player)
+        if result:
+            self.cover_path = result
 
     def update_buttons(self, player_buttons, show_buttons):
         self.stack_buttons_box.children = []
@@ -612,56 +600,18 @@ class PlayerBox(Box):
             self.player_stack.on_player_playback_changed(self, status)
 
     def _on_artwork_change(self, service, local_path, *_):
-        if not self.exit and local_path:
-            GLib.idle_add(
-                lambda: (
-                    self.album_cover.set_style(f"background-image:url('{local_path}')")
-                    if os.path.isfile(local_path)
-                    else None
-                )
-            )
+        if self.exit:
+            return
+        result = apply_player_art(self.album_cover, self.player, service, local_path)
+        if result:
+            self.cover_path = result
 
     def set_image(self, service=None, path=None, *_):
         if self.exit or self.player is None:
             return
-        if path:
-            self.cover_path = path
-            self.album_cover.set_style(f"background-image:url('{self.cover_path}')")
-            return
-        url = self.player.arturl
-        if url:
-            new_cover_path = (
-                (
-                    CACHE_DIR
-                    + "/"
-                    + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
-                )
-                if "file://" != url[0:7]
-                else url[7:]
-            )
-            if new_cover_path != self.cover_path:
-                self.cover_path = new_cover_path
-                if os.path.exists(self.cover_path):
-                    self.album_cover.set_style(
-                        f"background-image:url('{self.cover_path}')"
-                    )
-                    return
-                from fabric.utils import Gio
-
-                Gio.File.new_for_uri(uri=url).copy_async(
-                    Gio.File.new_for_path(self.cover_path),
-                    Gio.FileCopyFlags.OVERWRITE,
-                    GLib.PRIORITY_DEFAULT,
-                    None,
-                    None,
-                    lambda src, res, *_: (
-                        self.album_cover.set_style(
-                            f"background-image:url('{self.cover_path}')"
-                        )
-                        if not self.exit and os.path.isfile(self.cover_path)
-                        else None
-                    ),
-                )
+        result = apply_player_art(self.album_cover, self.player, service, path)
+        if result:
+            self.cover_path = result
 
     def _on_track_position(self, service, pos: float, dur: float):
         if self.exit or self._user_seeking:
