@@ -1,8 +1,6 @@
 import weakref
 
-from fabric.utils import (
-    bulk_connect,
-)
+from fabric.utils import bulk_connect, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -81,8 +79,8 @@ class PlayerBoxStack(Box):
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self._signal_connections.clear()
         super().destroy()
 
@@ -565,8 +563,8 @@ class PlayerBox(Box):
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         super().destroy()
 
     def _on_player_next(self, *_):
@@ -586,8 +584,8 @@ class PlayerBox(Box):
             self.play_pause_icon.dynamic_file(
                 "player/play.svg" if status == "paused" else "player/Pause.svg"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def _on_playback_change(self, *_):
         if self.exit or self.player is None:
@@ -634,7 +632,7 @@ class PlayerBox(Box):
                 if self.seek_bar.get_adjustment().get_upper() > 0:
                     self.seek_bar.set_value(min(2147483647, position_micros))
         except Exception as e:
-            print(f"[_on_track_position] Error: {e}")
+            logger.error(f"[_on_track_position] Error: {e}")
 
     def _on_seek_start(self, widget, event):
         self._user_seeking = True
@@ -651,8 +649,8 @@ class PlayerBox(Box):
                 self.seek_bar.set_range(
                     0, min(2147483647, duration) if duration > 0 else 100
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def _on_scale_value_changed(self, scale: Scale):
         if self.player and not self.exit and self._user_seeking:
@@ -660,8 +658,8 @@ class PlayerBox(Box):
                 new_position = max(-2147483648, min(2147483647, int(scale.get_value())))
                 self.player.position = new_position
                 self.position_label.set_label(self.length_str(new_position))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
 
 class ExpandedPlayer(Window):

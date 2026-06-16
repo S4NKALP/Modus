@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
 import psutil
-from fabric.utils import GLib, invoke_repeater, time
+from fabric.utils import GLib, invoke_repeater, time, logger
 from fabric.widgets.box import Box
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.datetime import DateTime
@@ -52,7 +52,7 @@ def http_get_json(
         if response.status_code == 200:
             return response.json()
     except Exception as e:
-        print(f"HTTP Request to {url} failed: {e}")
+        logger.error(f"HTTP Request to {url} failed: {e}")
     return None
 
 
@@ -64,8 +64,8 @@ def get_location() -> str:
         manual_location = config.get("weather_location")
         if manual_location:
             return manual_location
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
 
     # Fallback to IP geolocation APIs
     for api_url in LOCATION_APIS:
@@ -160,7 +160,7 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
 
         return [icon_name, temp, condition, city, max_temp, min_temp, gradient_class]
     except (KeyError, IndexError, TypeError) as e:
-        print(f"Error formatting weather data: {e}")
+        logger.error(f"Error formatting weather data: {e}")
         return None
 
 
@@ -605,7 +605,7 @@ class RamInfo(SystemInfoBase):
             )
             GLib.idle_add(self.progress.set_value, mem.percent)
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
         return True
 
 
@@ -634,8 +634,8 @@ class CpuInfo(SystemInfoBase):
                             for p in ["package id 0", "core 0", ""]
                         ):
                             return round(entry.current, 1)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return None
 
     def update(self) -> bool:
@@ -646,7 +646,7 @@ class CpuInfo(SystemInfoBase):
             self.temp_value.set_label(f"{temp}°C" if temp else "N/A")
             GLib.idle_add(self.progress.set_value, cpu)
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
         return True
 
 

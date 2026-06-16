@@ -186,8 +186,8 @@ def get_notification_image_cache_key(notification_id, image_pixbuf):
                         f"{width}x{height}".encode()
                     ).hexdigest()[:8]
                     return dimension_hash
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
         # Fallback to timestamp for invalid pixbufs
         return str(int(time.time()))[:8]
@@ -863,8 +863,8 @@ class NotificationRevealer(SlideRevealer):
                 self.notif_box._should_cleanup_cache = True
                 try:
                     self.notification.close("dismissed-by-user")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
                 return False
 
             return True
@@ -942,8 +942,8 @@ class NotificationRevealer(SlideRevealer):
         if hasattr(self, "_closed_handler_id") and self._closed_handler_id:
             try:
                 self.notification.disconnect(self._closed_handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
             self._closed_handler_id = 0
 
         # Clean up CSS provider from style context
@@ -952,8 +952,8 @@ class NotificationRevealer(SlideRevealer):
                 style_context = self.notif_box.get_style_context()
                 if style_context:
                     style_context.remove_provider(self._css_provider)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
             self._css_provider = None
 
         super().destroy()
@@ -1042,8 +1042,8 @@ class ModusNoti(Window):
                 oldest = self.notification_queue.pop(0)
                 try:
                     oldest.close("dismissed-by-user")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
         # Add new notification to queue
         self.notification_queue.append(notification)
@@ -1093,8 +1093,8 @@ class ModusNoti(Window):
             # Force close current notification with smooth animation
             try:
                 self.current_notification.notification.close("expired")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
     def _show_next_notification(self):
         if (
@@ -1126,8 +1126,8 @@ class ModusNoti(Window):
         for child in list(self.notifications.children):
             try:
                 self.notifications.remove(child)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         self.notifications.children = [new_box]
 
@@ -1158,8 +1158,8 @@ class ModusNoti(Window):
         try:
             if notification_box in self.notifications.children:
                 self.notifications.remove(notification_box)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         # Reset state
         self.current_notification = None
@@ -1191,8 +1191,8 @@ class ModusNoti(Window):
             for notification in list(self.notification_queue):
                 try:
                     notification.close("dismissed-by-user")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
             self.notification_queue.clear()
 
         # Also clean current notification if showing

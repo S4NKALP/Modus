@@ -1,4 +1,4 @@
-from fabric.utils import GLib
+from fabric.utils import GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -60,8 +60,8 @@ class PerAppVolumeControl(Box):
         try:
             if hasattr(self.control_center, "add_keybinding"):
                 self.control_center.add_keybinding("Escape", self._go_back)
-        except Exception:
-            pass  # Ignore if keybinding fails
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")  # Ignore if keybinding fails
 
         self.children = [self.header, self.scrolled_window]
 
@@ -174,8 +174,8 @@ class PerAppVolumeControl(Box):
         for child in list(self.apps_container.get_children()):
             try:
                 child.destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self.apps_container.children = []
         self._app_widgets.clear()
 
@@ -310,7 +310,7 @@ class PerAppVolumeControl(Box):
             app.volume = volume_value
 
         except Exception as e:
-            print(f"Error setting volume for {app.name}: {e}")
+            logger.error(f"Error setting volume for {app.name}: {e}")
         finally:
             GLib.timeout_add(100, lambda: self._updating_volumes.discard(app.name))
 
@@ -331,8 +331,8 @@ class PerAppVolumeControl(Box):
         if self._refresh_timer is not None:
             try:
                 GLib.source_remove(self._refresh_timer)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
             self._refresh_timer = None
 
         # Disconnect audio service signals
@@ -340,8 +340,8 @@ class PerAppVolumeControl(Box):
             for connection in self._signal_connections:
                 try:
                     audio_service.disconnect(connection)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
         self._signal_connections.clear()
         self._app_widgets.clear()

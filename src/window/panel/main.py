@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.system_tray.widgets import SystemTray
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -312,8 +313,8 @@ class Panel(Window):
 
             if self._on_config_changed in _config_handlers:
                 _config_handlers.remove(self._on_config_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         # Destroy components
         for component in [
@@ -324,14 +325,14 @@ class Panel(Window):
         ]:
             try:
                 component.destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         # Destroy MouseCapture windows
         for mc in [self.control_center, self.notification_center]:
             try:
                 mc.destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         super().destroy()

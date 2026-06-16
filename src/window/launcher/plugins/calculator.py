@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import math
 import re
 import subprocess
@@ -136,8 +137,8 @@ class CalculatorPlugin(PluginBase):
                             plugin_name=self.display_name,
                         )
                     ]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         return []
 

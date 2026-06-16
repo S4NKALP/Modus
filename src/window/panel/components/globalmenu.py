@@ -1,5 +1,5 @@
 from fabric.hyprland.widgets import HyprlandActiveWindow as ActiveWindow
-from fabric.utils import FormattedString, exec_shell_command_async
+from fabric.utils import FormattedString, exec_shell_command_async, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -312,8 +312,8 @@ class GlobalMenuDropdowns:
             modus_service.disconnect_by_func(self._on_active_app_changed)
             modus_service.disconnect_by_func(self.changed_dropdown)
             modus_service.disconnect_by_func(self.hide_dropdowns)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         # Destroy all dropdown captures
         dropdown_captures = [
@@ -327,8 +327,8 @@ class GlobalMenuDropdowns:
             try:
                 if capture and hasattr(capture, "destroy"):
                     capture.destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         super().destroy()
 
@@ -364,6 +364,6 @@ class GlobalMenu(Box):
         if hasattr(self, "dropdown_system") and self.dropdown_system:
             try:
                 self.dropdown_system.destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         super().destroy()

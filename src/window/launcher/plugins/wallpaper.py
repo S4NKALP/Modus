@@ -260,12 +260,12 @@ class WallpaperPlugin(PluginBase):
                             )
                             self.thumbnail_cache[filename] = pixbuf
                         except Exception as e:
-                            print(f"Error loading thumbnail for {filename}: {e}")
+                            logger.error(f"Error loading thumbnail for {filename}: {e}")
                             self.thumbnail_cache[filename] = None
                     else:
                         self.thumbnail_cache[filename] = None
                 except Exception as e:
-                    print(f"Error creating thumbnail for {filename}: {e}")
+                    logger.error(f"Error creating thumbnail for {filename}: {e}")
                     self.thumbnail_cache[filename] = None
                 finally:
                     self.thumbnail_loading.discard(filename)
@@ -341,7 +341,7 @@ class WallpaperPlugin(PluginBase):
             # File doesn't exist, return default
             return "scheme-tonal-spot"
         except Exception as e:
-            print(f"Error reading current scheme from config: {e}")
+            logger.error(f"Error reading current scheme from config: {e}")
             return "scheme-tonal-spot"
 
     def _set_current_scheme(self, scheme: str):
@@ -365,7 +365,7 @@ class WallpaperPlugin(PluginBase):
                 json.dump(config, f, indent=4)
 
         except Exception as e:
-            print(f"Error saving current scheme to config: {e}")
+            logger.error(f"Error saving current scheme to config: {e}")
             return
 
         # Apply the scheme to current wallpaper if matugen is enabled

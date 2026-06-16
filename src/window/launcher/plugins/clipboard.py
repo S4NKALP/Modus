@@ -1,5 +1,5 @@
+from fabric.utils import logger
 import subprocess
-import sys
 import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -71,7 +71,7 @@ class ClipboardPlugin(PluginBase):
                 self.image_cache.clear()
                 self.clipboard_items_cache.clear()
         except Exception as e:
-            print(f"Error cleaning up temporary files: {e}", file=sys.stderr)
+            logger.error(f"Error cleaning up temporary files: {e}")
 
     def invalidate_cache(self):
         """Force invalidation of the clipboard cache."""
@@ -120,7 +120,7 @@ class ClipboardPlugin(PluginBase):
                                 return False
 
                 except Exception as e:
-                    print(f"Error forcing launcher refresh: {e}")
+                    logger.error(f"Error forcing launcher refresh: {e}")
 
                 return False  # Don't repeat
 
@@ -128,7 +128,7 @@ class ClipboardPlugin(PluginBase):
             GLib.timeout_add(10, trigger_refresh)
 
         except Exception as e:
-            print(f"Could not trigger refresh: {e}")
+            logger.error(f"Could not trigger refresh: {e}")
 
     def _load_clipboard_items_cached(self) -> List[str]:
         """Load clipboard items from cliphist with caching and change detection."""
@@ -172,10 +172,10 @@ class ClipboardPlugin(PluginBase):
 
             return items
         except subprocess.CalledProcessError as e:
-            print(f"Error loading clipboard history: {e}", file=sys.stderr)
+            logger.error(f"Error loading clipboard history: {e}")
             return []
         except Exception as e:
-            print(f"Unexpected error: {e}", file=sys.stderr)
+            logger.error(f"Unexpected error: {e}")
             return []
 
     def _load_clipboard_items(self) -> List[str]:
@@ -247,7 +247,7 @@ class ClipboardPlugin(PluginBase):
 
             return pixbuf
         except Exception as e:
-            print(f"Error loading image preview: {e}", file=sys.stderr)
+            logger.error(f"Error loading image preview: {e}")
             return None
 
     def _load_image_preview_async(self, item_id: str) -> Optional[GdkPixbuf.Pixbuf]:
@@ -430,6 +430,6 @@ class ClipboardPlugin(PluginBase):
                 self.cache_timestamp = 0
 
         except subprocess.SubprocessError as e:
-            print(f"Error copying to clipboard: {e}", file=sys.stderr)
+            logger.error(f"Error copying to clipboard: {e}")
         except subprocess.TimeoutExpired as e:
-            print(f"Timeout copying to clipboard: {e}", file=sys.stderr)
+            logger.error(f"Timeout copying to clipboard: {e}")

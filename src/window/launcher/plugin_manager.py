@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import importlib
 import importlib.util
 import os
@@ -72,7 +73,7 @@ class PluginManager:
                         break
 
         except Exception as e:
-            print(f"Failed to load plugin {plugin_name}: {e}")
+            logger.error(f"Failed to load plugin {plugin_name}: {e}")
 
     def _activate_default_plugins(self):
         """Activate default plugins."""
@@ -115,7 +116,7 @@ class PluginManager:
             return True
 
         except Exception as e:
-            print(f"Failed to activate plugin {plugin_name}: {e}")
+            logger.error(f"Failed to activate plugin {plugin_name}: {e}")
             return False
 
     def deactivate_plugin(self, plugin_name: str) -> bool:
@@ -136,7 +137,7 @@ class PluginManager:
             return True
 
         except Exception as e:
-            print(f"Failed to deactivate plugin {plugin_name}: {e}")
+            logger.error(f"Failed to deactivate plugin {plugin_name}: {e}")
             return False
 
     def get_active_plugins(self) -> List[PluginBase]:

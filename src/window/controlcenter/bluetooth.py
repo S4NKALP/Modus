@@ -159,8 +159,8 @@ class BluetoothDeviceSlot(CenterBox):
         for sig_id in self._signal_ids:
             try:
                 self.device.disconnect(sig_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"[Bluetooth] Failed to disconnect signal {sig_id}: {e}")
         self._signal_ids.clear()
         self.device = None
         super().destroy()
@@ -200,8 +200,10 @@ class BluetoothDeviceSlot(CenterBox):
             ]
             self.styles = new_styles
             self.dimage.set_property("style-classes", " ".join(self.styles))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                f"[Bluetooth] Failed to update styles for {self.device.name}: {e}"
+            )
 
         if (
             hasattr(self.device, "battery_percentage")
@@ -482,8 +484,8 @@ class BluetoothConnections(Box):
                 self.parent.hide_controlcenter()
         except FileNotFoundError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[Bluetooth] Failed to open bluetooth settings: {e}")
 
     def update_scan_label(self):
         """Update scanning state appearance"""
@@ -529,7 +531,10 @@ class BluetoothConnections(Box):
                         else:
                             other_devices.append(device)
                             new_other_addresses.add(device.address)
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[Bluetooth] Failed to process device {device}: {e}"
+                    )
                     continue
 
             paired_changed = current_paired_addresses != new_paired_addresses
@@ -591,8 +596,8 @@ class BluetoothConnections(Box):
                 self.no_devices_label.set_visible(not has_any_devices)
                 self.other_devices_button.set_visible(True)  # Always visible
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[Bluetooth] Error during update_devices: {e}")
         finally:
             self._update_in_progress = False
 
@@ -618,8 +623,8 @@ class BluetoothConnections(Box):
 
         try:
             self.update_devices()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[Bluetooth] Error during periodic refresh: {e}")
 
         return True
 
@@ -630,8 +635,8 @@ class BluetoothConnections(Box):
 
         try:
             self.update_devices()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[Bluetooth] Error during forced device refresh: {e}")
 
     def on_client_changed(self, *_):
         """Handle when the bluetooth client state changes"""
@@ -648,13 +653,15 @@ class BluetoothConnections(Box):
         for sig_id in self._client_signal_ids:
             try:
                 self.client.disconnect(sig_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(
+                    f"[Bluetooth] Failed to disconnect client signal {sig_id}: {e}"
+                )
         self._client_signal_ids.clear()
         try:
             self.other_devices_revealer.child_revealed = False
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[Bluetooth] Failed to hide other devices revealer: {e}")
 
     def close_bluetooth(self):
         """Called when Bluetooth panel is being closed"""

@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import subprocess
 from threading import Timer
 from typing import List
@@ -74,7 +75,7 @@ class CaffeinePlugin(PluginBase):
                         self._schedule_expiration_notification(duration, duration_text)
 
             except Exception as e:
-                print(f"Error starting inhibit script: {e}")
+                logger.error(f"Error starting inhibit script: {e}")
 
         return action
 

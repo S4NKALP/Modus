@@ -137,7 +137,7 @@ class EmojiPlugin(PluginBase):
                 self.recent_emojis = OrderedDict()
                 self._save_recent_emojis()
         except Exception as e:
-            print(f"Error loading recent emoji data: {e}")
+            logger.error(f"Error loading recent emoji data: {e}")
             self.recent_emojis = OrderedDict()
 
     def _save_recent_emojis(self):
@@ -149,7 +149,7 @@ class EmojiPlugin(PluginBase):
             with open(self.recent_emoji_path, "w", encoding="utf-8") as f:
                 json.dump(dict(self.recent_emojis), f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"Error saving recent emoji data: {e}")
+            logger.error(f"Error saving recent emoji data: {e}")
 
     def _add_to_recent(self, emoji: str):
         """Add an emoji to the recent list."""
@@ -186,7 +186,7 @@ class EmojiPlugin(PluginBase):
             self._add_to_recent(emoji)
 
         except Exception as e:
-            print(f"Failed to copy to clipboard: {e}")
+            logger.error(f"Failed to copy to clipboard: {e}")
 
     def query(self, query_string: str) -> List[Result]:
         """Search emojis based on query."""

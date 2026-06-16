@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.bluetooth import BluetoothClient
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -465,7 +466,7 @@ class BatteryIndicator(Box):
             if hasattr(self, "battery_service") and self.battery_service:
                 self.battery_service.disconnect_by_func(self.on_battery_direct_changed)
         except Exception as e:
-            print(f"Error disconnecting battery indicator signals: {e}")
+            logger.error(f"Error disconnecting battery indicator signals: {e}")
 
         # Destroy window and widget
         try:
@@ -473,8 +474,8 @@ class BatteryIndicator(Box):
                 self.battery_widget.destroy()
             if hasattr(self, "battery_window") and self.battery_window:
                 self.battery_window.destroy()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         super().destroy()
 
@@ -491,14 +492,14 @@ def add_destroy_to_indicators():
                 self.bluetooth.disconnect_by_func(self.on_device_added)
                 self.bluetooth.disconnect_by_func(self.on_device_removed)
         except Exception as e:
-            print(f"Error disconnecting bluetooth indicator signals: {e}")
+            logger.error(f"Error disconnecting bluetooth indicator signals: {e}")
         try:
             if hasattr(self, "bluetooth_widget") and self.bluetooth_widget:
                 self.bluetooth_widget.destroy()
             if hasattr(self, "bluetooth_window") and self.bluetooth_window:
                 self.bluetooth_window.destroy()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         Box.destroy(self)
 
     BluetoothIndicator.destroy = bt_destroy
@@ -521,8 +522,8 @@ def add_destroy_to_indicators():
                         self.network_service.wifi_device.disconnect_by_func(
                             self.on_network_direct_changed
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(f"An error occurred: {e}")
                 if (
                     hasattr(self.network_service, "ethernet_device")
                     and self.network_service.ethernet_device
@@ -531,17 +532,17 @@ def add_destroy_to_indicators():
                         self.network_service.ethernet_device.disconnect_by_func(
                             self.on_network_direct_changed
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(f"An error occurred: {e}")
         except Exception as e:
-            print(f"Error disconnecting network indicator signals: {e}")
+            logger.error(f"Error disconnecting network indicator signals: {e}")
         try:
             if hasattr(self, "wifi_widget") and self.wifi_widget:
                 self.wifi_widget.destroy()
             if hasattr(self, "wifi_window") and self.wifi_window:
                 self.wifi_window.destroy()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         Box.destroy(self)
 
     NetworkIndicator.destroy = net_destroy

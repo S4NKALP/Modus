@@ -5,7 +5,7 @@ from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
-from fabric.utils import Gtk, GLib, Gdk
+from fabric.utils import Gtk, GLib, Gdk, logger
 
 from services.config import config, on_config_change
 from utils.utils import setup_cursor_hover, svg_file
@@ -98,8 +98,8 @@ class SettingsEntry(Entry):
         try:
             if value.isdigit():
                 value = int(value)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         config().set(self.config_key, value)
         config().save()

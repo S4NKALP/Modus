@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import json
 import os
 from typing import Any, Dict, List
@@ -19,7 +20,7 @@ class TriggerConfig:
                 with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
             except Exception as e:
-                print(f"Error loading trigger config: {e}")
+                logger.error(f"Error loading trigger config: {e}")
 
         self.config = config
         self.launcher_config = self.config.get("launcher_config", {})

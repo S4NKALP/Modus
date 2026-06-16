@@ -1,4 +1,4 @@
-from fabric.utils import GLib, os, time
+from fabric.utils import GLib, os, time, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
@@ -41,14 +41,14 @@ class RecordingIndicator(Button):
         # Prevent container.show_all() from forcing this visible when no recording
         try:
             self.set_no_show_all(True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         self.connect("clicked", self.on_stop_recording)
         try:
             setup_cursor_hover(self, "pointer")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         self.connect("button-press-event", self.on_button_press)
         self.set_visible(False)
 
@@ -86,7 +86,7 @@ class RecordingIndicator(Button):
                 self.cleanup_recording_state()
 
         except Exception as e:
-            print(f"[DEBUG] Error checking recording status: {e}")
+            logger.error(f"[DEBUG] Error checking recording status: {e}")
             if self.get_visible():
                 self.set_visible(False)
                 self.cleanup_recording_state()
@@ -110,7 +110,7 @@ class RecordingIndicator(Button):
 
             return True
         except Exception as e:
-            print(f"[DEBUG] Error updating timer display: {e}")
+            logger.error(f"[DEBUG] Error updating timer display: {e}")
             return False
 
     def cleanup_recording_state(self):
@@ -197,7 +197,7 @@ class RecordingIndicator(Button):
             )
 
         except Exception as e:
-            print(f"[DEBUG] Error in delayed recording indicator init: {e}")
+            logger.error(f"[DEBUG] Error in delayed recording indicator init: {e}")
         return False
 
     def destroy(self):

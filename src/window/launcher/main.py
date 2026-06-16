@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple
 
 from fabric.core.service import Property
-from fabric.utils import Gdk, GLib
+from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.entry import Entry
 from fabric.widgets.scrolledwindow import ScrolledWindow
@@ -193,7 +193,7 @@ class Launcher(Window):
                     self.selected_index = 0
                     self._update_results_display()
                 except Exception as e:
-                    print(
+                    logger.error(
                         f"Error querying triggered plugin {triggered_plugin.name}: {e}"
                     )
                     self._clear_results()
@@ -353,7 +353,7 @@ class Launcher(Window):
                     self.selected_index = 0
                     self._update_results_display()
                 except Exception as e:
-                    print(f"Error getting applications: {e}")
+                    logger.error(f"Error getting applications: {e}")
                     self._clear_results()
             else:
                 self._clear_results()
@@ -369,7 +369,9 @@ class Launcher(Window):
                 )
                 all_results = self.triggered_plugin.query(remaining_query)
             except Exception as e:
-                print(f"Error in triggered plugin {self.triggered_plugin.name}: {e}")
+                logger.error(
+                    f"Error in triggered plugin {self.triggered_plugin.name}: {e}"
+                )
                 all_results = []
         else:
             # Check for trigger activation
@@ -400,7 +402,9 @@ class Launcher(Window):
                 try:
                     all_results = triggered_plugin.query(remaining_query)
                 except Exception as e:
-                    print(f"Error in triggered plugin {triggered_plugin.name}: {e}")
+                    logger.error(
+                        f"Error in triggered plugin {triggered_plugin.name}: {e}"
+                    )
                     all_results = []
             else:
                 # No trigger detected - search applications and show trigger suggestions
@@ -416,7 +420,7 @@ class Launcher(Window):
                         app_results = applications_plugin.query(query)
                         all_results.extend(app_results)
                     except Exception as e:
-                        print(f"Error searching applications: {e}")
+                        logger.error(f"Error searching applications: {e}")
 
                 # Also show trigger suggestions if query matches trigger prefixes
                 trigger_suggestions = self._get_trigger_suggestions(query)
@@ -695,18 +699,18 @@ class Launcher(Window):
                         print(f"External command executed: {command_string}")
                         return result_value
                     except Exception as e:
-                        print(f"Error executing result action: {e}")
+                        logger.error(f"Error executing result action: {e}")
                         return None
                 else:
                     print(f"No suitable result found for: {command_string}")
                     return None
 
             except Exception as e:
-                print(f"Error querying plugin {triggered_plugin.name}: {e}")
+                logger.error(f"Error querying plugin {triggered_plugin.name}: {e}")
                 return None
 
         except Exception as e:
-            print(f"Error executing external command '{command_string}': {e}")
+            logger.error(f"Error executing external command '{command_string}': {e}")
             return None
 
     def _update_results_display(self):
@@ -1274,7 +1278,7 @@ class Launcher(Window):
                         )
                         vadjustment.set_value(target_pos)
             except Exception as e:
-                print(f"Error in _ensure_selected_visible: {e}")
+                logger.error(f"Error in _ensure_selected_visible: {e}")
 
         return False  # Don't repeat the idle callback
 
@@ -1325,11 +1329,11 @@ class Launcher(Window):
                     if hasattr(gtk_entry, "select_region"):
                         gtk_entry.select_region(text_length, text_length)
 
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
             except Exception as e:
-                print(f"Could not clear selection: {e}")
+                logger.error(f"Could not clear selection: {e}")
             return False
 
         # Schedule clearing selection after focus is established
@@ -1386,4 +1390,4 @@ class Launcher(Window):
                     self.close_launcher()
                 # For trigger suggestions and keep_launcher_open actions, the launcher stays open
             except Exception as e:
-                print(f"Error activating result: {e}")
+                logger.error(f"Error activating result: {e}")

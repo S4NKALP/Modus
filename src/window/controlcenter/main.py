@@ -599,14 +599,14 @@ class ModusControlCenter(AppletWindow):
                 try:
                     self.volume_scale.disconnect_by_func(self.set_volume)
                     self.volume_scale.disconnect_by_func(self.on_volume_scroll)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
             if hasattr(self, "brightness_scale"):
                 try:
                     self.brightness_scale.disconnect_by_func(self.set_brightness)
                     self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
             self._signals_connected = False
             self._resources_initialized = False
@@ -765,8 +765,8 @@ class ModusControlCenter(AppletWindow):
                 if self._caffeine_process:
                     try:
                         self._caffeine_process.terminate()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(f"An error occurred: {e}")
                     self._caffeine_process = None
             else:
                 inhibit_script = get_relative_path("../../utils/inhibit.py")
@@ -904,8 +904,8 @@ class ModusControlCenter(AppletWindow):
     def close_bluetooth(self, *_):
         try:
             self.bluetooth_man.close_bluetooth()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         if self.current_view == "expanded_player":
             self._crossfade_to_view("main")
         else:
@@ -915,8 +915,8 @@ class ModusControlCenter(AppletWindow):
     def close_wifi(self, *_):
         try:
             self.wifi_man.close_wifi()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         if self.current_view == "expanded_player":
             self._crossfade_to_view("main")
         else:
@@ -1072,28 +1072,28 @@ class ModusControlCenter(AppletWindow):
             if hasattr(self, "volume_scale") and self.volume_scale:
                 try:
                     self.volume_scale.disconnect_by_func(self.set_volume)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
                 try:
                     self.volume_scale.disconnect_by_func(self.on_volume_scroll)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
             if hasattr(self, "brightness_scale") and self.brightness_scale:
                 try:
                     self.brightness_scale.disconnect_by_func(self.set_brightness)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
                 try:
                     self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
             # Disconnect the visibility change signal on self
             try:
                 self.disconnect_by_func(self._on_visibility_changed)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
             self._signals_connected = False
             logger.debug("All signals disconnected successfully")
@@ -1254,5 +1254,5 @@ class ModusControlCenter(AppletWindow):
             logger.error(f"Failed to destroy control center: {e}")
             try:
                 super().destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")

@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import json
 
 from fabric.hyprland.widgets import get_hyprland_connection
@@ -208,7 +209,7 @@ class ApplicationSwitcher(Window):
             self.view.show_all()
             self.update_selection()
         except Exception as e:
-            print(f"Failed to update windows: {e}")
+            logger.error(f"Failed to update windows: {e}")
 
     def on_key_press(self, _, event):
         keyval = event.keyval
@@ -319,7 +320,7 @@ class ApplicationSwitcher(Window):
                     f"hyprctl dispatch 'hl.dsp.focus({{ window = \"address:{address}\" }})'"
                 )
             except Exception as e:
-                print(f"Failed to focus window: {e}")
+                logger.error(f"Failed to focus window: {e}")
 
     def _on_item_clicked(self, index):
         self.current_index = index
@@ -334,7 +335,7 @@ class ApplicationSwitcher(Window):
             window = self.get_window()
             seat.grab(window, Gdk.SeatCapabilities.KEYBOARD, False, None, None, None)
         except Exception as e:
-            print(f"Failed to grab keyboard: {e}")
+            logger.error(f"Failed to grab keyboard: {e}")
 
     def ungrab_keyboard(self):
         try:
@@ -342,4 +343,4 @@ class ApplicationSwitcher(Window):
             seat = display.get_default_seat()
             seat.ungrab()
         except Exception as e:
-            print(f"Failed to ungrab keyboard: {e}")
+            logger.error(f"Failed to ungrab keyboard: {e}")

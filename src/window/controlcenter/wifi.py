@@ -1,6 +1,6 @@
 import subprocess
 
-from fabric.utils import Gdk, GLib
+from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -151,7 +151,10 @@ class WifiNetworkSlot(Box):
                         self.network_service.connect_wifi_bssid(
                             self.access_point.bssid, callback=on_open_connection_result
                         )
-                except Exception:
+                except Exception as e:
+                    logger.error(
+                        f"[WiFi] Failed to connect to {self.access_point.ssid}: {e}"
+                    )
                     self._reset_connect_state()
                     self.on_changed()
 
@@ -234,7 +237,10 @@ class WifiNetworkSlot(Box):
                     self.network_service.connect_wifi_with_password(
                         self.access_point.bssid, password, callback=on_connection_result
                     )
-            except Exception:
+            except Exception as e:
+                logger.error(
+                    f"[WiFi] Failed to initiate connection to {self.access_point.ssid}: {e}"
+                )
                 self._reset_connect_state()
                 if self.password_dialog:
                     self._show_connection_error("Connection failed. Please try again.")
@@ -447,8 +453,8 @@ class WifiConnections(Box):
                 self.parent.hide_controlcenter()
         except FileNotFoundError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[WiFi] Failed to open network settings: {e}")
 
     def update_networks(self, *_):
         """Update the list of available networks"""
@@ -487,7 +493,10 @@ class WifiConnections(Box):
                         else:
                             other_networks.append(access_point)
                             new_other_ssids.add(access_point.ssid)
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[WiFi] Failed to process access point {access_point}: {e}"
+                    )
                     continue
 
             known_changed = current_known_ssids != new_known_ssids
@@ -570,8 +579,8 @@ class WifiConnections(Box):
                 self.other_networks_button.set_visible(True)  # Always visible
                 self.refresh_network_states()
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[WiFi] Error during update_networks: {e}")
         finally:
             self._update_in_progress = False
 
@@ -619,8 +628,8 @@ class WifiConnections(Box):
 
         try:
             self.update_networks()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[WiFi] Error during periodic network refresh: {e}")
 
         return True  # Continue monitoring
 
@@ -631,8 +640,8 @@ class WifiConnections(Box):
 
         try:
             self.update_networks()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[WiFi] Error during forced network refresh: {e}")
 
     def setup_pull_to_refresh(self):
         """Setup pull-to-refresh gesture for the scrolled window"""
@@ -714,15 +723,15 @@ class WifiConnections(Box):
         for obj, sig_id in self._signal_ids:
             try:
                 obj.disconnect(sig_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"[WiFi] Failed to disconnect signal {sig_id}: {e}")
         self._signal_ids.clear()
         self.wifi_service = None
         self.network_service = None
         try:
             self.other_networks_revealer.child_revealed = False
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"[WiFi] Failed to hide other networks revealer: {e}")
 
     def close_wifi(self):
         """Called when WiFi panel is being closed"""

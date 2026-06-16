@@ -124,8 +124,8 @@ class BluetoothDeviceSlot(CenterBox):
         for sig_id in self._signal_ids:
             try:
                 self.device.disconnect(sig_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self._signal_ids.clear()
         self.device = None
         super().destroy()
@@ -386,8 +386,8 @@ class BluetoothConnections(Box):
                 self.parent.hide_controlcenter()
         except FileNotFoundError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def update_scan_label(self):
         """Update scanning state appearance"""
@@ -485,8 +485,8 @@ class BluetoothConnections(Box):
                 # Always show the other devices button, regardless of available devices
                 self.other_devices_button.set_visible(True)  # Always visible
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         finally:
             self._update_in_progress = False
 
@@ -515,8 +515,8 @@ class BluetoothConnections(Box):
 
         try:
             self.update_devices()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         return True  # Continue monitoring
 
@@ -529,8 +529,8 @@ class BluetoothConnections(Box):
             # Simply trigger update_devices which has its own safety checks
             # Avoid forcing signal emissions to prevent race conditions
             self.update_devices()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def on_client_changed(self, *_):
         """Handle when the bluetooth client state changes"""
@@ -547,14 +547,14 @@ class BluetoothConnections(Box):
         for sig_id in self._client_signal_ids:
             try:
                 self.client.disconnect(sig_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self._client_signal_ids.clear()
         # Collapse other devices revealer
         try:
             self.other_devices_revealer.child_revealed = False
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def close_bluetooth(self):
         """Called when Bluetooth panel is being closed"""

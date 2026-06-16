@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import subprocess
 import urllib.parse
 from typing import List
@@ -179,7 +180,7 @@ class WebSearchPlugin(PluginBase):
                 ["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
         except Exception as e:
-            print(f"Failed to open URL: {e}")
+            logger.error(f"Failed to open URL: {e}")
 
     def _get_search_engine_list(self) -> List[Result]:
         """Get list of available search engines."""
@@ -248,7 +249,7 @@ class WebSearchPlugin(PluginBase):
                 stderr=subprocess.DEVNULL,
             )
         except Exception as e:
-            print(f"Failed to open search URL: {e}")
+            logger.error(f"Failed to open search URL: {e}")
 
     def _show_engine_help(self, engine_id: str):
         """Show help for a specific search engine."""

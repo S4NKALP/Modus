@@ -101,8 +101,8 @@ class PlayerBoxStack(Box):
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self._signal_connections.clear()
         super().destroy()
 
@@ -451,8 +451,8 @@ class PlayerBox(Box):
             self.play_pause_icon.dynamic_file(
                 "player/play.svg" if status == "paused" else "player/Pause.svg"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def _on_playback_change(self, *_):
         if self.exit or self.player is None:
@@ -482,6 +482,6 @@ class PlayerBox(Box):
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         super().destroy()

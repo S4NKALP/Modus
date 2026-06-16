@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import json
 from typing import List
 
@@ -54,7 +55,7 @@ class ApplicationsPlugin(PluginBase):
                     dock_apps_json = json.dumps(pinned_apps)
                     modus_service.dock_apps = dock_apps_json
                 except Exception as e:
-                    print(f"Failed to notify dock about pinned app change: {e}")
+                    logger.error(f"Failed to notify dock about pinned app change: {e}")
 
     def query(self, query_string: str) -> List[Result]:
         """Search applications based on query."""
@@ -64,7 +65,7 @@ class ApplicationsPlugin(PluginBase):
         try:
             applications = get_desktop_applications(include_hidden=False)
         except Exception as e:
-            print(f"Failed to load applications: {e}")
+            logger.error(f"Failed to load applications: {e}")
             applications = []
 
         query = query_string.lower().strip()
@@ -163,7 +164,7 @@ class ApplicationsPlugin(PluginBase):
         try:
             applications = get_desktop_applications(include_hidden=False)
         except Exception as e:
-            print(f"Failed to load applications: {e}")
+            logger.error(f"Failed to load applications: {e}")
             return []
 
         results = []
