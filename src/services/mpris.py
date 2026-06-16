@@ -70,8 +70,8 @@ class PlayerService(Service):
             meta = self._player.props.metadata
             if meta and "mpris:artUrl" in meta.keys():
                 return meta["mpris:artUrl"]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return ""
 
     @Property(str, "readable", default_value="")
@@ -87,8 +87,8 @@ class PlayerService(Service):
             meta = self._player.props.metadata
             if meta and "xesam:artist" in meta.keys():
                 return list(meta["xesam:artist"]) or []
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return []
 
     @Property(str, "readable", default_value="")
@@ -97,8 +97,8 @@ class PlayerService(Service):
             meta = self._player.props.metadata
             if meta and "xesam:album" in meta.keys():
                 return meta["xesam:album"] or ""
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return ""
 
     @Property(str, "readable", default_value="Stopped")
@@ -120,8 +120,8 @@ class PlayerService(Service):
             meta = self._player.props.metadata
             if meta and "mpris:length" in meta.keys():
                 return int(meta["mpris:length"])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return 0
 
     @Property(int, "read-write", default_value=0)

@@ -86,8 +86,8 @@ class ConfigService:
         for monitor in self._monitors:
             try:
                 monitor.cancel()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self._monitors.clear()
 
     def _load_config(self) -> None:

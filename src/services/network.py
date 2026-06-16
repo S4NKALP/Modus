@@ -343,8 +343,8 @@ class NetworkClient(Service):
                 return "wifi"
             if "ethernet" in str(conn_type):
                 return "wired"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return None
 
     def is_network_saved(self, ssid: str) -> bool:
@@ -391,8 +391,8 @@ class NetworkClient(Service):
             if handler_id:
                 try:
                     device.disconnect_by_func(_on_state_changed)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
         if callback:
             handler_id.append(device.connect("state-changed", _on_state_changed))
@@ -430,8 +430,8 @@ class NetworkClient(Service):
             if handler_id:
                 try:
                     device.disconnect_by_func(_on_state_changed)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"An error occurred: {e}")
 
         handler_id.append(device.connect("state-changed", _on_state_changed))
 

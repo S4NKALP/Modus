@@ -134,8 +134,8 @@ class BluetoothDevice(Service):
 
         try:
             self._battery_proxy = _make_proxy(bus, object_path, BLUEZ_BATTERY_IFACE)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         self._prop_sub_id = bus.signal_subscribe(
             BLUEZ_SERVICE,
@@ -153,8 +153,8 @@ class BluetoothDevice(Service):
             v = self._proxy.get_cached_property(name)
             if v is not None:
                 return v.unpack()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return _unpack_variant(self._props.get(name))
 
     def _get_battery_prop(self, name: str):
@@ -319,8 +319,8 @@ class BluetoothAdapter(Service):
             v = self._proxy.get_cached_property(name)
             if v is not None:
                 return v.unpack()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         return _unpack_variant(self._props.get(name))
 
     def _set_prop(self, name: str, value: GLib.Variant):
