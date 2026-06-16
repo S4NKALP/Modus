@@ -221,7 +221,6 @@ class NetworkIndicator(Box):
     def on_network_direct_changed(self, *args):
         self.update_modus_service_wlan_state()
         self.update_state()
-        hide_control_center(self.wifi_window)
 
     def on_network_changed(self, *args):
         self.update_modus_service_wlan_state()
