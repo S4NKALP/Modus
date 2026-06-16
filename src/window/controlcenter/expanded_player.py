@@ -1437,9 +1437,6 @@ class ExpandedPlayer(Window):
 
         super().destroy()
 
-    def _init_mousecapture(self, mousecapture):
-        self._mousecapture_parent = mousecapture
-
     def hide_controlcenter(self, *_):
         # self._mousecapture_parent.toggle_mousecapture()
         self.set_visible(False)

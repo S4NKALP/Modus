@@ -1,7 +1,7 @@
 import subprocess
 
 from fabric.bluetooth import BluetoothClient, BluetoothDevice
-from fabric.utils import Gdk, GLib, Gtk, exec_shell_command, logger
+from fabric.utils import Gdk, GLib, exec_shell_command, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -12,6 +12,7 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 
 from utils.utils import svg_file
+from shared.widgets.smooth_switch import SmoothSwitch
 
 
 def get_battery_icon_file(
@@ -246,14 +247,11 @@ class BluetoothConnections(Box):
             children=title_children,
         )
 
-        self.toggle_button = Gtk.Switch(visible=True, name="toggle-button")
-
-        # Safely set initial state
-        self.toggle_button.set_active(self.client.enabled)
-        self.toggle_button.connect(
-            "notify::active",
-            lambda *_: set_bluetooth_enabled_with_fallback(
-                self.client, self.toggle_button.get_active()
+        self.toggle_button = SmoothSwitch(
+            name="toggle-button",
+            active=self.client.enabled,
+            on_user_toggle=lambda active: set_bluetooth_enabled_with_fallback(
+                self.client, active
             ),
         )
 

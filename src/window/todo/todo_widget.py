@@ -6,10 +6,9 @@ from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.todo import get_todo_service
-from shared.window.mousecapture import MouseCapture
+from shared.window.applet_window import AppletWindow
 from utils.utils import svg_file
 
 
@@ -224,18 +223,20 @@ class TodoItem(Box):
         self.date_label.set_label(date_text)
 
 
-class TodoListWidget(Window):
-    """Main todo list widget window"""
+class TodoListWidget(AppletWindow):
+    """Main todo list window"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, parent=None, pointing_to=None, **kwargs):
         super().__init__(
+            parent=parent,
+            pointing_to=pointing_to,
+            layer="top",
             title="modus-todo",
             anchor="top right",
             margin="2px 10px 0px 0px",
             exclusivity="auto",
-            keyboard_mode="on-demand",
-            name="todo-list-window",
-            visible=False,  # Back to hidden by default
+            name="todo-list-menu",
+            visible=False,
             **kwargs,
         )
 
@@ -416,13 +417,8 @@ class TodoListWidget(Window):
 
     def hide_todo_list(self, *_):
         """Hide the todo list"""
-        if hasattr(self, "_mousecapture_parent"):
-            self._mousecapture_parent.toggle_mousecapture()
-        self.set_visible(False)
-
-    def _init_mousecapture(self, mousecapture):
-        """Initialize mousecapture parent reference"""
-        self._mousecapture_parent = mousecapture
+        self.hide()
+        self.hide()
 
     def destroy(self):
         """Clean up when destroyed"""
@@ -430,14 +426,3 @@ class TodoListWidget(Window):
         get_todo_service().remove_callback(self._on_todo_event)
 
         super().destroy()
-
-
-class TodoListCapture(MouseCapture):
-    """MouseCapture wrapper for the todo list"""
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            layer="top",
-            child_window=TodoListWidget(),
-            **kwargs,
-        )

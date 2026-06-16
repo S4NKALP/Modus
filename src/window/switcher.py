@@ -1,7 +1,7 @@
 import json
 
 from fabric.hyprland.widgets import get_hyprland_connection
-from fabric.utils import Gdk
+from fabric.utils import Gdk, GLib
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
@@ -198,6 +198,10 @@ class ApplicationSwitcher(Window):
                     name="window-button",
                     style_classes=["active"] if i == self.current_index else None,
                     child=button_content,
+                    events=["button-press-event"],
+                )
+                event_box.connect(
+                    "button-press-event", lambda w, e, idx=i: self._on_item_clicked(idx)
                 )
                 current_row.add(event_box)
 
@@ -311,10 +315,17 @@ class ApplicationSwitcher(Window):
         address = window.get("address")
         if address:
             try:
-                command = f"/dispatch focuswindow address:{address}"
-                self.conn.send_command(command)
+                GLib.spawn_command_line_async(
+                    f"hyprctl dispatch 'hl.dsp.focus({{ window = \"address:{address}\" }})'"
+                )
             except Exception as e:
                 print(f"Failed to focus window: {e}")
+
+    def _on_item_clicked(self, index):
+        self.current_index = index
+        self.update_selection()
+        self.activate_selected()
+        self.hide_switcher()
 
     def grab_keyboard(self):
         try:

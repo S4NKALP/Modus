@@ -1,6 +1,6 @@
 import subprocess
 
-from fabric.utils import Gdk, GLib, Gtk
+from fabric.utils import Gdk, GLib
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -13,6 +13,7 @@ from fabric.widgets.separator import Separator
 from services.network import NetworkClient
 from utils.functions import get_wifi_connecting_icon, get_wifi_icon_for_strength
 from utils.utils import svg_file
+from shared.widgets.smooth_switch import SmoothSwitch
 from shared.dialogs.wifi_password_dialog import WiFiPasswordDialog
 from gi.repository import NM
 
@@ -299,7 +300,12 @@ class WifiConnections(Box):
             children=title_children,
         )
 
-        self.toggle_button = Gtk.Switch(visible=True, name="toggle-button")
+        self.toggle_button = SmoothSwitch(
+            name="toggle-button",
+            on_user_toggle=lambda active: self.on_toggle_changed(
+                self.toggle_button, active
+            ),
+        )
 
         # Create Known Network section
         self.known_networks_label = Label(
@@ -393,7 +399,6 @@ class WifiConnections(Box):
         if self.wifi_service:
             # Set up WiFi toggle
             self.toggle_button.set_active(self.wifi_service.wireless_enabled)
-            self.toggle_button.connect("notify::active", self.on_toggle_changed)
 
             # Connect to WiFi service signals — track IDs for cleanup
             self._signal_ids.append(

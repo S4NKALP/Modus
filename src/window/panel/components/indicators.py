@@ -2,12 +2,11 @@ from fabric.bluetooth import BluetoothClient
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-from fabric.widgets.wayland import WaylandWindow as Window
 
-from services.battery import BatteryService, DeviceState
+from services.battery import Battery
 from services.network import NetworkClient
 from shared.window.battery_widget import BatteryControl
-from shared.window.mousecapture import DropDownMouseCapture
+from shared.window.applet_window import AppletWindow
 from utils.functions import format_duration, get_wifi_icon_for_strength
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover, svg_file
@@ -15,45 +14,41 @@ from window.controlcenter.bluetooth import BluetoothConnections
 from window.controlcenter.wifi import WifiConnections
 
 
-def create_control_window(name_prefix):
-    return Window(
+def create_control_window(name_prefix, parent=None, pointing_to=None):
+    return AppletWindow(
+        parent=parent,
+        pointing_to=pointing_to,
         layer="overlay",
         title="modus",
         anchor="top right",
         margin="2px 10px 0px 0px",
         exclusivity="auto",
-        keyboard_mode="on-demand",
         name=f"{name_prefix}-window",
         visible=False,
     )
 
 
-def create_mouse_capture(window):
-    return DropDownMouseCapture(layer="top", child_window=window)
-
-
 def setup_control_center(
-    show_window, name_prefix, widget_class, parent, **widget_kwargs
+    show_window, name_prefix, widget_class, parent, pointing_to=None, **widget_kwargs
 ):
     if not show_window:
-        return None, None, None
+        return None, None
 
-    window = create_control_window(name_prefix)
+    window = create_control_window(name_prefix, parent=parent, pointing_to=pointing_to)
     widget = widget_class(parent, **widget_kwargs)
     window.children = [widget]
-    mouse_capture = create_mouse_capture(window)
 
-    return window, widget, mouse_capture
-
-
-def handle_indicator_click(mouse_capture):
-    if mouse_capture:
-        mouse_capture.toggle_mousecapture()
+    return window, widget
 
 
-def hide_control_center(mouse_capture):
-    if mouse_capture:
-        mouse_capture.hide_child_window()
+def handle_indicator_click(window):
+    if window:
+        window.toggle()
+
+
+def hide_control_center(window):
+    if window:
+        window.hide()
 
 
 class BluetoothIndicator(Box):
@@ -77,16 +72,14 @@ class BluetoothIndicator(Box):
         (
             self.bluetooth_window,
             self.bluetooth_widget,
-            self.bluetooth_mousecapture,
         ) = setup_control_center(
             self.show_window,
             "bluetooth",
             BluetoothConnections,
             self,
+            pointing_to=self.bt_button,
             show_back_button=False,
         )
-        if self.bluetooth_window:
-            self.bluetooth_window._pointing_widget = self.bt_button
 
         modus_service.connect("bluetooth-changed", self.on_bluetooth_changed)
         self.bluetooth.connect("changed", self.on_bluetooth_direct_changed)
@@ -155,13 +148,13 @@ class BluetoothIndicator(Box):
         modus_service.bluetooth = bluetooth_state
 
     def on_bluetooth_clicked(self, *args):
-        handle_indicator_click(self.bluetooth_mousecapture)
+        handle_indicator_click(self.bluetooth_window)
 
     def close_bluetooth(self, *args):
-        hide_control_center(self.bluetooth_mousecapture)
+        hide_control_center(self.bluetooth_window)
 
     def hide_controlcenter(self, *args):
-        hide_control_center(self.bluetooth_mousecapture)
+        hide_control_center(self.bluetooth_window)
 
 
 class NetworkIndicator(Box):
@@ -188,12 +181,12 @@ class NetworkIndicator(Box):
         (
             self.wifi_window,
             self.wifi_widget,
-            self.wifi_mousecapture,
         ) = setup_control_center(
             self.show_window,
             "wifi",
             WifiConnections,
             self,
+            pointing_to=self.network_button,
             show_back_button=False,
         )
         if self.wifi_window:
@@ -232,6 +225,7 @@ class NetworkIndicator(Box):
     def on_network_direct_changed(self, *args):
         self.update_modus_service_wlan_state()
         self.update_state()
+        hide_control_center(self.wifi_window)
 
     def on_network_changed(self, *args):
         self.update_modus_service_wlan_state()
@@ -309,13 +303,19 @@ class NetworkIndicator(Box):
         self.network_button.set_tooltip_text(tooltip)
 
     def on_wifi_clicked(self, *args):
-        handle_indicator_click(self.wifi_mousecapture)
+        handle_indicator_click(self.wifi_window)
 
     def close_wifi(self, *args):
-        hide_control_center(self.wifi_mousecapture)
+        hide_control_center(self.wifi_window)
+
+    def on_wifi_direct_changed(self, *args):
+        hide_control_center(self.wifi_window)
+
+    def on_network_clicked(self, *args):
+        handle_indicator_click(self.wifi_window)
 
     def hide_controlcenter(self, *args):
-        hide_control_center(self.wifi_mousecapture)
+        hide_control_center(self.wifi_window)
 
 
 class BatteryIndicator(Box):
@@ -323,7 +323,7 @@ class BatteryIndicator(Box):
         super().__init__(name="battery-indicator", orientation="h", **kwargs)
         self.show_window = show_window
 
-        self.battery_service = BatteryService()
+        self.battery_service = Battery()
 
         self.battery_icon = svg_file("battery/battery-100.svg", size=23)
 
@@ -344,12 +344,12 @@ class BatteryIndicator(Box):
         (
             self.battery_window,
             self.battery_widget,
-            self.battery_mousecapture,
         ) = setup_control_center(
             self.show_window,
             "battery",
             BatteryControl,
             self,
+            pointing_to=self.battery_button,
             show_back_button=False,
         )
         if self.battery_window:
@@ -367,22 +367,28 @@ class BatteryIndicator(Box):
     def on_battery_direct_changed(self, *args):
         self.update_modus_service_battery_state()
         self.update_state()
+        hide_control_center(self.battery_window)
 
     def _get_percentage(self):
-        return int(self.battery_service.get_property("Percentage") or 0)
+        return int(self.battery_service.percent)
 
     def _get_state(self):
-        state_value = self.battery_service.get_property("State")
-        return DeviceState.get(state_value, "UNKNOWN")
+        if self.battery_service.charging:
+            return "CHARGING"
+        if self.battery_service.discharging:
+            return "DISCHARGING"
+        if self.battery_service.charged:
+            return "FULLY_CHARGED"
+        return "UNKNOWN"
 
     def _is_present(self):
-        return bool(self.battery_service.get_property("IsPresent"))
+        return self.battery_service.available
 
     def _get_time_to_empty(self):
-        return int(self.battery_service.get_property("TimeToEmpty") or 0)
+        return self.battery_service.time_remaining
 
     def _get_time_to_full(self):
-        return int(self.battery_service.get_property("TimeToFull") or 0)
+        return self.battery_service.time_to_full
 
     def _format_time(self, seconds: int) -> str:
         return format_duration(seconds)
@@ -433,10 +439,10 @@ class BatteryIndicator(Box):
     def update_state(self):
         if not self._is_present():
             print("[Battery] No battery detected, hiding indicator")
-            self.set_visible(False)
+            self.hide()
             return
         else:
-            self.set_visible(True)
+            self.show()
 
             percentage = self._get_percentage()
             state = self._get_state()
@@ -451,13 +457,13 @@ class BatteryIndicator(Box):
             self.battery_label.set_label(percentage_text)
 
     def on_battery_clicked(self, *args):
-        handle_indicator_click(self.battery_mousecapture)
+        handle_indicator_click(self.battery_window)
 
     def close_battery(self, *args):
-        hide_control_center(self.battery_mousecapture)
+        hide_control_center(self.battery_window)
 
     def hide_controlcenter(self, *args):
-        hide_control_center(self.battery_mousecapture)
+        hide_control_center(self.battery_window)
 
     def destroy(self):
         """Clean up resources when the indicator is destroyed."""
@@ -466,8 +472,8 @@ class BatteryIndicator(Box):
             modus_service.disconnect_by_func(self.on_battery_changed)
             if hasattr(self, "battery_service") and self.battery_service:
                 self.battery_service.disconnect_by_func(self.on_battery_direct_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error disconnecting battery indicator signals: {e}")
 
         # Destroy window and widget
         try:
@@ -475,8 +481,6 @@ class BatteryIndicator(Box):
                 self.battery_widget.destroy()
             if hasattr(self, "battery_window") and self.battery_window:
                 self.battery_window.destroy()
-            if hasattr(self, "battery_mousecapture") and self.battery_mousecapture:
-                self.battery_mousecapture.destroy()
         except Exception:
             pass
 
@@ -494,15 +498,13 @@ def add_destroy_to_indicators():
                 self.bluetooth.disconnect_by_func(self.on_bluetooth_direct_changed)
                 self.bluetooth.disconnect_by_func(self.on_device_added)
                 self.bluetooth.disconnect_by_func(self.on_device_removed)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error disconnecting bluetooth indicator signals: {e}")
         try:
             if hasattr(self, "bluetooth_widget") and self.bluetooth_widget:
                 self.bluetooth_widget.destroy()
             if hasattr(self, "bluetooth_window") and self.bluetooth_window:
                 self.bluetooth_window.destroy()
-            if hasattr(self, "bluetooth_mousecapture") and self.bluetooth_mousecapture:
-                self.bluetooth_mousecapture.destroy()
         except Exception:
             pass
         Box.destroy(self)
@@ -539,15 +541,13 @@ def add_destroy_to_indicators():
                         )
                     except Exception:
                         pass
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error disconnecting network indicator signals: {e}")
         try:
             if hasattr(self, "wifi_widget") and self.wifi_widget:
                 self.wifi_widget.destroy()
             if hasattr(self, "wifi_window") and self.wifi_window:
                 self.wifi_window.destroy()
-            if hasattr(self, "wifi_mousecapture") and self.wifi_mousecapture:
-                self.wifi_mousecapture.destroy()
         except Exception:
             pass
         Box.destroy(self)

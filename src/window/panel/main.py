@@ -8,7 +8,7 @@ from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.config import on_config_change, get_config_all
 from services.modus import notification_service
-from shared.window.mousecapture import MouseCapture
+
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover, svg_file
 from window.controlcenter.main import ModusControlCenter
@@ -78,20 +78,18 @@ class Panel(Window):
         )
         setup_cursor_hover(self.search, "pointer")
 
-        self.control_center = MouseCapture(
-            layer="top", child_window=ModusControlCenter()
-        )
-
         self.control_center_btn = Button(
             name="panel-button",
             child=svg_file("misc/control-center.svg", size=22),
-            on_clicked=self.control_center.toggle_mousecapture,
         )
         setup_cursor_hover(self.control_center_btn, "pointer")
-        self.control_center.child_window._pointing_widget = self.control_center_btn
 
-        self.notification_center = MouseCapture(
-            layer="overlay", child_window=NotificationCenter()
+        self.control_center = ModusControlCenter(
+            parent=self, pointing_to=self.control_center_btn
+        )
+        self.control_center_btn.connect(
+            "clicked",
+            lambda *_: self.control_center.toggle(),
         )
 
         self.notification_icon = svg_file(
@@ -104,8 +102,9 @@ class Panel(Window):
             on_clicked=self.on_notification_icon_clicked,
         )
         setup_cursor_hover(self.notification_center_btn, "pointer")
-        self.notification_center.child_window._pointing_widget = (
-            self.notification_center_btn
+
+        self.notification_center = NotificationCenter(
+            parent=self, pointing_to=self.notification_center_btn
         )
 
         self.datetime_btn = Button(
@@ -174,9 +173,7 @@ class Panel(Window):
     def on_notification_icon_clicked(self, *args):
         count = notification_service.count
         if count > 0:
-            # Only open notification center if there are notifications
-            self.notification_center.toggle_mousecapture()
-        # Do nothing if no notifications
+            self.notification_center.toggle()
 
     def update_notification_icon(self):
         count = notification_service.count
@@ -197,8 +194,6 @@ class Panel(Window):
     def _rebuild_layout_from_config(self, config_data=None):
         if config_data is None:
             config_data = get_config_all()
-
-        print(f"[Panel] Rebuilding layout with config: {config_data}")
 
         # Update indicator visibility directly
         battery_visible = config_data.get("battery", True)
@@ -257,10 +252,6 @@ class Panel(Window):
 
         # Force a layout recalculation
         self.queue_resize()
-
-        print(
-            f"[Panel] Battery visibility state: {self.battery_indicator.get_visible()}"
-        )
 
     def _on_config_changed(self, new_config, old_config):
         print("[Panel] Config changed, checking keys...")

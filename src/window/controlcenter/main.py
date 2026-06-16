@@ -5,8 +5,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-from fabric.widgets.scale import Scale
-from fabric.widgets.wayland import WaylandWindow as Window
+from shared.widgets.flat_scale import FlatScale
 
 from services.brightness import Brightness
 from services.network import NetworkClient
@@ -22,18 +21,21 @@ from window.controlcenter.per_app_volume import PerAppVolumeControl
 from window.controlcenter.player import PlayerBoxStack, get_shared_mpris_manager
 from window.controlcenter.wifi import WifiConnections
 
-brightness_service = Brightness.get_initial()
+from shared.window.applet_window import AppletWindow
+
+brightness_service = Brightness()
 
 
-class ModusControlCenter(Window):
-    def __init__(self, **kwargs):
+class ModusControlCenter(AppletWindow):
+    def __init__(self, parent=None, pointing_to=None, **kwargs):
         super().__init__(
+            parent=parent,
+            pointing_to=pointing_to,
             layer="top",
             title="modus",
             anchor="top right",
             margin="2px 10px 0px 0px",
             exclusivity="auto",
-            keyboard_mode="on-demand",
             name="control-center-menu",
             visible=False,
             **kwargs,
@@ -98,11 +100,11 @@ class ModusControlCenter(Window):
             ellipsization="end",
             h_align="start",
         )
-        self.volume_scale = Scale(
+        self.volume_scale = FlatScale(
             value=volume,
             min_value=0,
             max_value=100,
-            increments=(5, 5),
+            step=5,
             name="volume-widget-slider",
             size=30,
             h_expand=True,
@@ -115,11 +117,11 @@ class ModusControlCenter(Window):
             else 50
         )
 
-        self.brightness_scale = Scale(
+        self.brightness_scale = FlatScale(
             value=brightness_percentage,
             min_value=0,
             max_value=100,
-            increments=(5, 5),
+            step=5,
             name="brightness-widget-slider",
             size=30,
             h_expand=True,
@@ -555,7 +557,7 @@ class ModusControlCenter(Window):
 
             # Connect brightness controls if brightness service is available
             if brightness_service.max_screen > 0:
-                self.brightness_scale.connect("change-value", self.set_brightness)
+                self.brightness_scale.connect("value-changed", self.set_brightness)
                 self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
                 self._signal_connections.append(
                     (
@@ -565,7 +567,7 @@ class ModusControlCenter(Window):
                 )
 
             # Connect volume scale signals
-            self.volume_scale.connect("change-value", self.set_volume)
+            self.volume_scale.connect("value-changed", self.set_volume)
             self.volume_scale.connect("scroll-event", self.on_volume_scroll)
 
             # Mark signals as connected
@@ -762,14 +764,14 @@ class ModusControlCenter(Window):
         except Exception as e:
             logger.warning(f"Failed to toggle caffeine: {e}")
 
-    def set_volume(self, _, __, volume):
+    def set_volume(self, _, volume):
         if not self._signals_connected:
             return
         self._updating_volume = True
         audio_service.speaker.volume = round(volume)
         self._updating_volume = False
 
-    def set_brightness(self, _, __, brightness):
+    def set_brightness(self, _, brightness):
         if not self._signals_connected:
             return
         self._updating_brightness = True
@@ -1023,9 +1025,6 @@ class ModusControlCenter(Window):
         )
         self.focus_status_label.set_label("On" if self.focus_mode else "Off")
 
-    def _init_mousecapture(self, mousecapture):
-        self._mousecapture_parent = mousecapture
-
     def _disconnect_all_signals(self):
         """Disconnect all signal connections to prevent memory leaks"""
         try:
@@ -1206,8 +1205,7 @@ class ModusControlCenter(Window):
             self._disconnect_signals_when_hidden()
 
             # Hide the control center
-            if hasattr(self, "_mousecapture_parent"):
-                self._mousecapture_parent.toggle_mousecapture()
+            self.set_visible(False)
             self.set_visible(False)
 
         except Exception as e:

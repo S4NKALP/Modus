@@ -3,7 +3,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.scale import Scale
+from shared.widgets.flat_scale import FlatScale
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 
@@ -249,11 +249,11 @@ class PerAppVolumeControl(Box):
         )
 
         # Volume scale (smaller and horizontal)
-        volume_scale = Scale(
+        volume_scale = FlatScale(
             value=volume_percent,
             min_value=0,
             max_value=max_vol,
-            increments=(1, 5),
+            step=5,
             name="compact-volume-slider",
             size=20,
             h_expand=True,
@@ -261,8 +261,8 @@ class PerAppVolumeControl(Box):
 
         # Connect volume change handler
         volume_scale.connect(
-            "change-value",
-            lambda scale, scroll_type, value, app=app: self._set_app_volume(app, value),
+            "value-changed",
+            lambda scale, value, app=app: self._set_app_volume(app, value),
         )
 
         # Create horizontal compact layout

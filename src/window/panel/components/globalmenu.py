@@ -7,7 +7,6 @@ from fabric.widgets.label import Label
 
 from shared.dialogs.about import AboutApp, get_about_window
 from shared.window.dropdown import ModusDropdown, dropdown_divider, dropdowns
-from shared.window.mousecapture import DropDownMouseCapture
 from utils.app_name_resolver import format_window
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover
@@ -41,8 +40,7 @@ def create_dropdown_with_capture(dropdown_id, parent, dropdown_children, layer="
         parent=parent,
         dropdown_children=dropdown_children,
     )
-    mouse_capture = DropDownMouseCapture(layer=layer, child_window=dropdown)
-    return mouse_capture
+    return dropdown
 
 
 def manage_button_style_classes(buttons, active_button=None, style_class="active"):
@@ -72,7 +70,7 @@ def on_click_subthread(button, on_clicked, on_click):
 
     for dropdown in dropdowns:
         if dropdown.is_visible():
-            dropdown.hide_via_mousecapture()
+            dropdown.hide()
             break
 
 
@@ -137,15 +135,13 @@ class GlobalMenuDropdowns:
         self.parent = parent
 
         self.system_dropdown = SystemDropdown(parent=parent)
-        self.menu_button_dropdown = DropDownMouseCapture(
-            layer="top", child_window=self.system_dropdown
-        )
+        self.menu_button_dropdown = self.system_dropdown
         self.menu_button = Button(
             label="Modus",
             name="global-menu",
-            on_clicked=lambda _: self.menu_button_dropdown.toggle_mousecapture(),
+            on_clicked=lambda _: self.menu_button_dropdown.toggle(),
         )
-        self.menu_button_dropdown.child_window.set_pointing_to(self.menu_button)
+        self.menu_button_dropdown.set_pointing_to(self.menu_button)
 
         self.global_title_menu_about = dropdown_option(
             f"About {modus_service.current_active_app_name}",
@@ -162,8 +158,8 @@ class GlobalMenuDropdowns:
             parent,
             [
                 dropdown_option(
-                    "Enter Full Screen",
-                    on_click="hyprctl dispatch 'hl.dsp.fullscreen()'",
+                    "Fullscreen",
+                    on_click="hyprctl dispatch 'hl.dsp.window.fullscreen()'",
                 ),
             ],
         )
@@ -183,35 +179,35 @@ class GlobalMenuDropdowns:
                 ),
                 dropdown_divider("---------------------"),
                 dropdown_option(
-                    "Move Window to Left",
-                    on_click="hyprctl dispatch 'hl.dsp.movewindow([[l]])'",
+                    "Left",
+                    on_click="hyprctl dispatch 'hl.dsp.window.move([[l]])'",
                 ),
                 dropdown_option(
-                    "Move Window to Right",
-                    on_click="hyprctl dispatch 'hl.dsp.movewindow([[r]])'",
+                    "Right",
+                    on_click="hyprctl dispatch 'hl.dsp.window.move([[r]])'",
                 ),
                 dropdown_option(
-                    "Cycle Through Windows",
-                    on_click="hyprctl dispatch 'hl.dsp.cyclenext()'",
+                    "Cycle Next",
+                    on_click="hyprctl dispatch 'hl.dsp.window.cycle_next()'",
                 ),
                 dropdown_divider("---------------------"),
                 dropdown_option(
-                    "Float", on_click="hyprctl dispatch 'hl.dsp.togglefloating()'"
+                    "Float", on_click="hyprctl dispatch 'hl.dsp.window.float()'"
                 ),
                 dropdown_option(
-                    "Quit", on_click="hyprctl dispatch 'hl.dsp.killactive()'"
+                    "Quit", on_click="hyprctl dispatch 'hl.dsp.window.close()'"
                 ),
                 dropdown_option(
-                    "Pseudo", on_click="hyprctl dispatch 'hl.dsp.pseudo()'"
+                    "Pseudo", on_click="hyprctl dispatch 'hl.dsp.window.pseudo()'"
                 ),
                 dropdown_option(
                     "Toggle Split", on_click="hyprctl dispatch 'hl.dsp.togglesplit()'"
                 ),
                 dropdown_option(
-                    "Center", on_click="hyprctl dispatch 'hl.dsp.centerwindow()'"
+                    "Center", on_click="hyprctl dispatch 'hl.dsp.window.center()'"
                 ),
                 dropdown_option(
-                    "Group", on_click="hyprctl dispatch 'hl.dsp.togglegroup()'"
+                    "Group", on_click="hyprctl dispatch 'hl.dsp.group.toggle()'"
                 ),
                 dropdown_option(
                     "Pin",
@@ -252,31 +248,24 @@ class GlobalMenuDropdowns:
             on_clicked=self._on_title_button_clicked,
         )
 
-        self.global_menu_title.child_window.set_pointing_to(
-            self.global_menu_button_title
-        )
+        self.global_menu_title.set_pointing_to(self.global_menu_button_title)
         # File, Edit and Go buttons are placeholders - no dropdowns implemented yet
         self.global_menu_button_file = create_menu_button("File")
         self.global_menu_button_edit = create_menu_button("Edit")
         self.global_menu_button_go = create_menu_button("Go")
 
         self.global_menu_button_view = create_menu_button(
-            "View",
-            lambda _: self.global_menu_view.toggle_mousecapture(),
+            "View", lambda _: self.global_menu_view.toggle()
         )
-        self.global_menu_view.child_window.set_pointing_to(self.global_menu_button_view)
+        self.global_menu_view.set_pointing_to(self.global_menu_button_view)
         self.global_menu_button_window = create_menu_button(
-            "Window",
-            lambda _: self.global_menu_window.toggle_mousecapture(),
+            "Window", lambda _: self.global_menu_window.toggle()
         )
-        self.global_menu_window.child_window.set_pointing_to(
-            self.global_menu_button_window
-        )
+        self.global_menu_window.set_pointing_to(self.global_menu_button_window)
         self.global_menu_button_help = create_menu_button(
-            "Help",
-            lambda _: self.global_menu_help.toggle_mousecapture(),
+            "Help", lambda _: self.global_menu_help.toggle()
         )
-        self.global_menu_help.child_window.set_pointing_to(self.global_menu_button_help)
+        self.global_menu_help.set_pointing_to(self.global_menu_button_help)
 
         self.all_menu_buttons = [
             self.menu_button,
@@ -305,7 +294,7 @@ class GlobalMenuDropdowns:
 
     def _on_title_button_clicked(self, _):
         if has_active_window():
-            self.global_menu_title.toggle_mousecapture()
+            self.global_menu_title.set_visible(not self.global_menu_title.get_visible())
 
     def _on_active_app_changed(self, _, value):
         self.global_title_menu_about.set_property("label", f"About {value}")
@@ -366,11 +355,9 @@ class GlobalMenu(Box):
         ]
 
     def show_system_dropdown(self, imac_button):
-        self.dropdown_system.menu_button_dropdown.child_window.set_pointing_to(
-            imac_button
-        )
+        self.dropdown_system.menu_button_dropdown.set_pointing_to(imac_button)
         mouse_capture = self.dropdown_system.menu_button_dropdown
-        mouse_capture.set_child_window_visible(not mouse_capture.is_visible())
+        mouse_capture.toggle()
 
     def destroy(self):
         """Clean up the global menu and its dropdowns"""

@@ -9,11 +9,11 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.widgets.wayland import WaylandWindow as Window
 
 import shared.data as data
 from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
+from shared.window.applet_window import AppletWindow
 from shared.widgets.custom_image import CustomImage
 from utils.functions import escape_markup_text
 from window.notification.notification import (
@@ -591,13 +591,14 @@ class NotificationCenterWidget(NotificationWidget):
         return False
 
 
-class NotificationCenter(Window):
-    def __init__(self):
+class NotificationCenter(AppletWindow):
+    def __init__(self, parent=None, pointing_to=None):
         super().__init__(
+            parent=parent,
+            pointing_to=pointing_to,
             layer="overlay",
             anchor="top right",
             visible=False,
-            keyboard_mode="on-demand",
             title="modus",
         )
 
@@ -840,8 +841,8 @@ class NotificationCenter(Window):
         self.scrolled.set_visible(current_count > 0)
 
         # Auto-close notification center when no notifications remain
-        if current_count == 0 and hasattr(self, "mousecapture"):
-            self.mousecapture.hide_child_window()
+        if current_count == 0:
+            self.hide()
 
     def clear_all_notifications(self, *_):
         # Clear all groups
@@ -851,18 +852,14 @@ class NotificationCenter(Window):
         # Clear all remaining cached notification images AND icons when clear all is clicked
         cleanup_all_notification_caches()  # Clear ALL caches (icons + images)
         notification_service.clear_all_cached_notifications()
-        if hasattr(self, "mousecapture"):
-            self.mousecapture.hide_child_window()
+        self.hide()
 
     def _on_escape_pressed(self, *_):
-        if hasattr(self, "mousecapture"):
-            self.mousecapture.hide_child_window()
+        self.hide()
 
-    def _init_mousecapture(self, mousecapture):
-        self.mousecapture = mousecapture
-
-    def _set_mousecapture(self, visible):
+    def set_visible(self, visible: bool):
         """Control notification center visibility with slide-left animation"""
+        super().set_visible(visible)
         if visible:
             self.main_revealer.set_reveal_child(True)
         else:
