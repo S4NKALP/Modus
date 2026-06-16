@@ -9,7 +9,7 @@ from .base import BaseOSDContainer
 class BrightnessOSDContainer(BaseOSDContainer):
     def __init__(self, window, **kwargs):
         super().__init__(window, **kwargs)
-        self.brightness_service = Brightness.get_initial()
+        self.brightness_service = Brightness()
         self._setup_specific_components()
         self._connect_specific_signals()
 
