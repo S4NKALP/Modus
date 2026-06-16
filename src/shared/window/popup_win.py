@@ -52,7 +52,8 @@ class PopupWindow(WaylandWindow):
             try:
                 self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
             except Exception as e:
-                logger.error(f"An error occurred: {e}")
+                if "nothing connected" not in str(e):
+                    logger.error(f"Error disconnecting signal: {e}")
         self._pointing_widget = widget
         return self.do_update_handlers()
 
@@ -75,7 +76,8 @@ class PopupWindow(WaylandWindow):
                 self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
                 self.disconnect_by_func(self.do_handle_size_allocate)
             except Exception as e:
-                logger.error(f"An error occurred: {e}")
+                if "nothing connected" not in str(e):
+                    logger.error(f"Error disconnecting signal: {e}")
             return
 
         self._pointing_widget.connect("size-allocate", self.do_handle_size_allocate)
