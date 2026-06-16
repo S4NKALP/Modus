@@ -628,8 +628,8 @@
 #macos-outer-player-box {
   min-height: 80px;
   /* Reduced height */
-  min-width: 380px;
-  /* Slightly wider to accommodate expanded track info */
+  min-width: 345px;
+  /* Match the standard player width */
   /* margin: 10px; */
   padding: 10px;
   /* background-color: alpha(#000, 0.4); */
