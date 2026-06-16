@@ -5,6 +5,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
+from fabric.widgets.eventbox import EventBox
 from shared.widgets.flat_scale import FlatScale
 
 from services.brightness import Brightness
@@ -637,11 +638,16 @@ class ModusControlCenter(AppletWindow):
     def _ensure_bluetooth_widgets(self):
         """Lazy load bluetooth widgets"""
         if self.bluetooth_widgets is None:
-            self.bluetooth_widgets = Box(
+            inner_box = Box(
                 orientation="vertical",
                 h_expand=True,
                 v_expand=True,
                 children=[self.bluetooth_man],
+            )
+            self.bluetooth_widgets = EventBox(
+                events="button-press-mask",
+                on_button_press_event=lambda *_: True,
+                child=inner_box,
             )
             self.bluetooth_center_box = Box(
                 h_expand=True, v_expand=True, children=[self.bluetooth_widgets]
@@ -651,13 +657,18 @@ class ModusControlCenter(AppletWindow):
     def _ensure_wifi_widgets(self):
         """Lazy load wifi widgets"""
         if self.wifi_widgets is None:
-            self.wifi_widgets = Box(
+            inner_box = Box(
                 orientation="vertical",
                 h_expand=True,
                 v_expand=True,
                 children=[
                     self.wifi_man,
                 ],
+            )
+            self.wifi_widgets = EventBox(
+                events="button-press-mask",
+                on_button_press_event=lambda *_: True,
+                child=inner_box,
             )
             self.wifi_center_box = Box(
                 h_expand=True, v_expand=True, children=[self.wifi_widgets]
@@ -891,6 +902,10 @@ class ModusControlCenter(AppletWindow):
         self.has_wifi_open = True
 
     def close_bluetooth(self, *_):
+        try:
+            self.bluetooth_man.close_bluetooth()
+        except Exception:
+            pass
         if self.current_view == "expanded_player":
             self._crossfade_to_view("main")
         else:
@@ -898,6 +913,10 @@ class ModusControlCenter(AppletWindow):
         self.has_bluetooth_open = False
 
     def close_wifi(self, *_):
+        try:
+            self.wifi_man.close_wifi()
+        except Exception:
+            pass
         if self.current_view == "expanded_player":
             self._crossfade_to_view("main")
         else:

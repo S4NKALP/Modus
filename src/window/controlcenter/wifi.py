@@ -6,8 +6,6 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.revealer import Revealer
-from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 
 from services.network import NetworkClient
@@ -15,6 +13,7 @@ from utils.functions import get_wifi_connecting_icon, get_wifi_icon_for_strength
 from utils.utils import svg_file
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.dialogs.wifi_password_dialog import WiFiPasswordDialog
+from shared.window.animated_scrollwindow import AnimatedScrollable
 
 
 class WifiNetworkSlot(Box):
@@ -94,6 +93,24 @@ class WifiNetworkSlot(Box):
         # Emit initial change to update display
         self.on_changed()
 
+    def update_ap(self, access_point):
+        """Update existing slot with new AP data without recreating it"""
+        self.access_point = access_point
+        self.bssid = access_point.bssid
+        self.strength = access_point.strength
+        self.is_connected = access_point.is_active
+
+        # Update icon only if not currently animating a connection state
+        if not self.dimage.has_style_class(
+            "connecting"
+        ) and not self.dimage.has_style_class("disconnecting"):
+            from shared.widgets.wifi_icon import get_wifi_icon_for_strength
+
+            wifi_icon_path = get_wifi_icon_for_strength(self.strength)
+            self.dimage.set_from_file(wifi_icon_path)
+
+        self.on_changed()
+
     def toggle_connecting(self):
         # Check if this network is currently connected
         is_currently_connected = self.access_point.is_active
@@ -118,12 +135,16 @@ class WifiNetworkSlot(Box):
             # Remove disconnecting state after a short delay to show feedback
             GLib.timeout_add(500, lambda: self._reset_disconnect_state())
         else:
-            # Try to connect - check if password is required
-            if self.access_point.requires_password:
+            # Try to connect - check if password is required and not saved
+            is_saved = self.network_service and self.network_service.is_network_saved(
+                self.ssid
+            )
+
+            if self.access_point.requires_password and not is_saved:
                 # Show password dialog immediately
                 self._show_password_dialog()
             else:
-                # Try to connect without password (for open networks)
+                # Try to connect without password (for open or saved networks)
                 connecting_icon = get_wifi_connecting_icon()
                 self.dimage.set_from_file(connecting_icon)
                 self.dimage.add_style_class("connecting")
@@ -137,15 +158,18 @@ class WifiNetworkSlot(Box):
                     else:
                         # Connection failed
                         self._reset_connect_state()
+                        # If password was wrong or auth failed, prompt the user
+                        if message == "Wrong password":
+                            self._show_password_dialog()
 
                     # Update display after connection attempt
                     self.on_changed()
 
                 try:
                     if self.network_service:
-                        self.network_service.connect_wifi_bssid(self.access_point.bssid)
-                    GLib.timeout_add(1500, lambda: self._reset_connect_state())
-                    GLib.timeout_add(1500, lambda: self.on_changed())
+                        self.network_service.connect_wifi_bssid(
+                            self.access_point.bssid, callback=on_open_connection_result
+                        )
                 except Exception:
                     # Handle any connection errors gracefully
                     self._reset_connect_state()
@@ -324,6 +348,12 @@ class WifiConnections(Box):
         self.known_networks = Box(
             spacing=4, orientation="vertical", name="known-networks"
         )
+        self.known_networks_scrolled = AnimatedScrollable(
+            min_content_size=(303, 0),
+            max_content_size=(303, 200),
+            child=self.known_networks,
+            overlay_scroll=True,
+        )
 
         # Create "No networks available" message
         self.no_networks_label = Label(
@@ -340,24 +370,19 @@ class WifiConnections(Box):
             on_clicked=self.toggle_other_networks,
         )
         self.other_networks = Box(spacing=4, orientation="vertical")
+        self.other_networks.set_size_request(-1, 150)
 
         # Create scrolled window for other networks
-        self.other_networks_scrolled = ScrolledWindow(
-            min_content_size=(303, 150),
+        self.other_networks_scrolled = AnimatedScrollable(
+            min_content_size=(303, 0),
+            max_content_size=(303, 300),
             child=self.other_networks,
             overlay_scroll=True,
         )
+        self.other_networks.set_visible(False)
 
         # Add pull-to-refresh functionality to scrolled window
         self.setup_pull_to_refresh()
-
-        # Create revealer for Other Networks section
-        self.other_networks_revealer = Revealer(
-            child=self.other_networks_scrolled,
-            transition_type="slide-down",
-            transition_duration=100,
-            child_revealed=False,
-        )
 
         # Create More Settings button (same style as Other Networks button)
         self.more_settings_button = Button(
@@ -375,11 +400,11 @@ class WifiConnections(Box):
             self.refresh_indicator,
             Separator(orientation="h", name="separator"),
             self.known_networks_label,
-            self.known_networks,
+            self.known_networks_scrolled,
             self.no_networks_label,
             Separator(orientation="h", name="separator"),
             self.other_networks_button,
-            self.other_networks_revealer,
+            self.other_networks_scrolled,
             Separator(orientation="h", name="separator"),
             self.more_settings_button,
         ]
@@ -392,16 +417,23 @@ class WifiConnections(Box):
 
     def toggle_other_networks(self, *_):
         """Toggle the visibility of other networks section"""
-        current_state = self.other_networks_revealer.child_revealed
-        self.other_networks_revealer.child_revealed = not current_state
+        current_state = self.other_networks.get_visible()
+        self.other_networks.set_visible(not current_state)
 
-        # Update button text based on state
-        if self.other_networks_revealer.child_revealed:
+        if self.other_networks.get_visible():
             # Trigger a scan when revealing other networks and force refresh
             if self.wifi_service:
                 self.wifi_service.scan()
-                # Also force an immediate network refresh to catch any missed connections
-                self.force_network_refresh()
+                # Defer network refresh to avoid layout-shift killing the window focus during click
+                if hasattr(self, "_refresh_timeout_id") and self._refresh_timeout_id:
+                    GLib.source_remove(self._refresh_timeout_id)
+
+                def _do_refresh():
+                    self.force_network_refresh()
+                    self._refresh_timeout_id = None
+                    return False
+
+                self._refresh_timeout_id = GLib.timeout_add(150, _do_refresh)
 
     def on_network_ready(self, *_):
         """Called when network service is ready"""
@@ -501,35 +533,79 @@ class WifiConnections(Box):
 
             # Only rebuild if something actually changed
             if known_changed or other_changed:
-                # Clear existing networks safely
-                for child in list(self.known_networks.get_children()):
-                    if not self._destroyed:
-                        child.destroy()
-                for child in list(self.other_networks.get_children()):
-                    if not self._destroyed:
-                        child.destroy()
+                # Get existing networks
+                existing_known = {
+                    child.ssid: child for child in self.known_networks.get_children()
+                }
+                existing_other = {
+                    child.ssid: child for child in self.other_networks.get_children()
+                }
 
-                # Add known networks
+                # Process known networks
                 for access_point in known_networks:
                     if not self._destroyed:
-                        network_slot = WifiNetworkSlot(
-                            access_point,
-                            self.wifi_service,
-                            network_service=self.network_service,
-                            parent=self.parent,
-                        )
-                        self.known_networks.add(network_slot)
+                        if access_point.ssid in existing_known:
+                            slot = existing_known.pop(access_point.ssid)
+                            slot.update_ap(access_point)
+                        elif access_point.ssid in existing_other:
+                            slot = existing_other.pop(access_point.ssid)
+                            slot.update_ap(access_point)
+                            self.other_networks.remove(slot)
+                            self.known_networks.add(slot)
+                        else:
+                            network_slot = WifiNetworkSlot(
+                                access_point,
+                                self.wifi_service,
+                                network_service=self.network_service,
+                                parent=self.parent,
+                            )
+                            self.known_networks.add(network_slot)
 
-                # Add other networks
+                # Process other networks
                 for access_point in other_networks:
                     if not self._destroyed:
-                        network_slot = WifiNetworkSlot(
-                            access_point,
-                            self.wifi_service,
-                            network_service=self.network_service,
-                            parent=self.parent,
-                        )
-                        self.other_networks.add(network_slot)
+                        if access_point.ssid in existing_other:
+                            slot = existing_other.pop(access_point.ssid)
+                            slot.update_ap(access_point)
+                        elif access_point.ssid in existing_known:
+                            slot = existing_known.pop(access_point.ssid)
+                            slot.update_ap(access_point)
+                            self.known_networks.remove(slot)
+                            self.other_networks.add(slot)
+                        else:
+                            network_slot = WifiNetworkSlot(
+                                access_point,
+                                self.wifi_service,
+                                network_service=self.network_service,
+                                parent=self.parent,
+                            )
+                            self.other_networks.add(network_slot)
+
+                # We deliberately DO NOT destroy slots that disappear from the current scan.
+                # Destroying slots causes the window to shrink abruptly, which can cause
+                # the mouse cursor to fall outside the window bounds, triggering Hyprland
+                # to instantly dismiss the popup.
+                # Instead, they remain in the list until the control center is closed.
+                for slot in existing_known.values():
+                    # Update to 0 strength if it's completely gone
+                    if hasattr(slot, "access_point"):
+                        slot.strength = 0
+                        from shared.widgets.wifi_icon import get_wifi_icon_for_strength
+
+                        if not slot.dimage.has_style_class(
+                            "connecting"
+                        ) and not slot.dimage.has_style_class("disconnecting"):
+                            slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
+
+                for slot in existing_other.values():
+                    if hasattr(slot, "access_point"):
+                        slot.strength = 0
+                        from shared.widgets.wifi_icon import get_wifi_icon_for_strength
+
+                        if not slot.dimage.has_style_class(
+                            "connecting"
+                        ) and not slot.dimage.has_style_class("disconnecting"):
+                            slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
 
             # Show/hide sections based on available networks
             if not self._destroyed:
@@ -537,9 +613,8 @@ class WifiConnections(Box):
                 has_other_networks = len(other_networks) > 0
                 has_any_networks = has_known_networks or has_other_networks
 
-                # Show known networks section only if there are known networks
-                self.known_networks_label.set_visible(has_known_networks)
-                self.known_networks.set_visible(has_known_networks)
+                # Always keep scrolled window visible so it animates to 0 smoothly instead of abruptly skipping layout
+                self.known_networks_scrolled.set_visible(True)
 
                 # Show "No networks available" message if no networks at all
                 self.no_networks_label.set_visible(not has_any_networks)

@@ -1,18 +1,18 @@
 import subprocess
 
-from fabric.bluetooth import BluetoothClient, BluetoothDevice
+from enum import Enum, auto
+from services.bluetooth import BluetoothClient, BluetoothDevice
 from fabric.utils import Gdk, GLib, exec_shell_command, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.revealer import Revealer
-from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
 
 from utils.utils import svg_file
 from shared.widgets.smooth_switch import SmoothSwitch
+from shared.window.animated_scrollwindow import AnimatedScrollable
 
 
 def get_battery_icon_file(
@@ -36,26 +36,35 @@ def get_battery_icon_file(
 
 
 def set_bluetooth_enabled_with_fallback(client, enabled: bool):
+    # Always run rfkill first because if it's blocked, BlueZ will fail and
+    # our custom client catches the exception (so it won't trigger an except block here).
+    if enabled:
+        command = "rfkill unblock bluetooth"
+    else:
+        command = "rfkill block bluetooth"
+
+    result = exec_shell_command(command)
+    if result is False:
+        logger.error(f"rfkill fallback failed: command '{command}' returned False")
+    elif isinstance(result, str) and result.strip():
+        logger.warning(f"rfkill command output: {result.strip()}")
+
+    # Try setting enabled state via client as well
     try:
-        # Try fabric bluetooth first
-        client.set_enabled(enabled)
+        # Our custom client has enabled as a property, but setting it sets it on adapters
+        if hasattr(client, "set_enabled"):
+            client.set_enabled(enabled)
+        else:
+            client.enabled = enabled
     except Exception as e:
-        logger.warning(f"Fabric bluetooth set_enabled({enabled}) failed: {e}")
+        logger.warning(f"Bluetooth set_enabled({enabled}) failed: {e}")
 
-        # Fallback to rfkill to unblock/block bluetooth
-        if enabled:
-            command = "rfkill unblock bluetooth"
-        else:
-            command = "rfkill block bluetooth"
 
-        result = exec_shell_command(command)
-        if result is False:
-            logger.error(f"rfkill fallback failed: command '{command}' returned False")
-        elif isinstance(result, str) and result.strip():
-            # If result is a non-empty string, it might be an error message
-            logger.warning(f"rfkill command output: {result.strip()}")
-        else:
-            logger.info(f"rfkill fallback succeeded: {command}")
+class BTState(Enum):
+    IDLE = auto()
+    CONNECTED = auto()
+    CONNECTING = auto()
+    FAILED = auto()
 
 
 class BluetoothDeviceSlot(CenterBox):
@@ -63,11 +72,13 @@ class BluetoothDeviceSlot(CenterBox):
         super().__init__(h_expand=True, name="device-button", **kwargs)
         self.device = device
         self._destroyed = False
+        self._state = BTState.IDLE
         self._signal_ids = []
         self._signal_ids.append(self.device.connect("changed", self.on_changed))
         self._signal_ids.append(
             self.device.connect(
-                "notify::closed", lambda *_: self.device.closed and self.destroy()
+                "notify::closed",
+                lambda *_: getattr(self.device, "closed", False) and self.destroy(),
             )
         )
 
@@ -77,35 +88,47 @@ class BluetoothDeviceSlot(CenterBox):
         ]
 
         self.dimage = Image(
-            icon_name=device.icon_name + "-symbolic",  # type: ignore
+            icon_name=self._get_icon_for_device(self.device),
             size=5,
             name="device-icon",
             style_classes=" ".join(self.styles),
         )
+
+        # Status icon for connection state
+        self.status_icon = Image(
+            icon_name="process-working-symbolic",
+            size=5,
+            name="device-icon",
+        )
+        self.status_icon.set_visible(False)
 
         self.device_button = Button(
             on_clicked=lambda *_: self.toggle_connecting(),
             child=Box(
                 orientation="h",
                 h_expand=True,
-                children=[self.dimage, Label(label=device.name)],
-            ),  # type: ignore
+                spacing=8,
+                children=[
+                    self.dimage,
+                    Label(label=device.name),
+                    Box(h_expand=True),  # Spacer
+                    self.status_icon,
+                ],
+            ),
         )
         self.start_children = [self.device_button]
 
-        # # Add battery info if available
+        # Add battery info if available
         if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
             battery_box = Box(orientation="h", spacing=4)
 
-            # Create battery icon
             battery_icon = svg_file(
                 get_battery_icon_file(
                     device.battery_percentage,
-                    False,  # Not charging for bluetooth devices
+                    False,
                 )
             )
 
-            # Create battery percentage label
             battery_label = Label(
                 label=f"{device.battery_percentage:.0f}%", name="battery-label"
             )
@@ -115,7 +138,25 @@ class BluetoothDeviceSlot(CenterBox):
 
         self.device_button.connect("enter-notify-event", self.on_button_enter)
         self.device_button.connect("leave-notify-event", self.on_button_leave)
-        self.device.emit("changed")  # to update display status
+
+        self._refresh_state()
+        self.device.emit("changed")
+
+    def _get_icon_for_device(self, device) -> str:
+        # Fallback to symbolic icons instead of duotone
+        dtype = getattr(device, "type", None) or getattr(
+            device, "icon_name", "bluetooth"
+        )
+        return {
+            "Headset": "audio-headset-symbolic",
+            "Headphones": "audio-headphones-symbolic",
+            "Speaker": "audio-speakers-symbolic",
+            "Keyboard": "input-keyboard-symbolic",
+            "Mouse": "input-mouse-symbolic",
+            "Joypad": "input-gaming-symbolic",
+            "Phone": "phone-symbolic",
+            "Printer": "printer-symbolic",
+        }.get(dtype, dtype + "-symbolic" if not dtype.endswith("-symbolic") else dtype)
 
     def destroy(self):
         """Clean up device signal connections to prevent memory leaks."""
@@ -138,23 +179,36 @@ class BluetoothDeviceSlot(CenterBox):
         self.remove_style_class("button-hovered")
 
     def toggle_connecting(self):
+        if self._destroyed:
+            return
+        if self._state == BTState.CONNECTED:
+            self.device.connecting = False
+            self._set_state(BTState.IDLE)
+        elif self._state != BTState.CONNECTING:
+            self._set_state(BTState.CONNECTING)
+            self.device.connecting = True
         self.device.emit("changed")
-        self.device.set_connecting(not self.device.connected)
 
     def on_changed(self, *_):
         if self._destroyed or self.device is None:
             return
+
+        if getattr(self.device, "connected", False):
+            self._set_state(BTState.CONNECTED)
+        elif self._state == BTState.CONNECTING:
+            self._set_state(BTState.FAILED)
+        else:
+            self._set_state(BTState.IDLE)
+
         try:
-            # Update connection and pairing status
             new_styles = [
                 "connected" if getattr(self.device, "connected", False) else "",
                 "paired" if getattr(self.device, "paired", False) else "",
             ]
-
             self.styles = new_styles
             self.dimage.set_property("style-classes", " ".join(self.styles))
         except Exception:
-            return
+            pass
 
         # Update battery info if available
         if (
@@ -198,6 +252,41 @@ class BluetoothDeviceSlot(CenterBox):
         elif self.end_children:  # Remove battery display if no longer available
             self.end_children = []
 
+    def _refresh_state(self):
+        self._set_state(
+            BTState.CONNECTED
+            if getattr(self.device, "connected", False)
+            else BTState.IDLE
+        )
+
+    def _set_state(self, state: BTState):
+        if self._destroyed:
+            return
+        self._state = state
+        for cls in ["active", "connecting", "failed"]:
+            self.remove_style_class(cls)
+
+        if state == BTState.CONNECTED:
+            self.add_style_class("active")
+            self.status_icon.set_visible(True)
+            self.status_icon.set_from_icon_name("emblem-ok-symbolic", 5)
+        elif state == BTState.CONNECTING:
+            self.add_style_class("connecting")
+            self.status_icon.set_visible(True)
+            self.status_icon.set_from_icon_name("process-working-symbolic", 5)
+        elif state == BTState.FAILED:
+            self.add_style_class("failed")
+            self.status_icon.set_visible(True)
+            self.status_icon.set_from_icon_name("dialog-error-symbolic", 5)
+            GLib.timeout_add(5000, self._reset_from_failed)
+        else:
+            self.status_icon.set_visible(False)
+
+    def _reset_from_failed(self):
+        if not self._destroyed:
+            self._set_state(BTState.IDLE)
+        return False
+
         return
 
 
@@ -220,7 +309,7 @@ class BluetoothConnections(Box):
         self._destroyed = False  # Track if widget is destroyed
         self._client_signal_ids = []  # Track BluetoothClient signal IDs
 
-        self.client = BluetoothClient(on_device_added=self.on_device_added)
+        self.client = BluetoothClient()
 
         # Create pull-to-refresh indicator
         self.refresh_indicator = Label(
@@ -247,12 +336,12 @@ class BluetoothConnections(Box):
             children=title_children,
         )
 
+        self._switch_lock = False
+
         self.toggle_button = SmoothSwitch(
             name="toggle-button",
             active=self.client.enabled,
-            on_user_toggle=lambda active: set_bluetooth_enabled_with_fallback(
-                self.client, active
-            ),
+            on_user_toggle=self.handle_user_toggle,
         )
 
         # Connect client signals — track IDs for disconnect on destroy
@@ -286,6 +375,12 @@ class BluetoothConnections(Box):
         self.paired_devices = Box(
             spacing=4, orientation="vertical", name="known-networks"
         )
+        self.paired_devices_scrolled = AnimatedScrollable(
+            min_content_size=(303, 0),
+            max_content_size=(303, 200),
+            child=self.paired_devices,
+            overlay_scroll=True,
+        )
 
         # Create "No devices available" message
         self.no_devices_label = Label(
@@ -302,24 +397,19 @@ class BluetoothConnections(Box):
             on_clicked=self.toggle_other_devices,
         )
         self.other_devices = Box(spacing=4, orientation="vertical")
+        self.other_devices.set_size_request(-1, 150)
 
         # Create scrolled window for other devices
-        self.other_devices_scrolled = ScrolledWindow(
-            min_content_size=(303, 150),
+        self.other_devices_scrolled = AnimatedScrollable(
+            min_content_size=(303, 0),
+            max_content_size=(303, 300),
             child=self.other_devices,
             overlay_scroll=True,
         )
+        self.other_devices.set_visible(False)
 
         # Add pull-to-refresh functionality to scrolled window
         self.setup_pull_to_refresh()
-
-        # Create revealer for Other Devices section
-        self.other_devices_revealer = Revealer(
-            child=self.other_devices_scrolled,
-            transition_type="slide-down",
-            transition_duration=100,
-            child_revealed=False,
-        )
 
         # Create More Settings button (same style as Other Devices button)
         self.more_settings_button = Button(
@@ -337,11 +427,11 @@ class BluetoothConnections(Box):
             self.refresh_indicator,
             Separator(orientation="h", name="separator"),
             self.paired_devices_label,
-            self.paired_devices,
+            self.paired_devices_scrolled,
             self.no_devices_label,
             Separator(orientation="h", name="separator"),
             self.other_devices_button,
-            self.other_devices_revealer,
+            self.other_devices_scrolled,
             Separator(orientation="h", name="separator"),
             self.more_settings_button,
         ]
@@ -358,23 +448,43 @@ class BluetoothConnections(Box):
         # Start periodic device monitoring for real-time updates
         self.start_device_monitoring()
 
+    def handle_user_toggle(self, active: bool):
+        self._switch_lock = True
+        set_bluetooth_enabled_with_fallback(self.client, active)
+        # Lock the switch UI for 1.5 seconds to prevent DBus propagation flicker
+        GLib.timeout_add(1500, self._unlock_switch)
+
+    def _unlock_switch(self):
+        self._switch_lock = False
+        if not self._destroyed and getattr(self, "toggle_button", None):
+            self.toggle_button.set_active(self.client.enabled)
+        return False
+
     def toggle_other_devices(self, *_):
         """Toggle the visibility of other devices section"""
-        current_state = self.other_devices_revealer.child_revealed
-        self.other_devices_revealer.child_revealed = not current_state
+        current_state = self.other_devices.get_visible()
+        self.other_devices.set_visible(not current_state)
 
         # Handle scanning based on section visibility
         if self.client:
-            if self.other_devices_revealer.child_revealed:
+            if self.other_devices.get_visible():
                 # Start scanning when revealing other devices section
-                if not self.client.scanning:
-                    self.client.toggle_scan()
+                if not self.client.scanning and hasattr(self.client, "scan"):
+                    GLib.timeout_add(100, self.client.scan)
                 # Also force an immediate device refresh to catch any missed connections
-                self.force_device_refresh()
+                if hasattr(self, "_refresh_timeout_id") and self._refresh_timeout_id:
+                    GLib.source_remove(self._refresh_timeout_id)
+
+                def _do_refresh():
+                    self.force_device_refresh()
+                    self._refresh_timeout_id = None
+                    return False
+
+                self._refresh_timeout_id = GLib.timeout_add(150, _do_refresh)
             else:
                 # Stop scanning when hiding other devices section
-                if self.client.scanning:
-                    self.client.toggle_scan()
+                if self.client.scanning and hasattr(self.client, "stop_scan"):
+                    self.client.stop_scan()
 
     def open_bluetooth_settings(self, *_):
         """Open Blueman bluetooth manager"""
@@ -447,25 +557,58 @@ class BluetoothConnections(Box):
 
             # Only rebuild if something actually changed
             if paired_changed or other_changed:
-                # Clear existing devices safely
-                for child in list(self.paired_devices.get_children()):
-                    if not self._destroyed:
-                        child.destroy()
-                for child in list(self.other_devices.get_children()):
-                    if not self._destroyed:
-                        child.destroy()
+                existing_paired = {
+                    child.device.address: child
+                    for child in self.paired_devices.get_children()
+                    if hasattr(child, "device")
+                }
+                existing_other = {
+                    child.device.address: child
+                    for child in self.other_devices.get_children()
+                    if hasattr(child, "device")
+                }
 
                 # Add paired devices
                 for device in paired_devices:
                     if not self._destroyed:
-                        device_slot = BluetoothDeviceSlot(device)
-                        self.paired_devices.add(device_slot)
+                        if device.address in existing_paired:
+                            slot = existing_paired.pop(device.address)
+                            # update existing
+                            slot.device = device
+                        elif device.address in existing_other:
+                            slot = existing_other.pop(device.address)
+                            slot.device = device
+                            self.other_devices.remove(slot)
+                            self.paired_devices.add(slot)
+                        else:
+                            device_slot = BluetoothDeviceSlot(device)
+                            self.paired_devices.add(device_slot)
 
                 # Add other devices
                 for device in other_devices:
                     if not self._destroyed:
-                        device_slot = BluetoothDeviceSlot(device)
-                        self.other_devices.add(device_slot)
+                        if device.address in existing_other:
+                            slot = existing_other.pop(device.address)
+                            slot.device = device
+                        elif device.address in existing_paired:
+                            slot = existing_paired.pop(device.address)
+                            slot.device = device
+                            self.paired_devices.remove(slot)
+                            self.other_devices.add(slot)
+                        else:
+                            device_slot = BluetoothDeviceSlot(device)
+                            self.other_devices.add(device_slot)
+
+                # We deliberately DO NOT destroy slots that disappear from the current scan.
+                # Destroying slots causes the window to shrink abruptly, which can cause
+                # the mouse cursor to fall outside the window bounds, triggering Hyprland
+                # to instantly dismiss the popup.
+                # Instead, they remain in the list until the control center is closed.
+                for slot in existing_paired.values():
+                    pass
+
+                for slot in existing_other.values():
+                    pass
 
             # Show/hide sections based on available devices
             if not self._destroyed:
@@ -473,9 +616,8 @@ class BluetoothConnections(Box):
                 has_other_devices = len(other_devices) > 0
                 has_any_devices = has_paired_devices or has_other_devices
 
-                # Show paired devices section only if there are paired devices
-                self.paired_devices_label.set_visible(has_paired_devices)
-                self.paired_devices.set_visible(has_paired_devices)
+                # Always keep scrolled window visible so it animates to 0 smoothly
+                self.paired_devices_scrolled.set_visible(True)
 
                 # Show "No devices available" message if no devices at all
                 self.no_devices_label.set_visible(not has_any_devices)
@@ -532,6 +674,13 @@ class BluetoothConnections(Box):
 
     def on_client_changed(self, *_):
         """Handle when the bluetooth client state changes"""
+        # Sync switch state and scanning label directly since custom BluetoothClient
+        # doesn't emit notify::enabled or notify::scanning when adapters update.
+        if getattr(self, "toggle_button", None) and not self._switch_lock:
+            self.toggle_button.set_active(self.client.enabled)
+
+        self.update_scan_label()
+
         # Update devices when client state changes
         self.update_devices()
 
@@ -592,8 +741,9 @@ class BluetoothConnections(Box):
         # Only handle pull-to-refresh when at the top
         if self.vadjustment.get_value() <= 0:
             if event.direction == Gdk.ScrollDirection.UP:
-                # Scrolling up at the top - toggle scan and force refresh
-                self.client.toggle_scan()
+                # Scrolling up at the top - force scan and refresh
+                if not self.client.scanning and hasattr(self.client, "scan"):
+                    self.client.scan()
                 self.force_device_refresh()
                 return True  # Consume the event
         return False  # Let normal scrolling continue
@@ -610,8 +760,9 @@ class BluetoothConnections(Box):
         if self.is_pulling:
             pull_distance = event.y - self.pull_start_y
             if pull_distance > self.pull_threshold:
-                # Toggle scan and force refresh
-                self.client.toggle_scan()
+                # Force scan and refresh
+                if not self.client.scanning and hasattr(self.client, "scan"):
+                    self.client.scan()
                 self.force_device_refresh()
             # Hide refresh indicator
             self.refresh_indicator.set_visible(False)
