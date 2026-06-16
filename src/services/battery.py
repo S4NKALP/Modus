@@ -1,11 +1,19 @@
-from typing import Literal, Optional
-
+import gi
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import Gio, GLib, logger
+from gi.repository import Gio, GLib
+from loguru import logger
 
-from utils.dbus_helper import GioDBusHelper
+gi.require_version("Gtk", "3.0")
 
-DeviceState = {
+BATTERY_BUS_NAME = "org.freedesktop.UPower"
+BATTERY_BUS_PATH = "/org/freedesktop/UPower/devices/DisplayDevice"
+BATTERY_INTERFACE = "org.freedesktop.UPower.Device"
+
+POWER_PROFILE_BUS_NAME = "net.hadess.PowerProfiles"
+POWER_PROFILE_BUS_PATH = "/net/hadess/PowerProfiles"
+POWER_PROFILE_INTERFACE = "net.hadess.PowerProfiles"
+
+DEVICE_STATE = {
     0: "UNKNOWN",
     1: "CHARGING",
     2: "DISCHARGING",
@@ -15,188 +23,207 @@ DeviceState = {
     6: "PENDING_DISCHARGE",
 }
 
-PowerProfile = {
-    "power-saver": "Power Saver",
-    "balanced": "Balanced",
-    "performance": "Performance",
-}
 
-
-class BatteryService(Service):
-    """Service to interact with UPower and Power Profiles via GIO D-Bus"""
+class Battery(Service):
+    """A service for interacting with the battery's DBus and Power Profiles"""
 
     @Signal
-    def changed(self) -> None:
-        """Signal emitted when battery changes."""
+    def changed(self) -> None: ...
 
     @Signal
-    def power_profile_changed(self) -> None:
-        """Signal emitted when power profile changes."""
+    def power_profile_changed(self) -> None: ...
 
-    _instance = None
+    @Property(bool, "readable", default_value=False)
+    def available(self) -> bool:
+        return self.do_get_cached_property("IsPresent") or False
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+    @Property(str, "readable", default_value="")
+    def vendor(self) -> str:
+        return self.do_get_cached_property("Vendor") or ""
+
+    @Property(int, "readable", default_value=0)
+    def percent(self) -> int:
+        return self.do_get_cached_property("Percentage") or 0
+
+    @Property(bool, "readable", default_value=False)
+    def charging(self) -> bool:
+        val = self.do_get_cached_property("State")
+        if val is None:
+            return False
+        return val == DEVICE_STATE.get("CHARGING", 1)
+
+    @Property(bool, "readable", default_value=False)
+    def discharging(self) -> bool:
+        val = self.do_get_cached_property("State")
+        if val is None:
+            return False
+        return val == DEVICE_STATE.get("DISCHARGING", 2)
+
+    @Property(bool, "readable", default_value=False)
+    def charged(self) -> bool:
+        val = self.do_get_cached_property("State")
+        if val is None:
+            return False
+        return val == DEVICE_STATE.get("FULLY_CHARGED", 4)
+
+    @Property(str, "readable", default_value="")
+    def icon_name(self) -> str:
+        return self.do_get_cached_property("IconName") or ""
+
+    @Property(int, "readable", default_value=0)
+    def time_remaining(self) -> int:
+        return self.do_get_cached_property("TimeToEmpty") or 0
+
+    @Property(int, "readable", default_value=0)
+    def time_to_full(self) -> int:
+        return self.do_get_cached_property("TimeToFull") or 0
+
+    @Property(float, "readable", default_value=0.0)
+    def energy(self) -> float:
+        return self.do_get_cached_property("Energy") or 0.0
+
+    @Property(float, "readable", default_value=0.0)
+    def energy_full(self) -> float:
+        return self.do_get_cached_property("EnergyFull") or 0.0
+
+    @Property(float, "readable", default_value=0.0)
+    def energy_rate(self) -> float:
+        return self.do_get_cached_property("EnergyRate") or 0.0
+
+    @Property(float, "readable", default_value=0.0)
+    def temperature(self) -> float:
+        return self.do_get_cached_property("Temperature") or 0.0
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._bus: Gio.DBusConnection | None = None
+        self._proxy = None
+        self._power_profile_proxy = None
+        self.do_register()
 
-        # UPower D-Bus configuration
-        self.bus_name = "org.freedesktop.UPower"
-        self.object_path = "/org/freedesktop/UPower/devices/DisplayDevice"
-        self.interface_name = "org.freedesktop.UPower.Device"
-
-        self.dbus_helper = GioDBusHelper(
-            bus_type=Gio.BusType.SYSTEM,
-            bus_name=self.bus_name,
-            object_path=self.object_path,
-            interface_name=self.interface_name,
+    def do_register(self) -> None:
+        self._bus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
+        self._proxy = Gio.DBusProxy.new_sync(
+            self._bus,
+            Gio.DBusProxyFlags.NONE,
+            None,
+            BATTERY_BUS_NAME,
+            BATTERY_BUS_PATH,
+            BATTERY_INTERFACE,
+            None,
         )
 
-        self.proxy = self.dbus_helper.proxy
+        logger.info("[Battery] Proxy initialized")
 
-        # Listen for PropertiesChanged signals from UPower
-        self.dbus_helper.listen_signal(
-            member="PropertiesChanged",
-            callback=self.handle_property_change,
+        self._bus.signal_subscribe(
+            BATTERY_BUS_NAME,
+            "org.freedesktop.DBus.Properties",
+            "PropertiesChanged",
+            BATTERY_BUS_PATH,
+            None,
+            Gio.DBusSignalFlags.NONE,
+            self.do_handle_property_change,
         )
-
-        # Power Profiles D-Bus configuration
-        self.power_profile_bus_name = "net.hadess.PowerProfiles"
-        self.power_profile_object_path = "/net/hadess/PowerProfiles"
-        self.power_profile_interface_name = "net.hadess.PowerProfiles"
 
         try:
-            self.power_profile_helper = GioDBusHelper(
-                bus_type=Gio.BusType.SYSTEM,
-                bus_name=self.power_profile_bus_name,
-                object_path=self.power_profile_object_path,
-                interface_name=self.power_profile_interface_name,
+            self._power_profile_proxy = Gio.DBusProxy.new_sync(
+                self._bus,
+                Gio.DBusProxyFlags.NONE,
+                None,
+                POWER_PROFILE_BUS_NAME,
+                POWER_PROFILE_BUS_PATH,
+                POWER_PROFILE_INTERFACE,
+                None,
             )
-
-            self.power_profile_proxy = self.power_profile_helper.proxy
-
-            # Listen for PropertiesChanged signals from Power Profiles
-            self.power_profile_helper.listen_signal(
-                member="PropertiesChanged",
-                callback=self.handle_power_profile_change,
+            self._bus.signal_subscribe(
+                POWER_PROFILE_BUS_NAME,
+                "org.freedesktop.DBus.Properties",
+                "PropertiesChanged",
+                POWER_PROFILE_BUS_PATH,
+                None,
+                Gio.DBusSignalFlags.NONE,
+                self.do_handle_power_profile_change,
             )
-
-            self._power_profiles_available = True
+            logger.info("[Battery] Power Profiles Proxy initialized")
         except Exception as e:
             logger.warning(f"[Battery] Power Profiles daemon not available: {e}")
-            self.power_profile_helper = None
-            self.power_profile_proxy = None
-            self._power_profiles_available = False
 
-    def get_property(
+    def do_handle_property_change(self, *_):
+        self.emit("changed")
+
+    def do_handle_power_profile_change(self, *_):
+        self.emit("power_profile_changed")
+
+    def do_call_proxy_method(
         self,
-        property: Literal[
-            "Percentage",
-            "Temperature",
-            "TimeToEmpty",
-            "TimeToFull",
-            "IconName",
-            "State",
-            "Capacity",
-            "IsPresent",
-            "Vendor",
-        ],
+        bus_name,
+        object_path,
+        interface_name,
+        method_name,
+        parameters=None,
+        timeout=-1,
     ):
-        try:
-            result = self.proxy.get_cached_property(property)
-            return result.unpack() if result is not None else None
-        except Exception as e:
-            logger.exception(f"[Battery] Error retrieving '{property}': {e}")
-            return None
+        if parameters is None:
+            parameters = GLib.Variant("()", ())
+        result = self._bus.call_sync(
+            bus_name,
+            object_path,
+            interface_name,
+            method_name,
+            parameters,
+            None,
+            Gio.DBusCallFlags.NONE,
+            timeout,
+            None,
+        )
+        return result.unpack()
 
-    def get_power_profile(self) -> Optional[str]:
+    def do_get_cached_property(self, property_name):
+        result = self._proxy.get_cached_property(property_name)
+        return result.unpack() if result is not None else None
+
+    def get_power_profile(self) -> str | None:
         """Get the current active power profile."""
-        if not self._power_profiles_available:
+        if not self._power_profile_proxy:
             return None
+        result = self._power_profile_proxy.get_cached_property("ActiveProfile")
+        return result.unpack() if result is not None else None
 
-        try:
-            result = self.power_profile_proxy.get_cached_property("ActiveProfile")
-            return result.unpack() if result is not None else None
-        except Exception as e:
-            logger.exception(f"[Battery] Error retrieving active power profile: {e}")
-            return None
-
-    def set_power_profile(
-        self, profile: Literal["power-saver", "balanced", "performance"]
-    ) -> bool:
+    def set_power_profile(self, profile: str) -> bool:
         """Set the active power profile."""
-        if not self._power_profiles_available:
-            logger.warning("[Battery] Power Profiles daemon not available")
+        if not self._power_profile_proxy:
             return False
-
-        if profile not in PowerProfile:
-            return False
-
         try:
-            self.power_profile_helper.set_property(
-                interface_name=self.power_profile_interface_name,
-                property_name="ActiveProfile",
-                value_variant=GLib.Variant("s", profile),
+            parameters = GLib.Variant(
+                "(ssv)",
+                (POWER_PROFILE_INTERFACE, "ActiveProfile", GLib.Variant("s", profile)),
+            )
+            self._bus.call_sync(
+                POWER_PROFILE_BUS_NAME,
+                POWER_PROFILE_BUS_PATH,
+                "org.freedesktop.DBus.Properties",
+                "Set",
+                parameters,
+                None,
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
             )
             return True
         except Exception as e:
-            logger.exception(
-                f"[Battery] Error setting power profile to '{profile}': {e}"
-            )
+            logger.error(f"[Battery] Failed to set power profile: {e}")
             return False
 
-    def get_available_power_profiles(self) -> Optional[list]:
+    def get_available_power_profiles(self) -> list | None:
         """Get list of available power profiles."""
-        if not self._power_profiles_available:
+        if not self._power_profile_proxy:
             return None
-
-        try:
-            result = self.power_profile_proxy.get_cached_property("Profiles")
-            if result is not None:
-                profiles_data = result.unpack()
-                # Extract profile names from the array of dictionaries
-                profiles = []
-                for profile_dict in profiles_data:
-                    if "Profile" in profile_dict:
-                        profiles.append(profile_dict["Profile"])
-                return profiles
-            return None
-        except Exception as e:
-            logger.exception(
-                f"[Battery] Error retrieving available power profiles: {e}"
-            )
-            return None
-
-    def is_power_profiles_available(self) -> bool:
-        """Check if power profiles daemon is available."""
-        return self._power_profiles_available
-
-    def get_power_profile_display_name(self, profile: str) -> str:
-        """Get display name for a power profile."""
-        return PowerProfile.get(profile, profile.title())
-
-    @Property(int, "readable", default_value=0)
-    def percentage(self) -> int:
-        return self.get_property("Percentage") or 0
-
-    @Property(int, "readable", default_value=0)
-    def state(self) -> int:
-        return self.get_property("State") or 0
-
-    @Property(bool, "readable", default_value=False)
-    def is_present(self) -> bool:
-        return self.get_property("IsPresent") or False
-
-    def handle_property_change(self, *args):
-        # Notify about property changes for OSD and other listeners
-        self.notify("percentage")
-        self.notify("state")
-        self.notify("is-present")
-        self.emit("changed")
-
-    def handle_power_profile_change(self, *_):
-        """Handle power profile property changes."""
-        self.emit("power_profile_changed")
+        result = self._power_profile_proxy.get_cached_property("Profiles")
+        if result is not None:
+            profiles_data = result.unpack()
+            profiles = []
+            for profile_dict in profiles_data:
+                if "Profile" in profile_dict:
+                    profiles.append(profile_dict["Profile"])
+            return profiles
+        return None

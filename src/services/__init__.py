@@ -1,5 +1,5 @@
 from fabric.audio import Audio  # noqa: F401
-from .battery import BatteryService  # noqa: F401
+from .battery import Battery  # noqa: F401
 from .brightness import Brightness  # noqa: F401
 from .capslock import CapsLock  # noqa: F401
 from .keyboard_layout import KeyboardLayout  # noqa: F401

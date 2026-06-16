@@ -271,17 +271,24 @@ class CachedNotifications(Notifications):
 
         max_cache_id = 0
         for notification in data:
-            cached_notification = CachedNotification.create_from_dict(notification)
-            cache_id = cached_notification.cache_id
-            max_cache_id = max(max_cache_id, cache_id)
+            try:
+                cached_notification = CachedNotification.create_from_dict(notification)
+                cache_id = cached_notification.cache_id
+                max_cache_id = max(max_cache_id, cache_id)
 
-            handler_id = cached_notification.connect(
-                "removed-from-cache",
-                lambda *args: self.remove_cached_notification(notification_id=cache_id),
-            )
-            self._signal_handlers[cache_id] = handler_id
-            self._cached_notifications[cache_id] = cached_notification
-            self._count += 1
+                handler_id = cached_notification.connect(
+                    "removed-from-cache",
+                    lambda *args: self.remove_cached_notification(
+                        notification_id=cache_id
+                    ),
+                )
+                self._signal_handlers[cache_id] = handler_id
+                self._cached_notifications[cache_id] = cached_notification
+                self._count += 1
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load a cached notification (might be from an old schema): {e}"
+                )
 
         # Set next cache ID to be higher than any existing ID
         self._next_cache_id = max_cache_id + 1
