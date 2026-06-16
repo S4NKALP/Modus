@@ -7,7 +7,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
 from services.gamemode import check_gamemode, toggle_gamemode
 
-from services.battery import BatteryService, DeviceState
+from services.battery import Battery
 from utils.functions import clear_children, format_duration
 from utils.utils import svg_file
 
@@ -18,7 +18,7 @@ class EnergyModeButton(Box):
         profile_name: str,
         display_name: str,
         icon_name: str,
-        battery_service: BatteryService,
+        battery_service: Battery,
         parent,
         **kwargs,
     ):
@@ -60,7 +60,9 @@ class EnergyModeButton(Box):
         self.update_state()
 
     def on_clicked(self, *args):
-        success = self.battery_service.set_power_profile(self.profile_name)
+        success = False
+        if hasattr(self.battery_service, "set_power_profile"):
+            success = self.battery_service.set_power_profile(self.profile_name)
         if success:
             # Update all profile buttons in parent
             self.parent.update_energy_mode_buttons()
@@ -72,7 +74,9 @@ class EnergyModeButton(Box):
         return False  # Remove timeout
 
     def update_state(self):
-        current_profile = self.battery_service.get_power_profile()
+        current_profile = None
+        if hasattr(self.battery_service, "get_power_profile"):
+            current_profile = self.battery_service.get_power_profile()
         is_active = current_profile == self.profile_name
         if is_active:
             self.mode_icon.add_style_class("connected")
@@ -153,7 +157,7 @@ class BatteryControl(Box):
         self.set_size_request(354, -1)
 
         self.parent = parent
-        self.battery_service = BatteryService()
+        self.battery_service = Battery()
         self.energy_mode_buttons = []
 
         self.battery_widget = Box(
@@ -250,7 +254,13 @@ class BatteryControl(Box):
         self.add(self.battery_widget)
 
         self.battery_service.connect("changed", self.on_battery_changed)
-        self.battery_service.connect("power_profile_changed", self.on_profile_changed)
+        if hasattr(self.battery_service, "connect"):
+            try:
+                self.battery_service.connect(
+                    "power_profile_changed", self.on_profile_changed
+                )
+            except TypeError:
+                pass  # signal does not exist
 
         # Initialize display
         self.update_battery_info()
@@ -268,7 +278,11 @@ class BatteryControl(Box):
         self.energy_mode_buttons.clear()
 
         # Get available profiles
-        available_profiles = self.battery_service.get_available_power_profiles() or []
+        available_profiles = []
+        if hasattr(self.battery_service, "get_available_power_profiles"):
+            available_profiles = (
+                self.battery_service.get_available_power_profiles() or []
+            )
 
         if not available_profiles:
             no_profiles_label = Label(
@@ -333,7 +347,7 @@ class BatteryControl(Box):
         return format_duration(seconds)
 
     def update_battery_info(self):
-        is_present = bool(self.battery_service.get_property("IsPresent"))
+        is_present = self.battery_service.available
         if not is_present:
             self.battery_percentage_label.set_label("No Battery")
             self.power_source_label.set_label("Power Source: Not Present")
@@ -341,16 +355,22 @@ class BatteryControl(Box):
             return
 
         # Update percentage in header
-        percentage = int(self.battery_service.get_property("Percentage") or 0)
+        percentage = int(self.battery_service.percent)
         self.battery_percentage_label.set_label(f"{percentage}%")
 
         # Update power source and charging info
-        state_code = self.battery_service.get_property("State")
-        state = DeviceState.get(state_code, "UNKNOWN")
+        if self.battery_service.charging:
+            state = "CHARGING"
+        elif self.battery_service.discharging:
+            state = "DISCHARGING"
+        elif self.battery_service.charged:
+            state = "FULLY_CHARGED"
+        else:
+            state = "UNKNOWN"
 
         if state in ["CHARGING", "PENDING_CHARGE"]:
             self.power_source_label.set_label("Power Source: Power Adapter")
-            seconds_to_full = int(self.battery_service.get_property("TimeToFull") or 0)
+            seconds_to_full = self.battery_service.time_to_full
             time_to_full = self._format_time(seconds_to_full)
             if time_to_full != "N/A" and time_to_full != "0m":
                 self.charging_time_label.set_label(
@@ -363,9 +383,7 @@ class BatteryControl(Box):
             self.charging_time_label.set_label("Fully Charged")
         elif state in ["DISCHARGING", "PENDING_DISCHARGE"]:
             self.power_source_label.set_label("Power Source: Battery")
-            seconds_to_empty = int(
-                self.battery_service.get_property("TimeToEmpty") or 0
-            )
+            seconds_to_empty = self.battery_service.time_remaining
             time_to_empty = self._format_time(seconds_to_empty)
             if time_to_empty != "N/A" and not time_to_empty.startswith(
                 "4553h"

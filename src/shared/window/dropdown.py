@@ -1,8 +1,9 @@
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
+from gi.repository import GLib
 from utils.roam import modus_service
-from shared.window.popup_window import PopupWindow
+from shared.window.applet_window import AppletWindow
 
 dropdowns = []
 
@@ -17,22 +18,21 @@ def dropdown_divider(comment):
     )
 
 
-class ModusDropdown(PopupWindow):
+class ModusDropdown(AppletWindow):
     def __init__(self, dropdown_children=None, dropdown_id=None, **kwargs):
         super().__init__(
             layer="top",
             exclusivity="auto",
             name="dropdown-menu",
             title="modus",
-            keyboard_mode="none",
             visible=False,
             **kwargs,
         )
 
         self.id = dropdown_id or str(len(dropdowns))
         dropdowns.append(self)
-        self._mousecapture_parent = None  # Will be set by mousecapture
 
+        self.connect("notify::visible", self._on_visible_changed)
         modus_service.connect("dropdowns-hide-changed", self.hide_dropdown)
 
         self.dropdown = Box(
@@ -51,42 +51,32 @@ class ModusDropdown(PopupWindow):
         )
 
         self.children = [self.event_box]
-        self.add_keybinding("Escape", self.hide_dropdown)
+        self.add_keybinding("escape", self.hide_dropdown)
 
     def toggle_dropdown(self, button, parent=None):
-        self.set_visible(not self.is_visible())
+        self.toggle()
         modus_service.current_dropdown = self.id if self.is_visible() else None
 
-    def _init_mousecapture(self, mousecapture):
-        """Store reference to mousecapture parent for hiding"""
-        self._mousecapture_parent = mousecapture
-
-    def hide_dropdown(self, widget, event):
+    def hide_dropdown(self, *_):
         if self.is_visible():
-            self.hide()
-            if str(modus_service.current_dropdown) == str(self.id):
-                modus_service.current_dropdown = None
+            GLib.idle_add(lambda: self.hide())
+
+    def _on_visible_changed(self, *_):
+        if self.is_visible():
+            modus_service.current_dropdown = self.id
+        elif str(modus_service.current_dropdown) == str(self.id):
+            modus_service.current_dropdown = None
 
     def hide_via_mousecapture(self):
-        """Hide dropdown via mousecapture parent"""
-        if self._mousecapture_parent:
-            self._mousecapture_parent.hide_child_window()
-
-    def _set_mousecapture(self, visible: bool) -> None:
-        self.set_visible(visible)
-        if visible:
-            modus_service.current_dropdown = self.id
-        else:
-            if str(modus_service.current_dropdown) == str(self.id):
-                modus_service.current_dropdown = None
+        self.hide()
 
     def on_cursor_enter(self, *_):
-        self.set_visible(True)
+        self.show()
 
     def on_cursor_leave(self, *_):
         if self.is_hovered():
             return
-        self.set_visible(False)
+        self.hide()
         modus_service.dropdowns_hide = not modus_service.dropdowns_hide
 
     def destroy(self):
