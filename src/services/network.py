@@ -73,13 +73,22 @@ class Wifi(Service):
         self._client.wireless_set_enabled(not self._client.wireless_get_enabled())
 
     def scan(self):
-        self._device.request_scan_async(
-            None,
-            lambda device, result: [
-                device.request_scan_finish(result),
-                self.emit("changed"),
-            ],
-        )
+        if hasattr(self, "_scanning") and self._scanning:
+            return
+        self._scanning = True
+
+        def _on_scan_finish(device, result):
+            self._scanning = False
+            try:
+                device.request_scan_finish(result)
+            except Exception as e:
+                logger.debug(f"Scan finished with error: {e}")
+            self.emit("changed")
+
+        try:
+            self._device.request_scan_async(None, _on_scan_finish)
+        except Exception:
+            self._scanning = False
 
     def notifier(self, name: str, *args):
         self.notify(name)
@@ -339,9 +348,10 @@ class NetworkClient(Service):
         return None
 
     def is_network_saved(self, ssid: str) -> bool:
-        if not self._client:
+        client = self._client or NM.Client.new(None)
+        if not client:
             return False
-        for conn in self._client.get_connections():
+        for conn in client.get_connections():
             s_wifi = conn.get_setting_wireless()
             if s_wifi:
                 saved_ssid = s_wifi.get_ssid()
@@ -350,7 +360,43 @@ class NetworkClient(Service):
                         return True
         return False
 
-    def connect_wifi_bssid(self, bssid: str):
+    def connect_wifi_bssid(self, bssid: str, callback=None):
+        if not self._client or not self.wifi_device:
+            if callback:
+                callback(False, "No wifi device")
+            return
+
+        device = self.wifi_device._device
+        handler_id: list[int] = []
+
+        def _on_state_changed(dev, new_state, old_state, reason):
+            if not callback:
+                return
+            state = NM.DeviceState(new_state)
+            if state == NM.DeviceState.ACTIVATED:
+                _cleanup()
+                callback(True, "Connected")
+            elif state in (NM.DeviceState.FAILED, NM.DeviceState.DISCONNECTED):
+                _cleanup()
+                reason_str = NM.DeviceStateReason(reason).value_nick
+                if "secret" in reason_str or "auth" in reason_str:
+                    callback(False, "Wrong password")
+                else:
+                    callback(False, f"Failed ({reason_str})")
+            elif state == NM.DeviceState.NEED_AUTH:
+                _cleanup()
+                callback(False, "Wrong password")
+
+        def _cleanup():
+            if handler_id:
+                try:
+                    device.disconnect_by_func(_on_state_changed)
+                except Exception:
+                    pass
+
+        if callback:
+            handler_id.append(device.connect("state-changed", _on_state_changed))
+
         exec_shell_command_async(
             f"nmcli device wifi connect {bssid}",
             lambda *args: logger.debug(f"connect result: {args}"),
