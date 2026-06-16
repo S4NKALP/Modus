@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -99,7 +100,7 @@ class CurrencyCache:
                             "timestamp": current_time,
                         }
                 except Exception as je:
-                    print(f"Failed to parse JSON for {from_code}: {je}")
+                    logger.error(f"Failed to parse JSON for {from_code}: {je}")
             else:
                 print(
                     f"Background fetch for {from_code} returned status {
@@ -108,7 +109,7 @@ class CurrencyCache:
                 )
 
         except Exception as e:
-            print(f"Background currency fetch failed for {from_code}: {e}")
+            logger.error(f"Background currency fetch failed for {from_code}: {e}")
         finally:
             # Mark request as complete
             with self._cache_lock:

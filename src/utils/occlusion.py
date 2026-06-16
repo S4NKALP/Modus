@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import json
 import subprocess
 
@@ -19,7 +20,7 @@ def get_current_workspace():
             if part == "ID" and i + 1 < len(parts):
                 return int(parts[i + 1])
     except Exception as e:
-        print(f"Error getting current workspace: {e}")
+        logger.error(f"Error getting current workspace: {e}")
     return -1
 
 
@@ -53,7 +54,7 @@ def get_screen_dimensions():
                 "height", data.CURRENT_HEIGHT
             )
     except Exception as e:
-        print(f"Error getting screen dimensions: {e}")
+        logger.error(f"Error getting screen dimensions: {e}")
 
     # Default fallback values
     return data.CURRENT_WIDTH, data.CURRENT_HEIGHT
@@ -103,7 +104,7 @@ def check_occlusion(occlusion_region, workspace=None):
         )
         clients = json.loads(result.stdout)
     except Exception as e:
-        print(f"Error retrieving client windows: {e}")
+        logger.error(f"Error retrieving client windows: {e}")
         return False
 
     occ_x, occ_y, occ_width, occ_height = occlusion_region

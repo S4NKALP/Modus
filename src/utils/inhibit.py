@@ -1,3 +1,4 @@
+from fabric.utils import logger
 # From https://github.com/stwa/wayland-idle-inhibitor
 # License: WTFPL Version 2
 
@@ -78,10 +79,10 @@ def kill_existing_inhibit_processes():
 
     except subprocess.CalledProcessError:
         # No processes found
-        print("No existing inhibit processes were running")
+        logger.error("No existing inhibit processes were running")
         return 0
     except Exception as e:
-        print(f"Error stopping existing processes: {e}")
+        logger.error(f"Error stopping existing processes: {e}")
         return 0
 
 
@@ -182,8 +183,8 @@ def main() -> None:
         shutdown()
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        print("Make sure you're running this under a Wayland session.")
+        logger.error(f"Error: {str(e)}")
+        logger.error("Make sure you're running this under a Wayland session.")
         sys.exit(1)
 
 

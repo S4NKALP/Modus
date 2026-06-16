@@ -1,4 +1,4 @@
-from fabric.utils import Gio, GLib
+from fabric.utils import Gio, GLib, logger
 
 
 class GioDBusHelper:
@@ -67,8 +67,8 @@ class GioDBusHelper:
         """Unsubscribe a previously registered signal using its subscription id."""
         try:
             self.bus.signal_unsubscribe(subscription_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     def set_property(self, interface_name, property_name, value_variant):
         """Sets a D-Bus property using the standard D-Bus Properties interface."""
