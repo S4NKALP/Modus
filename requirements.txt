@@ -1,6 +1,8 @@
-fabric @ git+https://github.com/Fabric-Development/fabric.git@fd2aabbd7e1859aa7c11c626a6c36a937aca736a
-pam>=0.2.0
-psutil>=7.2.2
+
+fabric @ git+https://github.com/Fabric-Development/fabric.git@b7b0f9975f0cf161ccf81c1adfb181230d553f79
+httpx==0.28.1
+pam==0.2.0
+psutil==7.2.2
 pywayland==0.4.18
-six>=1.17.0
-httpx>=0.28.1
+ruff==0.15.12
+six==1.17.0

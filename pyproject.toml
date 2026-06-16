@@ -19,9 +19,6 @@ dev = [
     "ruff>=0.15.2",
 ]
 
-[tool.uv.sources]
-fabric = { git = "https://github.com/Fabric-Development/fabric.git" }
-
 [project.scripts]
 start = "main:main"
 lock = "lock:main"
@@ -35,3 +32,6 @@ packages = ["src/shared", "src/utils", "src/window", "src/services", "src/main.p
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
+
+[tool.uv.sources]
+fabric = { git = "https://github.com/Fabric-Development/fabric.git" }

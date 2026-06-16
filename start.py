@@ -8,6 +8,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 
+# Apply monkey patch for hyprland lua dispatcher
 def run_app():
     from main import main as app_main
 
