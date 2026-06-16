@@ -89,7 +89,7 @@ class PopupWindow(WaylandWindow):
         return False
 
     def do_handle_size_allocate(self, *_):
-        if self.get_visible() and not self._initial_position:
+        if not self.get_visible():
             return
         return self.do_reposition(self.do_calculate_edges())
 
@@ -186,5 +186,6 @@ class PopupWindow(WaylandWindow):
             new_margin[3],
         )
 
-        self.margin = new_margin
+        if tuple(self.margin) != tuple(new_margin):
+            self.margin = new_margin
         self._initial_position = False
