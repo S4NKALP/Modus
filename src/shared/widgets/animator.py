@@ -84,6 +84,18 @@ class Animator(Service):
     @Signal
     def finished(self) -> None: ...
 
+    @Property(tuple[float, float, float, float], "read-write")
+    def bezier_curve(self) -> tuple[float, float, float, float]:
+        return self._bezier_curve
+
+    @bezier_curve.setter
+    def bezier_curve(self, value: tuple[float, float, float, float]):
+        self._bezier_curve = value
+        self._timing_function = lambda progress=0.0, **_: cubic_bezier(
+            *value, progress=progress
+        )
+        return
+
     @Property(TimingFunctionCallback, "read-write")
     def timing_function(self) -> TimingFunctionCallback:
         return self._timing_function

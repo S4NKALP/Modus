@@ -55,6 +55,9 @@ class SmoothSwitch(Gtk.DrawingArea):
             max_value=1.0,
             tick_widget=self,
         )
+        if active:
+            self._animator.value = 1.0
+
         self._animator.connect("notify::value", lambda *_: self.queue_draw())
 
         self.add_events(
