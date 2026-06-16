@@ -63,6 +63,10 @@ class AppName:
             if wmclass:
                 name = self.get_app_name(wmclass=wmclass)
 
+            # Hardcode fix for Wayland Python scripts mapping to 'start.py'
+            if str(name).lower() == "start.py" or str(name).lower() == "python3":
+                name = "Modus"
+
             # Smart title formatting (capitalize first letter)
             name = str(name).title()
             if "." in name:
