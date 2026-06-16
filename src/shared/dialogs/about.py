@@ -230,6 +230,7 @@ def get_app_info(wmclass):
 class AboutApp(Gtk.Window):
     def __init__(self, app_name="Unknown Application", wmclass=""):
         super().__init__(title=f"About {app_name}")
+        self.set_wmclass("modus-about", "Modus")
         self.app_name = app_name
         self.wmclass = wmclass
         self.icon_resolver = IconResolver()
