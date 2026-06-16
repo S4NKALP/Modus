@@ -62,6 +62,14 @@ class AnimatedScrollable(ScrolledWindow):
         current_val = self.height_animator.value
         return self.do_animate(current_val, height)
 
+    def snap_to_size(self, height: int):
+        """Instantly resize without animation"""
+        self._last_req = height
+        self.height_animator.pause()
+        self.height_animator.value = height
+        self.set_min_content_height(height)
+        self.queue_resize()
+
     def do_get_preferred_height(self):
         value = self.height_animator.value
         value = 0 if value < 0 else value
