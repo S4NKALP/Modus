@@ -163,7 +163,7 @@ class GlobalMenuDropdowns:
             [
                 dropdown_option(
                     "Enter Full Screen",
-                    on_click="hyprctl dispatch fullscreen",
+                    on_click="hyprctl dispatch 'hl.dsp.fullscreen()'",
                 ),
             ],
         )
@@ -184,25 +184,35 @@ class GlobalMenuDropdowns:
                 dropdown_divider("---------------------"),
                 dropdown_option(
                     "Move Window to Left",
-                    on_click="hyprctl dispatch movewindow l",
+                    on_click="hyprctl dispatch 'hl.dsp.movewindow([[l]])'",
                 ),
                 dropdown_option(
                     "Move Window to Right",
-                    on_click="hyprctl dispatch movewindow r",
+                    on_click="hyprctl dispatch 'hl.dsp.movewindow([[r]])'",
                 ),
                 dropdown_option(
                     "Cycle Through Windows",
-                    on_click="hyprctl dispatch cyclenext",
+                    on_click="hyprctl dispatch 'hl.dsp.cyclenext()'",
                 ),
                 dropdown_divider("---------------------"),
-                dropdown_option("Float", on_click="hyprctl dispatch togglefloating"),
-                dropdown_option("Quit", on_click="hyprctl dispatch killactive"),
-                dropdown_option("Pseudo", on_click="hyprctl dispatch pseudo"),
                 dropdown_option(
-                    "Toggle Split", on_click="hyprctl dispatch togglesplit"
+                    "Float", on_click="hyprctl dispatch 'hl.dsp.togglefloating()'"
                 ),
-                dropdown_option("Center", on_click="hyprctl dispatch centerwindow"),
-                dropdown_option("Group", on_click="hyprctl dispatch togglegroup"),
+                dropdown_option(
+                    "Quit", on_click="hyprctl dispatch 'hl.dsp.killactive()'"
+                ),
+                dropdown_option(
+                    "Pseudo", on_click="hyprctl dispatch 'hl.dsp.pseudo()'"
+                ),
+                dropdown_option(
+                    "Toggle Split", on_click="hyprctl dispatch 'hl.dsp.togglesplit()'"
+                ),
+                dropdown_option(
+                    "Center", on_click="hyprctl dispatch 'hl.dsp.centerwindow()'"
+                ),
+                dropdown_option(
+                    "Group", on_click="hyprctl dispatch 'hl.dsp.togglegroup()'"
+                ),
                 dropdown_option(
                     "Pin",
                     on_clicked=lambda _: exec_shell_command_async(
