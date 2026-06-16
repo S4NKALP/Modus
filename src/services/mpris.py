@@ -1,444 +1,422 @@
-from typing import Literal, Optional
+import hashlib
+import mimetypes
+import urllib.parse
+import urllib.request
+from pathlib import Path
 
-from fabric.core.service import Property, Service, Signal
-from fabric.utils import Gio, GLib, logger, GObject
-from fabric.utils.helpers import (
-    bulk_connect,
-    clamp,
-    pascal_case_to_snake_case,
-    snake_case_to_kebab_case,
-)
+import gi
+from fabric.utils import GLib, logger
 
-from utils.dbus_helper import GioDBusHelper
+gi.require_version("Playerctl", "2.0")
+from fabric import Fabricator  # noqa: E402
+from fabric.core.service import Property, Service, Signal  # noqa: E402
+from gi.repository import Playerctl  # noqa: E402
 
-MPRIS_MEDIAPLAYER_BUS_NAME = "org.mpris.MediaPlayer2"
-MPRIS_MEDIAPLAYER_BUS_PATH = "/org/mpris/MediaPlayer2"
-MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME = "org.mpris.MediaPlayer2.Player"
+from shared.data import CACHE_DIR  # noqa: E402
 
-
-# TODO Shuffle is broken because there is no CanShuffle property, it relies on can_control but thats not all inclusive
+TEMP_DIR = CACHE_DIR
 
 
-class MprisPlayer(Service):
+class PlayerService(Service):
     @Signal
-    def closed(self, value: bool) -> bool: ...
+    def meta_change(self, metadata: GLib.Variant, player: Playerctl.Player) -> None: ...
 
     @Signal
-    def changed(self) -> None: ...
+    def artwork_change(self, local_path: str) -> None: ...
 
-    seeked = Signal(name="seeked", arg_types=(GObject.TYPE_INT64,))
+    @Signal
+    def pause(self) -> None: ...
 
-    @Property(str, "readable")
-    def player_name(self):
-        return self.bus_name.split(".", 3)[-1].split(".")[0]
+    @Signal
+    def play(self) -> None: ...
 
-    @Property(str, "readable")
-    def playback_status(self) -> Literal["Playing", "Paused", "Stopped"]:
-        # type: ignore
-        return self._dbus_helper.proxy.get_cached_property(
-            "PlaybackStatus"
-        ).get_string()
-
-    @Property(str, "read-write", default_value="None")
-    def loop_status(self) -> Literal["None", "Track", "Playlist"]:
-        # type: ignore
-        return self._dbus_helper.proxy.get_cached_property("LoopStatus").get_string()
-
-    @loop_status.setter
-    def loop_status(self, status: Literal["None", "Track", "Playlist"]) -> None:
-        if self._dbus_helper.proxy.get_cached_property("LoopStatus") is None:
-            return
-
-        (
-            self._dbus_helper.set_property(
-                MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME,
-                "LoopStatus",
-                GLib.Variant("s", value=status),
-            )
-            if self.can_control
-            else None
-        )
-
-    # TODO: Playback rate??? (Rate) idk i dont really see why someone would use this ngl
-
-    @Property(bool, "read-write", default_value=False)
-    def shuffle(self) -> bool:
-        if self._dbus_helper.proxy.get_cached_property("Shuffle"):
-            # type: ignore
-            return self._dbus_helper.proxy.get_cached_property("Shuffle").get_boolean()
-        return False
-
-    @shuffle.setter
-    def shuffle(self, is_shuffle: bool) -> None:
-        if self._dbus_helper.proxy.get_cached_property("Shuffle") is None:
-            return
-
-        (
-            self._dbus_helper.set_property(
-                MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME,
-                "Shuffle",
-                GLib.Variant("b", value=is_shuffle),
-            )
-            if self.can_control
-            else None
-        )
-
-    @Property(dict, "readable")
-    def metadata(self) -> dict:
-        prop: GLib.Variant | None = self._dbus_helper.proxy.get_cached_property(
-            "Metadata"
-        )  # type: ignore
-        return dict(prop) if prop else {}  # type: ignore
-
-    # RELY ON METADATA
-    @Property(str, "readable")
-    def arturl(self) -> str:
-        return self.metadata.get("mpris:artUrl", "")
-
-    @Property(int, "readable", default_value=0)
-    def length(self) -> int:
-        return self.metadata.get("mpris:length", 0)
-
-    @Property(list, "readable")
-    def artist(self) -> list:
-        return self.metadata.get("xesam:artist", "")
-
-    @Property(str, "readable")
-    def album(self) -> str:
-        return self.metadata.get("xesam:album", "")
-
-    @Property(str, "readable")
-    def title(self):
-        return self.metadata.get("xesam:title", "")
-
-    # END RELY ON METADATA
-
-    @Property(float, "read-write")
-    def volume(self) -> float:
-        # type: ignore
-        return self._dbus_helper.proxy.get_cached_property("Volume").get_double()
-
-    @volume.setter
-    def volume(self, volume: float) -> None:
-        (
-            self._dbus_helper.set_property(
-                MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME,
-                "Volume",
-                GLib.Variant("d", clamp(value=volume, min_value=0.0, max_value=1.0)),
-            )
-            if self.can_control
-            else None
-        )
-
-    @Property(int, "read-write", default_value=0)
-    def position(self) -> int:
-        # type: ignore
-        return self._dbus_helper.proxy.get_cached_property("Position").get_int64()
-
-    @position.setter
-    def position(self, new_pos: int) -> None:
-        self._dbus_helper.call_method(
-            self.bus_name,
-            MPRIS_MEDIAPLAYER_BUS_PATH,
-            MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME,
-            "SetPosition",
-            GLib.Variant(
-                "(ox)",
-                (self.metadata["mpris:trackid"], new_pos),
-            ),
-        )
-
-    # TODO: consider MinimumRate, MaximumRate
-
-    @Property(bool, "readable", default_value=False)
-    def can_go_next(self) -> bool:
-        return self._dbus_helper.proxy.get_cached_property("CanGoNext").get_boolean()
+    @Signal
+    def track_position(self, pos: float, dur: float) -> None: ...
 
     @Property(bool, "readable", default_value=False)
     def can_go_previous(self) -> bool:
-        return self._dbus_helper.proxy.get_cached_property(
-            "CanGoPrevious"
-        ).get_boolean()
+        return self._player.get_property("can_go_previous")
 
     @Property(bool, "readable", default_value=False)
-    def can_play(self) -> bool:
-        return self._dbus_helper.proxy.get_cached_property("CanPlay").get_boolean()
+    def can_go_next(self) -> bool:
+        return self._player.get_property("can_go_next")
 
     @Property(bool, "readable", default_value=False)
     def can_pause(self) -> bool:
-        return self._dbus_helper.proxy.get_cached_property("CanPause").get_boolean()
+        return self._player.get_property("can_pause")
+
+    @Property(bool, "readable", default_value=False)
+    def can_play(self) -> bool:
+        return self._player.get_property("can_play")
 
     @Property(bool, "readable", default_value=False)
     def can_seek(self) -> bool:
-        return self._dbus_helper.proxy.get_cached_property("CanSeek").get_boolean()
+        return self._player.get_property("can_seek")
 
     @Property(bool, "readable", default_value=False)
     def can_control(self) -> bool:
-        return self._dbus_helper.proxy.get_cached_property("CanControl").get_boolean()
+        return self._player.get_property("can_control")
 
-    def __init__(self, bus_name: str, **kwargs):
-        super().__init__(**kwargs)
-        self.bus_name: str = bus_name
-        self._dbus_helper: GioDBusHelper | None = None
-
-        # Ahoy!
-        self.do_register()
-
-    def do_register(self) -> None:  # the bus id
-        self._dbus_helper = GioDBusHelper(
-            self.bus_name,
-            MPRIS_MEDIAPLAYER_BUS_PATH,
-            MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME,
-            Gio.BusType.SESSION,
-        )
-
-        if not self._dbus_helper.proxy:
-            return
-
-        bulk_connect(
-            self._dbus_helper.proxy,
-            {
-                "g-properties-changed": self._do_handle_properties_changed,
-                "g-signal": self._do_handle_signal_changed,
-                "notify::g-name-owner": self._on_name_owner_change,
-            },
-        )
-        # Update all properties to start
-        self.update_all_properties()
-
-    def update_all_properties(self):
-        def on_update_finish(proxy, task):
-            try:
-                self._do_handle_properties_changed(
-                    self._dbus_helper.proxy, proxy.call_finish(task)[0], ""
-                )
-            except Exception:
-                logger.error(f"[MPRIS-{self.bus_name}] Failed to retrieve properties")
-
-        self._dbus_helper.proxy.call(
-            "org.freedesktop.DBus.Properties.GetAll",
-            GLib.Variant.new_tuple(
-                GLib.Variant.new_string("org.mpris.MediaPlayer2.Player")
-            ),
-            Gio.DBusCallFlags.NONE,
-            -1,
-            None,
-            on_update_finish,
-        )  # User data
-
-    def _do_handle_properties_changed(
-        self, proxy: Gio.DBusProxy, changed_properties, invalidated_properties: str
-    ):
-        for prop_name in set(
-            [
-                snake_case_to_kebab_case(pascal_case_to_snake_case(x))
-                for x in changed_properties.keys()
-            ]
-        ).intersection([prop.name for prop in self.get_properties()]):
-            self.notifier(prop_name)
-
-            if prop_name == "metadata":
-                for sub_prop in ["arturl", "album", "artist", "length", "title"]:
-                    self.notifier(sub_prop)
-
-    def notifier(self, prop):
-        self.notify(prop)
-        self.changed()
-
-    def _do_handle_signal_changed(
-        self,
-        proxy: Gio.DBusProxy,
-        sender_name: str,
-        signal_name: str,
-        params: tuple[GLib.Variant],
-    ):
-        # Only One Signal for Mpris
-        if signal_name == "Seeked":
-            self.seeked(params[0])
-
-    def _proxy_call(self, method_name: str, parameter: Optional[GLib.Variant]):
-        self._dbus_helper.proxy.call(
-            method_name,
-            parameter,
-            Gio.DBusCallFlags.NONE,
-            self._dbus_helper.proxy.get_default_timeout(),
-            None,
-            self._do_method_callback,
-            pascal_case_to_snake_case(method_name),
-        )
-
-    def _do_method_callback(self, _, res: Gio.AsyncResult, user_data):
+    @Property(str, "readable", default_value="")
+    def player_name(self) -> str:
         try:
-            self._dbus_helper.proxy.call_finish(res)
+            return self._player.props.player_name or ""
+        except Exception:
+            return ""
+
+    @Property(str, "readable", default_value="")
+    def arturl(self) -> str:
+        try:
+            meta = self._player.props.metadata
+            if meta and "mpris:artUrl" in meta.keys():
+                return meta["mpris:artUrl"]
+        except Exception:
+            pass
+        return ""
+
+    @Property(str, "readable", default_value="")
+    def title(self) -> str:
+        try:
+            return self._player.get_title() or ""
+        except Exception:
+            return ""
+
+    @Property(object, "readable")
+    def artist(self) -> list:
+        try:
+            meta = self._player.props.metadata
+            if meta and "xesam:artist" in meta.keys():
+                return list(meta["xesam:artist"]) or []
+        except Exception:
+            pass
+        return []
+
+    @Property(str, "readable", default_value="")
+    def album(self) -> str:
+        try:
+            meta = self._player.props.metadata
+            if meta and "xesam:album" in meta.keys():
+                return meta["xesam:album"] or ""
+        except Exception:
+            pass
+        return ""
+
+    @Property(str, "readable", default_value="Stopped")
+    def playback_status(self) -> str:
+        try:
+            val = int(self._player.props.playback_status)
+            if val == 0:
+                return "Playing"
+            elif val == 1:
+                return "Paused"
+            else:
+                return "Stopped"
+        except Exception:
+            return "Stopped"
+
+    @Property(int, "readable", default_value=0)
+    def length(self) -> int:
+        try:
+            meta = self._player.props.metadata
+            if meta and "mpris:length" in meta.keys():
+                return int(meta["mpris:length"])
+        except Exception:
+            pass
+        return 0
+
+    @Property(int, "read-write", default_value=0)
+    def position(self) -> int:
+        try:
+            return int(self._player.get_position())
+        except Exception:
+            return 0
+
+    @position.setter
+    def position(self, value: int):
+        self.set_position(value / 1_000_000)
+
+    def play_pause(self, *_):
+        try:
+            self._player.play_pause()
         except Exception as e:
-            print(e)
-            logger.error(
-                f"[MPRIS-{self.bus_name}] Failed to invoke method: {user_data}"
-            )
+            logger.warning(f"play_pause failed: {e}")
 
-    def _on_name_owner_change(self, proxy: Gio.DBusProxy, _):
-        if not self._dbus_helper.proxy.get_name_owner():
-            # proxy is automatically destroyed
-            self.closed(True)
+    def next(self, *_):
+        try:
+            self._player.next()
+        except Exception as e:
+            logger.warning(f"next failed: {e}")
 
-    # Methods
-    def next(self):
-        self._proxy_call("Next", None) if self.can_go_next else None
+    def previous(self, *_):
+        try:
+            self._player.previous()
+        except Exception as e:
+            logger.warning(f"previous failed: {e}")
 
-    def previous(self):
-        self._proxy_call("Previous", None) if self.can_go_previous else None
-
-    def pause(self):
-        self._proxy_call("Pause", None) if self.can_pause else None
-
-    def play_pause(self):
-        (
-            self._proxy_call("PlayPause", None)
-            if self.can_pause
-            else logger.error(
-                f"[MPRIS-{self.bus_name}] `play_pause` is not supported by this player"
-            )
-        )
-
-    def stop(self):
-        (
-            self._proxy_call("Stop", None)
-            if self.can_control
-            else logger.error(
-                f"[MPRIS-{self.bus_name}] `stop` is not supported by this player"
-            )
-        )
-
-    def play(self):
-        self._proxy_call("Play", None) if self.can_play else None
-
-    def seek(self, time_in_us: int):
-        (
-            self._proxy_call("Seek", GLib.Variant.new_int64(time_in_us))
-            if self.can_seek
-            else None
-        )
-
-    # No need for SetPositition, that is handled by the setter
-
-    # Ignoring OpenUri
-
-
-class MprisPlayerManager(Service):
-    @Signal
-    def player_appeared(self, player: MprisPlayer) -> MprisPlayer:
-        logger.info(f"[MPRIS] Found Player: {player.bus_name}")
-        self._players[player.bus_name] = player
-        self.notify("players")
-        return player
-
-    @Signal
-    def player_vanished(self, bus_name: str) -> str:
-        logger.info(f"[MPRIS] Lost Player: {bus_name}")
-        self._players.pop(bus_name)
-        self.notify("players")
-        return bus_name
-
-    @Property(dict[str, MprisPlayer], "readable")
-    def players(self):
-        return self._players
-
-    def __init__(self, **kwargs):
+    def __init__(self, player: Playerctl.Player, **kwargs):
         super().__init__(**kwargs)
-        self._players: dict[str, MprisPlayer] = {}
-        self._dbus_helper: GioDBusHelper | None = None
-        self._subscription_id: int | None = None
+        self._player: Playerctl.Player = player
+        self._current_artwork_hash = ""
+        self._current_artwork_path = ""
+        self._is_cleaning_up = False
+        self._cached_playback_status = int(self._player.props.playback_status)
+        self._signal_ids = []
 
-        # ahoy
-        self.do_register()
-
-    def do_register(self):
-        self._dbus_helper = GioDBusHelper(
-            "org.freedesktop.DBus",
-            "/org/freedesktop/DBus",
-            "org.freedesktop.DBus",
-            Gio.BusType.SESSION,
+        self._signal_ids.append(
+            self._player.connect("playback-status", self.on_playback_status)
         )
+        self._signal_ids.append(self._player.connect("metadata", self.on_metadata))
+        self._signal_ids.append(self._player.connect("seeked", self.on_seeked))
 
-        self._subscription_id = self._dbus_helper.listen_signal(
-            "NameOwnerChanged",
-            self.on_name_owner_change,
-            "org.freedesktop.DBus",
+        self.status = self._player.props.playback_status
+        self._last_polled_status = self.playback_status
+        self.pos_fabricator = Fabricator(
+            interval=1000,
+            poll_from=lambda f, *_: self.get_position(),
+            on_changed=lambda f, *_: self.fabricating(),
         )
-
-        # Defer player discovery to avoid blocking initialization
-        GLib.idle_add(self._get_available_players)
-
-    def destroy(self):
-        """Unsubscribe bus signal and clear players."""
-        try:
-            if self._subscription_id is not None and self._dbus_helper is not None:
-                self._dbus_helper.unsubscribe_signal(self._subscription_id)
-                self._subscription_id = None
-        except Exception:
-            pass
+        self.status_fabricator = Fabricator(
+            interval=250,
+            poll_from=lambda f, *_: self.playback_status,
+            on_changed=lambda f, value: self._on_polled_status_change(value),
+        )
+        self.status_fabricator.start()
+        self.poll_progress()
 
         try:
-            # notify vanish for all remaining players
-            for bus_name in list(self._players.keys()):
-                try:
-                    self.player_vanished(bus_name)
-                except Exception:
-                    pass
-            self._players.clear()
-        except Exception:
-            pass
+            metadata = self._player.props.metadata
+            if metadata:
+                self.meta_change(metadata, self._player)
+                self._handle_artwork(metadata, metadata.keys())
+        except Exception as e:
+            logger.warning(f"Failed to initialize metadata: {e}")
 
-    def _list_names_callback(
-        self,
-        proxy: Gio.DBusProxy,
-        res: Gio.AsyncResult,
-    ):
+    def get_artwork(self) -> str:
+        return self._current_artwork_path
+
+    def get_position(self) -> float:
+        if self._is_cleaning_up:
+            return 0
         try:
-            reply = proxy.call_finish(res)
-            for player in filter(
-                lambda x: x.startswith(MPRIS_MEDIAPLAYER_BUS_NAME),
-                reply.get_child_value(0),  # type: ignore
-            ):
-                self.do_handle_new_player(player)
+            return self._player.get_position()
+        except Exception as e:
+            logger.warning(f"Could not get position: {e}")
+            return 0
 
-        except Exception:
-            logger.error("[MPRIS MANAGER] Failed to ListNames")
+    def set_position(self, pos: float):
+        if self._is_cleaning_up:
+            return
+        self.pos_fabricator.stop()
+        try:
+            self._player.set_position(int(pos * 1_000_000))
+        except GLib.Error as e:
+            logger.error(f"Failed to seek: {e}")
 
-    def _get_available_players(self):
-        self._dbus_helper.proxy.call(
-            "ListNames",
-            GLib.Variant("()", ()),
-            Gio.DBusCallFlags.NONE,
-            -1,
-            None,
-            self._list_names_callback,
-        )
+    def poll_progress(self):
+        if self._is_cleaning_up:
+            return
+        if self.playback_status.lower() == "playing":
+            self.pos_fabricator.start()
+        else:
+            self.pos_fabricator.stop()
 
-    def on_name_owner_change(
-        self,
-        conn,
-        sender_name: str,
-        object_path: str,
-        interface_name: str,
-        signal_name: str,
-        user_data,
-        *params,
-    ) -> None:
-        name, old_owner, new_owner = user_data
-        if not name.startswith(MPRIS_MEDIAPLAYER_BUS_NAME):
+    def fabricating(self):
+        if self._is_cleaning_up:
+            return
+        try:
+            pos = self._player.get_position() / 1_000_000
+            keys = self._player.props.metadata.keys()
+            dur = (
+                self._player.props.metadata["mpris:length"] / 1_000_000
+                if "mpris:length" in keys
+                else 0
+            )
+            self.track_position(pos, dur)
+        except GLib.Error as e:
+            logger.warning(f"Failed to get position: {e}")
+
+    def on_seeked(self, player, position):
+        if self._is_cleaning_up:
+            return
+        if self.playback_status.lower() == "playing":
+            self.pos_fabricator.start()
+
+    def on_playback_status(self, player, status):
+        """DBus signal handler - instant when it fires (e.g. Modus buttons)."""
+        if self._is_cleaning_up:
+            return
+        self.status = status
+        self.poll_progress()
+        if self.playback_status.lower() == "playing":
+            self.play()
+        else:
+            self.pause()
+
+    def _on_polled_status_change(self, new_status: str):
+        """Fabricator-driven status change - fires reliably every second."""
+        if self._is_cleaning_up:
+            return
+        self.poll_progress()
+        if new_status.lower() == "playing":
+            self.play()
+        else:
+            self.pause()
+
+    def on_metadata(self, player, metadata):
+        if self._is_cleaning_up:
+            return
+        self.meta_change(metadata, player)
+        self._handle_artwork(metadata, metadata.keys())
+
+    def _handle_artwork(self, metadata, keys):
+        if self._is_cleaning_up or "mpris:artUrl" not in keys:
             return
 
-        if old_owner == "" and new_owner != "":
-            self.do_handle_new_player(name)
+        art_url = metadata["mpris:artUrl"]
+        artwork_hash = hashlib.md5(art_url.encode()).hexdigest()
 
-    def do_handle_new_player(self, bus_name: str):
-        if bus_name in self._players.keys():
+        if artwork_hash == self._current_artwork_hash:
             return
 
-        player = MprisPlayer(bus_name)
-        player.connect(
-            "closed",
-            lambda *_: self.player_vanished(bus_name),
+        self._current_artwork_hash = artwork_hash
+        parsed = urllib.parse.urlparse(art_url)
+
+        if parsed.scheme == "file":
+            self._set_artwork(urllib.parse.unquote(parsed.path))
+        elif parsed.scheme in ("http", "https"):
+            GLib.Thread.new(
+                "download-artwork",
+                self._download_artwork,
+                art_url,
+                artwork_hash,
+            )
+
+    def _set_artwork(self, path: str):
+        self._current_artwork_path = path
+        self.artwork_change(path)
+
+    def _download_artwork(self, art_url: str, artwork_hash: str):
+        if self._is_cleaning_up:
+            return
+        try:
+            cache_dir = TEMP_DIR / "player-art"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+
+            filename_hash = hashlib.md5(art_url.encode()).hexdigest()
+            parsed = urllib.parse.urlparse(art_url)
+
+            local_arturl = None
+            url_suffix = Path(parsed.path).suffix
+            if url_suffix:
+                test_path = cache_dir / f"{filename_hash}{url_suffix}"
+                if test_path.exists():
+                    local_arturl = test_path
+            else:
+                existing = list(cache_dir.glob(f"{filename_hash}.*"))
+                if existing:
+                    local_arturl = existing[0]
+
+            if not local_arturl:
+                with urllib.request.urlopen(art_url, timeout=5) as response:
+                    data = response.read()
+                    suffix = (
+                        mimetypes.guess_extension(response.info().get_content_type())
+                        or ".png"
+                    )
+                    local_arturl = cache_dir / f"{filename_hash}{suffix}"
+                    tmp = local_arturl.with_suffix(".tmp")
+                    tmp.write_bytes(data)
+                    tmp.replace(local_arturl)
+
+            GLib.idle_add(self._set_artwork, str(local_arturl))
+
+        except Exception as e:
+            logger.error(f"Failed to download artwork: {e}")
+
+    def cleanup(self):
+        if self._is_cleaning_up:
+            return
+        self._is_cleaning_up = True
+
+        try:
+            if hasattr(self, "pos_fabricator"):
+                self.pos_fabricator.stop()
+        except Exception as e:
+            logger.error(f"Error stopping fabricator: {e}")
+
+        try:
+            if hasattr(self, "status_fabricator"):
+                self.status_fabricator.stop()
+        except Exception as e:
+            logger.error(f"Error stopping status fabricator: {e}")
+
+        for signal_id in self._signal_ids:
+            try:
+                self._player.disconnect(signal_id)
+            except Exception as e:
+                logger.warning(f"Error disconnecting signal: {e}")
+        self._signal_ids.clear()
+        self._current_artwork_path = ""
+
+
+class PlayerManager(Service):
+    _instance = None
+
+    @Signal
+    def new_player(self, player_name: str, service: PlayerService) -> None: ...
+
+    @Signal
+    def player_vanish(self, player_name: str) -> None: ...
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._init_singleton()
+        return cls._instance
+
+    def _init_singleton(self):
+        super().__init__()
+        self._manager = Playerctl.PlayerManager()
+        self._services: dict[str, PlayerService] = {}
+        self._player_objects: dict[str, Playerctl.Player] = {}
+
+        self._manager.connect("name-appeared", self._on_name_appeared, self._manager)
+        self._manager.connect(
+            "player-vanished", self._on_player_vanished, self._manager
         )
-        self.player_appeared(player)
+        self._init_existing_players()
+
+    def _init_existing_players(self):
+        for player_obj in self._manager.props.player_names:
+            self._create_player(player_obj)
+
+    def _create_player(self, name_obj):
+        name_str = name_obj.name
+        if name_str in self._services:
+            return
+        try:
+            player = Playerctl.Player.new_from_name(name_obj)
+            self._manager.manage_player(player)
+            service = PlayerService(player)
+            self._services[name_str] = service
+            self._player_objects[name_str] = player
+            self.new_player(name_str, service)
+        except Exception as e:
+            logger.error(f"Failed to create player {name_str}: {e}")
+
+    def _on_name_appeared(self, sender, name, manager):
+        self._create_player(name)
+
+    def _on_player_vanished(self, sender, player, manager):
+        name = player.props.player_name
+        if name in self._services:
+            self._services[name].cleanup()
+            del self._services[name]
+        self._player_objects.pop(name, None)
+        self.player_vanish(name)
+
+    def get_player_service(self, name: str) -> PlayerService | None:
+        return self._services.get(name)
+
+    def get_all_services(self) -> dict[str, PlayerService]:
+        return self._services.copy()
