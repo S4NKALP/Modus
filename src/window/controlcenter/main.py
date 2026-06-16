@@ -522,7 +522,7 @@ class ModusControlCenter(AppletWindow):
             if self.network_service is None:
                 self.network_service = NetworkClient()
                 # Connect network signal
-                self.network_service.connect("wifi-device-added", self.on_network_ready)
+                self.network_service.connect("device-ready", self.on_network_ready)
 
             # Check initial states lazily (only when needed)
             self._check_initial_states()

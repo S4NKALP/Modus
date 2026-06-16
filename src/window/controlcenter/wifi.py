@@ -15,14 +15,16 @@ from utils.functions import get_wifi_connecting_icon, get_wifi_icon_for_strength
 from utils.utils import svg_file
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.dialogs.wifi_password_dialog import WiFiPasswordDialog
-from gi.repository import NM
 
 
 class WifiNetworkSlot(Box):
-    def __init__(self, access_point, wifi_service, parent=None, **kwargs):
+    def __init__(
+        self, access_point, wifi_service, network_service=None, parent=None, **kwargs
+    ):
         super().__init__(name="wifi-network-slot", **kwargs)
         self.access_point = access_point
         self.wifi_service = wifi_service
+        self.network_service = network_service
         self.parent = parent  # Reference to control center
 
         # Get network info from AccessPoint object
@@ -103,7 +105,15 @@ class WifiNetworkSlot(Box):
             self.dimage.add_style_class("disconnecting")
 
             # Disconnect from network
-            self.wifi_service.disconnect_wifi()
+            if self.wifi_service and self.wifi_service._device:
+                subprocess.Popen(
+                    [
+                        "nmcli",
+                        "device",
+                        "disconnect",
+                        self.wifi_service._device.get_iface(),
+                    ]
+                )
             self.is_connected = False
             # Remove disconnecting state after a short delay to show feedback
             GLib.timeout_add(500, lambda: self._reset_disconnect_state())
@@ -132,9 +142,10 @@ class WifiNetworkSlot(Box):
                     self.on_changed()
 
                 try:
-                    self.wifi_service.connect_to_wifi(
-                        self.access_point, callback=on_open_connection_result
-                    )
+                    if self.network_service:
+                        self.network_service.connect_wifi_bssid(self.access_point.bssid)
+                    GLib.timeout_add(1500, lambda: self._reset_connect_state())
+                    GLib.timeout_add(1500, lambda: self.on_changed())
                 except Exception:
                     # Handle any connection errors gracefully
                     self._reset_connect_state()
@@ -225,9 +236,10 @@ class WifiNetworkSlot(Box):
                 self.on_changed()
 
             try:
-                self.wifi_service.connect_to_wifi(
-                    self.access_point, password, callback=on_connection_result
-                )
+                if self.network_service:
+                    self.network_service.connect_wifi_with_password(
+                        self.access_point.bssid, password, callback=on_connection_result
+                    )
             except Exception:
                 # Handle any connection errors gracefully
                 self._reset_connect_state()
@@ -269,9 +281,7 @@ class WifiConnections(Box):
         self._signal_ids.append(
             (
                 self.network_service,
-                self.network_service.connect(
-                    "wifi-device-added", self.on_network_ready
-                ),
+                self.network_service.connect("device-ready", self.on_network_ready),
             )
         )
 
@@ -398,14 +408,14 @@ class WifiConnections(Box):
         self.wifi_service = self.network_service.wifi_device
         if self.wifi_service:
             # Set up WiFi toggle
-            self.toggle_button.set_active(self.wifi_service.wireless_enabled)
+            self.toggle_button.set_active(self.wifi_service.enabled)
 
             # Connect to WiFi service signals — track IDs for cleanup
             self._signal_ids.append(
                 (
                     self.wifi_service,
                     self.wifi_service.connect(
-                        "notify::wireless-enabled", self.on_wifi_enabled_changed
+                        "notify::enabled", self.on_wifi_enabled_changed
                     ),
                 )
             )
@@ -413,18 +423,6 @@ class WifiConnections(Box):
                 (
                     self.wifi_service,
                     self.wifi_service.connect("changed", self.update_networks),
-                )
-            )
-            self._signal_ids.append(
-                (
-                    self.wifi_service,
-                    self.wifi_service.connect("ap-added", self.update_networks),
-                )
-            )
-            self._signal_ids.append(
-                (
-                    self.wifi_service,
-                    self.wifi_service.connect("ap-removed", self.update_networks),
                 )
             )
 
@@ -435,12 +433,12 @@ class WifiConnections(Box):
         """Handle WiFi toggle button changes"""
         if self.wifi_service:
             new_state = toggle_button.get_active()
-            self.wifi_service.wireless_enabled = new_state
+            self.wifi_service.enabled = new_state
 
     def on_wifi_enabled_changed(self, *_):
         """Handle WiFi enabled state changes"""
         if self.wifi_service:
-            self.toggle_button.set_active(self.wifi_service.wireless_enabled)
+            self.toggle_button.set_active(self.wifi_service.enabled)
 
     def open_network_settings(self, *_):
         """Open NetworkManager connection editor"""
@@ -515,7 +513,10 @@ class WifiConnections(Box):
                 for access_point in known_networks:
                     if not self._destroyed:
                         network_slot = WifiNetworkSlot(
-                            access_point, self.wifi_service, parent=self.parent
+                            access_point,
+                            self.wifi_service,
+                            network_service=self.network_service,
+                            parent=self.parent,
                         )
                         self.known_networks.add(network_slot)
 
@@ -523,7 +524,10 @@ class WifiConnections(Box):
                 for access_point in other_networks:
                     if not self._destroyed:
                         network_slot = WifiNetworkSlot(
-                            access_point, self.wifi_service, parent=self.parent
+                            access_point,
+                            self.wifi_service,
+                            network_service=self.network_service,
+                            parent=self.parent,
                         )
                         self.other_networks.add(network_slot)
 
@@ -553,40 +557,12 @@ class WifiConnections(Box):
 
     def _is_saved_network(self, access_point):
         """Check if a network is saved/known using NetworkManager connections"""
-        if not self.network_service or not self.network_service._client:
+        if not self.network_service:
             return False
-
-        try:
-            ssid = access_point.ssid
-            if not ssid or ssid == "Unknown":
-                return False
-
-            # Get all saved connections from NetworkManager
-            connections = self.network_service._client.get_connections()
-
-            for connection in connections:
-                # Check if this is a WiFi connection
-                if connection.get_connection_type() != "802-11-wireless":
-                    continue
-
-                # Get the wireless setting
-                wifi_setting = connection.get_setting_wireless()
-                if not wifi_setting:
-                    continue
-
-                # Compare SSIDs
-                connection_ssid_bytes = wifi_setting.get_ssid()
-                if connection_ssid_bytes:
-                    connection_ssid = NM.utils_ssid_to_utf8(
-                        connection_ssid_bytes.get_data()
-                    )
-                    if connection_ssid == ssid:
-                        return True
-
-        except Exception:
-            pass
-
-        return False
+        ssid = access_point.ssid
+        if not ssid or ssid == "Unknown":
+            return False
+        return self.network_service.is_network_saved(ssid)
 
     def refresh_network_states(self, *_):
         """Refresh connection states for all network slots"""
@@ -623,7 +599,7 @@ class WifiConnections(Box):
         if (
             self._update_in_progress
             or not self.wifi_service
-            or not self.wifi_service.wireless_enabled
+            or not self.wifi_service.enabled
         ):
             return True  # Continue monitoring
 
