@@ -193,12 +193,8 @@ class NetworkIndicator(Box):
             self.wifi_window._pointing_widget = self.network_button
 
         modus_service.connect("wlan-changed", self.on_wlan_changed)
-        self.network_service.connect("wifi-device-added", self.on_wifi_device_added)
-        self.network_service.connect(
-            "ethernet-device-added", self.on_ethernet_device_added
-        )
-        self.network_service.connect("changed", self.on_network_changed)
-
+        self.network_service.connect("device-ready", self.on_wifi_device_added)
+        self.network_service.connect("device-ready", self.on_ethernet_device_added)
         self.update_modus_service_wlan_state()
         self.update_state()
 
@@ -236,13 +232,12 @@ class NetworkIndicator(Box):
 
         if self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
-            if not wifi.wireless_enabled:
+            if not wifi.enabled:
                 wlan_state = "disabled"
-            elif wifi.active_access_point:
-                ap = wifi.active_access_point
-                wlan_state = f"connected:{ap.ssid}"
-                if ap.strength >= 0:
-                    wlan_state += f":{ap.strength}%"
+            elif wifi.ssid:
+                wlan_state = f"connected:{wifi.ssid}"
+                if wifi.strength >= 0:
+                    wlan_state += f":{wifi.strength}%"
             else:
                 wlan_state = "enabled"
 
@@ -267,17 +262,15 @@ class NetworkIndicator(Box):
         # Check WiFi first (prioritize WiFi over Ethernet)
         if self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
-            if not wifi.wireless_enabled:
+            if not wifi.enabled:
                 icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disabled"
-            elif wifi.active_access_point:
-                ap = wifi.active_access_point
-                # Use dynamic WiFi icon based on signal strength
-                wifi_icon_path = get_wifi_icon_for_strength(ap.strength)
+            elif wifi.ssid:
+                wifi_icon_path = get_wifi_icon_for_strength(wifi.strength)
                 self.network_icon.set_from_file(wifi_icon_path)
-                tooltip = f"Connected to {ap.ssid}"
-                if ap.strength >= 0:
-                    tooltip += f" ({ap.strength}%)"
+                tooltip = f"Connected to {wifi.ssid}"
+                if wifi.strength >= 0:
+                    tooltip += f" ({wifi.strength}%)"
                 self.network_button.set_tooltip_text(tooltip)
                 return  # Early return to avoid setting icon again
             else:
