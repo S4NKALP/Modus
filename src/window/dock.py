@@ -10,6 +10,7 @@ from fabric.utils import (
     os,
     random,
     re,
+    exec_shell_command_async,
 )
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -443,8 +444,8 @@ class AppBar(Box):
 
             if command_line:
                 cleaned_command = re.sub(r"%\w+", "", command_line).strip()
-                final_command = f"hyprctl dispatch exec 'uwsm app -- {cleaned_command}'"
-                subprocess.Popen(final_command, shell=True)
+                final_command = f"hyprctl dispatch 'hl.dsp.exec_cmd([[uwsm app -- {cleaned_command}]])'"
+                exec_shell_command_async(final_command)
             elif hasattr(app_info, "launch"):
                 app_info.launch()
             else:
