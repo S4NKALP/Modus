@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from fabric.utils import Gdk, GLib, invoke_repeater, remove_handler, time
+from fabric.utils import Gdk, GLib, invoke_repeater, remove_handler, time, logger
 from fabric.widgets.box import Box
 from fabric.widgets.wayland import WaylandWindow as Window
 
@@ -48,16 +48,16 @@ class BaseOSDContainer(Box):
         if self.last_handler:
             try:
                 remove_handler(self.last_handler)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
             self.last_handler = 0
 
     def remove_watchdog_handler(self):
         if self.watchdog_handler:
             try:
                 GLib.source_remove(self.watchdog_handler)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
             self.watchdog_handler = 0
 
     def cleanup_all_handlers(self):

@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import math
 from fabric.audio import Audio
 from utils.utils import svg_file
@@ -105,6 +106,6 @@ class AudioOSDContainer(BaseOSDContainer):
             self.audio.disconnect_by_func(self._on_speaker_changed)
             if self.audio.speaker:
                 self.audio.speaker.disconnect_by_func(self._on_speaker_stream_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         super().destroy()

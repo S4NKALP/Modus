@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.widgets.label import Label
 from utils.utils import svg_file
 from .base import BaseOSDContainer
@@ -50,6 +51,6 @@ class CapsLockOSDContainer(BaseOSDContainer):
         """Disconnect signals from CapsLock service"""
         try:
             self.capslock.disconnect_by_func(self._on_caps_lock_state_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         super().destroy()

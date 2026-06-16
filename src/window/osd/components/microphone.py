@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import math
 from fabric.audio import Audio
 from utils.utils import svg_file
@@ -107,6 +108,6 @@ class MicrophoneOSDContainer(BaseOSDContainer):
                 self.audio.microphone.disconnect_by_func(
                     self._on_microphone_stream_changed
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         super().destroy()

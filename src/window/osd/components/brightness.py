@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import math
 from services.brightness import Brightness
 from utils.utils import svg_file
@@ -64,6 +65,6 @@ class BrightnessOSDContainer(BaseOSDContainer):
             self.brightness_service.disconnect_by_func(
                 self._on_screen_brightness_changed
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         super().destroy()

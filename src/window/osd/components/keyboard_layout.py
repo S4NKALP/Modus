@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.widgets.label import Label
 from utils.utils import svg_file
 from .base import BaseOSDContainer
@@ -42,6 +43,6 @@ class KeyboardLayoutOSDContainer(BaseOSDContainer):
         """Disconnect signals from KeyboardLayout service"""
         try:
             self.keyboard_layout.disconnect_by_func(self._on_layout_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
         super().destroy()
