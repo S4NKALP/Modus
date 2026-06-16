@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.utils import GLib
 from fabric.widgets.eventbox import EventBox  # noqa: E402
 from fabric.widgets.wayland import WaylandWindow as Window  # noqa: E402
@@ -51,7 +52,9 @@ class AppletWindow(PopupWindow):
                 else:
                     active.hide()
             except Exception as e:
-                print(f"[AppletWindow] Warning: failed to close active popup: {e}")
+                logger.error(
+                    f"[AppletWindow] Warning: failed to close active popup: {e}"
+                )
 
         AppletWindow._active_popup = self
 

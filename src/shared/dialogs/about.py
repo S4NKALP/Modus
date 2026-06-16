@@ -1,6 +1,6 @@
 import subprocess
 
-from fabric.utils import GdkPixbuf, Gtk, get_relative_path, os, re
+from fabric.utils import GdkPixbuf, Gtk, get_relative_path, os, re, logger
 
 from utils.functions import escape_markup_text
 from utils.icon_resolver import IconResolver
@@ -73,8 +73,8 @@ def get_executable_path(exec_string):
         result = subprocess.run(["which", executable], capture_output=True, text=True)
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
 
     return None
 
@@ -212,8 +212,8 @@ def get_app_info(wmclass):
         )
         if result.returncode == 0:
             location = result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
 
     return {
         "name": wmclass.title() if wmclass else "Unknown Application",
@@ -261,8 +261,8 @@ class AboutApp(Gtk.Window):
             icon_pixbuf = self.icon_resolver.get_icon_pixbuf(app_info["icon"], 128)
             if icon_pixbuf:
                 logo = Gtk.Image.new_from_pixbuf(icon_pixbuf)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         if not logo:
             try:
@@ -273,8 +273,8 @@ class AboutApp(Gtk.Window):
                         icon_path, 128, 128, True
                     )
                     logo = Gtk.Image.new_from_pixbuf(pixbuf)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         if not logo:
             # 3. Final fallback

@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.utils import GLib
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -125,7 +126,7 @@ class GameModeButton(Box):
             toggle_gamemode()
             GLib.timeout_add(500, lambda: self.update_state())
         except Exception as e:
-            print(f"Failed to toggle game mode: {e}")
+            logger.error(f"Failed to toggle game mode: {e}")
 
         GLib.timeout_add(300, lambda: self._reset_icon_state())
 
@@ -140,7 +141,7 @@ class GameModeButton(Box):
             else:
                 self.game_icon.remove_style_class("connected")
         except Exception as e:
-            print(f"Failed to check game mode status: {e}")
+            logger.error(f"Failed to check game mode status: {e}")
             self.game_icon.remove_style_class("connected")
 
         return False  # Remove timeout if called from GLib.timeout_add

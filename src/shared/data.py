@@ -1,3 +1,4 @@
+from fabric.utils import logger
 import json
 
 from fabric.utils import Gdk, GLib, get_relative_path, os
@@ -41,7 +42,7 @@ def load_config():
                 with open(CONFIG_FILE, "r") as f:
                     config = json.load(f)
             except Exception as e:
-                print(f"Error loading config: {e}")
+                logger.error(f"Error loading config: {e}")
 
         return config
 

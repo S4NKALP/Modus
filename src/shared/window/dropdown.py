@@ -1,3 +1,4 @@
+from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
@@ -87,7 +88,7 @@ class ModusDropdown(AppletWindow):
 
         try:
             modus_service.disconnect_by_func(self.hide_dropdown)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
         super().destroy()

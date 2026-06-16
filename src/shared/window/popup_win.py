@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib, Gtk
+from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.wayland import WaylandWindow
 from gi.repository import GtkLayerShell
 
@@ -51,8 +51,8 @@ class PopupWindow(WaylandWindow):
         if self._pointing_widget:
             try:
                 self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
         self._pointing_widget = widget
         return self.do_update_handlers()
 
@@ -74,8 +74,8 @@ class PopupWindow(WaylandWindow):
             try:
                 self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
                 self.disconnect_by_func(self.do_handle_size_allocate)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
             return
 
         self._pointing_widget.connect("size-allocate", self.do_handle_size_allocate)
