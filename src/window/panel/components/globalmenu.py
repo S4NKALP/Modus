@@ -294,7 +294,7 @@ class GlobalMenuDropdowns:
 
     def _on_title_button_clicked(self, _):
         if has_active_window():
-            self.global_menu_title.set_visible(not self.global_menu_title.get_visible())
+            self.global_menu_title.toggle()
 
     def _on_active_app_changed(self, _, value):
         self.global_title_menu_about.set_property("label", f"About {value}")
