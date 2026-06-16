@@ -3,7 +3,7 @@ from .battery import Battery  # noqa: F401
 from .brightness import Brightness  # noqa: F401
 from .capslock import CapsLock  # noqa: F401
 from .keyboard_layout import KeyboardLayout  # noqa: F401
-from .network import NetworkClient, Wifi, Ethernet, AccessPoint  # noqa: F401
+from .network import NetworkClient, Wifi, Ethernet  # noqa: F401
 from .mpris import MprisPlayer, MprisPlayerManager  # noqa: F401
 from .todo import TodoService  # noqa: F401
 from .modus import ModusService  # noqa: F401
