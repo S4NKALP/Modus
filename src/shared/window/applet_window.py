@@ -70,6 +70,7 @@ class AppletWindow(PopupWindow):
         self.set_focus(None)
 
     def close_applet(self):
+
         if not self._is_open:
             return
 
