@@ -345,6 +345,22 @@ class GlobalMenuDropdowns:
         """
         logger.info(f"[GlobalMenu] _rebuild_dynamic_menus: {len(menu_items)} items")
 
+        # Destroy old buttons to prevent massive GTK memory leaks
+        if hasattr(self, "all_menu_buttons"):
+            for btn in self.all_menu_buttons:
+                if btn not in (
+                    self.global_menu_button_title,
+                    getattr(self, "global_menu_button_view", None),
+                    getattr(self, "global_menu_button_window", None),
+                    getattr(self, "global_menu_button_help", None),
+                ):
+                    try:
+                        if btn.get_parent():
+                            btn.get_parent().remove(btn)
+                        btn.destroy()
+                    except Exception:
+                        pass
+
         # Clean up any previous dynamic dropdowns
         for dd in self._dynamic_dropdowns:
             try:
