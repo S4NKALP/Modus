@@ -324,8 +324,9 @@ class ModusService(Service):
             else:
                 name = "Finder"
 
-            self.current_active_app_name = name
+            # Set wm_class FIRST so that signal handlers reading it get the new value
             self.current_active_wm_class = wmclass
+            self.current_active_app_name = name
 
         except Exception as e:
             logger.error(f"[ModusService] Error updating active window: {e}")

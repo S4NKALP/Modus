@@ -67,12 +67,9 @@ class PlayerService(Service):
     @Property(str, "readable", default_value="")
     def arturl(self) -> str:
         try:
-            meta = self._player.props.metadata
-            if meta and "mpris:artUrl" in meta.keys():
-                return meta["mpris:artUrl"]
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-        return ""
+            return self._player.props.metadata["mpris:artUrl"] or ""
+        except Exception:
+            return ""
 
     @Property(str, "readable", default_value="")
     def title(self) -> str:
@@ -84,22 +81,16 @@ class PlayerService(Service):
     @Property(object, "readable")
     def artist(self) -> list:
         try:
-            meta = self._player.props.metadata
-            if meta and "xesam:artist" in meta.keys():
-                return list(meta["xesam:artist"]) or []
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-        return []
+            return list(self._player.props.metadata["xesam:artist"]) or []
+        except Exception:
+            return []
 
     @Property(str, "readable", default_value="")
     def album(self) -> str:
         try:
-            meta = self._player.props.metadata
-            if meta and "xesam:album" in meta.keys():
-                return meta["xesam:album"] or ""
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-        return ""
+            return self._player.props.metadata["xesam:album"] or ""
+        except Exception:
+            return ""
 
     @Property(str, "readable", default_value="Stopped")
     def playback_status(self) -> str:
@@ -117,23 +108,16 @@ class PlayerService(Service):
     @Property(int, "readable", default_value=0)
     def length(self) -> int:
         try:
-            meta = self._player.props.metadata
-            if meta and "mpris:length" in meta.keys():
-                return int(meta["mpris:length"])
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-        return 0
+            return int(self._player.props.metadata["mpris:length"])
+        except Exception:
+            return 0
 
-    @Property(int, "read-write", default_value=0)
+    @Property(int, "readable", default_value=0)
     def position(self) -> int:
         try:
             return int(self._player.get_position())
         except Exception:
             return 0
-
-    @position.setter
-    def position(self, value: int):
-        self.set_position(value / 1_000_000)
 
     def play_pause(self, *_):
         try:
@@ -187,7 +171,7 @@ class PlayerService(Service):
             metadata = self._player.props.metadata
             if metadata:
                 self.meta_change(metadata, self._player)
-                self._handle_artwork(metadata, metadata.keys())
+                self._handle_artwork(metadata)
         except Exception as e:
             logger.warning(f"Failed to initialize metadata: {e}")
 
@@ -207,10 +191,30 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return
         self.pos_fabricator.stop()
+        current = self.get_position() / 1_000_000
         try:
             self._player.set_position(int(pos * 1_000_000))
+        except GLib.Error:
+            try:
+                offset = pos - current
+                self._player.seek(int(offset * 1_000_000))
+            except GLib.Error as e:
+                logger.error(f"Failed to seek: {e}")
+        finally:
+            if self.playback_status.lower() == "playing":
+                self.pos_fabricator.start()
+
+    def seek(self, offset: float):
+        if self._is_cleaning_up:
+            return
+        self.pos_fabricator.stop()
+        try:
+            self._player.seek(int(offset * 1_000_000))
         except GLib.Error as e:
             logger.error(f"Failed to seek: {e}")
+        finally:
+            if self.playback_status.lower() == "playing":
+                self.pos_fabricator.start()
 
     def poll_progress(self):
         if self._is_cleaning_up:
@@ -220,20 +224,26 @@ class PlayerService(Service):
         else:
             self.pos_fabricator.stop()
 
-    def fabricating(self):
+    def fabricating(self, metadata=None):
         if self._is_cleaning_up:
             return
         try:
             pos = self._player.get_position() / 1_000_000
-            keys = self._player.props.metadata.keys()
-            dur = (
-                self._player.props.metadata["mpris:length"] / 1_000_000
-                if "mpris:length" in keys
-                else 0
-            )
-            self.track_position(pos, dur)
         except GLib.Error as e:
             logger.warning(f"Failed to get position: {e}")
+            return
+        dur = 0
+        if metadata is None:
+            try:
+                metadata = self._player.props.metadata
+            except Exception:
+                metadata = None
+        if metadata is not None:
+            try:
+                dur = metadata["mpris:length"] / 1_000_000
+            except Exception:
+                dur = 0
+        self.track_position(pos, dur)
 
     def on_seeked(self, player, position):
         if self._is_cleaning_up:
@@ -266,13 +276,16 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return
         self.meta_change(metadata, player)
-        self._handle_artwork(metadata, metadata.keys())
+        self._handle_artwork(metadata)
+        self.fabricating(metadata)
 
-    def _handle_artwork(self, metadata, keys):
-        if self._is_cleaning_up or "mpris:artUrl" not in keys:
+    def _handle_artwork(self, metadata):
+        if self._is_cleaning_up:
             return
-
-        art_url = metadata["mpris:artUrl"]
+        try:
+            art_url = metadata["mpris:artUrl"]
+        except Exception:
+            return
         artwork_hash = hashlib.md5(art_url.encode()).hexdigest()
 
         if artwork_hash == self._current_artwork_hash:

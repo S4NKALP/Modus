@@ -429,17 +429,44 @@ class PlayerBox(Box):
         if result:
             self.cover_path = result
 
+        try:
+            metadata = self.player._player.props.metadata
+            if metadata:
+                keys = metadata.keys()
+                self.track_title.set_label(
+                    metadata["xesam:title"] if "xesam:title" in keys else "No Title"
+                )
+                self.track_artist.set_label(
+                    ", ".join(metadata["xesam:artist"])
+                    if "xesam:artist" in keys and metadata["xesam:artist"]
+                    else "No Artist"
+                )
+        except Exception:
+            pass
+
     def _on_outer_box_clicked(self, *_):
         if self.control_center and hasattr(self.control_center, "open_expanded_player"):
             self.control_center.open_expanded_player()
 
-    def _on_metadata(self, *_):
+    def _on_metadata(self, *args):
         if self.exit or self.player is None:
             return
-        self.track_title.set_label(self.player.title or "No Title")
-        self.track_artist.set_label(
-            ", ".join(self.player.artist) if self.player.artist else "No Artist"
-        )
+        metadata = args[1] if len(args) >= 2 else None
+        if metadata is not None:
+            keys = metadata.keys()
+            self.track_title.set_label(
+                metadata["xesam:title"] if "xesam:title" in keys else "No Title"
+            )
+            self.track_artist.set_label(
+                ", ".join(metadata["xesam:artist"])
+                if "xesam:artist" in keys and metadata["xesam:artist"]
+                else "No Artist"
+            )
+        else:
+            self.track_title.set_label(self.player.title or "No Title")
+            self.track_artist.set_label(
+                ", ".join(self.player.artist) if self.player.artist else "No Artist"
+            )
         self.set_image()
 
     def refresh_icon(self):

@@ -1,6 +1,6 @@
 import weakref
 
-from fabric.utils import bulk_connect, logger
+from fabric.utils import GLib, bulk_connect, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -279,6 +279,8 @@ class PlayerBox(Box):
         self._signal_connections = []
         self._property_bindings = []
         self._seekbar_signal_ids = []
+        self._init_metadata_polled = False
+        self._cached_duration = 0
 
         self.album_cover = Box(style_classes="album-image-c")
         self.album_cover.set_style(
@@ -492,10 +494,48 @@ class PlayerBox(Box):
             self._signal_connections.append((self.player, handler_id))
 
         self.seek_bar.connect("realize", self._on_seek_bar_realized)
+        if self.seek_bar.get_realized():
+            self._on_seek_bar_realized(self.seek_bar)
 
         result = apply_player_art(self.album_cover, self.player)
         if result:
             self.cover_path = result
+
+        self._load_initial_metadata()
+        GLib.timeout_add(500, self._poll_initial_metadata)
+
+    def _load_initial_metadata(self):
+        try:
+            metadata = self.player._player.props.metadata
+            if metadata:
+                keys = metadata.keys()
+                self.track_title.set_label(
+                    metadata["xesam:title"] if "xesam:title" in keys else "No Title"
+                )
+                self.track_artist.set_label(
+                    ", ".join(metadata["xesam:artist"])
+                    if "xesam:artist" in keys and metadata["xesam:artist"]
+                    else "No Artist"
+                )
+                self.track_album.set_label(
+                    metadata["xesam:album"] if "xesam:album" in keys else "No Album"
+                )
+                self._update_duration_from_metadata()
+                self.position_label.set_label(
+                    self.length_str(self.player.position or 0)
+                )
+        except Exception:
+            pass
+
+    def _poll_initial_metadata(self):
+        if self.exit:
+            return False
+        if self._init_metadata_polled:
+            return False
+        self._init_metadata_polled = True
+        self._load_initial_metadata()
+        self.set_image()
+        return False
 
     def update_buttons(self, player_buttons, show_buttons):
         self.stack_buttons_box.children = []
@@ -532,24 +572,35 @@ class PlayerBox(Box):
             else f"{minutes}:{seconds:02d}"
         )
 
-    def _on_metadata(self, *_):
+    def _on_metadata(self, *args):
         if self.exit or self.player is None:
             return
-        self.track_title.set_label(self.player.title or "No Title")
-        self.track_artist.set_label(
-            ", ".join(self.player.artist) if self.player.artist else "No Artist"
-        )
-        self.track_album.set_label(self.player.album or "No Album")
-        self.set_image()
-        duration = self.player.length or 0
-        if duration > 0:
-            self.length_label.set_label(self.length_str(duration))
-            if self.seek_bar.get_realized():
+        metadata = args[1] if len(args) >= 2 else None
+        if metadata is not None:
+            keys = metadata.keys()
+            self.track_title.set_label(
+                metadata["xesam:title"] if "xesam:title" in keys else "No Title"
+            )
+            self.track_artist.set_label(
+                ", ".join(metadata["xesam:artist"])
+                if "xesam:artist" in keys and metadata["xesam:artist"]
+                else "No Artist"
+            )
+            self.track_album.set_label(
+                metadata["xesam:album"] if "xesam:album" in keys else "No Album"
+            )
+            if "mpris:length" in keys:
+                duration = int(metadata["mpris:length"])
+                self.length_label.set_label(self.length_str(duration))
                 self.seek_bar.set_range(0, min(2147483647, duration))
+            self.position_label.set_label(self.length_str(self.player.position or 0))
         else:
-            self.length_label.set_label("0:00")
-            if self.seek_bar.get_realized():
-                self.seek_bar.set_range(0, 100)
+            self.track_title.set_label(self.player.title or "No Title")
+            self.track_artist.set_label(
+                ", ".join(self.player.artist) if self.player.artist else "No Artist"
+            )
+            self.track_album.set_label(self.player.album or "No Album")
+        self.set_image()
 
     def suspend(self):
         pass
@@ -612,24 +663,25 @@ class PlayerBox(Box):
             self.cover_path = result
 
     def _on_track_position(self, service, pos: float, dur: float):
-        if self.exit or self._user_seeking:
+        if self.exit:
             return
         try:
             position_micros = int(pos * 1_000_000)
             duration_micros = int(dur * 1_000_000)
+            if duration_micros <= 0:
+                duration_micros = self.player.length or 0
+
+            if duration_micros > 0:
+                self._cached_duration = duration_micros
+                self.length_label.set_label(self.length_str(duration_micros))
 
             self.position_label.set_label(self.length_str(position_micros))
 
-            if duration_micros > 0:
-                self.length_label.set_label(self.length_str(duration_micros))
-
             if self.seek_bar.get_realized() and self.seek_bar.get_adjustment():
-                if (
-                    duration_micros > 0
-                    and self.seek_bar.get_adjustment().get_upper() <= 100
-                ):
+                adj = self.seek_bar.get_adjustment()
+                if duration_micros > 0:
                     self.seek_bar.set_range(0, min(2147483647, duration_micros))
-                if self.seek_bar.get_adjustment().get_upper() > 0:
+                if not self._user_seeking and adj.get_upper() > 0:
                     self.seek_bar.set_value(min(2147483647, position_micros))
         except Exception as e:
             logger.error(f"[_on_track_position] Error: {e}")
@@ -640,26 +692,72 @@ class PlayerBox(Box):
 
     def _on_seek_end(self, widget, event):
         self._user_seeking = False
+        if not self.player or self.exit:
+            return False
+        try:
+            adj = widget.get_adjustment()
+            upper = adj.get_upper()
+            value = max(0, int(widget.get_value()))
+            duration = self._cached_duration or self.player.length or 0
+            if duration <= 0 and upper > 100:
+                duration = int(upper)
+            if upper > 100:
+                new_position = value
+            elif duration > 0 and upper > 0:
+                new_position = int(value / upper * duration)
+            else:
+                new_position = value
+            self.player.set_position(new_position / 1_000_000)
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+        return False
+
+    def _update_duration_from_metadata(self):
+        try:
+            duration = self._cached_duration or self.player.length or 0
+            if duration <= 0 and self.seek_bar.get_realized():
+                adj = self.seek_bar.get_adjustment()
+                if adj.get_upper() > 100:
+                    duration = int(adj.get_upper())
+            if duration > 0:
+                self.seek_bar.set_range(0, min(2147483647, duration))
+                self.length_label.set_label(self.length_str(duration))
+                return True
+        except Exception:
+            pass
         return False
 
     def _on_seek_bar_realized(self, widget):
         try:
             if not self.exit and self.player:
-                duration = self.player.length or 0
-                self.seek_bar.set_range(
-                    0, min(2147483647, duration) if duration > 0 else 100
+                self._update_duration_from_metadata()
+                self.position_label.set_label(
+                    self.length_str(self.player.position or 0)
                 )
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
     def _on_scale_value_changed(self, scale: Scale):
-        if self.player and not self.exit and self._user_seeking:
-            try:
-                new_position = max(-2147483648, min(2147483647, int(scale.get_value())))
-                self.player.position = new_position
-                self.position_label.set_label(self.length_str(new_position))
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
+        if not self.player or self.exit:
+            return
+        try:
+            adj = scale.get_adjustment()
+            upper = adj.get_upper()
+            value = max(0, int(scale.get_value()))
+
+            duration = self._cached_duration or self.player.length or 0
+            if duration <= 0 and upper > 100:
+                duration = int(upper)
+            if upper > 100:
+                new_position = value
+            elif duration > 0 and upper > 0:
+                new_position = int(value / upper * duration)
+            else:
+                new_position = value
+
+            self.position_label.set_label(self.length_str(new_position))
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
 
 class ExpandedPlayer(Window):

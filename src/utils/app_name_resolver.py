@@ -73,8 +73,8 @@ class AppName:
                 name = name.split(".")[-1]
 
         if update:
-            modus_service.current_active_app_name = name
             modus_service.current_active_wm_class = wmclass
+            modus_service.current_active_app_name = name
         return name
 
 

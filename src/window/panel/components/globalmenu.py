@@ -7,6 +7,7 @@ from fabric.widgets.label import Label
 
 from shared.dialogs.about import AboutApp, get_about_window
 from shared.window.dropdown import ModusDropdown, dropdown_divider, dropdowns
+from services.globalmenu import get_global_menu_service
 from utils.app_name_resolver import format_window
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover
@@ -45,7 +46,7 @@ def create_dropdown_with_capture(dropdown_id, parent, dropdown_children, layer="
 
 def manage_button_style_classes(buttons, active_button=None, style_class="active"):
     for button in buttons:
-        if button:  # Check if button exists (some might be None)
+        if button:
             button.remove_style_class(style_class)
 
     if active_button:
@@ -103,6 +104,32 @@ def dropdown_option(
     return btn
 
 
+def _make_menu_item_click(item_id):
+    """Create a click handler for a menu item."""
+
+    def handler(_, __=None):
+        global_menu_svc = get_global_menu_service()
+        if global_menu_svc:
+            global_menu_svc.click_item(item_id)
+
+    return handler
+
+
+def _menu_item_to_dropdown(item):
+    """Convert a DBusMenuItem to a dropdown_option widget."""
+    if item.type == "separator":
+        return dropdown_divider("---------------------")
+
+    keybind = item.shortcut if item.shortcut else ""
+
+    return dropdown_option(
+        item.label if item.label else "",
+        keybind,
+        on_click=None,
+        on_clicked=_make_menu_item_click(item.id),
+    )
+
+
 class SystemDropdown(ModusDropdown):
     def __init__(self, parent, **kwargs):
         super().__init__(
@@ -131,17 +158,15 @@ class SystemDropdown(ModusDropdown):
 
 
 class GlobalMenuDropdowns:
-    def __init__(self, parent):
+    def __init__(self, parent, menu_box=None):
         self.parent = parent
+        self._menu_box = menu_box  # The GlobalMenu Box widget to update
+
+        # Get the global menu service
+        self._global_menu_svc = get_global_menu_service()
+        self._has_extracted_menu = False
 
         self.system_dropdown = SystemDropdown(parent=parent)
-        self.menu_button_dropdown = self.system_dropdown
-        self.menu_button = Button(
-            label="Modus",
-            name="global-menu",
-            on_clicked=lambda _: self.menu_button_dropdown.toggle(),
-        )
-        self.menu_button_dropdown.set_pointing_to(self.menu_button)
 
         self.global_title_menu_about = dropdown_option(
             f"About {modus_service.current_active_app_name}",
@@ -153,6 +178,10 @@ class GlobalMenuDropdowns:
             [self.global_title_menu_about],
         )
 
+        # Dynamic menu dropdowns (populated from extracted app menus)
+        self._dynamic_dropdowns: list[ModusDropdown] = []
+
+        # Fallback static Hyprland menu
         self.global_menu_view = create_dropdown_with_capture(
             "global-menu-view",
             parent,
@@ -237,6 +266,8 @@ class GlobalMenuDropdowns:
             "current-active-app-name-changed", self._on_active_app_changed
         )
 
+        # Connect to global menu service signals (Moved to the bottom of __init__)
+
         self.global_menu_button_title = Button(
             child=ActiveWindow(
                 formatter=FormattedString(
@@ -249,11 +280,8 @@ class GlobalMenuDropdowns:
         )
 
         self.global_menu_title.set_pointing_to(self.global_menu_button_title)
-        # File, Edit and Go buttons are placeholders - no dropdowns implemented yet
-        self.global_menu_button_file = create_menu_button("File")
-        self.global_menu_button_edit = create_menu_button("Edit")
-        self.global_menu_button_go = create_menu_button("Go")
 
+        # Fallback buttons (shown when no app menu is extracted)
         self.global_menu_button_view = create_menu_button(
             "View", lambda _: self.global_menu_view.toggle()
         )
@@ -267,24 +295,14 @@ class GlobalMenuDropdowns:
         )
         self.global_menu_help.set_pointing_to(self.global_menu_button_help)
 
+        # Start with only title
         self.all_menu_buttons = [
-            self.menu_button,
             self.global_menu_button_title,
-            self.global_menu_button_file,
-            self.global_menu_button_edit,
-            self.global_menu_button_view,
-            self.global_menu_button_go,
-            self.global_menu_button_window,
-            self.global_menu_button_help,
         ]
 
         self.dropdown_button_map = {
-            "os-menu": self.menu_button,
             "global-menu-title": self.global_menu_button_title,
-            "global-menu-file": self.global_menu_button_file,
-            "global-menu-edit": self.global_menu_button_edit,
             "global-menu-view": self.global_menu_button_view,
-            "global-menu-go": self.global_menu_button_go,
             "global-menu-window": self.global_menu_button_window,
             "global-menu-help": self.global_menu_button_help,
         }
@@ -292,12 +310,147 @@ class GlobalMenuDropdowns:
         modus_service.connect("current-dropdown-changed", self.changed_dropdown)
         modus_service.connect("dropdowns-hide-changed", self.hide_dropdowns)
 
+        # Connect to global menu service signals
+        if self._global_menu_svc:
+            self._global_menu_svc.connect("menu-changed", self._on_menu_changed)
+
     def _on_title_button_clicked(self, _):
         if has_active_window():
             self.global_menu_title.toggle()
 
     def _on_active_app_changed(self, _, value):
+        logger.info(f"[GlobalMenu] Active app changed: {value}")
         self.global_title_menu_about.set_property("label", f"About {value}")
+
+        # Notify the global menu service about the active window change
+        if self._global_menu_svc:
+            wm_class = getattr(modus_service, "current_active_wm_class", "")
+            logger.info(
+                f"[GlobalMenu] Calling update_active_window('{value}', '{wm_class}')"
+            )
+            self._global_menu_svc.update_active_window(value, wm_class)
+
+    def _on_menu_changed(self, _, menu_items: list):
+        """Handle menu changes from the GlobalMenuService."""
+        logger.info(
+            f"[GlobalMenu] _on_menu_changed called with {len(menu_items)} items"
+        )
+        self._rebuild_dynamic_menus(menu_items)
+
+    def _rebuild_dynamic_menus(self, menu_items: list):
+        """Rebuild the menu bar buttons based on extracted menu items.
+
+        If the app has a menu bar → show extracted menus (File, Edit, etc.)
+        If not → show fallback Hyprland window controls (View, Window, Help)
+        """
+        logger.info(f"[GlobalMenu] _rebuild_dynamic_menus: {len(menu_items)} items")
+
+        # Clean up any previous dynamic dropdowns
+        for dd in self._dynamic_dropdowns:
+            try:
+                dd.destroy()
+            except Exception:
+                pass
+        self._dynamic_dropdowns.clear()
+
+        # Filter to top-level menu items only
+        top_level = [
+            item for item in menu_items if hasattr(item, "label") and item.label
+        ]
+        logger.info(f"[GlobalMenu] top_level after filter: {len(top_level)} items")
+
+        if not top_level:
+            # No extracted menu → show only title button
+            self._has_extracted_menu = False
+            self.all_menu_buttons = [
+                self.global_menu_button_title,
+            ]
+        else:
+            # Has extracted menu → build dynamic buttons
+            self._has_extracted_menu = True
+            new_buttons = [
+                self.global_menu_button_title,
+            ]
+
+            for item in top_level:
+                is_action = not item.has_submenu and not item.children
+
+                if is_action:
+                    # Top-level item without children (e.g., VLC Play/Stop)
+                    btn = create_menu_button(
+                        item.label,
+                        _make_menu_item_click(item.id),
+                    )
+                    new_buttons.append(btn)
+                else:
+                    # Build initial children for this dropdown
+                    dropdown_children = []
+                    for child in item.children if item.children else []:
+                        dropdown_children.append(_menu_item_to_dropdown(child))
+
+                    if not dropdown_children:
+                        dropdown_children = [
+                            dropdown_option(f"No items in {item.label}")
+                        ]
+
+                    dropdown_id = f"global-menu-{item.label.lower()}"
+                    dropdown = create_dropdown_with_capture(
+                        dropdown_id, self.parent, dropdown_children
+                    )
+
+                    btn = create_menu_button(
+                        item.label,
+                        lambda _, dd=dropdown: dd.toggle(),
+                    )
+                    dropdown.set_pointing_to(btn)
+
+                    # Dynamically fetch submenu on hover
+                    def make_on_enter(menu_item, dd):
+                        def on_enter(widget, event):
+                            if not menu_item.has_submenu:
+                                return False
+                            svc = get_global_menu_service()
+                            if svc:
+                                svc.about_to_show(menu_item.id)
+                                new_menu = svc.refresh_menu_sync()
+                                if new_menu:
+                                    # find the updated item
+                                    new_item = next(
+                                        (i for i in new_menu if i.id == menu_item.id),
+                                        None,
+                                    )
+                                    if new_item:
+                                        children = []
+                                        for child in (
+                                            new_item.children
+                                            if new_item.children
+                                            else []
+                                        ):
+                                            children.append(
+                                                _menu_item_to_dropdown(child)
+                                            )
+                                        if not children:
+                                            children = [
+                                                dropdown_option(
+                                                    f"No items in {new_item.label}"
+                                                )
+                                            ]
+                                        dd.dropdown.children = children
+                            return False
+
+                        return on_enter
+
+                    btn.connect("enter-notify-event", make_on_enter(item, dropdown))
+
+                    self._dynamic_dropdowns.append(dropdown)
+                    self.dropdown_button_map[dropdown_id] = btn
+                    new_buttons.append(btn)
+
+            self.all_menu_buttons = new_buttons
+
+        # Update the panel (the actual GTK Box widget)
+        if self._menu_box is not None:
+            self._menu_box.children = self.all_menu_buttons
 
     def hide_dropdowns(self, *_):
         manage_button_style_classes(self.all_menu_buttons)
@@ -315,9 +468,24 @@ class GlobalMenuDropdowns:
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
-        # Destroy all dropdown captures
+        # Disconnect global menu service
+        if self._global_menu_svc:
+            try:
+                self._global_menu_svc.disconnect_by_func(self._on_menu_changed)
+            except Exception:
+                pass
+
+        # Destroy dynamic dropdowns
+        for dd in self._dynamic_dropdowns:
+            try:
+                dd.destroy()
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
+        self._dynamic_dropdowns.clear()
+
+        # Destroy static dropdown captures
         dropdown_captures = [
-            getattr(self, "menu_button_dropdown", None),
+            getattr(self, "system_dropdown", None),
             getattr(self, "global_menu_title", None),
             getattr(self, "global_menu_view", None),
             getattr(self, "global_menu_window", None),
@@ -342,22 +510,13 @@ class GlobalMenu(Box):
             name="globalmenu", orientation="horizontal", spacing=0, **kwargs
         )
 
-        self.dropdown_system = GlobalMenuDropdowns(parent=parent_window)
+        self.dropdown_system = GlobalMenuDropdowns(parent=parent_window, menu_box=self)
 
-        self.children = [
-            self.dropdown_system.global_menu_button_title,
-            self.dropdown_system.global_menu_button_file,
-            self.dropdown_system.global_menu_button_edit,
-            self.dropdown_system.global_menu_button_view,
-            self.dropdown_system.global_menu_button_go,
-            self.dropdown_system.global_menu_button_window,
-            self.dropdown_system.global_menu_button_help,
-        ]
+        self.children = self.dropdown_system.all_menu_buttons
 
     def show_system_dropdown(self, imac_button):
-        self.dropdown_system.menu_button_dropdown.set_pointing_to(imac_button)
-        mouse_capture = self.dropdown_system.menu_button_dropdown
-        mouse_capture.toggle()
+        self.dropdown_system.system_dropdown.set_pointing_to(imac_button)
+        self.dropdown_system.system_dropdown.toggle()
 
     def destroy(self):
         """Clean up the global menu and its dropdowns"""

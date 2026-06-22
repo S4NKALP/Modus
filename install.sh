@@ -48,6 +48,10 @@ PACKAGES=(
     uwsm
     cinnamon-desktop
     ddcutil
+    at-spi2-core
+    gcc
+    make
+    pkgconf
 )
 
 # Colors and formatting
@@ -284,6 +288,19 @@ if [ ${#to_update[@]} -gt 0 ]; then
     success "Packages updated"
 else
     success "All packages are up-to-date"
+fi
+
+progress "Building Global Menu C library"
+
+step "Compiling libglobalmenu.so..."
+if [ -f "$INSTALL_DIR/native/Makefile" ]; then
+    if make -C "$INSTALL_DIR/native" clean >/dev/null 2>&1 && make -C "$INSTALL_DIR/native" >/dev/null 2>&1; then
+        success "libglobalmenu.so built successfully"
+    else
+        warn "Failed to build libglobalmenu.so - global menu may not work"
+    fi
+else
+    warn "native/Makefile not found - skipping C library build"
 fi
 
 progress "Configuring Hyprland"

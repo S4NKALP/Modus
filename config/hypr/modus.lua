@@ -1,5 +1,8 @@
 local modus = "$HOME/.config/Modus"
 
+-- Global Menu: auto-set env vars so Qt/GTK apps export their menus
+hl.env("GTK_MODULES", "appmenu-gtk-module")
+
 hl.on("hyprland.start", function()
 	local cmds = {
 		"uwsm app -- awww-daemon",
