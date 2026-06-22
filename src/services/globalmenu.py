@@ -3,14 +3,13 @@
 Uses the pure Python DBusMenu extractor via Gio.DBus.
 """
 
-import threading
 import json
-import subprocess
-from typing import Optional, List
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional
 
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import logger
-from gi.repository import Gio, GLib
+from fabric.utils import Gio, GLib, exec_shell_command, idle_add, logger, os
 
 from utils.dbusmenu import DBusMenuClient, DBusMenuItem
 
@@ -69,11 +68,23 @@ class GlobalMenuService(Service):
         # Cache holds the extracted top-level menus
         self._menu_cache: dict[str, Optional[List[DBusMenuItem]]] = {}
 
+        # Cache DBus service -> PID to make discovery instant
+        self._pid_cache: dict[str, int] = {}
+
         # Registrar mapping: sender -> object_path
         self._registered_menus: dict[str, str] = {}
-        self._setup_registrar()
 
         self._lock = threading.Lock()
+        self._registry_lock = (
+            threading.Lock()
+        )  # Protects _registered_menus and _pid_cache
+
+        self._setup_registrar()
+        self._setup_environment()
+
+        # Prewarm the PID cache in the background
+        threading.Thread(target=self._prewarm_dbus_cache, daemon=True).start()
+
         self._extraction_seq = 0  # Monotonic counter to discard stale results
 
         logger.info(
@@ -103,6 +114,88 @@ class GlobalMenuService(Service):
         except Exception as e:
             logger.error(f"[GlobalMenuService] Failed to start Registrar: {e}")
 
+    def _prewarm_dbus_cache(self):
+        """Pre-fetches PIDs for all current DBus services so discovery is instant."""
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            res = bus.call_sync(
+                "org.freedesktop.DBus",
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                "ListNames",
+                None,
+                GLib.VariantType("(as)"),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+            names = res.get_child_value(0).unpack()
+
+            def fetch_pid(svc):
+                with self._registry_lock:
+                    cached = svc in self._pid_cache
+                if not cached:
+                    try:
+                        pid_res = bus.call_sync(
+                            "org.freedesktop.DBus",
+                            "/org/freedesktop/DBus",
+                            "org.freedesktop.DBus",
+                            "GetConnectionUnixProcessID",
+                            GLib.Variant("(s)", (svc,)),
+                            GLib.VariantType("(u)"),
+                            Gio.DBusCallFlags.NONE,
+                            500,
+                            None,
+                        )
+                        with self._registry_lock:
+                            self._pid_cache[svc] = pid_res.get_child_value(
+                                0
+                            ).get_uint32()
+                    except Exception:
+                        with self._registry_lock:
+                            self._pid_cache[svc] = 0
+
+            with ThreadPoolExecutor(max_workers=32) as executor:
+                list(executor.map(fetch_pid, names))
+
+            logger.info(
+                f"[GlobalMenuService] Pre-warmed DBus PID cache with {len(self._pid_cache)} entries"
+            )
+        except Exception as e:
+            logger.debug(f"[GlobalMenuService] Pre-warm failed: {e}")
+
+    def _setup_environment(self):
+        """Automatically setup environment variables and system overrides for global menus."""
+        try:
+            # 1. Inject GTK Modules for standard GTK3 apps
+            os.environ["GTK_MODULES"] = "appmenu-gtk-module"
+            exec_shell_command("hyprctl keyword env GTK_MODULES,appmenu-gtk-module")
+            exec_shell_command(
+                "dbus-update-activation-environment --systemd GTK_MODULES=appmenu-gtk-module"
+            )
+
+            # 2. Automatically grant Flatpak apps permission to talk to the DBus Registrar
+            exec_shell_command(
+                "flatpak override --user --talk-name=com.canonical.AppMenu.Registrar"
+            )
+
+            # 3. Force XFCE / GTK3 apps to show menubars globally by writing to settings.ini
+            settings_path = os.path.expanduser("~/.config/gtk-3.0/settings.ini")
+            if os.path.exists(settings_path):
+                with open(settings_path, "r") as f:
+                    content = f.read()
+                if "gtk-shell-shows-menubar" not in content:
+                    with open(settings_path, "a") as f:
+                        f.write("\ngtk-shell-shows-menubar=1\n")
+
+            logger.info(
+                "[GlobalMenuService] Injected GTK environment and Flatpak overrides automatically"
+            )
+        except Exception as e:
+            logger.debug(
+                f"[GlobalMenuService] Failed to set up global menu environment overrides: {e}"
+            )
+
     def _handle_registrar_method(
         self,
         connection,
@@ -120,7 +213,8 @@ class GlobalMenuService(Service):
                 logger.debug(
                     f"[GlobalMenuService] App {sender} registered menu {menu_path} for window {window_id}"
                 )
-                self._registered_menus[sender] = menu_path
+                with self._registry_lock:
+                    self._registered_menus[sender] = menu_path
                 invocation.return_value(None)
 
             elif method_name == "UnregisterWindow":
@@ -177,7 +271,7 @@ class GlobalMenuService(Service):
     def _discover_dbus_client(self) -> Optional[DBusMenuClient]:
         """Discovers the DBusMenu object path for the active Wayland window using Gio.DBus."""
         try:
-            out = subprocess.check_output(["hyprctl", "activewindow", "-j"], timeout=2)
+            out = exec_shell_command("hyprctl activewindow -j")
             data = json.loads(out)
             target_pid = data.get("pid", 0)
 
@@ -185,6 +279,39 @@ class GlobalMenuService(Service):
                 return None
 
             bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+
+            # FAST PATH: Check explicitly registered menus first (O(1) fast lookup)
+            with self._registry_lock:
+                registered_items = list(self._registered_menus.items())
+            for svc, path in registered_items:
+                try:
+                    pid_res = bus.call_sync(
+                        "org.freedesktop.DBus",
+                        "/org/freedesktop/DBus",
+                        "org.freedesktop.DBus",
+                        "GetConnectionUnixProcessID",
+                        GLib.Variant("(s)", (svc,)),
+                        GLib.VariantType("(u)"),
+                        Gio.DBusCallFlags.NONE,
+                        100,
+                        None,
+                    )
+                    pid = pid_res.get_child_value(0).get_uint32()
+                    if pid == target_pid or (
+                        pid > 0
+                        and target_pid > 0
+                        and self._is_same_app(pid, target_pid)
+                    ):
+                        logger.info(
+                            f"[GlobalMenuService] Fast path found Registrar path {path} for {svc}"
+                        )
+                        return DBusMenuClient(svc, path)
+                except Exception:
+                    # Clean up dead services from registry
+                    with self._registry_lock:
+                        self._registered_menus.pop(svc, None)
+
+            # SLOW PATH: Fallback to scanning all DBus names
             res = bus.call_sync(
                 "org.freedesktop.DBus",
                 "/org/freedesktop/DBus",
@@ -198,72 +325,118 @@ class GlobalMenuService(Service):
             )
             names = res.get_child_value(0).unpack()
 
-            for svc in names:
-                if (
+            # Filter standard services out
+            valid_svcs = [
+                svc
+                for svc in names
+                if not (
                     svc.startswith("org.freedesktop.systemd")
                     or svc.startswith("org.freedesktop.login1")
                     or svc == "org.freedesktop.DBus"
+                )
+            ]
+
+            def check_svc(svc):
+                with self._registry_lock:
+                    cached = svc in self._pid_cache
+                if not cached:
+                    try:
+                        pid_res = bus.call_sync(
+                            "org.freedesktop.DBus",
+                            "/org/freedesktop/DBus",
+                            "org.freedesktop.DBus",
+                            "GetConnectionUnixProcessID",
+                            GLib.Variant("(s)", (svc,)),
+                            GLib.VariantType("(u)"),
+                            Gio.DBusCallFlags.NONE,
+                            500,
+                            None,
+                        )
+                        with self._registry_lock:
+                            self._pid_cache[svc] = pid_res.get_child_value(
+                                0
+                            ).get_uint32()
+                    except Exception:
+                        with self._registry_lock:
+                            self._pid_cache[svc] = 0
+
+                with self._registry_lock:
+                    pid = self._pid_cache[svc]
+                if pid == target_pid or (
+                    pid > 0 and target_pid > 0 and self._is_same_app(pid, target_pid)
                 ):
-                    continue
+                    return svc
+                return None
 
-                try:
-                    pid_res = bus.call_sync(
-                        "org.freedesktop.DBus",
-                        "/org/freedesktop/DBus",
-                        "org.freedesktop.DBus",
-                        "GetConnectionUnixProcessID",
-                        GLib.Variant("(s)", (svc,)),
-                        GLib.VariantType("(u)"),
-                        Gio.DBusCallFlags.NONE,
-                        1000,
-                        None,
+            # Scan DBus PIDs in parallel (takes ~15ms instead of 2.0s)
+            matching_svcs = []
+            with ThreadPoolExecutor(max_workers=32) as executor:
+                for svc in executor.map(check_svc, valid_svcs):
+                    if svc:
+                        matching_svcs.append(svc)
+
+            for svc in matching_svcs:
+                # 1. Check if this app explicitly registered its menu via Registrar
+                with self._registry_lock:
+                    path = self._registered_menus.get(svc)
+                if path:
+                    logger.info(
+                        f"[GlobalMenuService] Found Registrar path {path} for {svc}"
                     )
-                    pid = pid_res.get_child_value(0).get_uint32()
+                    return DBusMenuClient(svc, path)
 
-                    if pid == target_pid:
-                        # 1. Check if this app explicitly registered its menu via Registrar
-                        if svc in self._registered_menus:
-                            path = self._registered_menus[svc]
+                # 2. Fallback to common paths
+                fallback_paths = [
+                    "/com/canonical/menu/0",
+                    "/com/canonical/menu/1",
+                    "/MenuBar",
+                    "/org/xfce/Thunar/menus/menubar/0",
+                    "/com/canonical/AppMenu/Registrar/0",
+                ]
+                # Add /MenuBar/1 through /MenuBar/10 for KDE apps that increment window IDs
+                fallback_paths.extend([f"/MenuBar/{i}" for i in range(1, 10)])
+
+                for path in fallback_paths:
+                    try:
+                        introspect_res = bus.call_sync(
+                            svc,
+                            path,
+                            "org.freedesktop.DBus.Introspectable",
+                            "Introspect",
+                            None,
+                            GLib.VariantType("(s)"),
+                            Gio.DBusCallFlags.NONE,
+                            1000,
+                            None,
+                        )
+                        xml = introspect_res.get_child_value(0).get_string()
+                        if "com.canonical.dbusmenu" in xml:
                             logger.info(
-                                f"[GlobalMenuService] Found Registrar path {path} for {svc}"
+                                f"[GlobalMenuService] Discovered DBusMenu natively at {svc} {path}"
                             )
+                            # Also cache this for the future
+                            with self._registry_lock:
+                                self._registered_menus[svc] = path
                             return DBusMenuClient(svc, path)
-
-                        # 2. Fallback to common paths
-                        for path in [
-                            "/com/canonical/menu/0",
-                            "/com/canonical/menu/1",
-                            "/MenuBar",
-                            "/MenuBar/1",
-                            "/org/xfce/Thunar/menus/menubar/0",
-                            "/com/canonical/AppMenu/Registrar/0",
-                        ]:
-                            try:
-                                introspect_res = bus.call_sync(
-                                    svc,
-                                    path,
-                                    "org.freedesktop.DBus.Introspectable",
-                                    "Introspect",
-                                    None,
-                                    GLib.VariantType("(s)"),
-                                    Gio.DBusCallFlags.NONE,
-                                    500,
-                                    None,
-                                )
-                                xml = introspect_res.get_child_value(0).get_string()
-                                if "com.canonical.dbusmenu" in xml:
-                                    logger.info(
-                                        f"[GlobalMenuService] Discovered DBusMenu natively at {svc} {path}"
-                                    )
-                                    return DBusMenuClient(svc, path)
-                            except Exception:
-                                pass
-                except Exception:
-                    pass
+                    except Exception:
+                        pass
         except Exception as e:
             logger.debug(f"[GlobalMenuService] DBus discovery failed: {e}")
 
         return None
+
+    def _is_same_app(self, pid1: int, pid2: int) -> bool:
+        if pid1 == pid2:
+            return True
+        try:
+            # Match by executable path instead of PGID because Hyprland puts ALL apps in the same PGID
+            exe1 = os.path.realpath(f"/proc/{pid1}/exe")
+            exe2 = os.path.realpath(f"/proc/{pid2}/exe")
+            if exe1 and exe2 and exe1 == exe2:
+                return True
+        except OSError:
+            pass
+        return False
 
     def _extract_menu(self, wm_class: str, seq: int):
         """Extract menu for a given WM class in a background thread."""
@@ -292,7 +465,7 @@ class GlobalMenuService(Service):
                 return
 
             # Update UI on main thread via GLib idle
-            GLib.idle_add(self._emit_menu_changed, items)
+            idle_add(self._emit_menu_changed, items)
 
         except Exception as e:
             logger.error(
