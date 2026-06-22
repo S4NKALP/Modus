@@ -52,6 +52,7 @@ PACKAGES=(
     gcc
     make
     pkgconf
+    appmenu-gtk-module
 )
 
 # Colors and formatting
