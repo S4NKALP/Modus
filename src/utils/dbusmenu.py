@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass, field
 from typing import List, Optional
-from gi.repository import GLib, Gio
-from fabric.utils import logger
+
+from fabric.utils import Gio, GLib, logger
 
 
 @dataclass
