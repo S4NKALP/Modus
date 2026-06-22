@@ -262,8 +262,18 @@ class GlobalMenuService(Service):
         if wm_class == self._current_wm_class:
             return
 
+        # Capture the PID right now at focus time — don't re-query later in the thread
+        target_pid = 0
+        try:
+            out = exec_shell_command("hyprctl activewindow -j")
+            if out:
+                data = json.loads(out)
+                target_pid = data.get("pid", 0)
+        except Exception:
+            pass
+
         logger.info(
-            f"[GlobalMenuService] Active window changed: {app_name} ({wm_class})"
+            f"[GlobalMenuService] Active window changed: {app_name} ({wm_class}) pid={target_pid}"
         )
         self._current_app = app_name
         self._current_wm_class = wm_class
@@ -290,25 +300,30 @@ class GlobalMenuService(Service):
         self._current_menu = None
         self.menu_changed([])
 
-        # Extract menu in background thread
-        logger.info(f"[GlobalMenuService] Starting extraction for '{wm_class}'")
+        # Extract menu in background thread, passing captured pid
+        logger.info(
+            f"[GlobalMenuService] Starting extraction for '{wm_class}' pid={target_pid}"
+        )
         thread = threading.Thread(
             target=self._extract_menu,
-            args=(wm_class, seq),
+            args=(wm_class, seq, target_pid),
             daemon=True,
         )
         thread.start()
 
-    def _discover_dbus_client(self, wm_class: str) -> Optional[DBusMenuClient]:
+    def _discover_dbus_client(
+        self, wm_class: str, target_pid: int = 0
+    ) -> Optional[DBusMenuClient]:
         """Fast and deterministic DBusMenu discovery (Wayland-safe)."""
         try:
-            out = exec_shell_command("hyprctl activewindow -j")
-            if not out:
-                logger.warning("[GlobalMenuService] hyprctl returned no output")
-                return None
-
-            data = json.loads(out)
-            target_pid = data.get("pid", 0)
+            # Use the pid captured at focus time; fall back to hyprctl only if not provided
+            if target_pid <= 0:
+                out = exec_shell_command("hyprctl activewindow -j")
+                if not out:
+                    logger.warning("[GlobalMenuService] hyprctl returned no output")
+                    return None
+                data = json.loads(out)
+                target_pid = data.get("pid", 0)
 
             if target_pid <= 0:
                 return None
@@ -349,16 +364,18 @@ class GlobalMenuService(Service):
                         self._registered_menus.pop(sender, None)
 
             # =========================
-            # 2. SIMPLE FALLBACK PATHS ONLY
+            # 2. FALLBACK: Scan DBus services matching the target PID
             # =========================
-            fallback_paths = (
+
+            # Static well-known paths (Electron, XFCE, legacy apps)
+            static_paths = (
                 "/com/canonical/menu/0",
-                "/MenuBar",
                 "/appmenu",
                 "/com/canonical/AppMenu/Registrar/0",
                 "/org/gtk/Application/menus/appmenu",
                 "/org/gtk/Application/menus/menubar",
                 "/org/xfce/Thunar/menus/menubar/0",
+                "/org/appmenu/gtk/window/menus/menubar",
             )
 
             res = bus.call_sync(
@@ -375,11 +392,14 @@ class GlobalMenuService(Service):
 
             names = res.get_child_value(0).unpack()
 
-            # filter only real app services (cheap filter)
+            # Include BOTH well-known names AND unique names (:1.xxx) — many apps
+            # only have a unique name and would be invisible with the old filter.
+            # Only skip the DBus daemon itself.
             services = [
                 n
                 for n in names
-                if not n.startswith("org.freedesktop.") and not n.startswith(":")
+                if n != "org.freedesktop.DBus"
+                and not n.startswith("org.freedesktop.DBus")
             ]
 
             for svc in services:
@@ -401,7 +421,59 @@ class GlobalMenuService(Service):
                     if not (pid == target_pid or self._is_same_app(pid, target_pid)):
                         continue
 
-                    # check only known paths (NO brute force)
+                    # Build dynamic path list: static + numbered children
+                    fallback_paths = list(static_paths)
+
+                    # These base paths may have numbered children (XID or window index)
+                    # e.g. /MenuBar/2, /com/canonical/menu/5, /org/xfce/Thunar/menus/menubar/18
+                    # Sanitize wm_class for use in DBus paths (only alphanumeric + underscore allowed)
+                    import re as _re
+
+                    _safe_cls = (
+                        _re.sub(r"[^A-Za-z0-9_]", "", wm_class) if wm_class else ""
+                    )
+                    _safe_cap = _safe_cls.capitalize() if _safe_cls else ""
+
+                    dynamic_bases = [
+                        "/MenuBar",
+                        "/com/canonical/menu",
+                        "/org/appmenu/gtk/window/menus/menubar",
+                        "/org/appmenu/gtk/window",
+                    ]
+                    # Only add wm_class derived paths if the class is non-empty and valid
+                    if _safe_cls:
+                        dynamic_bases += [
+                            f"/org/xfce/{_safe_cap}/menus/menubar",
+                            f"/org/xfce/{_safe_cls}/menus/menubar",
+                            f"/org/{_safe_cls.lower()}/{_safe_cap}/menus/menubar",
+                        ]
+                    for base in dynamic_bases:
+                        if not GLib.Variant.is_object_path(base):
+                            continue
+                        try:
+                            mb_xml_res = bus.call_sync(
+                                svc,
+                                base,
+                                "org.freedesktop.DBus.Introspectable",
+                                "Introspect",
+                                None,
+                                GLib.VariantType("(s)"),
+                                Gio.DBusCallFlags.NONE,
+                                300,
+                                None,
+                            )
+                            if mb_xml_res:
+                                xml_text = mb_xml_res.get_child_value(0).get_string()
+                                for child in _re.findall(
+                                    r'<node name="(\w+)"', xml_text
+                                ):
+                                    child_path = f"{base}/{child}"
+                                    if GLib.Variant.is_object_path(child_path):
+                                        fallback_paths.insert(0, child_path)
+                        except Exception:
+                            pass
+
+                    # check all known paths
                     for path in fallback_paths:
                         try:
                             introspect = bus.call_sync(
@@ -448,13 +520,24 @@ class GlobalMenuService(Service):
         if pid1 == pid2:
             return True
         try:
-            # multiple instances of the same executable (e.g. two terminals).
             exe1 = os.path.realpath(f"/proc/{pid1}/exe")
             exe2 = os.path.realpath(f"/proc/{pid2}/exe")
             if not (exe1 and exe2 and exe1 == exe2):
+                # Also allow: one pid is the direct parent of the other
+                # (Qt apps register DBus under a child thread pid)
+                def _ppid(p: int) -> int:
+                    try:
+                        with open(f"/proc/{p}/stat") as f:
+                            return int(f.read().split()[3])
+                    except Exception:
+                        return 0
+
+                if _ppid(pid1) == pid2 or _ppid(pid2) == pid1:
+                    return True
                 return False
 
-            # Read start time from /proc/<pid>/stat field 22 (0-indexed: field index 21)
+            # Same executable — also confirm start time to avoid matching two
+            # independent instances of the same binary (e.g. two terminals)
             def _start_time(pid: int) -> Optional[str]:
                 try:
                     with open(f"/proc/{pid}/stat") as f:
@@ -466,11 +549,9 @@ class GlobalMenuService(Service):
             st1 = _start_time(pid1)
             st2 = _start_time(pid2)
 
-            # If we can read start times, they must also match
             if st1 is not None and st2 is not None:
                 return st1 == st2
 
-            # Fall back to exe-only match if /proc/stat is unreadable
             return True
         except OSError:
             pass
@@ -487,10 +568,10 @@ class GlobalMenuService(Service):
             self._menu_cache.pop(oldest, None)
             logger.debug(f"[GlobalMenuService] Evicted cache for '{oldest}'")
 
-    def _extract_menu(self, wm_class: str, seq: int):
+    def _extract_menu(self, wm_class: str, seq: int, target_pid: int = 0):
         """Extract menu for a given WM class in a background thread."""
         try:
-            client = self._discover_dbus_client(wm_class)
+            client = self._discover_dbus_client(wm_class, target_pid)
             items = []
 
             if client:
