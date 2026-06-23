@@ -7,50 +7,94 @@ Supports:
 """
 
 import threading
-from dataclasses import dataclass, field
 from typing import List, Optional
 
 from fabric.utils import Any, Gio, GLib, logger
 
+# SHARED BUS — one connection for the entire process
+_SESSION_BUS: Optional[Gio.DBusConnection] = None
+_BUS_LOCK = threading.Lock()
 
-@dataclass
+
+def _get_bus() -> Gio.DBusConnection:
+    global _SESSION_BUS
+    if _SESSION_BUS is None:
+        with _BUS_LOCK:
+            if _SESSION_BUS is None:
+                _SESSION_BUS = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    return _SESSION_BUS
+
+
+# DATA MODEL — __slots__ cuts ~200 bytes per instance
 class DBusMenuItem:
-    id: int
-    label: str = ""
-    enabled: bool = True
-    visible: bool = True
-    type: str = "standard"
-    shortcut: str = ""
-    icon_name: str = ""
-    has_submenu: bool = False
-    children: List["DBusMenuItem"] = field(default_factory=list)
+    __slots__ = (
+        "id",
+        "label",
+        "enabled",
+        "visible",
+        "type",
+        "shortcut",
+        "icon_name",
+        "has_submenu",
+        "children",
+        "action_name",
+        "action_target",
+    )
 
-    # GtkMenu specific fields
-    action_name: str = ""
-    action_target: Optional[Any] = None  # FIX #1: any → Any
+    def __init__(
+        self,
+        id: int,
+        label: str = "",
+        enabled: bool = True,
+        visible: bool = True,
+        type: str = "standard",
+        shortcut: str = "",
+        icon_name: str = "",
+        has_submenu: bool = False,
+        children: Optional[List["DBusMenuItem"]] = None,
+        action_name: str = "",
+        action_target: Optional[Any] = None,
+    ):
+        self.id = id
+        self.label = label
+        self.enabled = enabled
+        self.visible = visible
+        self.type = type
+        self.shortcut = shortcut
+        self.icon_name = icon_name
+        self.has_submenu = has_submenu
+        self.children: List["DBusMenuItem"] = children if children is not None else []
+        self.action_name = action_name
+        self.action_target = action_target
 
 
+# MAIN CLIENT
 class DBusMenuClient:
+    __slots__ = (
+        "service_name",
+        "object_path",
+        "_cache",
+        "_cache_valid",
+        "_hash_cache",
+        "_lock",
+        "_fetching",
+    )
+
     def __init__(self, service_name: str, object_path: str):
         self.service_name = service_name
         self.object_path = object_path
-        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
-        self._pid: Optional[int] = None
         self._cache: Optional[List[DBusMenuItem]] = None
         self._cache_valid = False
         self._hash_cache: Optional[str] = None
 
-        # concurrency guard
         self._lock = threading.Lock()
         self._fetching = False
 
-    def set_pid(self, pid: int):
-        self._pid = pid
-
+    # DBUS CALL — uses shared session bus
     def _call(self, method, params, reply_type=None):
         try:
-            return self.bus.call_sync(
+            return _get_bus().call_sync(
                 self.service_name,
                 self.object_path,
                 "com.canonical.dbusmenu",
@@ -64,6 +108,7 @@ class DBusMenuClient:
         except Exception:
             return None
 
+    # PUBLIC ENTRY
     def get_layout(self, force_refresh=False):
         if self._cache and self._cache_valid and not force_refresh:
             return self._cache
@@ -79,6 +124,7 @@ class DBusMenuClient:
             with self._lock:
                 self._fetching = False
 
+    # CORE FETCH LOGIC
     def _fetch(self):
         params = GLib.Variant("(iias)", (0, -1, []))
         res = self._call("GetLayout", params)
@@ -94,13 +140,11 @@ class DBusMenuClient:
 
         try:
             layout = res.get_child_value(1)
-
             while layout.is_of_type(GLib.VariantType("v")):
                 layout = layout.get_variant()
 
             parsed = self._parse_dbusmenu(layout).children
 
-            # diff detection — FIX #5: use fast string hash instead of MD5
             h = self._hash(parsed)
             if h == self._hash_cache:
                 return self._cache or parsed
@@ -108,15 +152,15 @@ class DBusMenuClient:
             self._hash_cache = h
             self._cache = parsed
             self._cache_valid = True
-
             return parsed
 
         except Exception as e:
             logger.error(f"[Menu] parse error: {e}")
             return []
 
-    def _hash(self, items) -> str:
-        flat = []
+    # HASH DIFF SYSTEM
+    def _hash(self, items):
+        flat: List[str] = []
 
         def walk(nodes):
             for n in nodes:
@@ -126,7 +170,7 @@ class DBusMenuClient:
         walk(items)
         return str(hash("".join(flat)))
 
-    # DBUSMENU PARSER (KDE / XFCE / Unity)
+    # DBUSMENU PARSER
     def _parse_dbusmenu(self, node):
         item = DBusMenuItem(id=0)
 
@@ -136,7 +180,6 @@ class DBusMenuClient:
 
             item.id = node.get_child_value(0).get_int32()
 
-            # props
             try:
                 props = node.get_child_value(1).unpack()
             except Exception:
@@ -151,40 +194,31 @@ class DBusMenuClient:
             if props.get("children-display") == "submenu":
                 item.has_submenu = True
 
-            # shortcut
             sc = props.get("shortcut")
             if sc:
                 try:
                     parts = []
                     if isinstance(sc, list):
                         flat = sc[0] if isinstance(sc[0], list) else sc
-
                         mapping = {
                             "Control": "Ctrl",
                             "Shift": "Shift",
                             "Alt": "Alt",
                             "Meta": "Super",
                         }
-
                         for s in flat:
                             parts.append(mapping.get(s, str(s).upper()))
-
                     item.shortcut = "+".join(parts)
                 except Exception:
                     item.shortcut = ""
 
-            # children
             children = node.get_child_value(2)
-
             for i in range(children.n_children()):
                 c = children.get_child_value(i)
-
                 if c.is_of_type(GLib.VariantType("v")):
                     c = c.get_variant()
-
                 item.children.append(self._parse_dbusmenu(c))
 
-            # lazy GTK submenu trigger
             if item.has_submenu and not item.children:
                 try:
                     self.about_to_show(item.id)
@@ -198,64 +232,46 @@ class DBusMenuClient:
 
     # GTK FALLBACK (GMenuModel-style)
     def _try_gtk_menu(self):
-        # Passing None caused silent failure. Start with group 0.
         try:
-            res = self.bus.call_sync(
+            res = _get_bus().call_sync(
                 self.service_name,
                 self.object_path,
                 "org.gtk.Menus",
-                "Get",
-                GLib.Variant("(au)", ([0],)),  # FIX #2: correct parameter
+                "Start",
+                GLib.Variant("(au)", ([0],)),
                 None,
                 Gio.DBusCallFlags.NONE,
                 1000,
                 None,
             )
-
             return res.get_child_value(0) if res else None
-
         except Exception:
             return None
 
     def _parse_gtk_menu(self, variant):
         items = []
-
         try:
             if not variant:
                 return []
-
             if variant.is_container():
                 for i in range(variant.n_children()):
                     c = variant.get_child_value(i)
-
-                    item = DBusMenuItem(
-                        id=i,
-                        label="",
-                        enabled=True,
-                        visible=True,
-                    )
-
+                    item = DBusMenuItem(id=i)
                     try:
                         if c.n_children() > 0:
                             item.label = c.get_child_value(0).get_string()
                     except Exception:
                         pass
-
-                    # Use n_children() - 1 explicitly.
-                    n = c.n_children()
-                    if n > 1:
-                        sub = c.get_child_value(n - 1)
+                    if c.n_children() > 1:
+                        sub = c.get_child_value(c.n_children() - 1)
                         item.children = self._parse_gtk_menu(sub)
-                        item.has_submenu = len(item.children) > 0
-
+                        item.has_submenu = bool(item.children)
                     items.append(item)
-
         except Exception:
             pass
-
         return items
 
-    # GTK / DBUS ACTIONS
+    # ACTIONS
     def about_to_show(self, item_id):
         try:
             res = self._call(
@@ -271,34 +287,22 @@ class DBusMenuClient:
         try:
             self._call(
                 "Event",
-                GLib.Variant(
-                    "(isvu)",
-                    (item_id, "clicked", GLib.Variant("s", ""), 0),
-                ),
+                GLib.Variant("(isvu)", (item_id, "clicked", GLib.Variant("s", ""), 0)),
             )
             self.invalidate()
         except Exception:
             pass
 
+    # CACHE CONTROL
     def invalidate(self):
         self._cache_valid = False
 
     def prefetch_async(self):
-        # If already fetching, skip — get_layout's _fetching flag handles dedup.
-        with self._lock:
-            if self._fetching:
-                return
-            # Mark fetching now so a second call before the thread starts also bails out.
-            self._fetching = True
-
-        def worker():
-            try:
-                self._fetch()
-            finally:
-                with self._lock:
-                    self._fetching = False
-
-        threading.Thread(target=worker, daemon=True).start()
+        if self._fetching:
+            return
+        threading.Thread(
+            target=self.get_layout, kwargs={"force_refresh": True}, daemon=True
+        ).start()
 
     def on_focus(self):
         self.prefetch_async()
