@@ -369,9 +369,11 @@ class GlobalMenuDropdowns:
                 pass
         self._dynamic_dropdowns.clear()
 
-        # Filter to top-level menu items only
+        # Filter to visible top-level menu items only
         top_level = [
-            item for item in menu_items if hasattr(item, "label") and item.label
+            item
+            for item in menu_items
+            if hasattr(item, "label") and item.label and getattr(item, "visible", True)
         ]
         logger.info(f"[GlobalMenu] top_level after filter: {len(top_level)} items")
 
@@ -402,6 +404,8 @@ class GlobalMenuDropdowns:
                     # Build initial children for this dropdown
                     dropdown_children = []
                     for child in item.children if item.children else []:
+                        if not getattr(child, "visible", True):
+                            continue
                         dropdown_children.append(_menu_item_to_dropdown(child))
 
                     if not dropdown_children:
@@ -442,6 +446,8 @@ class GlobalMenuDropdowns:
                                             if new_item.children
                                             else []
                                         ):
+                                            if not getattr(child, "visible", True):
+                                                continue
                                             children.append(
                                                 _menu_item_to_dropdown(child)
                                             )
