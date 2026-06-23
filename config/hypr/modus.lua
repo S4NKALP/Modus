@@ -1,7 +1,9 @@
 local modus = "$HOME/.config/Modus"
 
--- Global Menu: auto-set env vars so Qt/GTK apps export their menus
-hl.env("GTK_MODULES", "appmenu-gtk-module")
+-- Global Menu env is set by Modus's _setup_environment() at runtime via
+-- hyprctl keyword env, so it doesn't affect Modus's own windows.
+-- (Setting it here via hl.env would cause Modus's GTK windows to also load
+--  appmenu-gtk-module, triggering Gdk-CRITICAL assertion failures.)
 
 hl.on("hyprland.start", function()
 	local cmds = {
