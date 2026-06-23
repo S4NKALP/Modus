@@ -7,7 +7,7 @@ from shared.data import APP_NAME, load_config
 from utils.functions import set_process_name
 from window.desktop.widget import Deskwidgets
 from window.dock import Dock
-from window.launcher.main import Launcher
+
 from window.notification.notification import ModusNoti
 from window.osd.main import OSDWindow
 from window.panel.main import Panel
@@ -20,6 +20,25 @@ for log in [
     "utils",
 ]:
     logger.disable(log)
+
+
+class LazyLauncher:
+    def __init__(self):
+        self._instance = None
+
+    def _get_instance(self):
+        if self._instance is None:
+            from window.launcher.main import Launcher
+
+            self._instance = Launcher()
+            import __main__
+
+            if hasattr(__main__, "app") and __main__.app:
+                __main__.app.add_window(self._instance)
+        return self._instance
+
+    def __getattr__(self, name):
+        return getattr(self._get_instance(), name)
 
 
 def main():
@@ -39,7 +58,7 @@ def main():
     switcher = ApplicationSwitcher()
     panel = Panel()
     modusnoti = ModusNoti()
-    launcher = Launcher()
+    launcher = LazyLauncher()
     deskwidget = Deskwidgets()
     dock = Dock()
     osd = OSDWindow()
@@ -55,7 +74,6 @@ def main():
         deskwidget.top_left,
         deskwidget.bottom_left,
         osd,
-        launcher,
         switcher,
         dock,
     )

@@ -1,9 +1,7 @@
-"""Global Menu Service - extracts and manages application menus.
-
-Uses the pure Python DBusMenu extractor via Gio.DBus.
-"""
+"""Global Menu Service - extracts and manages application menus."""
 
 import json
+import re
 import threading
 from typing import List, Optional
 
@@ -17,10 +15,10 @@ from fabric.utils import (
     os,
 )
 
-from utils.dbusmenu import DBusMenuClient, DBusMenuItem
+from utils.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
 from utils.gtkmenu import GtkMenuClient
 
-_MAX_CACHE_SIZE = 32
+_MAX_CACHE_SIZE = 5
 
 REGISTRAR_XML = """
 <node>
@@ -71,16 +69,12 @@ class GlobalMenuService(Service):
         self._current_menu: Optional[List[DBusMenuItem]] = None
         self._current_app: str = ""
         self._current_wm_class: str = ""
+        self._current_pid: int = 0
 
-        # Cache holds DBusMenuClient instances
+        # Bounded LRU caches — deliberately small to save memory
         self._client_cache: dict[str, Optional[DBusMenuClient]] = {}
-        # Cache holds the extracted top-level menus
         self._menu_cache: dict[str, Optional[List[DBusMenuItem]]] = {}
-        # LRU-style insertion-order tracking for cache eviction
         self._cache_order: list[str] = []
-
-        # Cache DBus service -> PID to make discovery instant
-        self._pid_cache: dict[str, int] = {}
 
         # Registrar mapping: sender -> (service_name, object_path)
         self._registered_menus: dict[str, tuple[str, str]] = {}
@@ -94,9 +88,6 @@ class GlobalMenuService(Service):
         self._setup_registrar()
         self._setup_environment()
 
-        # Prewarm the PID cache in the background
-        threading.Thread(target=self._prewarm_dbus_cache, daemon=True).start()
-
         logger.info(
             "[GlobalMenuService] Initialized native Python DBusMenu parser successfully"
         )
@@ -104,7 +95,7 @@ class GlobalMenuService(Service):
     def _setup_registrar(self):
         """Host the AppMenu Registrar on DBus to allow GTK/KDE apps to register menus."""
         try:
-            self._bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            self._bus = _get_bus()  # Shared connection — no extra allocation
             self._node = Gio.DBusNodeInfo.new_for_xml(REGISTRAR_XML)
             self._reg_id = self._bus.register_object(
                 "/com/canonical/AppMenu/Registrar",
@@ -124,64 +115,13 @@ class GlobalMenuService(Service):
         except Exception as e:
             logger.error(f"[GlobalMenuService] Failed to start Registrar: {e}")
 
-    def _prewarm_dbus_cache(self):
-        """Pre-fetches PIDs for all current DBus services so discovery is instant."""
-        try:
-            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-            res = bus.call_sync(
-                "org.freedesktop.DBus",
-                "/org/freedesktop/DBus",
-                "org.freedesktop.DBus",
-                "ListNames",
-                None,
-                GLib.VariantType("(as)"),
-                Gio.DBusCallFlags.NONE,
-                -1,
-                None,
-            )
-            names = res.get_child_value(0).unpack()
-
-            def fetch_pid(svc):
-                with self._registry_lock:
-                    cached = svc in self._pid_cache
-                if not cached:
-                    try:
-                        pid_res = bus.call_sync(
-                            "org.freedesktop.DBus",
-                            "/org/freedesktop/DBus",
-                            "org.freedesktop.DBus",
-                            "GetConnectionUnixProcessID",
-                            GLib.Variant("(s)", (svc,)),
-                            GLib.VariantType("(u)"),
-                            Gio.DBusCallFlags.NONE,
-                            500,
-                            None,
-                        )
-                        with self._registry_lock:
-                            self._pid_cache[svc] = pid_res.get_child_value(
-                                0
-                            ).get_uint32()
-                    except Exception:
-                        with self._registry_lock:
-                            self._pid_cache[svc] = 0
-
-            for svc in names:
-                with self._registry_lock:
-                    if svc in self._pid_cache:
-                        continue
-                threading.Thread(target=fetch_pid, args=(svc,), daemon=True).start()
-
-            logger.info(
-                f"[GlobalMenuService] Pre-warmed DBus PID cache with {len(self._pid_cache)} entries"
-            )
-        except Exception as e:
-            logger.debug(f"[GlobalMenuService] Pre-warm failed: {e}")
-
     def _setup_environment(self):
         """Automatically setup environment variables and system overrides for global menus."""
         try:
             # 1. Inject GTK Modules for standard GTK3 apps
-            os.environ["GTK_MODULES"] = "appmenu-gtk-module"
+            # NOTE: We do NOT set os.environ here — that would affect Modus's own GTK windows,
+            # causing gdk_wayland_window_set_dbus_properties_libgtk_only assertion failures.
+            # The hyprctl/dbus-update-activation-environment calls set it for future apps instead.
             exec_shell_command("hyprctl keyword env GTK_MODULES,appmenu-gtk-module")
             exec_shell_command(
                 "dbus-update-activation-environment --systemd GTK_MODULES=appmenu-gtk-module"
@@ -250,17 +190,15 @@ class GlobalMenuService(Service):
                     )
 
             elif method_name == "GetMenus":
-                invocation.return_value(GLib.Variant("(a(uso))", ([])))
+                invocation.return_value(GLib.Variant("(a(uso))", ([],)))
         except Exception as e:
             logger.error(
                 f"[GlobalMenuService] Error handling Registrar method {method_name}: {e}"
             )
-            invocation.return_error_literal(Gio.DBusError.FAILED, str(e))
+            invocation.return_error_literal(Gio.DBusError.FAILED, "FAILED", str(e))
 
     def update_active_window(self, app_name: str, wm_class: str):
         """Called when the active window changes. Triggers menu extraction."""
-        if wm_class == self._current_wm_class:
-            return
 
         # Capture the PID right now at focus time — don't re-query later in the thread
         target_pid = 0
@@ -272,11 +210,21 @@ class GlobalMenuService(Service):
         except Exception:
             pass
 
+        same_class = wm_class == self._current_wm_class
+        same_pid = target_pid != 0 and target_pid == self._current_pid
+
+        # Re-focus of EXACT same window instance → just re-emit what we have
+        if same_class and same_pid:
+            if self._current_menu is not None:
+                self.menu_changed(self._current_menu)
+            return
+
         logger.info(
             f"[GlobalMenuService] Active window changed: {app_name} ({wm_class}) pid={target_pid}"
         )
         self._current_app = app_name
         self._current_wm_class = wm_class
+        self._current_pid = target_pid
 
         with self._seq_lock:
             self._extraction_seq += 1
@@ -284,16 +232,20 @@ class GlobalMenuService(Service):
 
         self.active_app_changed(app_name, wm_class)
 
-        # Check cache first
+        # Check cache — but ONLY serve cached result if it's non-empty.
+        # An empty cache entry means discovery failed last time; try again.
         with self._lock:
-            has_client = wm_class in self._client_cache
-            has_menu = wm_class in self._menu_cache
-            cached_menu = self._menu_cache.get(wm_class) if has_menu else None
+            has_good_cache = (
+                wm_class in self._client_cache
+                and wm_class in self._menu_cache
+                and self._menu_cache.get(wm_class)  # non-empty
+            )
+            cached_menu = self._menu_cache.get(wm_class) if has_good_cache else None
 
-        if has_client and has_menu:
+        if has_good_cache and cached_menu:
             self._current_menu = cached_menu
             logger.info(f"[GlobalMenuService] Cache hit for '{wm_class}'")
-            self.menu_changed(cached_menu if cached_menu else [])
+            self.menu_changed(cached_menu)
             return
 
         # Clear menu immediately for new app while extraction runs
@@ -328,7 +280,7 @@ class GlobalMenuService(Service):
             if target_pid <= 0:
                 return None
 
-            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            bus = _get_bus()
 
             # =========================
             # 1. FAST PATH: Registrar cache
@@ -367,16 +319,29 @@ class GlobalMenuService(Service):
             # 2. FALLBACK: Scan DBus services matching the target PID
             # =========================
 
-            # Static well-known paths (Electron, XFCE, legacy apps)
-            static_paths = (
+            # Static well-known paths (all known DEs and toolkits)
+            static_paths: list[str] = [
+                # Unity/Canonical
                 "/com/canonical/menu/0",
-                "/appmenu",
                 "/com/canonical/AppMenu/Registrar/0",
+                "/com/canonical/Unity/Panel/Service",
+                "/appmenu",
+                # GTK generic
                 "/org/gtk/Application/menus/appmenu",
                 "/org/gtk/Application/menus/menubar",
-                "/org/xfce/Thunar/menus/menubar/0",
+                "/org/gtk/Application/menus/appmenu/0",
+                "/org/gtk/Application/menus/menubar/0",
+                # appmenu-gtk-module
                 "/org/appmenu/gtk/window/menus/menubar",
-            )
+                "/org/appmenu/gtk/window/menus/appmenu",
+                "/org/appmenu/gtk/window/menus/menubar/0",
+                "/org/appmenu/gtk/window/menus/appmenu/0",
+                # KDE/Qt
+                "/MenuBar",
+                "/KDEAppMenu",
+                # XFCE
+                "/org/xfce/Thunar/menus/menubar/0",
+            ]
 
             res = bus.call_sync(
                 "org.freedesktop.DBus",
@@ -421,37 +386,84 @@ class GlobalMenuService(Service):
                     if not (pid == target_pid or self._is_same_app(pid, target_pid)):
                         continue
 
-                    # Build dynamic path list: static + numbered children
-                    fallback_paths = list(static_paths)
+                    # Check if this app explicitly registered its menu via Registrar
+                    with self._registry_lock:
+                        reg_entry = self._registered_menus.get(svc)
+                    if reg_entry:
+                        reg_svc, reg_path = reg_entry
+                        logger.info(
+                            f"[GlobalMenuService] Found Registrar path {reg_path} for {svc}"
+                        )
+                        return DBusMenuClient(reg_svc, reg_path)
 
-                    # These base paths may have numbered children (XID or window index)
-                    # e.g. /MenuBar/2, /com/canonical/menu/5, /org/xfce/Thunar/menus/menubar/18
-                    # Sanitize wm_class for use in DBus paths (only alphanumeric + underscore allowed)
-                    import re as _re
-
+                    # Sanitize wm_class for use in DBus paths
                     _safe_cls = (
-                        _re.sub(r"[^A-Za-z0-9_]", "", wm_class) if wm_class else ""
+                        re.sub(r"[^A-Za-z0-9_]", "", wm_class) if wm_class else ""
                     )
                     _safe_cap = _safe_cls.capitalize() if _safe_cls else ""
 
-                    dynamic_bases = [
+                    # Dynamic bases — introspected for child nodes to expand
+                    # Ordered by likelihood to minimize DBus calls
+                    dynamic_bases: list[str] = [
                         "/MenuBar",
                         "/com/canonical/menu",
                         "/org/appmenu/gtk/window/menus/menubar",
+                        "/org/appmenu/gtk/window/menus/appmenu",
                         "/org/appmenu/gtk/window",
+                        "/org/gtk/Application/menus",
+                        "/org/gtk/Application",
+                        # DE namespace roots — DFS handles deeper traversal
+                        "/org/libreoffice",
+                        "/org/xfce",
+                        "/org/mate",
+                        "/org/kde",
+                        "/org/gnome",
+                        "/org/enlightenment",
+                        "/org/pantheon",
+                        "/org/elementary",
+                        "/com/deepin",
+                        "/com/solus-project",
+                        "/com/canonical",
                     ]
-                    # Only add wm_class derived paths if the class is non-empty and valid
+
+                    # wm_class-derived paths for each known DE namespace
                     if _safe_cls:
-                        dynamic_bases += [
-                            f"/org/xfce/{_safe_cap}/menus/menubar",
-                            f"/org/xfce/{_safe_cls}/menus/menubar",
-                            f"/org/{_safe_cls.lower()}/{_safe_cap}/menus/menubar",
-                        ]
+                        cls_lower = _safe_cls.lower()
+                        for ns, app_part in [
+                            ("xfce", _safe_cap),
+                            ("xfce", _safe_cls),
+                            ("mate", _safe_cap),
+                            ("mate", _safe_cls),
+                            ("kde", _safe_cap),
+                            ("kde", _safe_cls),
+                            ("gnome", _safe_cap),
+                            ("gnome", _safe_cls),
+                            ("enlightenment", _safe_cap),
+                            ("enlightenment", _safe_cls),
+                            ("pantheon", _safe_cap),
+                            ("pantheon", _safe_cls),
+                            ("elementary", _safe_cap),
+                            ("elementary", _safe_cls),
+                            ("budgie", _safe_cap),
+                            ("budgie", _safe_cls),
+                            ("deepin", _safe_cap),
+                            ("deepin", _safe_cls),
+                            (cls_lower, _safe_cap),  # generic fallback
+                        ]:
+                            for suffix in ("menus/menubar", "menus/appmenu", "menus"):
+                                p = f"/org/{ns}/{app_part}/{suffix}"
+                                if GLib.Variant.is_object_path(p):
+                                    dynamic_bases.append(p)
+
+                    fallback_paths = list(static_paths)
+                    seen_fallback: set[str] = set(fallback_paths)
+
+                    # Multi-level child introspection from dynamic bases
                     for base in dynamic_bases:
                         if not GLib.Variant.is_object_path(base):
                             continue
                         try:
-                            mb_xml_res = bus.call_sync(
+                            xml_res = _get_bus().call_sync(
                                 svc,
                                 base,
                                 "org.freedesktop.DBus.Introspectable",
@@ -462,18 +474,50 @@ class GlobalMenuService(Service):
                                 300,
                                 None,
                             )
-                            if mb_xml_res:
-                                xml_text = mb_xml_res.get_child_value(0).get_string()
-                                for child in _re.findall(
-                                    r'<node name="(\w+)"', xml_text
+                            if not xml_res:
+                                continue
+                            xml_text = xml_res.get_child_value(0).get_string()
+                            for child in re.findall(r'<node name="([^"]+)"', xml_text):
+                                child_path = f"{base}/{child}"
+                                if (
+                                    not GLib.Variant.is_object_path(child_path)
+                                    or child_path in seen_fallback
                                 ):
-                                    child_path = f"{base}/{child}"
-                                    if GLib.Variant.is_object_path(child_path):
-                                        fallback_paths.insert(0, child_path)
+                                    continue
+                                seen_fallback.add(child_path)
+                                fallback_paths.insert(0, child_path)
+                                # Recurse one more level for deeply nested structures
+                                try:
+                                    cxml_res = _get_bus().call_sync(
+                                        svc,
+                                        child_path,
+                                        "org.freedesktop.DBus.Introspectable",
+                                        "Introspect",
+                                        None,
+                                        GLib.VariantType("(s)"),
+                                        Gio.DBusCallFlags.NONE,
+                                        200,
+                                        None,
+                                    )
+                                    if cxml_res:
+                                        for gchild in re.findall(
+                                            r'<node name="([^"]+)"',
+                                            cxml_res.get_child_value(0).get_string(),
+                                        ):
+                                            gp = f"{child_path}/{gchild}"
+                                            if (
+                                                GLib.Variant.is_object_path(gp)
+                                                and gp not in seen_fallback
+                                            ):
+                                                seen_fallback.add(gp)
+                                                fallback_paths.insert(0, gp)
+                                except Exception:
+                                    pass
                         except Exception:
                             pass
 
-                    # check all known paths
+                    # Collect ALL GTK menu paths via both fallback_paths and DFS
+                    gtk_candidates: list[tuple[str, str]] = []
                     for path in fallback_paths:
                         try:
                             introspect = bus.call_sync(
@@ -498,15 +542,49 @@ class GlobalMenuService(Service):
                                     self._registered_menus[svc] = (svc, path)
                                 return DBusMenuClient(svc, path)
                             elif "org.gtk.Menus" in xml:
+                                logger.debug(
+                                    f"[GlobalMenuService] GTK menu at {path} (deferring for DBusMenu)"
+                                )
+                                gtk_candidates.append((svc, path))
+                            else:
+                                logger.debug(
+                                    f"[GlobalMenuService] {svc} {path}: no menu (interfaces: {re.findall(r'interface name=\"([^\"]+)\"', xml)})"
+                                )
+                        except Exception as e:
+                            logger.debug(
+                                f"[GlobalMenuService] {svc} {path}: introspection error: {e}"
+                            )
+
+                    # Also search the full object tree via DFS for GTK menus
+                    all_dfs_paths = self._dfs_find_gtk_menus(svc)
+                    for dfs_path in all_dfs_paths:
+                        if dfs_path not in {p for _, p in gtk_candidates}:
+                            gtk_candidates.append((svc, dfs_path))
+
+                    # Validate each candidate — find one with actual menu items
+                    for gsvc, gpath in gtk_candidates:
+                        try:
+                            test_client = GtkMenuClient(gsvc, gpath)
+                            test_items = test_client.get_layout()
+                            if test_items:
                                 logger.info(
-                                    f"[GlobalMenuService] GtkMenu found: {svc} {path}"
+                                    f"[GlobalMenuService] GTK menu found: {gsvc} {gpath} ({len(test_items)} items)"
                                 )
                                 with self._registry_lock:
-                                    self._registered_menus[svc] = (svc, path)
-                                return GtkMenuClient(svc, path)
+                                    self._registered_menus[gsvc] = (gsvc, gpath)
+                                return test_client
+                            else:
+                                logger.debug(
+                                    f"[GlobalMenuService] GTK menu {gpath} returned 0 items — trying next"
+                                )
+                        except Exception as e:
+                            logger.debug(
+                                f"[GlobalMenuService] GTK menu {gpath} validation failed: {e}"
+                            )
 
-                        except Exception:
-                            continue
+                    logger.info(
+                        f"[GlobalMenuService] No menu found for {svc} wm={wm_class}"
+                    )
 
                 except Exception:
                     continue
@@ -516,43 +594,68 @@ class GlobalMenuService(Service):
 
         return None
 
+    def _dfs_find_gtk_menus(
+        self,
+        service: str,
+        path: str = "/",
+        _depth: int = 0,
+        _visited: Optional[set] = None,
+    ) -> list[str]:
+        """Bounded DFS returning ALL org.gtk.Menus paths in a service's object tree."""
+        if _depth > 6 or (_visited is not None and path in _visited):
+            return []
+        if _visited is None:
+            _visited = set()
+        _visited.add(path)
+        results: list[str] = []
+        try:
+            xml_res = _get_bus().call_sync(
+                service,
+                path,
+                "org.freedesktop.DBus.Introspectable",
+                "Introspect",
+                None,
+                GLib.VariantType("(s)"),
+                Gio.DBusCallFlags.NONE,
+                500,
+                None,
+            )
+            xml = xml_res.get_child_value(0).get_string()
+            if 'interface name="org.gtk.Menus"' in xml:
+                results.append(path)
+            for child in re.findall(r'<node name="([^"]+)"', xml):
+                child_path = (
+                    path.rstrip("/") + "/" + child if path != "/" else "/" + child
+                )
+                if not GLib.Variant.is_object_path(child_path):
+                    continue
+                results.extend(
+                    self._dfs_find_gtk_menus(service, child_path, _depth + 1, _visited)
+                )
+        except Exception:
+            pass
+        return results
+
     def _is_same_app(self, pid1: int, pid2: int) -> bool:
         if pid1 == pid2:
             return True
         try:
             exe1 = os.path.realpath(f"/proc/{pid1}/exe")
             exe2 = os.path.realpath(f"/proc/{pid2}/exe")
-            if not (exe1 and exe2 and exe1 == exe2):
-                # Also allow: one pid is the direct parent of the other
-                # (Qt apps register DBus under a child thread pid)
-                def _ppid(p: int) -> int:
-                    try:
-                        with open(f"/proc/{p}/stat") as f:
-                            return int(f.read().split()[3])
-                    except Exception:
-                        return 0
+            if exe1 and exe2 and exe1 == exe2:
+                return True
 
-                if _ppid(pid1) == pid2 or _ppid(pid2) == pid1:
-                    return True
-                return False
-
-            # Same executable — also confirm start time to avoid matching two
-            # independent instances of the same binary (e.g. two terminals)
-            def _start_time(pid: int) -> Optional[str]:
+            # Also allow: one pid is the direct parent of the other
+            # (Qt apps register DBus under a child thread pid)
+            def _ppid(p: int) -> int:
                 try:
-                    with open(f"/proc/{pid}/stat") as f:
-                        fields = f.read().split()
-                    return fields[21] if len(fields) > 21 else None
-                except OSError:
-                    return None
+                    with open(f"/proc/{p}/stat") as f:
+                        return int(f.read().split()[3])
+                except Exception:
+                    return 0
 
-            st1 = _start_time(pid1)
-            st2 = _start_time(pid2)
-
-            if st1 is not None and st2 is not None:
-                return st1 == st2
-
-            return True
+            if _ppid(pid1) == pid2 or _ppid(pid2) == pid1:
+                return True
         except OSError:
             pass
         return False
@@ -571,6 +674,11 @@ class GlobalMenuService(Service):
     def _extract_menu(self, wm_class: str, seq: int, target_pid: int = 0):
         """Extract menu for a given WM class in a background thread."""
         try:
+            # Bail early if a newer extraction has already superseded this one
+            with self._seq_lock:
+                if seq != self._extraction_seq:
+                    return
+
             client = self._discover_dbus_client(wm_class, target_pid)
             items = []
 
@@ -578,15 +686,19 @@ class GlobalMenuService(Service):
                 items = client.get_layout()
 
             with self._lock:
-                self._client_cache[wm_class] = client
-                self._menu_cache[wm_class] = items
-                self._evict_cache_if_needed(wm_class)
-
+                # Only cache successful (non-empty) results.
+                # Empty results are NOT cached so the next focus triggers a fresh discovery.
                 if items:
+                    self._client_cache[wm_class] = client
+                    self._menu_cache[wm_class] = items
+                    self._evict_cache_if_needed(wm_class)
                     logger.info(
                         f"[GlobalMenuService] Found menu for '{wm_class}': {len(items)} items"
                     )
                 else:
+                    # Clear any stale cached empty entry so next focus retries
+                    self._client_cache.pop(wm_class, None)
+                    self._menu_cache.pop(wm_class, None)
                     logger.info(
                         f"[GlobalMenuService] No DBus menu found for '{wm_class}'"
                     )

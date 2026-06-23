@@ -49,12 +49,12 @@ class CapsLock(Service):
         self._start_efficient_polling()
 
     def _start_efficient_polling(self):
-        """Start efficient polling with 100ms intervals."""
+        """Start efficient polling with 500ms intervals."""
         if self._timeout_id is None:
-            self._timeout_id = GLib.timeout_add(100, self._efficient_poll)
+            self._timeout_id = GLib.timeout_add(500, self._efficient_poll)
 
     def _efficient_poll(self) -> bool:
-        """Monitor CapsLock state with 100ms polling intervals.
+        """Monitor CapsLock state with 500ms polling intervals.
 
         Returns:
             bool: True to continue polling, False to stop.

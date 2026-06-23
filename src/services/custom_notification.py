@@ -402,6 +402,15 @@ class CachedNotifications(Notifications):
                 f"Pruned {len(ids_to_remove)} old notifications for limited app {notification.app_name}"
             )
 
+        # Enforce global max history size (50 notifications max) to prevent memory leak
+        MAX_HISTORY = 50
+        while len(self._cached_notifications) >= MAX_HISTORY:
+            if not self._cached_notifications:
+                break
+            oldest_id = min(self._cached_notifications.keys())
+            self.remove_cached_notification(oldest_id)
+            logger.debug(f"History full, pruned oldest notification {oldest_id}")
+
         # GUARANTEED STORAGE: Always create and store notification to history first
         cache_id = self._next_cache_id
         self._next_cache_id += 1
@@ -474,7 +483,7 @@ class CachedNotifications(Notifications):
                             notification.id, image_pixbuf
                         )
                         cache_notification_image(
-                            notification.id, image_pixbuf, (35, 35)
+                            notification.id, image_pixbuf, (128, 128)
                         )
                         cached_notification.cache_metadata[
                             "notification_image_cache_key"

@@ -1,6 +1,6 @@
+import shutil
 import subprocess
 import time
-import shutil
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import GLib, exec_shell_command_async, logger, os, re
@@ -81,25 +81,17 @@ class Brightness(Service):
         try:
             file_path = f"/sys/class/backlight/{self._get_screen_device()}/brightness"
             if os.path.exists(file_path):
-                current_mtime = os.path.getmtime(file_path)
-                if current_mtime > self._last_file_mtime:
-                    self._last_file_mtime = current_mtime
-                    with open(file_path) as f:
-                        raw = int(f.readline().strip())
+                with open(file_path) as f:
+                    raw = int(f.readline().strip())
 
-                    if raw != self._last_raw:
-                        self._last_raw = raw
-                        percent = (
-                            int((raw / self.max_screen) * 100)
-                            if self.max_screen > 0
-                            else 0
-                        )
-                        if (
-                            abs(percent - self._last_percent)
-                            >= self.MIN_CHANGE_THRESHOLD
-                        ):
-                            self._last_percent = percent
-                            self.emit("screen", percent)
+                if raw != self._last_raw:
+                    self._last_raw = raw
+                    percent = (
+                        int((raw / self.max_screen) * 100) if self.max_screen > 0 else 0
+                    )
+                    if abs(percent - self._last_percent) >= self.MIN_CHANGE_THRESHOLD:
+                        self._last_percent = percent
+                        self.emit("screen", percent)
             return True
         except Exception as e:
             logger.error(f"Error checking brightness file: {e}")
@@ -227,36 +219,39 @@ class Brightness(Service):
             ):
                 return self._last_raw
 
-            try:
-                process = subprocess.run(
-                    [
-                        "ddcutil",
-                        "--bus",
-                        str(self.ddcutil_bus),
-                        *self.DDCUTIL_PARAMS.split(),
-                        "getvcp",
-                        "10",
-                    ],
-                    text=True,
-                    capture_output=True,
-                    timeout=2,
+            def on_ddcutil_success(stdout):
+                match = re.search(
+                    r"current value\s*=\s*(\d+)\s*,\s*max value\s*=\s*(\d+)",
+                    stdout,
                 )
-
-                if process.returncode == 0:
-                    match = re.search(
-                        r"current value\s*=\s*(\d+)\s*,\s*max value\s*=\s*(\d+)",
-                        process.stdout,
-                    )
-                    if match:
-                        current = int(match.group(1))
-
+                if match:
+                    current = int(match.group(1))
+                    if current != self._last_raw:
                         self._last_raw = current
-                        self._last_update_time = time.time()
-                        return current
-            except Exception as e:
-                logger.error(f"Error executing ddcutil: {e}")
+                        percent = (
+                            int((current / self.max_screen) * 100)
+                            if self.max_screen > 0
+                            else 0
+                        )
+                        # Emit to update UI when background fetch completes
+                        self.emit("screen", percent)
 
-            return self._last_raw if self._last_raw != -1 else -1
+            # Update cache timestamp immediately to prevent spamming async commands
+            self._last_update_time = time.time()
+
+            try:
+                exec_shell_command_async(
+                    f"ddcutil --bus {self.ddcutil_bus} {self.DDCUTIL_PARAMS} getvcp 10",
+                    lambda exit_code, stdout, stderr: (
+                        on_ddcutil_success(stdout)
+                        if exit_code == 0
+                        else logger.error(f"ddcutil error (code {exit_code}): {stderr}")
+                    ),
+                )
+            except Exception as e:
+                logger.error(f"Error executing ddcutil async: {e}")
+
+            return self._last_raw if self._last_raw != -1 else 0
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):
@@ -281,6 +276,7 @@ class Brightness(Service):
                 return
 
             self._pending_raw = value
+            self._last_raw = value
 
             if self._timer_id:
                 GLib.source_remove(self._timer_id)
@@ -303,8 +299,6 @@ class Brightness(Service):
             self._lock.unlock()
 
         try:
-            self._last_raw = raw
-
             percent = int((raw / self.max_screen) * 100) if self.max_screen > 0 else 0
 
             if self.backend == "brightnessctl":
