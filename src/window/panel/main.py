@@ -85,9 +85,7 @@ class Panel(Window):
         )
         setup_cursor_hover(self.control_center_btn, "pointer")
 
-        self.control_center = ModusControlCenter(
-            parent=self, pointing_to=self.control_center_btn
-        )
+        self._control_center_instance = None
         self.control_center_btn.connect(
             "clicked",
             lambda *_: self.control_center.toggle(),
@@ -104,9 +102,7 @@ class Panel(Window):
         )
         setup_cursor_hover(self.notification_center_btn, "pointer")
 
-        self.notification_center = NotificationCenter(
-            parent=self, pointing_to=self.notification_center_btn
-        )
+        self._notification_center_instance = None
 
         self.datetime_btn = Button(
             name="panel-button",
@@ -171,10 +167,24 @@ class Panel(Window):
     def on_notification_count_changed(self, service, *args):
         self.update_notification_icon()
 
-    def on_notification_icon_clicked(self, *args):
-        count = notification_service.count
-        if count > 0:
-            self.notification_center.toggle()
+    def on_notification_icon_clicked(self, *_):
+        self.notification_center.toggle()
+
+    @property
+    def control_center(self):
+        if self._control_center_instance is None:
+            self._control_center_instance = ModusControlCenter(
+                parent=self, pointing_to=self.control_center_btn
+            )
+        return self._control_center_instance
+
+    @property
+    def notification_center(self):
+        if self._notification_center_instance is None:
+            self._notification_center_instance = NotificationCenter(
+                parent=self, pointing_to=self.notification_center_btn
+            )
+        return self._notification_center_instance
 
     def update_notification_icon(self):
         count = notification_service.count

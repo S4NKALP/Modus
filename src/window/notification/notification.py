@@ -367,7 +367,7 @@ def preload_notification_assets(notification):
         # Cache notification image if available
         if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
             cache_notification_image(
-                notification.id, notification.image_pixbuf, (35, 35)
+                notification.id, notification.image_pixbuf, (128, 128)
             )
 
     except Exception as e:

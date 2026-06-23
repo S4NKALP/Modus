@@ -421,12 +421,11 @@ class BluetoothConnections(Box):
 
         self.connect("destroy", self.on_destroy)
         self.connect("unmap", self.on_hide)
+        self.connect("map", lambda *_: self.start_device_monitoring())
 
         self.client.notify("scanning")
         self.client.notify("enabled")
         self.update_devices()
-
-        self.start_device_monitoring()
 
     def handle_user_toggle(self, active: bool):
         self._switch_lock = True
@@ -441,6 +440,7 @@ class BluetoothConnections(Box):
 
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
+        self.stop_device_monitoring()
         if self.other_devices.get_visible():
             self.other_devices.set_visible(False)
             self.other_devices_scrolled.snap_to_size(0)

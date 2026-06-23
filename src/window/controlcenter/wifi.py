@@ -383,11 +383,11 @@ class WifiConnections(Box):
 
         self.connect("destroy", self.on_destroy)
         self.connect("unmap", self.on_hide)
-
-        self.start_network_monitoring()
+        self.connect("map", lambda *_: self.start_network_monitoring())
 
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
+        self.stop_network_monitoring()
         if self.other_networks.get_visible():
             self.other_networks.set_visible(False)
             self.other_networks_scrolled.snap_to_size(0)

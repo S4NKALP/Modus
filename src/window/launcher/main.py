@@ -272,7 +272,17 @@ class Launcher(Window):
     def close_launcher(self):
         """Hide the launcher and clear search."""
         self.hide()
+
+        # Cancel any pending search timeout to prevent background rendering
+        if hasattr(self, "_search_timeout") and self._search_timeout:
+            GLib.source_remove(self._search_timeout)
+            self._search_timeout = None
+
+        # Temporarily block search handling while clearing the entry
+        self._initializing = True
         self.search_entry.set_text("")
+        self._initializing = False
+
         self._clear_results()
         self.triggered_plugin = None
         self.active_trigger = ""
@@ -435,7 +445,6 @@ class Launcher(Window):
             for r in all_results
         )
 
-        # Don't limit results for triggered plugin queries, only for global searches and trigger suggestions
         if self.triggered_plugin and self.active_trigger:
             # In trigger mode - show all results from the triggered plugin
             self.results = all_results
@@ -448,8 +457,8 @@ class Launcher(Window):
             )
 
             if is_application_search:
-                # Don't limit application search results
-                self.results = all_results
+                # Limit application search results to a reasonable number to prevent lag
+                self.results = all_results[:20]
             else:
                 # Apply max_results limit for other global searches and trigger suggestions
                 self.results = all_results[: self.max_results]

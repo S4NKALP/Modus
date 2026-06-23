@@ -357,8 +357,8 @@ class BluetoothConnections(Box):
         # Initial device update
         self.update_devices()
 
-        # Start periodic device monitoring for real-time updates
-        self.start_device_monitoring()
+        self.connect("map", lambda *_: self.start_device_monitoring())
+        self.connect("unmap", lambda *_: self.on_hide())
 
     def toggle_other_devices(self, *_):
         """Toggle the visibility of other devices section"""
@@ -489,6 +489,10 @@ class BluetoothConnections(Box):
             logger.error(f"An error occurred: {e}")
         finally:
             self._update_in_progress = False
+
+    def on_hide(self, *_):
+        """Called when the widget is hidden"""
+        self.stop_device_monitoring()
 
     def start_device_monitoring(self):
         """Start periodic monitoring for device changes"""

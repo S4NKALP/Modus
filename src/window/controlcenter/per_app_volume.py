@@ -77,8 +77,8 @@ class PerAppVolumeControl(Box):
         # Initial population
         self._populate_apps()
 
-        # Set up auto-refresh timer for audio streams
-        self._refresh_timer = GLib.timeout_add_seconds(2, self._auto_refresh)
+        self.connect("map", self._on_map)
+        self.connect("unmap", self._on_unmap)
 
     def _auto_refresh(self):
         """Auto-refresh the application list every 2 seconds"""
@@ -87,6 +87,15 @@ class PerAppVolumeControl(Box):
             return False  # Remove GLib source
         self._populate_apps()
         return True  # Continue the timer
+
+    def _on_map(self, *_):
+        if self._refresh_timer is None:
+            self._refresh_timer = GLib.timeout_add_seconds(2, self._auto_refresh)
+
+    def _on_unmap(self, *_):
+        if self._refresh_timer is not None:
+            GLib.source_remove(self._refresh_timer)
+            self._refresh_timer = None
 
     def _go_back(self, *_):
         """Return to main control center view"""

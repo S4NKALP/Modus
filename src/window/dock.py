@@ -73,15 +73,37 @@ class AppBar(Box):
         self.setup_app_monitoring()
 
     def setup_app_monitoring(self):
-        def update_running_apps():
-            try:
-                self.update_dock_apps()
-            except Exception as e:
-                logger.error(f"[AppBar] Error updating apps: {e}")
-            return True
+        self._hyprland_event_handlers = []
 
-        self._app_monitor_timer_id = GLib.timeout_add(250, update_running_apps)
+        events_to_monitor = [
+            "event::openwindow",
+            "event::closewindow",
+            "event::activewindow",
+            "event::windowtitle",
+            "event::movewindow",
+            "event::workspace",
+        ]
+
+        for event in events_to_monitor:
+            handler_id = self._hyprland_connection.connect(
+                event, lambda *_: self.debounced_update_dock_apps()
+            )
+            self._hyprland_event_handlers.append(handler_id)
+
         GLib.idle_add(self.update_dock_apps)
+
+    def debounced_update_dock_apps(self):
+        if hasattr(self, "_dock_update_timer") and self._dock_update_timer:
+            GLib.source_remove(self._dock_update_timer)
+        self._dock_update_timer = GLib.timeout_add(50, self._do_update_dock_apps)
+
+    def _do_update_dock_apps(self):
+        self._dock_update_timer = None
+        try:
+            self.update_dock_apps()
+        except Exception as e:
+            logger.error(f"[AppBar] Error updating apps: {e}")
+        return False
 
     def update_icon_size(self):
         """Update all icons in the dock to the current config size"""
@@ -121,6 +143,18 @@ class AppBar(Box):
         if hasattr(self, "_app_monitor_timer_id") and self._app_monitor_timer_id:
             GLib.source_remove(self._app_monitor_timer_id)
             self._app_monitor_timer_id = None
+
+        if hasattr(self, "_dock_update_timer") and self._dock_update_timer:
+            GLib.source_remove(self._dock_update_timer)
+            self._dock_update_timer = None
+
+        if hasattr(self, "_hyprland_event_handlers"):
+            for handler_id in self._hyprland_event_handlers:
+                try:
+                    self._hyprland_connection.disconnect(handler_id)
+                except Exception:
+                    pass
+            self._hyprland_event_handlers = []
 
         # Destroy context menu
         if self.menu:
