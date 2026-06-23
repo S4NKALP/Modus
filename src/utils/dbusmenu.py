@@ -171,7 +171,9 @@ class DBusMenuClient:
         return str(hash("".join(flat)))
 
     # DBUSMENU PARSER
-    def _parse_dbusmenu(self, node):
+    def _parse_dbusmenu(self, node, _depth: int = 0):
+        if _depth > 20:
+            return DBusMenuItem(id=0)
         item = DBusMenuItem(id=0)
 
         try:
@@ -214,10 +216,12 @@ class DBusMenuClient:
 
             children = node.get_child_value(2)
             for i in range(children.n_children()):
+                if _depth >= 20:
+                    break
                 c = children.get_child_value(i)
                 if c.is_of_type(GLib.VariantType("v")):
                     c = c.get_variant()
-                item.children.append(self._parse_dbusmenu(c))
+                item.children.append(self._parse_dbusmenu(c, _depth + 1))
 
             if item.has_submenu and not item.children:
                 try:
@@ -248,25 +252,26 @@ class DBusMenuClient:
         except Exception:
             return None
 
-    def _parse_gtk_menu(self, variant):
+    def _parse_gtk_menu(self, variant, _depth: int = 0):
+        if _depth > 10:
+            return []
         items = []
         try:
-            if not variant:
+            if not variant or not variant.is_container():
                 return []
-            if variant.is_container():
-                for i in range(variant.n_children()):
-                    c = variant.get_child_value(i)
-                    item = DBusMenuItem(id=i)
-                    try:
-                        if c.n_children() > 0:
-                            item.label = c.get_child_value(0).get_string()
-                    except Exception:
-                        pass
-                    if c.n_children() > 1:
-                        sub = c.get_child_value(c.n_children() - 1)
-                        item.children = self._parse_gtk_menu(sub)
-                        item.has_submenu = bool(item.children)
-                    items.append(item)
+            for i in range(variant.n_children()):
+                c = variant.get_child_value(i)
+                item = DBusMenuItem(id=i)
+                try:
+                    if c.n_children() > 0:
+                        item.label = c.get_child_value(0).get_string()
+                except Exception:
+                    pass
+                if c.n_children() > 1:
+                    sub = c.get_child_value(c.n_children() - 1)
+                    item.children = self._parse_gtk_menu(sub, _depth + 1)
+                    item.has_submenu = bool(item.children)
+                items.append(item)
         except Exception:
             pass
         return items

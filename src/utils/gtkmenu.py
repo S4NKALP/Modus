@@ -1,5 +1,5 @@
 import re
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fabric.utils import Gio, GLib, logger
 
@@ -172,3 +172,82 @@ class GtkMenuClient:
                     continue
         except Exception as e:
             logger.error(f"[GtkMenuClient] click failed: {e}")
+
+
+class ActionMenuClient:
+    """Flat menu from org.gtk.Actions when org.gtk.Menus is unavailable."""
+
+    __slots__ = ("service_name", "object_path", "_cached_items", "_action_map")
+
+    def __init__(self, service_name: str, object_path: str):
+        self.service_name = service_name
+        self.object_path = object_path
+        self._cached_items: List[DBusMenuItem] = []
+        self._action_map: Dict[int, str] = {}
+
+    def _call(self, interface, method, params, reply_type=None):
+        try:
+            return _get_bus().call_sync(
+                self.service_name,
+                self.object_path,
+                interface,
+                method,
+                params,
+                reply_type,
+                Gio.DBusCallFlags.NONE,
+                3000,
+                None,
+            )
+        except Exception:
+            return None
+
+    def get_layout(self, parent_id: int = 0) -> List[DBusMenuItem]:
+        if parent_id != 0:
+            return []
+        res = self._call(
+            "org.gtk.Actions",
+            "DescribeAll",
+            None,
+            GLib.VariantType("(a{s(bgav)})"),
+        )
+        if not res:
+            return self._cached_items
+
+        try:
+            data = res.get_child_value(0).unpack()
+            items: List[DBusMenuItem] = []
+            self._action_map = {}
+            for i, (name, (enabled, param_type, state)) in enumerate(data.items()):
+                label = name.replace("-", " ").replace("_", " ").strip().title()
+                item = DBusMenuItem(id=hash((0, i)))
+                item.action_name = name
+                # Hide actions that need parameters — they can't work in a flat menu
+                item.visible = not bool(param_type)
+                item.enabled = enabled if not param_type else False
+                item.label = label
+                self._action_map[item.id] = name
+                items.append(item)
+            self._cached_items = items
+            return items
+        except Exception as e:
+            logger.error(f"[ActionMenuClient] parse error: {e}")
+            return self._cached_items
+
+    def about_to_show(self, item_id: int) -> bool:
+        return False
+
+    def click_item(
+        self, item_id: int, action_name: str = "", action_target=None
+    ) -> None:
+        if not action_name:
+            action_name = self._action_map.get(item_id, "")
+        if not action_name:
+            return
+        try:
+            self._call(
+                "org.gtk.Actions",
+                "Activate",
+                GLib.Variant("(sava{sv})", (action_name, [], {})),
+            )
+        except Exception as e:
+            logger.error(f"[ActionMenuClient] click failed: {e}")
