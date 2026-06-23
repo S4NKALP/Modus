@@ -236,6 +236,10 @@ class ActionMenuClient:
     def about_to_show(self, item_id: int) -> bool:
         return False
 
+    def invalidate(self):
+        self._cached_items = []
+        self._action_map = {}
+
     def click_item(
         self, item_id: int, action_name: str = "", action_target=None
     ) -> None:

@@ -130,12 +130,6 @@ class DBusMenuClient:
         res = self._call("GetLayout", params)
 
         if not res:
-            gtk_menu = self._try_gtk_menu()
-            if gtk_menu:
-                parsed = self._parse_gtk_menu(gtk_menu)
-                self._cache = parsed
-                self._cache_valid = True
-                return parsed
             return []
 
         try:
@@ -233,48 +227,6 @@ class DBusMenuClient:
             pass
 
         return item
-
-    # GTK FALLBACK (GMenuModel-style)
-    def _try_gtk_menu(self):
-        try:
-            res = _get_bus().call_sync(
-                self.service_name,
-                self.object_path,
-                "org.gtk.Menus",
-                "Start",
-                GLib.Variant("(au)", ([0],)),
-                None,
-                Gio.DBusCallFlags.NONE,
-                1000,
-                None,
-            )
-            return res.get_child_value(0) if res else None
-        except Exception:
-            return None
-
-    def _parse_gtk_menu(self, variant, _depth: int = 0):
-        if _depth > 10:
-            return []
-        items = []
-        try:
-            if not variant or not variant.is_container():
-                return []
-            for i in range(variant.n_children()):
-                c = variant.get_child_value(i)
-                item = DBusMenuItem(id=i)
-                try:
-                    if c.n_children() > 0:
-                        item.label = c.get_child_value(0).get_string()
-                except Exception:
-                    pass
-                if c.n_children() > 1:
-                    sub = c.get_child_value(c.n_children() - 1)
-                    item.children = self._parse_gtk_menu(sub, _depth + 1)
-                    item.has_submenu = bool(item.children)
-                items.append(item)
-        except Exception:
-            pass
-        return items
 
     # ACTIONS
     def about_to_show(self, item_id):
