@@ -53,6 +53,8 @@ PACKAGES=(
     make
     pkgconf
     appmenu-gtk-module
+    libdbusmenu-gtk3
+    libdbusmenu-qt5
 )
 
 # Colors and formatting
