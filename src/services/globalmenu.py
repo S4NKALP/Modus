@@ -16,7 +16,7 @@ from fabric.utils import (
 )
 
 from utils.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
-from utils.gtkmenu import GtkMenuClient
+from utils.gtkmenu import ActionMenuClient, GtkMenuClient
 
 _MAX_CACHE_SIZE = 5
 
@@ -81,12 +81,13 @@ class GlobalMenuService(Service):
 
         self._seq_lock = threading.Lock()
         self._extraction_seq = 0
+        self._extracting_in_flight: set[str] = set()
 
         self._lock = threading.Lock()
         self._registry_lock = threading.Lock()
 
         self._setup_registrar()
-        self._setup_environment()
+        threading.Thread(target=self._setup_environment, daemon=True).start()
 
         logger.info(
             "[GlobalMenuService] Initialized native Python DBusMenu parser successfully"
@@ -248,6 +249,16 @@ class GlobalMenuService(Service):
             self.menu_changed(cached_menu)
             return
 
+        # Dedup in-flight extractions — skip if already running for this class+pid
+        inflight_key = f"{wm_class}:{target_pid}"
+        with self._lock:
+            if inflight_key in self._extracting_in_flight:
+                logger.debug(
+                    f"[GlobalMenuService] Extraction already in-flight for '{inflight_key}' — skipping"
+                )
+                return
+            self._extracting_in_flight.add(inflight_key)
+
         # Clear menu immediately for new app while extraction runs
         self._current_menu = None
         self.menu_changed([])
@@ -258,7 +269,7 @@ class GlobalMenuService(Service):
         )
         thread = threading.Thread(
             target=self._extract_menu,
-            args=(wm_class, seq, target_pid),
+            args=(wm_class, seq, target_pid, inflight_key),
             daemon=True,
         )
         thread.start()
@@ -311,9 +322,12 @@ class GlobalMenuService(Service):
                         return DBusMenuClient(service, path)
 
                 except Exception:
-                    # stale entry cleanup
+                    # stale entry cleanup — sender no longer on bus
                     with self._registry_lock:
                         self._registered_menus.pop(sender, None)
+                        logger.debug(
+                            f"[GlobalMenuService] Cleaned stale Registrar entry: {sender}"
+                        )
 
             # =========================
             # 2. FALLBACK: Scan DBus services matching the target PID
@@ -582,6 +596,48 @@ class GlobalMenuService(Service):
                                 f"[GlobalMenuService] GTK menu {gpath} validation failed: {e}"
                             )
 
+                    # Final fallback: flat menu from org.gtk.Actions
+                    action_candidates: list[str] = ["/"]
+                    # Convert well-known bus name to path: org.gnome.TextEditor -> /org/gnome/TextEditor
+                    name_path = (
+                        "/" + svc.replace(".", "/") if not svc.startswith(":") else ""
+                    )
+                    if name_path and GLib.Variant.is_object_path(name_path):
+                        action_candidates.append(name_path)
+                    # Also common GTK application paths
+                    action_candidates.append("/org/gtk/Application")
+                    if _safe_cls:
+                        action_candidates.append(
+                            f"/org/{_safe_cls.lower()}/{_safe_cap}"
+                        )
+                        action_candidates.append(f"/org/{_safe_cls.lower()}")
+                    # DFS for org.gtk.Actions in object tree
+                    action_candidates.extend(self._dfs_find_actions(svc))
+                    for act_base in action_candidates:
+                        try:
+                            ax = bus.call_sync(
+                                svc,
+                                act_base,
+                                "org.freedesktop.DBus.Introspectable",
+                                "Introspect",
+                                None,
+                                GLib.VariantType("(s)"),
+                                Gio.DBusCallFlags.NONE,
+                                200,
+                                None,
+                            )
+                            xml = ax.get_child_value(0).get_string()
+                            if 'interface name="org.gtk.Actions"' in xml:
+                                test_client = ActionMenuClient(svc, act_base)
+                                test_items = test_client.get_layout()
+                                if test_items:
+                                    logger.info(
+                                        f"[GlobalMenuService] Action flat menu fallback: {svc} {act_base} ({len(test_items)} items)"
+                                    )
+                                    return test_client
+                        except Exception:
+                            continue
+
                     logger.info(
                         f"[GlobalMenuService] No menu found for {svc} wm={wm_class}"
                     )
@@ -600,9 +656,14 @@ class GlobalMenuService(Service):
         path: str = "/",
         _depth: int = 0,
         _visited: Optional[set] = None,
+        _node_count: int = 0,
     ) -> list[str]:
         """Bounded DFS returning ALL org.gtk.Menus paths in a service's object tree."""
-        if _depth > 6 or (_visited is not None and path in _visited):
+        if (
+            _depth > 6
+            or _node_count > 100
+            or (_visited is not None and path in _visited)
+        ):
             return []
         if _visited is None:
             _visited = set()
@@ -620,6 +681,7 @@ class GlobalMenuService(Service):
                 500,
                 None,
             )
+            _node_count += 1
             xml = xml_res.get_child_value(0).get_string()
             if 'interface name="org.gtk.Menus"' in xml:
                 results.append(path)
@@ -630,7 +692,59 @@ class GlobalMenuService(Service):
                 if not GLib.Variant.is_object_path(child_path):
                     continue
                 results.extend(
-                    self._dfs_find_gtk_menus(service, child_path, _depth + 1, _visited)
+                    self._dfs_find_gtk_menus(
+                        service, child_path, _depth + 1, _visited, _node_count
+                    )
+                )
+        except Exception:
+            pass
+        return results
+
+    def _dfs_find_actions(
+        self,
+        service: str,
+        path: str = "/",
+        _depth: int = 0,
+        _visited: Optional[set] = None,
+        _node_count: int = 0,
+    ) -> list[str]:
+        """Bounded DFS returning ALL org.gtk.Actions paths in a service's object tree."""
+        if (
+            _depth > 6
+            or _node_count > 100
+            or (_visited is not None and path in _visited)
+        ):
+            return []
+        if _visited is None:
+            _visited = set()
+        _visited.add(path)
+        results: list[str] = []
+        try:
+            xml_res = _get_bus().call_sync(
+                service,
+                path,
+                "org.freedesktop.DBus.Introspectable",
+                "Introspect",
+                None,
+                GLib.VariantType("(s)"),
+                Gio.DBusCallFlags.NONE,
+                500,
+                None,
+            )
+            _node_count += 1
+            xml = xml_res.get_child_value(0).get_string()
+            if 'interface name="org.gtk.Actions"' in xml:
+                results.append(path)
+            for child in re.findall(r'<node name="([^"]+)"', xml):
+                child_path = (
+                    path.rstrip("/") + "/" + child if path != "/" else "/" + child
+                )
+                if not GLib.Variant.is_object_path(child_path):
+                    continue
+                results.extend(
+                    self._dfs_find_actions(
+                        service, child_path, _depth + 1, _visited, _node_count
+                    )
                 )
         except Exception:
             pass
@@ -650,7 +764,8 @@ class GlobalMenuService(Service):
             def _ppid(p: int) -> int:
                 try:
                     with open(f"/proc/{p}/stat") as f:
-                        return int(f.read().split()[3])
+                        parts = f.read().split()
+                        return int(parts[3]) if len(parts) > 4 else 0
                 except Exception:
                     return 0
 
@@ -671,7 +786,9 @@ class GlobalMenuService(Service):
             self._menu_cache.pop(oldest, None)
             logger.debug(f"[GlobalMenuService] Evicted cache for '{oldest}'")
 
-    def _extract_menu(self, wm_class: str, seq: int, target_pid: int = 0):
+    def _extract_menu(
+        self, wm_class: str, seq: int, target_pid: int = 0, inflight_key: str = ""
+    ):
         """Extract menu for a given WM class in a background thread."""
         try:
             # Bail early if a newer extraction has already superseded this one
@@ -716,6 +833,10 @@ class GlobalMenuService(Service):
             logger.error(
                 f"[GlobalMenuService] Error extracting menu for '{wm_class}': {e}"
             )
+        finally:
+            if inflight_key:
+                with self._lock:
+                    self._extracting_in_flight.discard(inflight_key)
 
     def _emit_menu_changed(self, items: List[DBusMenuItem]):
         """Emit menu_changed signal on the main thread."""
