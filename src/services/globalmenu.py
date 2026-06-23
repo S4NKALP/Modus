@@ -656,18 +656,24 @@ class GlobalMenuService(Service):
         path: str = "/",
         _depth: int = 0,
         _visited: Optional[set] = None,
-        _node_count: int = 0,
+        _node_count: Optional[list[int]] = None,
     ) -> list[str]:
-        """Bounded DFS returning ALL org.gtk.Menus paths in a service's object tree."""
+        """Bounded DFS returning ALL org.gtk.Menus paths in a service's object tree.
+
+        Uses a mutable list[int] as a shared counter across all branches.
+        """
+        if _node_count is None:
+            _node_count = [0]
         if (
             _depth > 6
-            or _node_count > 100
+            or _node_count[0] > 100
             or (_visited is not None and path in _visited)
         ):
             return []
         if _visited is None:
             _visited = set()
         _visited.add(path)
+        _node_count[0] += 1
         results: list[str] = []
         try:
             xml_res = _get_bus().call_sync(
@@ -681,7 +687,6 @@ class GlobalMenuService(Service):
                 500,
                 None,
             )
-            _node_count += 1
             xml = xml_res.get_child_value(0).get_string()
             if 'interface name="org.gtk.Menus"' in xml:
                 results.append(path)
@@ -706,18 +711,24 @@ class GlobalMenuService(Service):
         path: str = "/",
         _depth: int = 0,
         _visited: Optional[set] = None,
-        _node_count: int = 0,
+        _node_count: Optional[list[int]] = None,
     ) -> list[str]:
-        """Bounded DFS returning ALL org.gtk.Actions paths in a service's object tree."""
+        """Bounded DFS returning ALL org.gtk.Actions paths in a service's object tree.
+
+        Uses a mutable list[int] as a shared counter across all branches.
+        """
+        if _node_count is None:
+            _node_count = [0]
         if (
             _depth > 6
-            or _node_count > 100
+            or _node_count[0] > 100
             or (_visited is not None and path in _visited)
         ):
             return []
         if _visited is None:
             _visited = set()
         _visited.add(path)
+        _node_count[0] += 1
         results: list[str] = []
         try:
             xml_res = _get_bus().call_sync(
@@ -731,7 +742,6 @@ class GlobalMenuService(Service):
                 500,
                 None,
             )
-            _node_count += 1
             xml = xml_res.get_child_value(0).get_string()
             if 'interface name="org.gtk.Actions"' in xml:
                 results.append(path)
