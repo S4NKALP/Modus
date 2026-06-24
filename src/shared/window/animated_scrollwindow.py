@@ -6,7 +6,7 @@ from shared.widgets.animator import Animator
 class AnimatedScrollable(ScrolledWindow):
     def __init__(
         self,
-        bezier_curve: tuple[float, float, float, float] = (0.2, 1, 0.8, 1.0),
+        bezier_curve: tuple[float, float, float, float] = (0.25, 0.1, 0.25, 1.0),
         duration: float = 0.3,
         **kwargs,
     ):
