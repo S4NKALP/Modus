@@ -3,6 +3,7 @@
 import json
 import re
 import threading
+import time
 from typing import List, Optional
 
 from fabric.core.service import Property, Service, Signal
@@ -20,6 +21,10 @@ from utils.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
 from utils.gtkmenu import ActionMenuClient, GtkMenuClient
 
 _MAX_CACHE_SIZE = 5
+_EMPTY_CACHE_TTL = 30.0  # re-check apps with empty menus after 30s
+_DBUS_TIMEOUT_INTROSPECT = 500  # ms for introspection calls
+_DBUS_TIMEOUT_PID = 200  # ms for PID lookups
+_DBUS_TIMEOUT_FAST = 100  # ms for expected-fast calls
 
 REGISTRAR_XML = """
 <node>
@@ -42,6 +47,11 @@ REGISTRAR_XML = """
   </interface>
 </node>
 """
+
+
+_EMPTY_SENTINEL: List[
+    DBusMenuItem
+] = []  # distinct sentinel for "discovery returned empty"
 
 
 class GlobalMenuService(Service):
@@ -76,6 +86,7 @@ class GlobalMenuService(Service):
         self._client_cache: dict[str, Optional[DBusMenuClient]] = {}
         self._menu_cache: dict[str, Optional[List[DBusMenuItem]]] = {}
         self._cache_order: list[str] = []
+        self._empty_cache_ts: dict[str, float] = {}  # wm_class -> monotonic timestamp
 
         # Registrar mapping: sender -> (service_name, object_path)
         self._registered_menus: dict[str, tuple[str, str]] = {}
@@ -86,6 +97,7 @@ class GlobalMenuService(Service):
 
         self._lock = threading.Lock()
         self._registry_lock = threading.Lock()
+        self._state_lock = threading.Lock()
 
         self._setup_registrar()
         threading.Thread(target=self._setup_environment, daemon=True).start()
@@ -147,8 +159,8 @@ class GlobalMenuService(Service):
                 "[GlobalMenuService] Injected GTK environment and Flatpak overrides automatically"
             )
         except Exception as e:
-            logger.debug(
-                f"[GlobalMenuService] Failed to set up global menu environment overrides: {e}"
+            logger.warning(
+                f"[GlobalMenuService] Global menu environment setup failed: {e}"
             )
 
     def _handle_registrar_method(
@@ -212,26 +224,33 @@ class GlobalMenuService(Service):
         except Exception:
             pass
 
-        same_class = wm_class == self._current_wm_class
-        same_pid = target_pid != 0 and target_pid == self._current_pid
+        # Snapshot current state under lock for race-free comparison
+        with self._state_lock:
+            same_class = wm_class == self._current_wm_class
+            same_pid = target_pid != 0 and target_pid == self._current_pid
 
         # Re-focus of EXACT same window instance → use cached menu, not stale _current_menu
         if same_class and same_pid:
             with self._lock:
                 cached = self._menu_cache.get(wm_class)
             if cached:
-                self._current_menu = cached
+                with self._state_lock:
+                    self._current_menu = cached
                 self.menu_changed(cached)
-            elif self._current_menu is not None:
-                self.menu_changed(self._current_menu)
+            else:
+                with self._state_lock:
+                    current_menu = self._current_menu
+                if current_menu is not None:
+                    self.menu_changed(current_menu)
             return
 
         logger.info(
             f"[GlobalMenuService] Active window changed: {app_name} ({wm_class}) pid={target_pid}"
         )
-        self._current_app = app_name
-        self._current_wm_class = wm_class
-        self._current_pid = target_pid
+        with self._state_lock:
+            self._current_app = app_name
+            self._current_wm_class = wm_class
+            self._current_pid = target_pid
 
         with self._seq_lock:
             self._extraction_seq += 1
@@ -239,23 +258,46 @@ class GlobalMenuService(Service):
 
         self.active_app_changed(app_name, wm_class)
 
-        # Check cache — but ONLY serve cached result if it's non-empty.
-        # An empty cache entry means discovery failed last time; try again.
+        # Check cache — snapshot under lock, serve non-empty + non-expired results
         with self._lock:
+            cached_menu = self._menu_cache.get(wm_class)
             has_good_cache = (
                 wm_class in self._client_cache
-                and wm_class in self._menu_cache
-                and self._menu_cache.get(wm_class)  # non-empty
+                and cached_menu is not None
+                and cached_menu  # non-empty
+                and cached_menu is not _EMPTY_SENTINEL
             )
-            cached_menu = self._menu_cache.get(wm_class) if has_good_cache else None
+            if has_good_cache:
+                # non-empty, serve it
+                pass
+            elif cached_menu is _EMPTY_SENTINEL:
+                # last attempt returned empty — check TTL
+                empty_ts = self._empty_cache_ts.get(wm_class, 0)
+                if time.monotonic() - empty_ts < _EMPTY_CACHE_TTL:
+                    has_good_cache = True  # still within TTL, skip re-scan
+                    cached_menu = []
 
-        if has_good_cache and cached_menu:
-            self._current_menu = cached_menu
-            logger.info(f"[GlobalMenuService] Cache hit for '{wm_class}'")
-            self.menu_changed(cached_menu)
+        if has_good_cache:
+            with self._state_lock:
+                self._current_menu = cached_menu
+                self._current_app = app_name
+                self._current_wm_class = wm_class
+                self._current_pid = target_pid
+            logger.info(
+                f"[GlobalMenuService] Cache {'hit' if cached_menu else 'skip (empty TTL)'} for '{wm_class}'"
+            )
+            self.menu_changed(cached_menu or [])
             return
 
-        # Dedup in-flight extractions — skip if already running for this class+pid
+        # Clear menu IMMEDIATELY for the new app (before in_flight check below).
+        # This ensures the old app's menu doesn't persist if an extraction is
+        # already running for this wm_class (e.g. user focused Kitty, then Zen,
+        # then Kitty again before the first extraction finished).
+        with self._state_lock:
+            self._current_menu = None
+        self.menu_changed([])
+
+        # Dedup in-flight extractions — atomic check+add under lock
         inflight_key = f"{wm_class}:{target_pid}"
         with self._lock:
             if inflight_key in self._extracting_in_flight:
@@ -264,10 +306,6 @@ class GlobalMenuService(Service):
                 )
                 return
             self._extracting_in_flight.add(inflight_key)
-
-        # Clear menu immediately for new app while extraction runs
-        self._current_menu = None
-        self.menu_changed([])
 
         # Extract menu in background thread, passing captured pid
         logger.info(
@@ -315,7 +353,7 @@ class GlobalMenuService(Service):
                         GLib.Variant("(s)", (service,)),
                         GLib.VariantType("(u)"),
                         Gio.DBusCallFlags.NONE,
-                        100,
+                        _DBUS_TIMEOUT_FAST,
                         None,
                     )
 
@@ -327,12 +365,17 @@ class GlobalMenuService(Service):
                         )
                         return DBusMenuClient(service, path)
 
-                except Exception:
-                    # stale entry cleanup — sender no longer on bus
-                    with self._registry_lock:
-                        self._registered_menus.pop(sender, None)
+                except Exception as e:
+                    # Only remove Registrar entry on NameHasNoOwner, not transient errors
+                    if "NameHasNoOwner" in str(e):
+                        with self._registry_lock:
+                            self._registered_menus.pop(sender, None)
+                            logger.debug(
+                                f"[GlobalMenuService] Cleaned stale Registrar entry: {sender}"
+                            )
+                    else:
                         logger.debug(
-                            f"[GlobalMenuService] Cleaned stale Registrar entry: {sender}"
+                            f"[GlobalMenuService] Registrar PID lookup error for {sender}: {e}"
                         )
 
             # =========================
@@ -397,7 +440,7 @@ class GlobalMenuService(Service):
                         GLib.Variant("(s)", (svc,)),
                         GLib.VariantType("(u)"),
                         Gio.DBusCallFlags.NONE,
-                        200,
+                        _DBUS_TIMEOUT_PID,
                         None,
                     )
 
@@ -491,7 +534,7 @@ class GlobalMenuService(Service):
                                 None,
                                 GLib.VariantType("(s)"),
                                 Gio.DBusCallFlags.NONE,
-                                300,
+                                _DBUS_TIMEOUT_INTROSPECT,
                                 None,
                             )
                             if not xml_res:
@@ -516,7 +559,7 @@ class GlobalMenuService(Service):
                                         None,
                                         GLib.VariantType("(s)"),
                                         Gio.DBusCallFlags.NONE,
-                                        200,
+                                        _DBUS_TIMEOUT_FAST,
                                         None,
                                     )
                                     if cxml_res:
@@ -548,7 +591,7 @@ class GlobalMenuService(Service):
                                 None,
                                 GLib.VariantType("(s)"),
                                 Gio.DBusCallFlags.NONE,
-                                300,
+                                _DBUS_TIMEOUT_INTROSPECT,
                                 None,
                             )
 
@@ -617,6 +660,32 @@ class GlobalMenuService(Service):
                             f"/org/{_safe_cls.lower()}/{_safe_cap}"
                         )
                         action_candidates.append(f"/org/{_safe_cls.lower()}")
+                        # Add namespace-prefixed paths (e.g. /org/xfce/Thunar)
+                        cls_lower = _safe_cls.lower()
+                        for ns, app_part in [
+                            ("xfce", _safe_cap),
+                            ("xfce", _safe_cls),
+                            ("mate", _safe_cap),
+                            ("mate", _safe_cls),
+                            ("kde", _safe_cap),
+                            ("kde", _safe_cls),
+                            ("gnome", _safe_cap),
+                            ("gnome", _safe_cls),
+                            ("enlightenment", _safe_cap),
+                            ("enlightenment", _safe_cls),
+                            ("pantheon", _safe_cap),
+                            ("pantheon", _safe_cls),
+                            ("elementary", _safe_cap),
+                            ("elementary", _safe_cls),
+                            ("budgie", _safe_cap),
+                            ("budgie", _safe_cls),
+                            ("deepin", _safe_cap),
+                            ("deepin", _safe_cls),
+                            (cls_lower, _safe_cap),
+                        ]:
+                            p = f"/org/{ns}/{app_part}"
+                            if GLib.Variant.is_object_path(p):
+                                action_candidates.append(p)
                     # DFS for org.gtk.Actions in object tree
                     action_candidates.extend(self._dfs_find_actions(svc))
                     for act_base in action_candidates:
@@ -629,7 +698,7 @@ class GlobalMenuService(Service):
                                 None,
                                 GLib.VariantType("(s)"),
                                 Gio.DBusCallFlags.NONE,
-                                200,
+                                _DBUS_TIMEOUT_FAST,
                                 None,
                             )
                             xml = ax.get_child_value(0).get_string()
@@ -690,7 +759,7 @@ class GlobalMenuService(Service):
                 None,
                 GLib.VariantType("(s)"),
                 Gio.DBusCallFlags.NONE,
-                500,
+                _DBUS_TIMEOUT_INTROSPECT,
                 None,
             )
             xml = xml_res.get_child_value(0).get_string()
@@ -745,7 +814,7 @@ class GlobalMenuService(Service):
                 None,
                 GLib.VariantType("(s)"),
                 Gio.DBusCallFlags.NONE,
-                500,
+                _DBUS_TIMEOUT_INTROSPECT,
                 None,
             )
             xml = xml_res.get_child_value(0).get_string()
@@ -770,10 +839,23 @@ class GlobalMenuService(Service):
         if pid1 == pid2:
             return True
         try:
+            # Compare resolved executable paths
             exe1 = os.path.realpath(f"/proc/{pid1}/exe")
             exe2 = os.path.realpath(f"/proc/{pid2}/exe")
             if exe1 and exe2 and exe1 == exe2:
                 return True
+
+            # Compare process names (comm) — handles cases where exe differs
+            # but the app is the same (e.g., launcher wrappers)
+            try:
+                with open(f"/proc/{pid1}/comm") as f:
+                    comm1 = f.read().strip()
+                with open(f"/proc/{pid2}/comm") as f:
+                    comm2 = f.read().strip()
+                if comm1 and comm2 and comm1 == comm2:
+                    return True
+            except OSError:
+                pass
 
             # Also allow: one pid is the direct parent of the other
             # (Qt apps register DBus under a child thread pid)
@@ -787,7 +869,7 @@ class GlobalMenuService(Service):
 
             if _ppid(pid1) == pid2 or _ppid(pid2) == pid1:
                 return True
-        except OSError:
+        except (OSError, PermissionError, FileNotFoundError):
             pass
         return False
 
@@ -800,6 +882,7 @@ class GlobalMenuService(Service):
             oldest = self._cache_order.pop(0)
             self._client_cache.pop(oldest, None)
             self._menu_cache.pop(oldest, None)
+            self._empty_cache_ts.pop(oldest, None)
             logger.debug(f"[GlobalMenuService] Evicted cache for '{oldest}'")
 
     def _extract_menu(
@@ -819,21 +902,22 @@ class GlobalMenuService(Service):
                 items = client.get_layout()
 
             with self._lock:
-                # Only cache successful (non-empty) results.
-                # Empty results are NOT cached so the next focus triggers a fresh discovery.
                 if items:
                     self._client_cache[wm_class] = client
                     self._menu_cache[wm_class] = items
+                    self._empty_cache_ts.pop(wm_class, None)
                     self._evict_cache_if_needed(wm_class)
                     logger.info(
                         f"[GlobalMenuService] Found menu for '{wm_class}': {len(items)} items"
                     )
                 else:
-                    # Clear any stale cached empty entry so next focus retries
+                    # Cache empty result with TTL to avoid repeated DBus scanning
                     self._client_cache.pop(wm_class, None)
-                    self._menu_cache.pop(wm_class, None)
+                    self._menu_cache[wm_class] = _EMPTY_SENTINEL
+                    self._empty_cache_ts[wm_class] = time.monotonic()
+                    self._evict_cache_if_needed(wm_class)
                     logger.info(
-                        f"[GlobalMenuService] No DBus menu found for '{wm_class}'"
+                        f"[GlobalMenuService] No DBus menu found for '{wm_class}' (cached empty)"
                     )
 
             with self._seq_lock:
@@ -861,14 +945,17 @@ class GlobalMenuService(Service):
             with self._seq_lock:
                 if seq != self._extraction_seq:
                     return False
-        self._current_menu = items
+        with self._state_lock:
+            self._current_menu = items
         self.menu_changed(items)
         return False  # Remove from idle queue
 
     def click_item(self, item_id: int) -> bool:
         """Click a menu item by ID."""
+        with self._state_lock:
+            wm_class = self._current_wm_class
         with self._lock:
-            client = self._client_cache.get(self._current_wm_class)
+            client = self._client_cache.get(wm_class)
         if client:
             client.click_item(item_id)
             return True
@@ -876,20 +963,24 @@ class GlobalMenuService(Service):
 
     def about_to_show(self, item_id: int) -> bool:
         """Triggers the AboutToShow event on a DBusMenu item."""
+        with self._state_lock:
+            wm_class = self._current_wm_class
         with self._lock:
-            client = self._client_cache.get(self._current_wm_class)
+            client = self._client_cache.get(wm_class)
         if client:
             return client.about_to_show(item_id)
         return False
 
     def refresh_menu_sync(self) -> List[DBusMenuItem]:
         """Synchronously refetches the menu for the current app."""
+        with self._state_lock:
+            wm_class = self._current_wm_class
         with self._lock:
-            client = self._client_cache.get(self._current_wm_class)
+            client = self._client_cache.get(wm_class)
         if client:
             items = client.get_layout()
             with self._lock:
-                self._menu_cache[self._current_wm_class] = items
+                self._menu_cache[wm_class] = items
             return items
         return []
 

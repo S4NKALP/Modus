@@ -3,16 +3,6 @@ import os
 from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
-from shared.data import APP_NAME, load_config
-from utils.functions import set_process_name
-from window.desktop.widget import Deskwidgets
-from window.dock import Dock
-
-from window.notification.notification import ModusNoti
-from window.osd.main import OSDWindow
-from window.panel.main import Panel
-from window.switcher import ApplicationSwitcher
-
 for log in [
     "fabric",
     "services",
@@ -20,6 +10,15 @@ for log in [
     "utils",
 ]:
     logger.disable(log)
+
+from shared.data import APP_NAME, load_config
+from utils.functions import set_process_name
+from window.desktop.widget import Deskwidgets
+from window.dock import Dock
+from window.notification.notification import ModusNoti
+from window.osd.main import OSDWindow
+from window.panel.main import Panel
+from window.switcher import ApplicationSwitcher
 
 
 class LazyLauncher:

@@ -67,7 +67,7 @@ class KeyboardLayout(Service):
     def _sync_with_hyprland(self):
         try:
             result = run_command([HYPRCTL_BIN, "devices", "-j"])
-            devices = json.loads(result)
+            devices = json.loads(result.stdout)
             keyboards = devices.get("keyboards", [])
             for k in keyboards:
                 if k.get("main"):

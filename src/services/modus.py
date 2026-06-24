@@ -316,13 +316,10 @@ class ModusService(Service):
                 self.current_active_app_name = "Finder"
                 return
 
-            name = wmclass if wmclass else title
-            if name:
-                name = str(name).title()
-                if "." in name:
-                    name = name.split(".")[-1]
-            else:
-                name = "Finder"
+            # Delegate name resolution to app_name_resolver (lazy import to avoid circular)
+            from utils.app_name_resolver import app_name_resolver
+
+            name = app_name_resolver.format_app_name(title, wmclass)
 
             # Set wm_class FIRST so that signal handlers reading it get the new value
             self.current_active_wm_class = wmclass

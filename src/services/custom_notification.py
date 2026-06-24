@@ -21,6 +21,7 @@ class CachedNotification(Service):
     def create_from_dict(cls, data, **kwargs):
         """Create CachedNotification from enhanced JSON data"""
         data["timeout"] = 0
+        data.setdefault("time", float(time.time()))
         self = cls.__new__(cls)
         Service.__init__(self, **kwargs)
         self._notification = Notification.deserialize(data)
@@ -150,6 +151,7 @@ class CachedNotification(Service):
             "image-file": self.image_file,
             # Only store image-pixmap if no cache key is available (fallback)
             "image-pixmap": None,  # Don't store image data, only cache key
+            "time": float(self._notification.time),
             "timestamp": int(time.time()),
             "group": self.app_name,  # Group notifications by app name
             # Enhanced cache metadata - store only cache keys

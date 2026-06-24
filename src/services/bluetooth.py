@@ -225,8 +225,7 @@ class BluetoothAdapter(Service):
 
     @Property(list, "readable")
     def devices(self) -> list:
-
-        return [d for d in self._devices.values() if d.paired or d.trusted]
+        return list(self._devices.values())
 
     @Property(list, "readable")
     def connected_devices(self) -> list:
@@ -378,15 +377,13 @@ class BluetoothAdapter(Service):
         if not device:
             return
 
-        was_visible = device.paired or device.trusted
         logger.info(f"[Bluetooth:{self.name}] Removing device: {addr}")
 
-        if was_visible:
-            self.emit("device-removed", addr)
-            if device.connected:
-                self.notify("connected-devices")
-            self.notify("devices")
-            self.emit("changed")
+        self.emit("device-removed", addr)
+        if device.connected:
+            self.notify("connected-devices")
+        self.notify("devices")
+        self.emit("changed")
 
         device.close()
 
