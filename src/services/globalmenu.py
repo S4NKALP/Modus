@@ -15,6 +15,7 @@ from fabric.utils import (
     os,
 )
 
+
 from utils.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
 from utils.gtkmenu import ActionMenuClient, GtkMenuClient
 
@@ -214,9 +215,14 @@ class GlobalMenuService(Service):
         same_class = wm_class == self._current_wm_class
         same_pid = target_pid != 0 and target_pid == self._current_pid
 
-        # Re-focus of EXACT same window instance → just re-emit what we have
+        # Re-focus of EXACT same window instance → use cached menu, not stale _current_menu
         if same_class and same_pid:
-            if self._current_menu is not None:
+            with self._lock:
+                cached = self._menu_cache.get(wm_class)
+            if cached:
+                self._current_menu = cached
+                self.menu_changed(cached)
+            elif self._current_menu is not None:
                 self.menu_changed(self._current_menu)
             return
 
@@ -836,8 +842,9 @@ class GlobalMenuService(Service):
             if seq != current_seq:
                 return
 
-            # Update UI on main thread via GLib idle
-            idle_add(self._emit_menu_changed, items)
+            # Capture seq for race-safe emission in idle callback
+            emit_seq = current_seq
+            idle_add(self._emit_menu_changed, items, emit_seq)
 
         except Exception as e:
             logger.error(
@@ -848,8 +855,12 @@ class GlobalMenuService(Service):
                 with self._lock:
                     self._extracting_in_flight.discard(inflight_key)
 
-    def _emit_menu_changed(self, items: List[DBusMenuItem]):
-        """Emit menu_changed signal on the main thread."""
+    def _emit_menu_changed(self, items: List[DBusMenuItem], seq: int = 0):
+        """Emit menu_changed signal on the main thread. Checks seq to avoid stale emissions."""
+        if seq:
+            with self._seq_lock:
+                if seq != self._extraction_seq:
+                    return False
         self._current_menu = items
         self.menu_changed(items)
         return False  # Remove from idle queue
