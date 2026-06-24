@@ -13,10 +13,10 @@ class AppName:
             if f.startswith(wmclass + ".desktop"):
                 desktop_file = f
 
-        desktop_app_name = wmclass
-
         if desktop_file == "":
-            return wmclass
+            return None
+
+        desktop_app_name = wmclass
         with open(os.path.join(self.path, desktop_file), "r") as f:
             lines = f.readlines()
             for line in lines:
@@ -61,11 +61,11 @@ class AppName:
 
             # Try to get the proper app name from desktop file only if wmclass is not empty
             if wmclass:
-                name = self.get_app_name(wmclass=wmclass)
-
-            # Hardcode fix for Wayland Python scripts mapping to 'start.py'
-            if str(name).lower() == "start.py" or str(name).lower() == "python3":
-                name = "Modus"
+                resolved = self.get_app_name(wmclass=wmclass)
+                if resolved is not None:
+                    name = resolved
+                elif title:
+                    name = title
 
             # Smart title formatting (capitalize first letter)
             name = str(name).title()
