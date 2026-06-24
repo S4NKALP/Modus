@@ -382,7 +382,6 @@ class BluetoothConnections(Box):
             on_clicked=self.toggle_other_devices,
         )
         self.other_devices = Box(spacing=4, orientation="vertical")
-        self.other_devices.set_size_request(-1, 150)
 
         self.other_devices_scrolled = AnimatedScrollable(
             min_content_size=(303, 0),
@@ -441,6 +440,7 @@ class BluetoothConnections(Box):
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
         self.stop_device_monitoring()
+        self._cancel_pending_refresh()
         if self.other_devices.get_visible():
             self.other_devices.set_visible(False)
             self.other_devices_scrolled.snap_to_size(0)
@@ -456,25 +456,51 @@ class BluetoothConnections(Box):
     def toggle_other_devices(self, *_):
         """Toggle the visibility of other devices section"""
         current_state = self.other_devices.get_visible()
-        self.other_devices.set_visible(not current_state)
-        self.update_scan_label()
+        self._cancel_pending_refresh()
+        if current_state:
+            self.other_devices.set_visible(False)
+            self.other_devices_scrolled.snap_to_size(0)
+            self.update_scan_label()
+            if (
+                self.client
+                and self.client.scanning
+                and hasattr(self.client, "stop_scan")
+            ):
+                self.client.stop_scan()
+        else:
+            self.other_devices.set_visible(True)
+            self.update_scan_label()
+            if (
+                self.client
+                and not self.client.scanning
+                and hasattr(self.client, "scan")
+            ):
+                self.client.scan()
+            # Defer refresh until after the height animation completes
+            GLib.idle_add(self._refresh_after_animation)
 
-        if self.client:
-            if self.other_devices.get_visible():
-                if not self.client.scanning and hasattr(self.client, "scan"):
-                    GLib.timeout_add(100, self.client.scan)
-                if hasattr(self, "_refresh_timeout_id") and self._refresh_timeout_id:
-                    GLib.source_remove(self._refresh_timeout_id)
+    def _cancel_pending_refresh(self):
+        if hasattr(self, "_anim_finished_handler") and self._anim_finished_handler:
+            try:
+                self.other_devices_scrolled.height_animator.disconnect(
+                    self._anim_finished_handler
+                )
+            except Exception:
+                pass
+            self._anim_finished_handler = None
 
-                def _do_refresh():
-                    self.force_device_refresh()
-                    self._refresh_timeout_id = None
-                    return False
-
-                self._refresh_timeout_id = GLib.timeout_add(150, _do_refresh)
-            else:
-                if self.client.scanning and hasattr(self.client, "stop_scan"):
-                    self.client.stop_scan()
+    def _refresh_after_animation(self):
+        if self._destroyed:
+            return False
+        anim = self.other_devices_scrolled.height_animator
+        if anim.playing:
+            self._anim_finished_handler = anim.connect(
+                "finished",
+                lambda *_: self.force_device_refresh() if not self._destroyed else None,
+            )
+        else:
+            self.force_device_refresh()
+        return False
 
     def open_bluetooth_settings(self, *_):
         """Open Blueman bluetooth manager"""
@@ -650,6 +676,7 @@ class BluetoothConnections(Box):
         """Cleanup when widget is destroyed"""
         self._destroyed = True
         self.stop_device_monitoring()
+        self._cancel_pending_refresh()
         for sig_id in self._client_signal_ids:
             try:
                 self.client.disconnect(sig_id)
@@ -658,14 +685,12 @@ class BluetoothConnections(Box):
                     f"[Bluetooth] Failed to disconnect client signal {sig_id}: {e}"
                 )
         self._client_signal_ids.clear()
-        try:
-            self.other_devices_revealer.child_revealed = False
-        except Exception as e:
-            logger.error(f"[Bluetooth] Failed to hide other devices revealer: {e}")
 
     def close_bluetooth(self):
         """Called when Bluetooth panel is being closed"""
-        self.other_devices_revealer.child_revealed = False
+        if self.other_devices.get_visible():
+            self.other_devices.set_visible(False)
+            self.other_devices_scrolled.snap_to_size(0)
 
     def setup_pull_to_refresh(self):
         """Setup pull-to-refresh gesture for the scrolled window"""

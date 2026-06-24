@@ -172,6 +172,9 @@ class Launcher(Window):
 
         self.show_all()
 
+        if not self.results:
+            self.results_scroll.hide()
+
         if trigger_keyword:
             # Set flag to track that launcher was opened with a trigger keyword
             self.opened_with_trigger = True
@@ -764,7 +767,10 @@ class Launcher(Window):
 
         self.results_box.show_all()
 
-        self.results_scroll.show()
+        if self.results:
+            self.results_scroll.show()
+        else:
+            self.results_scroll.hide()
 
     def _update_input_action_text(self):
         """Update the input field with action text (Spotlight-style)."""
@@ -810,7 +816,7 @@ class Launcher(Window):
                 child.destroy()
             else:
                 self.results_box.remove(child)
-        # Keep the results scroll visible even when empty
+        self.results_scroll.hide()
 
     def _handle_escape_key(self) -> bool:
         """Handle escape key press."""

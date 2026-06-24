@@ -342,7 +342,6 @@ class WifiConnections(Box):
             on_clicked=self.toggle_other_networks,
         )
         self.other_networks = Box(spacing=4, orientation="vertical")
-        self.other_networks.set_size_request(-1, 150)
 
         # Create scrolled window for other networks
         self.other_networks_scrolled = AnimatedScrollable(
@@ -388,6 +387,7 @@ class WifiConnections(Box):
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
         self.stop_network_monitoring()
+        self._cancel_pending_refresh()
         if self.other_networks.get_visible():
             self.other_networks.set_visible(False)
             self.other_networks_scrolled.snap_to_size(0)
@@ -395,20 +395,41 @@ class WifiConnections(Box):
     def toggle_other_networks(self, *_):
         """Toggle the visibility of other networks section"""
         current_state = self.other_networks.get_visible()
-        self.other_networks.set_visible(not current_state)
-
-        if self.other_networks.get_visible():
+        self._cancel_pending_refresh()
+        if current_state:
+            self.other_networks.set_visible(False)
+            self.other_networks_scrolled.snap_to_size(0)
+        else:
+            self.other_networks.set_visible(True)
             if self.wifi_service:
                 self.wifi_service.scan()
-                if hasattr(self, "_refresh_timeout_id") and self._refresh_timeout_id:
-                    GLib.source_remove(self._refresh_timeout_id)
+            # Defer refresh until after the height animation completes
+            GLib.idle_add(self._refresh_after_animation)
 
-                def _do_refresh():
-                    self.force_network_refresh()
-                    self._refresh_timeout_id = None
-                    return False
+    def _cancel_pending_refresh(self):
+        if hasattr(self, "_anim_finished_handler") and self._anim_finished_handler:
+            try:
+                self.other_networks_scrolled.height_animator.disconnect(
+                    self._anim_finished_handler
+                )
+            except Exception:
+                pass
+            self._anim_finished_handler = None
 
-                self._refresh_timeout_id = GLib.timeout_add(150, _do_refresh)
+    def _refresh_after_animation(self):
+        if self._destroyed:
+            return False
+        anim = self.other_networks_scrolled.height_animator
+        if anim.playing:
+            self._anim_finished_handler = anim.connect(
+                "finished",
+                lambda *_: (
+                    self.force_network_refresh() if not self._destroyed else None
+                ),
+            )
+        else:
+            self.force_network_refresh()
+        return False
 
     def on_network_ready(self, *_):
         """Called when network service is ready"""
@@ -720,6 +741,7 @@ class WifiConnections(Box):
         """Cleanup when widget is destroyed"""
         self._destroyed = True
         self.stop_network_monitoring()
+        self._cancel_pending_refresh()
         for obj, sig_id in self._signal_ids:
             try:
                 obj.disconnect(sig_id)
@@ -728,11 +750,9 @@ class WifiConnections(Box):
         self._signal_ids.clear()
         self.wifi_service = None
         self.network_service = None
-        try:
-            self.other_networks_revealer.child_revealed = False
-        except Exception as e:
-            logger.error(f"[WiFi] Failed to hide other networks revealer: {e}")
 
     def close_wifi(self):
         """Called when WiFi panel is being closed"""
-        self.other_networks_revealer.child_revealed = False
+        if self.other_networks.get_visible():
+            self.other_networks.set_visible(False)
+            self.other_networks_scrolled.snap_to_size(0)
