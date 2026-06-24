@@ -33,5 +33,8 @@ packages = ["src/shared", "src/utils", "src/window", "src/services", "src/main.p
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
 
+[tool.ruff.lint.per-file-ignores]
+"src/main.py" = ["E402"]
+
 [tool.uv.sources]
 fabric = { git = "https://github.com/Fabric-Development/fabric.git" }
