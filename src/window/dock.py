@@ -791,8 +791,8 @@ class AppBar(Box):
         if event.button == 1:  # Left click - focus window
             if instance_address:
                 try:
-                    self._hyprland_connection.send_command(
-                        f"dispatch focuswindow address:{instance_address}"
+                    GLib.spawn_command_line_async(
+                        f"hyprctl dispatch 'hl.dsp.focus({{ window = \"address:{instance_address}\" }})'"
                     )
                 except Exception as e:
                     logger.error(f"[AppBar] Error focusing window: {e}")
