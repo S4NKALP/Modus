@@ -101,7 +101,7 @@ class Battery(Service):
         self._bus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
         self._proxy = Gio.DBusProxy.new_sync(
             self._bus,
-            Gio.DBusProxyFlags.NONE,
+            Gio.DBusProxyFlags.USE_PROPERTY_CHANGED,
             None,
             BATTERY_BUS_NAME,
             BATTERY_BUS_PATH,
@@ -124,7 +124,7 @@ class Battery(Service):
         try:
             self._power_profile_proxy = Gio.DBusProxy.new_sync(
                 self._bus,
-                Gio.DBusProxyFlags.NONE,
+                Gio.DBusProxyFlags.USE_PROPERTY_CHANGED,
                 None,
                 POWER_PROFILE_BUS_NAME,
                 POWER_PROFILE_BUS_PATH,
