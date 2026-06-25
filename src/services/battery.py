@@ -95,13 +95,14 @@ class Battery(Service):
         self._bus: Gio.DBusConnection | None = None
         self._proxy = None
         self._power_profile_proxy = None
+        self._prop_cache: dict[str, any] = {}
         self.do_register()
 
     def do_register(self) -> None:
         self._bus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
         self._proxy = Gio.DBusProxy.new_sync(
             self._bus,
-            Gio.DBusProxyFlags.USE_PROPERTY_CHANGED,
+            Gio.DBusProxyFlags.NONE,
             None,
             BATTERY_BUS_NAME,
             BATTERY_BUS_PATH,
@@ -124,7 +125,7 @@ class Battery(Service):
         try:
             self._power_profile_proxy = Gio.DBusProxy.new_sync(
                 self._bus,
-                Gio.DBusProxyFlags.USE_PROPERTY_CHANGED,
+                Gio.DBusProxyFlags.NONE,
                 None,
                 POWER_PROFILE_BUS_NAME,
                 POWER_PROFILE_BUS_PATH,
@@ -144,7 +145,21 @@ class Battery(Service):
         except Exception as e:
             logger.warning(f"[Battery] Power Profiles daemon not available: {e}")
 
-    def do_handle_property_change(self, *_):
+    def do_handle_property_change(
+        self,
+        _connection: Gio.DBusConnection,
+        _sender_name: str,
+        _object_path: str,
+        _interface_name: str,
+        _signal_name: str,
+        parameters: GLib.Variant,
+    ):
+        try:
+            _iface, changed_props, _invalidated = parameters.unpack()
+            for prop_name, variant in changed_props.items():
+                self._prop_cache[prop_name] = variant.unpack()
+        except Exception as e:
+            logger.warning(f"[Battery] Failed to parse PropertiesChanged: {e}")
         self.emit("changed")
 
     def do_handle_power_profile_change(self, *_):
@@ -175,8 +190,13 @@ class Battery(Service):
         return result.unpack()
 
     def do_get_cached_property(self, property_name):
+        if property_name in self._prop_cache:
+            return self._prop_cache[property_name]
         result = self._proxy.get_cached_property(property_name)
-        return result.unpack() if result is not None else None
+        value = result.unpack() if result is not None else None
+        if value is not None:
+            self._prop_cache[property_name] = value
+        return value
 
     def get_power_profile(self) -> str | None:
         """Get the current active power profile."""
