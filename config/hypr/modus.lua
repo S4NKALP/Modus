@@ -19,6 +19,16 @@ hl.on("hyprland.start", function()
 	end
 end)
 
+hl.layer_rule({
+	match = {
+		namespace = "^(lock|modus-.*)$",
+	},
+	blur = true,
+	no_anim = true,
+	ignore_alpha = 0,
+	blur_popups = true,
+})
+
 hl.curve("easeOutQuint", { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 } } })
 hl.curve("easeInOutCubic", { type = "bezier", points = { { 0.65, 0.05 }, { 0.36, 1 } } })
 hl.curve("linear", { type = "bezier", points = { { 0, 0 }, { 1, 1 } } })
@@ -48,47 +58,6 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 2, bezier = "workspa
 hl.animation({ leaf = "workspacesIn", enabled = true, speed = 2, bezier = "workspace", style = "" })
 hl.animation({ leaf = "workspacesOut", enabled = true, speed = 2, bezier = "workspace", style = "" })
 hl.animation({ leaf = "zoomFactor", enabled = true, speed = 7, bezier = "quick" })
-
--- Layer Rules for Blurs and Animations
-local layer_rules = {
-	{
-		match = { namespace = "modus-notifications" },
-		blur = true,
-		xray = 0,
-		blur_popups = true,
-		ignore_alpha = 0,
-		no_anim = true,
-	},
-	{ match = { namespace = "lockscreen" }, animation = "popin" },
-	{
-		match = { namespace = "modus-launcher" },
-		blur = true,
-		xray = 0,
-		blur_popups = true,
-		ignore_alpha = 0,
-		animation = "popin",
-	},
-	{
-		match = { namespace = "fabric" },
-		blur = true,
-		ignore_alpha = 0,
-		xray = 0,
-		blur_popups = true,
-	},
-	{
-		match = { namespace = "modus" },
-		blur = true,
-		xray = 0,
-		blur_popups = true,
-		ignore_alpha = 0,
-	},
-	{ match = { namespace = "notification-center" }, animation = "slide right" },
-}
-
-for _, rule in ipairs(layer_rules) do
-	hl.layer_rule(rule)
-end
-
 
 local fabricSend = "fabric-cli exec modus1"
 
