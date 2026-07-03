@@ -1,14 +1,14 @@
+from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from shared.widgets.smooth_switch import SmoothSwitch
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
-from fabric.utils import Gtk, GLib, Gdk, logger
 
 from services.config import config, on_config_change
+from shared.widgets.smooth_switch import SmoothSwitch
 from utils.utils import setup_cursor_hover, svg_file
 
 
@@ -237,6 +237,7 @@ class SettingsWindow(Gtk.Window):
         GLib.set_prgname("modus-settings")
         super().__init__(title="Modus Settings", **kwargs)
         self.set_name("settings-window")
+        self.title("modus-settings")
         self.set_wmclass("modus-settings", "Modus")
         self.set_default_size(850, 600)
         self.set_resizable(False)
