@@ -76,6 +76,7 @@ class PlayerBoxStack(Box):
         self.player_stack.children = [self.no_media_box]
         self.set_visible(True)
         self.mpris_manager = mpris_manager or get_shared_mpris_manager()
+        self.connect("map", self._on_map)
 
         if self.mpris_manager is not None:
             self._init_mpris_manager()
@@ -96,6 +97,9 @@ class PlayerBoxStack(Box):
                 self.on_new_player(self.mpris_manager, name, player)
         except Exception as e:
             logger.error(f"Failed to initialize PlayerBoxStack signals: {e}")
+
+    def _on_map(self, *_):
+        self._check_and_update_playing_state()
 
     def destroy(self):
         for obj, handler_id in self._signal_connections:
@@ -211,6 +215,12 @@ class PlayerBoxStack(Box):
         elif status in ["paused", "stopped"]:
             self._check_and_update_playing_state()
 
+    def _update_all_player_buttons(self):
+        show_buttons = len(self.player_buttons) > 1
+        for child in self.player_stack.get_children():
+            if hasattr(child, "update_buttons"):
+                child.update_buttons(self.player_buttons, show_buttons)
+
     def on_player_clicked_by_index(self, index):
         if 0 <= index < len(self.player_buttons):
             if self.current_stack_pos < len(self.player_buttons):
@@ -220,6 +230,7 @@ class PlayerBoxStack(Box):
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos]
             )
+            self._update_all_player_buttons()
 
     def on_new_player(self, mpris_manager, name, player):
         if (
@@ -237,6 +248,7 @@ class PlayerBoxStack(Box):
         if self.player_buttons:
             self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
         self._check_and_update_playing_state()
+        self._update_all_player_buttons()
 
     def on_lost_player(self, mpris_manager, bus_name):
         player_box_to_remove = None
@@ -268,6 +280,7 @@ class PlayerBoxStack(Box):
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos]
             )
+        self._update_all_player_buttons()
 
     def make_new_player_button(self, player_box):
         new_button = Button(name="player-stack-button")
@@ -358,56 +371,73 @@ class PlayerBox(Box):
             on_clicked=self.player.next,
         )
 
+        self.stack_buttons_box = Box(
+            h_expand=False,
+            v_expand=False,
+            name="macos-stack-buttons-box",
+            spacing=4,
+            orientation="h",
+            h_align="center",
+            v_align="end",
+        )
+        self.stack_buttons_box.hide()
+
         self.children = [
-            CenterBox(
-                name="box-c",
-                orientation="h",
-                h_align="center",
-                start_children=[
-                    Button(
-                        spacing=5,
-                        name="outer-player-box-c",
-                        h_expand=True,
-                        on_clicked=self._on_outer_box_clicked,
-                        h_align="start",
-                        child=Box(
-                            name="inner-player-box",
-                            h_expand=True,
-                            v_align="center",
-                            h_align="start",
-                            children=[
-                                self.image,
-                                Box(
-                                    name="player-info-box-c",
-                                    v_align="center",
+            Box(
+                orientation="v",
+                children=[
+                    CenterBox(
+                        name="box-c",
+                        orientation="h",
+                        h_align="center",
+                        start_children=[
+                            Button(
+                                spacing=5,
+                                name="outer-player-box-c",
+                                h_expand=True,
+                                on_clicked=self._on_outer_box_clicked,
+                                h_align="start",
+                                child=Box(
+                                    name="inner-player-box",
                                     h_expand=True,
+                                    v_align="center",
                                     h_align="start",
-                                    orientation="v",
                                     children=[
+                                        self.image,
                                         Box(
-                                            name="track-info",
-                                            spacing=5,
-                                            orientation="v",
-                                            v_align="start",
+                                            name="player-info-box-c",
+                                            v_align="center",
+                                            h_expand=True,
                                             h_align="start",
+                                            orientation="v",
                                             children=[
-                                                self.track_title,
-                                                self.track_artist,
+                                                Box(
+                                                    name="track-info",
+                                                    spacing=5,
+                                                    orientation="v",
+                                                    v_align="start",
+                                                    h_align="start",
+                                                    children=[
+                                                        self.track_title,
+                                                        self.track_artist,
+                                                    ],
+                                                )
                                             ],
-                                        )
+                                        ),
                                     ],
                                 ),
-                            ],
-                        ),
-                    )
-                ],
-                end_children=[
-                    Box(
-                        name="button-box-c",
-                        h_expand=False,
-                        spacing=2,
-                        children=[self.play_pause_button, self.next_button],
-                    )
+                            )
+                        ],
+                        end_children=[
+                            Box(
+                                name="button-box-c",
+                                h_expand=False,
+                                spacing=2,
+                                children=[self.play_pause_button, self.next_button],
+                            )
+                        ],
+                    ),
+                    self.stack_buttons_box,
                 ],
             )
         ]
@@ -443,6 +473,36 @@ class PlayerBox(Box):
                 )
         except Exception:
             pass
+
+    def update_buttons(self, player_buttons, show_buttons):
+        if show_buttons and len(player_buttons) > 1:
+            if len(self.stack_buttons_box.get_children()) != len(player_buttons):
+                self.stack_buttons_box.children = []
+                for i, button in enumerate(player_buttons):
+                    dot_button = Button(
+                        name="macos-player-switcher-dot",
+                        style_classes=["macos-switcher-dot"],
+                    )
+                    dot_button.connect(
+                        "clicked",
+                        lambda *_, idx=i: self.player_stack.on_player_clicked_by_index(
+                            idx
+                        ),
+                    )
+                    self.stack_buttons_box.children = [
+                        *self.stack_buttons_box.children,
+                        dot_button,
+                    ]
+
+            for i, dot_button in enumerate(self.stack_buttons_box.get_children()):
+                if player_buttons[i].get_style_context().has_class("active"):
+                    dot_button.add_style_class("active")
+                else:
+                    dot_button.remove_style_class("active")
+
+            self.stack_buttons_box.show_all()
+        else:
+            self.stack_buttons_box.hide()
 
     def _on_outer_box_clicked(self, *_):
         if self.control_center and hasattr(self.control_center, "open_expanded_player"):
@@ -481,15 +541,20 @@ class PlayerBox(Box):
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
-    def _on_playback_change(self, *_):
+    def _on_playback_change(self, service, *args):
         if self.exit or self.player is None:
             return
-        status = str(self.player.playback_status).lower()
+
+        current_status = str(self.player.playback_status).lower()
+        if getattr(self, "_last_notified_status", None) == current_status:
+            return
+        self._last_notified_status = current_status
+
         self.play_pause_icon.dynamic_file(
-            "player/play.svg" if status == "paused" else "player/Pause.svg"
+            "player/play.svg" if current_status == "paused" else "player/Pause.svg"
         )
         if self.player_stack:
-            self.player_stack.on_player_playback_changed(self, status)
+            self.player_stack.on_player_playback_changed(self, current_status)
 
     def set_image(self, service=None, path=None, *_):
         if self.exit or self.player is None:
@@ -503,6 +568,9 @@ class PlayerBox(Box):
 
     def resume(self):
         self.exit = False
+
+    def _on_map(self, *_):
+        self._check_and_update_playing_state()
 
     def destroy(self):
         self.exit = True

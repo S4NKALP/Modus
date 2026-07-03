@@ -45,6 +45,9 @@ class EmbeddedExpandedPlayer(Box):
             if hasattr(child, "resume"):
                 child.resume()
 
+    def _on_map(self, *_):
+        self._check_and_update_playing_state()
+
     def destroy(self):
         if hasattr(self, "player_content") and hasattr(self.player_content, "destroy"):
             self.player_content.destroy()
@@ -64,6 +67,7 @@ class PlayerBoxStack(Box):
         self.player_stack.children = [self.no_media_box]
         self.set_visible(True)
         self.mpris_manager = mpris_manager
+        self.connect("map", self._on_map)
 
         connections = bulk_connect(
             self.mpris_manager,
@@ -74,6 +78,9 @@ class PlayerBoxStack(Box):
 
         for name, player in self.mpris_manager.get_all_services().items():
             self.on_new_player(self.mpris_manager, name, player)
+
+    def _on_map(self, *_):
+        self._check_and_update_playing_state()
 
     def destroy(self):
         for obj, handler_id in self._signal_connections:
@@ -321,10 +328,7 @@ class PlayerBox(Box):
             self.seek_bar.connect("value-changed", self._on_scale_value_changed)
         )
         self._seekbar_signal_ids.append(
-            self.seek_bar.connect("button-press-event", self._on_seek_start)
-        )
-        self._seekbar_signal_ids.append(
-            self.seek_bar.connect("button-release-event", self._on_seek_end)
+            self.seek_bar.connect("change-value", self._on_change_value)
         )
         self._property_bindings.append(
             self.player.bind_property("can_seek", self.seek_bar, "sensitive")
@@ -538,23 +542,31 @@ class PlayerBox(Box):
         return False
 
     def update_buttons(self, player_buttons, show_buttons):
-        self.stack_buttons_box.children = []
         if show_buttons and len(player_buttons) > 1:
-            for i, button in enumerate(player_buttons):
-                dot_button = Button(
-                    name="macos-player-switcher-dot",
-                    style_classes=["macos-switcher-dot"],
-                )
-                if button.get_style_context().has_class("active"):
+            if len(self.stack_buttons_box.get_children()) != len(player_buttons):
+                self.stack_buttons_box.children = []
+                for i, button in enumerate(player_buttons):
+                    dot_button = Button(
+                        name="macos-player-switcher-dot",
+                        style_classes=["macos-switcher-dot"],
+                    )
+                    dot_button.connect(
+                        "clicked",
+                        lambda *_, idx=i: self.player_stack.on_player_clicked_by_index(
+                            idx
+                        ),
+                    )
+                    self.stack_buttons_box.children = [
+                        *self.stack_buttons_box.children,
+                        dot_button,
+                    ]
+
+            for i, dot_button in enumerate(self.stack_buttons_box.get_children()):
+                if player_buttons[i].get_style_context().has_class("active"):
                     dot_button.add_style_class("active")
-                dot_button.connect(
-                    "clicked",
-                    lambda *_, idx=i: self.player_stack.on_player_clicked_by_index(idx),
-                )
-                self.stack_buttons_box.children = [
-                    *self.stack_buttons_box.children,
-                    dot_button,
-                ]
+                else:
+                    dot_button.remove_style_class("active")
+
             self.stack_buttons_box.show_all()
         else:
             self.stack_buttons_box.hide()
@@ -592,7 +604,7 @@ class PlayerBox(Box):
             if "mpris:length" in keys:
                 duration = int(metadata["mpris:length"])
                 self.length_label.set_label(self.length_str(duration))
-                self.seek_bar.set_range(0, min(2147483647, duration))
+                self.seek_bar.set_range(0, duration / 1_000_000)
             self.position_label.set_label(self.length_str(self.player.position or 0))
         else:
             self.track_title.set_label(self.player.title or "No Title")
@@ -607,6 +619,9 @@ class PlayerBox(Box):
 
     def resume(self):
         pass
+
+    def _on_map(self, *_):
+        self._check_and_update_playing_state()
 
     def destroy(self):
         self.exit = True
@@ -638,15 +653,28 @@ class PlayerBox(Box):
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
-    def _on_playback_change(self, *_):
-        if self.exit or self.player is None:
-            return
-        status = str(self.player.playback_status).lower()
-        self.play_pause_icon.dynamic_file(
-            "player/play.svg" if status == "paused" else "player/Pause.svg"
-        )
-        if self.player_stack:
-            self.player_stack.on_player_playback_changed(self, status)
+    def _on_playback_change(self, service, *args):
+        if not self.exit:
+            current_status = str(self.player.playback_status).lower()
+            if getattr(self, "_last_notified_status", None) == current_status:
+                return
+            self._last_notified_status = current_status
+
+            icon_file = (
+                "player/play.svg" if current_status == "paused" else "player/Pause.svg"
+            )
+            if hasattr(self, "play_pause_icon"):
+                self.play_pause_icon.dynamic_file(icon_file)
+            else:
+                # Fallback if play_pause_icon isn't available
+                from utils.utils import get_relative_path
+                import os
+
+                self.play_pause_button.get_child().set_from_file(
+                    os.path.join(get_relative_path("assets/icons/"), icon_file)
+                )
+
+            self.player_stack.on_player_playback_changed(self, current_status)
 
     def _on_artwork_change(self, service, local_path, *_):
         if self.exit:
@@ -680,36 +708,47 @@ class PlayerBox(Box):
             if self.seek_bar.get_realized() and self.seek_bar.get_adjustment():
                 adj = self.seek_bar.get_adjustment()
                 if duration_micros > 0:
-                    self.seek_bar.set_range(0, min(2147483647, duration_micros))
+                    self.seek_bar.set_range(0, duration_micros / 1_000_000)
                 if not self._user_seeking and adj.get_upper() > 0:
-                    self.seek_bar.set_value(min(2147483647, position_micros))
+                    self.seek_bar.set_value(position_micros / 1_000_000)
         except Exception as e:
             logger.error(f"[_on_track_position] Error: {e}")
 
-    def _on_seek_start(self, widget, event):
-        self._user_seeking = True
+    def _clear_seeking(self):
+        self._user_seeking = False
         return False
 
-    def _on_seek_end(self, widget, event):
-        self._user_seeking = False
+    def _do_seek(self, value):
+        self._debounce_seek = None
+        if self.player and not self.exit:
+            try:
+                self.player.seek_position(value)
+            except Exception:
+                pass
+        if hasattr(self, "_seek_timeout") and self._seek_timeout:
+            from fabric.utils import GLib
+
+            GLib.source_remove(self._seek_timeout)
+        from fabric.utils import GLib
+
+        self._seek_timeout = GLib.timeout_add(1000, self._clear_seeking)
+        return False
+
+    def _on_change_value(self, scale, scroll, value):
         if not self.player or self.exit:
             return False
-        try:
-            adj = widget.get_adjustment()
-            upper = adj.get_upper()
-            value = max(0, int(widget.get_value()))
-            duration = self._cached_duration or self.player.length or 0
-            if duration <= 0 and upper > 100:
-                duration = int(upper)
-            if upper > 100:
-                new_position = value
-            elif duration > 0 and upper > 0:
-                new_position = int(value / upper * duration)
-            else:
-                new_position = value
-            self.player.set_position(new_position / 1_000_000)
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
+        self._user_seeking = True
+        value = max(0.0, value)
+        self.position_label.set_label(self.length_str(int(value * 1_000_000)))
+
+        if hasattr(self, "_debounce_seek") and self._debounce_seek:
+            from fabric.utils import GLib
+
+            GLib.source_remove(self._debounce_seek)
+
+        from fabric.utils import GLib
+
+        self._debounce_seek = GLib.timeout_add(100, self._do_seek, value)
         return False
 
     def _update_duration_from_metadata(self):
@@ -717,10 +756,10 @@ class PlayerBox(Box):
             duration = self._cached_duration or self.player.length or 0
             if duration <= 0 and self.seek_bar.get_realized():
                 adj = self.seek_bar.get_adjustment()
-                if adj.get_upper() > 100:
-                    duration = int(adj.get_upper())
+                if adj.get_upper() > 1:
+                    duration = int(adj.get_upper() * 1_000_000)
             if duration > 0:
-                self.seek_bar.set_range(0, min(2147483647, duration))
+                self.seek_bar.set_range(0, duration / 1_000_000)
                 self.length_label.set_label(self.length_str(duration))
                 return True
         except Exception:
@@ -741,21 +780,8 @@ class PlayerBox(Box):
         if not self.player or self.exit:
             return
         try:
-            adj = scale.get_adjustment()
-            upper = adj.get_upper()
-            value = max(0, int(scale.get_value()))
-
-            duration = self._cached_duration or self.player.length or 0
-            if duration <= 0 and upper > 100:
-                duration = int(upper)
-            if upper > 100:
-                new_position = value
-            elif duration > 0 and upper > 0:
-                new_position = int(value / upper * duration)
-            else:
-                new_position = value
-
-            self.position_label.set_label(self.length_str(new_position))
+            value = max(0.0, scale.get_value())
+            self.position_label.set_label(self.length_str(int(value * 1_000_000)))
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
@@ -772,6 +798,9 @@ class ExpandedPlayer(Window):
             visible=False,
         )
         self.add_keybinding("Escape", lambda *_: self.set_visible(False))
+
+    def _on_map(self, *_):
+        self._check_and_update_playing_state()
 
     def destroy(self):
         if hasattr(self, "child") and hasattr(self.child, "destroy"):
