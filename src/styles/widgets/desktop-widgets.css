@@ -146,7 +146,7 @@
 #calendar-day-today {
   font-size: apply(font-sm);
   font-weight: 700;
-  color: @foreground;
+  color: @on-primary;
   background-color: @primary;
   border-radius: apply(radius-full);
   min-width: 18px;
@@ -209,7 +209,6 @@
 
 #ram-progress {
   margin-left: 12px;
-  color: var(--foreground);
 }
 
 #progress-label {
@@ -219,28 +218,9 @@
 
 #progress {
   background-color: transparent;
-  border: solid 8px @primary-a20;
-  color: @foreground;        /* Filled progress as solid white/foreground */
+  border: solid 8px @primary;
 }
 
-/* Color indicators for memory usage */
-#used-color-indicator {
-  color: @primary;
-  font-size: apply(font-2xs);
-  font-weight: 900;
-}
-
-#free-color-indicator {
-  color: @outline;
-  font-size: apply(font-2xs);
-  font-weight: 900;
-}
-
-#temp-color-indicator {
-  color: @primary;
-  font-size: apply(font-2xs);
-  font-weight: 900;
-}
 
 /* Info text styling */
 #info-text {
