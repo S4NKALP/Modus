@@ -1,7 +1,7 @@
 #settings-window {
-    background-color: var(--background);
+    background-color: @bg-a50;
     border-radius: apply(radius-md);
-    border: 1px solid var(--border);
+    border: 1px solid @outline-a40;
     min-width: 850px;
     min-height: 600px;
 }
@@ -14,7 +14,7 @@
     background-color: @bg-a95;
     padding: 20px 10px;
     min-width: 200px;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid @outline-a40;
 }
 
 #settings-sidebar-button {
@@ -24,7 +24,8 @@
 }
 
 #settings-sidebar-button:hover {
-    background-color: @fg-a05;
+    background-color: @primary;
+    color: @on-primary;
 }
 
 #settings-sidebar-button Label {
@@ -33,11 +34,16 @@
 }
 
 #settings-sidebar-button.active {
-    background-color: var(--accent);
+    background-color: @primary;
 }
 
 #settings-sidebar-button.active Label {
-    color: var(--accent-foreground);
+    color: @on-primary;
+}
+
+#settings-sidebar-button:hover *,
+#settings-sidebar-button.active * {
+    color: @on-primary;
 }
 
 #settings-content-wrapper {
@@ -48,7 +54,7 @@
     font-size: 24px;
     font-weight: 700;
     margin-bottom: 20px;
-    color: var(--foreground);
+    color: @foreground;
 }
 
 #settings-row {
@@ -58,6 +64,10 @@
     margin-bottom: 2px;
 }
 
+#settings-row:hover {
+    background-color: @fg-a10;
+}
+
 #settings-row-label {
     font-size: 15px;
     font-weight: 500;
@@ -65,42 +75,43 @@
 
 #settings-row-description {
     font-size: apply(font-sm);
-    color: var(--foreground-dim);
+    color: @fg-a60;
 }
 
 #settings-switch {
-    background-color: @fg-a10;
-    padding: 6px 12px;
-    border-radius: apply(radius-xl);
-    min-width: 50px;
-    transition: all apply(transition-medium) ease;
+    min-width: 40px;
+    min-height: 22px;
+    background-color: @fg-a30;
+    border-radius: apply(radius-full);
+    padding: 3px;
+    transition: background-color apply(transition-slow) ease;
 }
 
 #settings-switch.active {
-    background-color: var(--accent);
-    color: var(--accent-foreground);
+    background-color: @primary;
+    color: @fg-a90;
 }
 
 #settings-entry {
-    background-color: @fg-a05;
+    background-color: @bg-a70;
     padding: 8px 12px;
     border-radius: apply(radius-xs);
-    border: 1px solid var(--border);
+    border: 1px solid @outline-a40;
     min-width: 200px;
-    color: var(--foreground);
+    color: @foreground;
 }
 
 #settings-entry:focus {
-    border-color: var(--accent);
+    border-color: @primary;
 }
 
 #settings-combo {
-    background-color: @fg-a05;
+    background-color: @bg-a70;
     padding: 4px 8px;
     border-radius: apply(radius-xs);
-    border: 1px solid var(--border);
+    border: 1px solid @outline-a40;
     min-width: 150px;
-    color: var(--foreground);
+    color: @foreground;
 }
 
 #settings-combo:hover {
@@ -128,18 +139,18 @@
 }
 
 #settings-list-tag-close {
-    color: var(--foreground-dim);
+    color: @fg-a60;
     font-size: apply(font-2xs);
     margin-left: 3px;
 }
 
 #settings-list-tag-close:hover {
-    color: var(--accent);
+    color: @primary;
 }
 
 #settings-list-entry {
     background-color: @fg-a03;
-    border: 1px dashed var(--border);
+    border: 1px dashed @outline-a40;
     padding: 6px 12px;
     border-radius: apply(radius-xs);
     font-size: apply(font-md);

@@ -21,18 +21,26 @@
 }
 
 #window-button.active {
-    background-color: var(--surface);
+    background-color: @primary;
+}
+
+#window-button:hover {
+    background-color: @fg-a10;
+}
+
+#window-button.active:hover {
+    background-color: @primary;
 }
 
 .switcher-selection-label {
-    color: var(--foreground);
+    color: @foreground;
     font-size: apply(font-lg);
     font-weight: 600;
     margin-top: 8px;
 }
 
 .switcher-workspace-label {
-    color: var(--foreground);
+    color: @foreground;
     opacity: 0.6;
     font-size: apply(font-sm);
     margin-top: 4px;
@@ -47,14 +55,14 @@
     padding: 0px;
 }
 
-#window-button:hover,
-#window-button.active {
-    background-color: @primary;
+#window-button.active .switcher-selection-label,
+#window-button.active .switcher-workspace-label,
+#window-button.active:hover .switcher-selection-label,
+#window-button.active:hover .switcher-workspace-label {
+    color: @on-primary;
 }
 
 #window-button:hover .switcher-selection-label,
-#window-button.active .switcher-selection-label,
-#window-button:hover .switcher-workspace-label,
-#window-button.active .switcher-workspace-label {
-    color: @on-primary;
+#window-button:hover .switcher-workspace-label {
+    color: @fg-a90;
 }

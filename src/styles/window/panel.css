@@ -69,6 +69,14 @@
     color: @foreground;
 }
 
+#workspaces>button.active:hover {
+    background-color: @primary;
+}
+
+#workspaces>button.active:hover label {
+    color: @on-primary;
+}
+
 #workspaces>button.urgent {
     background-color: alpha(@error, 0.7);
 }
