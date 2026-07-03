@@ -4,12 +4,14 @@ from fabric.utils import Gdk, GLib, get_relative_path, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.label import Label
 from fabric.widgets.eventbox import EventBox
-from shared.widgets.flat_scale import FlatScale
+from fabric.widgets.label import Label
+from fabric.widgets.overlay import Overlay
 
 from services.brightness import Brightness
 from services.network import NetworkClient
+from shared.widgets.flat_scale import FlatScale
+from shared.window.applet_window import AppletWindow
 from utils.roam import audio_service, modus_service
 from utils.utils import svg_file
 from window.controlcenter.bluetooth import (
@@ -21,8 +23,6 @@ from window.controlcenter.nightlight import create_night_light_widget
 from window.controlcenter.per_app_volume import PerAppVolumeControl
 from window.controlcenter.player import PlayerBoxStack, get_shared_mpris_manager
 from window.controlcenter.wifi import WifiConnections
-
-from shared.window.applet_window import AppletWindow
 
 brightness_service = Brightness()
 
@@ -394,9 +394,18 @@ class ModusControlCenter(AppletWindow):
                     h_expand=True,
                     children=[
                         Label(label="Display", style_classes="title", h_align="start"),
-                        self.brightness_scale,
-                        Label(
-                            label="󰖨 ", name="brightness-widget-icon", h_align="start"
+                        Overlay(
+                            h_expand=True,
+                            child=self.brightness_scale,
+                            overlays=[
+                                svg_file(
+                                    "brightness/brightness.svg",
+                                    name="brightness-widget-icon",
+                                    size=32,
+                                    h_align="start",
+                                    v_align="center",
+                                )
+                            ],
                         ),
                     ],
                 ),
@@ -419,7 +428,19 @@ class ModusControlCenter(AppletWindow):
                                     v_align="center",
                                     v_expand=False,
                                     children=[
-                                        self.volume_scale,
+                                        Overlay(
+                                            h_expand=True,
+                                            child=self.volume_scale,
+                                            overlays=[
+                                                svg_file(
+                                                    "volume/audio-volume.svg",
+                                                    name="volume-widget-icon",
+                                                    size=32,
+                                                    h_align="start",
+                                                    v_align="center",
+                                                )
+                                            ],
+                                        ),
                                     ],
                                 ),
                                 Button(
@@ -434,7 +455,6 @@ class ModusControlCenter(AppletWindow):
                                 ),
                             ],
                         ),
-                        Label(label=" ", name="volume-widget-icon", h_align="start"),
                     ],
                 ),
                 self.music_widget,
