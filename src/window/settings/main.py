@@ -1,5 +1,6 @@
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from shared.widgets.smooth_switch import SmoothSwitch
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
@@ -39,13 +40,17 @@ class SettingsRow(CenterBox):
             self.description_widget = description_widget
 
 
-class SettingsSwitch(Button):
+class SettingsSwitch(SmoothSwitch):
     def __init__(self, config_key: str, **kwargs):
         self.config_key = config_key
-        self.active = config().get(config_key, False)
+        initial_active = config().get(config_key, False)
 
-        super().__init__(name="settings-switch", on_clicked=self.toggle, **kwargs)
-        self._update_style()
+        super().__init__(
+            name="settings-switch",
+            active=initial_active,
+            on_user_toggle=self.toggle,
+            **kwargs,
+        )
         setup_cursor_hover(self, "pointer")
 
         # Sync with external config changes
@@ -53,22 +58,11 @@ class SettingsSwitch(Button):
 
     def _on_config_change(self, new_config, old_config):
         if config().has_changed(self.config_key, old_config):
-            self.active = new_config.get(self.config_key, False)
-            self._update_style()
+            self.set_active(new_config.get(self.config_key, False))
 
-    def toggle(self, *args):
-        self.active = not self.active
-        config().set(self.config_key, self.active)
+    def toggle(self, state: bool):
+        config().set(self.config_key, state)
         config().save()
-        self._update_style()
-
-    def _update_style(self):
-        if self.active:
-            self.add_style_class("active")
-            self.set_label("On")
-        else:
-            self.remove_style_class("active")
-            self.set_label("Off")
 
 
 class SettingsEntry(Entry):
