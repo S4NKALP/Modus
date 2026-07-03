@@ -259,16 +259,13 @@ class BluetoothDeviceSlot(CenterBox):
 
         if state == BTState.CONNECTED:
             self.add_style_class("active")
-            self.status_icon.set_visible(True)
-            self.status_icon.set_from_icon_name("emblem-ok-symbolic", 5)
+            self.status_icon.set_visible(False)
         elif state == BTState.CONNECTING:
             self.add_style_class("connecting")
-            self.status_icon.set_visible(True)
-            self.status_icon.set_from_icon_name("process-working-symbolic", 5)
+            self.status_icon.set_visible(False)
         elif state == BTState.FAILED:
             self.add_style_class("failed")
-            self.status_icon.set_visible(True)
-            self.status_icon.set_from_icon_name("dialog-error-symbolic", 5)
+            self.status_icon.set_visible(False)
             GLib.timeout_add(5000, self._reset_from_failed)
         else:
             self.status_icon.set_visible(False)
@@ -367,6 +364,7 @@ class BluetoothConnections(Box):
             max_content_size=(303, 200),
             child=self.paired_devices,
             overlay_scroll=True,
+            animate=False,
         )
 
         self.no_devices_label = Label(
@@ -377,7 +375,10 @@ class BluetoothConnections(Box):
         )
 
         self.other_devices_button = Button(
-            child=Label("Other Devices", h_align="start"),
+            child=CenterBox(
+                start_children=Label("Other Devices", h_align="start"),
+                end_children=self.refresh_indicator,
+            ),
             name="wifi-other-button",
             on_clicked=self.toggle_other_devices,
         )
@@ -388,6 +389,7 @@ class BluetoothConnections(Box):
             max_content_size=(303, 300),
             child=self.other_devices,
             overlay_scroll=True,
+            animate=False,
         )
         self.other_devices.set_visible(False)
 
@@ -406,7 +408,6 @@ class BluetoothConnections(Box):
                 end_children=self.toggle_button,
                 name="bluetooth-widget-top",
             ),
-            self.refresh_indicator,
             Separator(orientation="h", name="separator"),
             self.paired_devices_label,
             self.paired_devices_scrolled,

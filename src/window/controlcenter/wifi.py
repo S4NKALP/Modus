@@ -325,6 +325,7 @@ class WifiConnections(Box):
             max_content_size=(303, 200),
             child=self.known_networks,
             overlay_scroll=True,
+            animate=False,
         )
 
         # Create "No networks available" message
@@ -335,9 +336,11 @@ class WifiConnections(Box):
             visible=False,
         )
 
-        # Create Other Networks section with clickable title
         self.other_networks_button = Button(
-            child=Label("Other Networks", h_align="start"),
+            child=CenterBox(
+                start_children=Label("Other Networks", h_align="start"),
+                end_children=self.refresh_indicator,
+            ),
             name="wifi-other-button",
             on_clicked=self.toggle_other_networks,
         )
@@ -349,6 +352,7 @@ class WifiConnections(Box):
             max_content_size=(303, 300),
             child=self.other_networks,
             overlay_scroll=True,
+            animate=False,
         )
         self.other_networks.set_visible(False)
 
@@ -368,7 +372,6 @@ class WifiConnections(Box):
                 end_children=self.toggle_button,
                 name="wifi-widget-top",
             ),
-            self.refresh_indicator,
             Separator(orientation="h", name="separator"),
             self.known_networks_label,
             self.known_networks_scrolled,
