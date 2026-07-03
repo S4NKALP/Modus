@@ -1,3 +1,4 @@
+from fabric.utils import idle_add
 from fabric.widgets.scrolledwindow import ScrolledWindow
 
 from shared.widgets.animator import Animator
@@ -8,10 +9,12 @@ class AnimatedScrollable(ScrolledWindow):
         self,
         bezier_curve: tuple[float, float, float, float] = (0.25, 0.1, 0.25, 1.0),
         duration: float = 0.3,
+        animate: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self._last_req = -1
+        self.animate = animate
         _, min_height = self.min_content_size
         _, max_height = self.max_content_size
 
@@ -58,6 +61,9 @@ class AnimatedScrollable(ScrolledWindow):
         return
 
     def animate_size(self, height: int = -1):
+        if not self.animate:
+            idle_add(lambda: self.snap_to_size(height))
+            return
         self._last_req = height
         current_val = self.height_animator.value
         return self.do_animate(current_val, height)
