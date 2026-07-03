@@ -274,12 +274,16 @@
 .flat-scale {
     margin: 4px 0px;
 }
+
 .flat-scale slider {
-    background-color: @text-main;
+    /* background: linear-gradient(135deg, @text-main 0%, #f0f1f2 100%); */
+    background-color: white;
     min-height: 24px;
     min-width: 24px;
     border-radius: apply(radius-full);
 }
+
+
 .flat-scale trough {
     background-color: alpha(#666, 0.5);
     min-height: 25px;
