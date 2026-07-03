@@ -1,5 +1,4 @@
 import os
-from utils.roam import modus_service
 
 
 class AppName:
@@ -73,6 +72,8 @@ class AppName:
                 name = name.split(".")[-1]
 
         if update:
+            from utils.roam import modus_service
+
             modus_service.current_active_wm_class = wmclass
             modus_service.current_active_app_name = name
         return name
