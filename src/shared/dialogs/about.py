@@ -1,6 +1,6 @@
 import subprocess
 
-from fabric.utils import GdkPixbuf, Gtk, get_relative_path, os, re, logger
+from fabric.utils import GdkPixbuf, Gtk, get_relative_path, logger, os, re
 
 from utils.functions import escape_markup_text
 from utils.icon_resolver import IconResolver
@@ -231,6 +231,7 @@ class AboutApp(Gtk.Window):
     def __init__(self, app_name="Unknown Application", wmclass=""):
         super().__init__(title=f"About {app_name}")
         self.set_wmclass("modus-about", "Modus")
+        self.set_title("modus-about")
         self.app_name = app_name
         self.wmclass = wmclass
         self.icon_resolver = IconResolver()

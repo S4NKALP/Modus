@@ -17,7 +17,7 @@ class WiFiPasswordDialog(Window):
         **kwargs,
     ):
         super().__init__(
-            title="modus",
+            title="modus-dialog",
             layer="overlay",
             anchor="center",
             keyboard_mode="on-demand",

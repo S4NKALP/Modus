@@ -3,8 +3,9 @@ from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
 from gi.repository import GLib
-from utils.roam import modus_service
+
 from shared.window.applet_window import AppletWindow
+from utils.roam import modus_service
 
 dropdowns = []
 
@@ -25,7 +26,7 @@ class ModusDropdown(AppletWindow):
             layer="top",
             exclusivity="auto",
             name="dropdown-menu",
-            title="modus",
+            title="modus-dropdown",
             visible=False,
             **kwargs,
         )
