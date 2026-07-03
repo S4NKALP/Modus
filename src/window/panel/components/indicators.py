@@ -1,13 +1,13 @@
-from fabric.utils import logger
 from fabric.bluetooth import BluetoothClient
+from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 
 from services.battery import Battery
 from services.network import NetworkClient
-from shared.window.battery_widget import BatteryControl
 from shared.window.applet_window import AppletWindow
+from shared.window.battery_widget import BatteryControl
 from utils.functions import format_duration, get_wifi_icon_for_strength
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover, svg_file
@@ -20,7 +20,7 @@ def create_control_window(name_prefix, parent=None, pointing_to=None):
         parent=parent,
         pointing_to=pointing_to,
         layer="overlay",
-        title="modus",
+        title="modus-controlcenter",
         anchor="top right",
         margin="2px 10px 0px 0px",
         exclusivity="auto",

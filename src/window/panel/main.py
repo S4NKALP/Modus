@@ -1,5 +1,5 @@
-from fabric.utils import logger
 from fabric.system_tray.widgets import SystemTray
+from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -7,9 +7,8 @@ from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
-from services.config import on_config_change, get_config_all
+from services.config import get_config_all, on_config_change
 from services.modus import notification_service
-
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover, svg_file
 from window.controlcenter.main import ModusControlCenter
@@ -30,8 +29,8 @@ apply_enhanced_system_tray()
 class Panel(Window):
     def __init__(self, **kwargs):
         super().__init__(
+            title="mdous-bar",
             name="bar",
-            title="modus",
             layer="top",
             anchor="left top right",
             exclusivity="auto",
