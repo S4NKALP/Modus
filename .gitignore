@@ -9,7 +9,7 @@ config/accounts.json
 config/passwords.json
 config/bookmarks.json
 config/hypr/colors.conf
-src/shared/styles/colors.css
+src/styles/colors.css
 .aider*
 .venv/*
 .venv/
