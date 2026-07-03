@@ -62,9 +62,12 @@ def main():
     dock = Dock()
     osd = OSDWindow()
 
-    # Monitor CSS files for changes
-    css_file = monitor_file(get_relative_path("styles"))
-    _ = css_file.connect("changed", lambda *_: set_css())
+    # Monitor CSS files and subdirectories for changes
+    css_monitors = []
+    for root, dirs, files in os.walk(get_relative_path("styles/")):
+        monitor = monitor_file(root)
+        monitor.connect("changed", lambda *_: set_css())
+        css_monitors.append(monitor)
 
     app = Application(
         f"{APP_NAME}",
@@ -78,9 +81,7 @@ def main():
     )
 
     def set_css():
-        app.set_stylesheet_from_file(
-            get_relative_path("styles/main.css"),
-        )
+        app.set_stylesheet_from_file(get_relative_path("styles/main.css"))
 
     app.set_css = set_css
     app.set_css()
