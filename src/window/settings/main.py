@@ -237,7 +237,7 @@ class SettingsWindow(Gtk.Window):
         GLib.set_prgname("modus-settings")
         super().__init__(title="Modus Settings", **kwargs)
         self.set_name("settings-window")
-        self.title("modus-settings")
+        self.set_title("modus-settings")
         self.set_wmclass("modus-settings", "Modus")
         self.set_default_size(850, 600)
         self.set_resizable(False)
