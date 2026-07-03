@@ -4,13 +4,13 @@ import subprocess
 from fabric.utils import (
     GLib,
     Gtk,
+    exec_shell_command_async,
     get_desktop_applications,
     get_relative_path,
     logger,
     os,
     random,
     re,
-    exec_shell_command_async,
 )
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -47,7 +47,7 @@ class AppBar(Box):
 
         super().__init__(
             spacing=0,
-            name="dock",
+            name="modus-dock",
             orientation="horizontal",
             children=[],
         )
@@ -823,7 +823,9 @@ class AppBar(Box):
 
 class Dock(Window):
     def __init__(self):
-        super().__init__(layer="top", anchor="bottom center", title="modus-dock")
+        super().__init__(
+            layer="top", anchor="bottom center", title="modus-dock", name="dock"
+        )
 
         self.app_bar = AppBar(self)
         self.revealer = Revealer(

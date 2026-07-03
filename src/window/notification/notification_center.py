@@ -13,8 +13,8 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 import shared.data as data
 from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
-from shared.window.applet_window import AppletWindow
 from shared.widgets.custom_image import CustomImage
+from shared.window.applet_window import AppletWindow
 from utils.functions import escape_markup_text
 from window.notification.notification import (
     NotificationWidget,
@@ -599,7 +599,7 @@ class NotificationCenter(AppletWindow):
             layer="overlay",
             anchor="top right",
             visible=False,
-            title="modus",
+            title="modus-notificationcenter",
         )
 
         NOTIFICATION_CENTER_WIDTH = 410

@@ -33,7 +33,7 @@ class ModusControlCenter(AppletWindow):
             parent=parent,
             pointing_to=pointing_to,
             layer="top",
-            title="modus",
+            title="modus-controlcenter",
             anchor="top right",
             margin="2px 10px 0px 0px",
             exclusivity="auto",

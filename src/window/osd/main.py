@@ -1,18 +1,19 @@
 from fabric.widgets.box import Box
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
+
 from .components import (
     AudioOSDContainer,
     BrightnessOSDContainer,
-    MicrophoneOSDContainer,
     CapsLockOSDContainer,
     KeyboardLayoutOSDContainer,
+    MicrophoneOSDContainer,
 )
 
 
 class OSD(Box):
     def __init__(self, window: Window, **kwargs):
-        super().__init__(name="osd", **kwargs)
+        super().__init__(title="modus-osd", name="osd", **kwargs)
         self.window = window
 
         self.revealer = Revealer(

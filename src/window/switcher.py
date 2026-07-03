@@ -1,8 +1,7 @@
-from fabric.utils import logger
 import json
 
 from fabric.hyprland.widgets import get_hyprland_connection
-from fabric.utils import Gdk, GLib
+from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image

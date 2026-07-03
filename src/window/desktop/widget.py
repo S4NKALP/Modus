@@ -1,12 +1,12 @@
 import calendar
 import datetime
 import urllib.parse
-import httpx
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
+import httpx
 import psutil
-from fabric.utils import GLib, invoke_repeater, time, logger
+from fabric.utils import GLib, invoke_repeater, logger, time
 from fabric.widgets.box import Box
 from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.datetime import DateTime
@@ -661,7 +661,7 @@ class Deskwidgets:
         # Create separate independent windows as attributes
         self.top_left = Window(
             anchor="top left",
-            title="modus-widgets-topleft",
+            title="modus-widgets",
             exclusivity="none",
             orientation="h",
             layer="bottom",
@@ -678,7 +678,7 @@ class Deskwidgets:
 
         self.bottom_left = Window(
             anchor="bottom right",
-            title="modus-widgets-bottomright",
+            title="modus-widgets",
             orientation="h",
             layer="bottom",
             exclusivity="none",
