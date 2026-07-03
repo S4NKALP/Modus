@@ -63,7 +63,7 @@ class BTState(Enum):
     FAILED = auto()
 
 
-class BluetoothDeviceSlot(CenterBox):
+class BluetoothDeviceSlot(Box):
     def __init__(self, device: BluetoothDevice, **kwargs):
         super().__init__(h_expand=True, name="device-button", **kwargs)
         self.device = device
@@ -97,38 +97,42 @@ class BluetoothDeviceSlot(CenterBox):
         )
         self.status_icon.set_visible(False)
 
+        self.battery_icon = None
+        self.battery_label = None
+        if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
+            self.battery_icon = svg_file(
+                get_battery_icon_file(
+                    device.battery_percentage,
+                    False,
+                ),
+                size=24,
+            )
+            self.battery_label = Label(
+                label=f"{device.battery_percentage:.0f}%", name="battery-label"
+            )
+
+        button_children = [
+            self.dimage,
+            Label(label=device.name),
+            Box(h_expand=True),  # Spacer
+            self.status_icon,
+        ]
+        if self.battery_icon and self.battery_label:
+            button_children.insert(-1, self.battery_icon)
+            button_children.insert(-1, self.battery_label)
+
         self.device_button = Button(
             on_clicked=lambda *_: self.toggle_connecting(),
+            h_expand=True,
+            h_align="fill",
             child=Box(
                 orientation="h",
                 h_expand=True,
                 spacing=8,
-                children=[
-                    self.dimage,
-                    Label(label=device.name),
-                    Box(h_expand=True),  # Spacer
-                    self.status_icon,
-                ],
+                children=button_children,
             ),
         )
-        self.start_children = [self.device_button]
-
-        if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
-            battery_box = Box(orientation="h", spacing=4)
-
-            battery_icon = svg_file(
-                get_battery_icon_file(
-                    device.battery_percentage,
-                    False,
-                )
-            )
-
-            battery_label = Label(
-                label=f"{device.battery_percentage:.0f}%", name="battery-label"
-            )
-
-            battery_box.children = [battery_icon, battery_label]
-            self.end_children = [battery_box]
+        self.children = [self.device_button]
 
         self.device_button.connect("enter-notify-event", self.on_button_enter)
         self.device_button.connect("leave-notify-event", self.on_button_leave)
@@ -209,39 +213,41 @@ class BluetoothDeviceSlot(CenterBox):
             hasattr(self.device, "battery_percentage")
             and self.device.battery_percentage > 0
         ):
-            if not self.end_children:  # Add battery display if not already present
-                battery_box = Box(orientation="h", spacing=4)
-
-                # Create battery icon
-                battery_icon = svg_file(
+            if self.battery_icon and self.battery_label:
+                self.battery_icon.set_visible(True)
+                self.battery_label.set_visible(True)
+                self.battery_icon.dynamic_file(
                     get_battery_icon_file(
                         self.device.battery_percentage,
-                        False,  # Not charging for bluetooth devices
+                        False,
                     )
                 )
-
-                battery_label = Label(
-                    label=f"{self.device.battery_percentage:.0f}%", name="battery-label"
-                )
-
-                battery_box.children = [battery_icon, battery_label]
-                self.end_children = [battery_box]
+                self.battery_label.set_label(f"{self.device.battery_percentage:.0f}%")
             else:
-                battery_box = self.end_children[0]
-                if hasattr(battery_box, "children") and len(battery_box.children) >= 2:
-                    battery_icon = battery_box.children[0]
-                    battery_label = battery_box.children[1]
-
-                    battery_icon.dynamic_file(
-                        get_battery_icon_file(
-                            self.device.battery_percentage,
-                            False,  # Not charging for bluetooth devices
-                        )
-                    )
-
-                    battery_label.set_label(f"{self.device.battery_percentage:.0f}%")
-        elif self.end_children:
-            self.end_children = []
+                self.battery_icon = svg_file(
+                    get_battery_icon_file(
+                        self.device.battery_percentage,
+                        False,
+                    ),
+                    size=12,
+                )
+                self.battery_label = Label(
+                    label=f"{self.device.battery_percentage:.0f}%",
+                    name="battery-label",
+                )
+                btn_box = self.device_button.get_child()
+                if btn_box:
+                    btn_box.children = [
+                        *btn_box.children[:-1],
+                        self.battery_icon,
+                        self.battery_label,
+                        btn_box.children[-1],
+                    ]
+        elif self.battery_icon or self.battery_label:
+            if self.battery_icon:
+                self.battery_icon.set_visible(False)
+            if self.battery_label:
+                self.battery_label.set_visible(False)
 
     def _refresh_state(self):
         self._set_state(
