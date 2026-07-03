@@ -25,6 +25,55 @@ _DBUS_TIMEOUT_INTROSPECT = 500  # ms for introspection calls
 _DBUS_TIMEOUT_PID = 200  # ms for PID lookups
 _DBUS_TIMEOUT_FAST = 100  # ms for expected-fast calls
 
+_DE_NAMESPACES = [
+    "xfce",
+    "mate",
+    "kde",
+    "gnome",
+    "enlightenment",
+    "pantheon",
+    "elementary",
+    "budgie",
+    "deepin",
+]
+
+
+def _dbus_introspect(bus, service: str, path: str, timeout: int) -> str:
+    try:
+        res = bus.call_sync(
+            service,
+            path,
+            "org.freedesktop.DBus.Introspectable",
+            "Introspect",
+            None,
+            GLib.VariantType("(s)"),
+            Gio.DBusCallFlags.NONE,
+            timeout,
+            None,
+        )
+        return res.get_child_value(0).get_string() if res else ""
+    except Exception:
+        return ""
+
+
+def _dbus_get_pid(bus, service: str, timeout: int) -> int:
+    try:
+        res = bus.call_sync(
+            "org.freedesktop.DBus",
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "GetConnectionUnixProcessID",
+            GLib.Variant("(s)", (service,)),
+            GLib.VariantType("(u)"),
+            Gio.DBusCallFlags.NONE,
+            timeout,
+            None,
+        )
+        return res.get_child_value(0).get_uint32() if res else 0
+    except Exception:
+        return 0
+
+
 REGISTRAR_XML = """
 <node>
   <interface name="com.canonical.AppMenu.Registrar">
@@ -306,86 +355,51 @@ class GlobalMenuService(Service):
     ) -> Optional[DBusMenuClient]:
         """Fast and deterministic DBusMenu discovery (Wayland-safe)."""
         try:
-            # Use the pid captured at focus time; fall back to hyprctl only if not provided
             if target_pid <= 0:
                 out = exec_shell_command("hyprctl activewindow -j")
                 if not out:
                     logger.warning("[GlobalMenuService] hyprctl returned no output")
                     return None
-                data = json.loads(out)
-                target_pid = data.get("pid", 0)
+                target_pid = json.loads(out).get("pid", 0)
 
             if target_pid <= 0:
                 return None
 
             bus = _get_bus()
 
-            # =========================
             # 1. FAST PATH: Registrar cache
-            # =========================
             with self._registry_lock:
                 registered = dict(self._registered_menus)
 
             for sender, (service, path) in registered.items():
                 try:
-                    pid_res = bus.call_sync(
-                        "org.freedesktop.DBus",
-                        "/org/freedesktop/DBus",
-                        "org.freedesktop.DBus",
-                        "GetConnectionUnixProcessID",
-                        GLib.Variant("(s)", (service,)),
-                        GLib.VariantType("(u)"),
-                        Gio.DBusCallFlags.NONE,
-                        _DBUS_TIMEOUT_FAST,
-                        None,
-                    )
-
-                    pid = pid_res.get_child_value(0).get_uint32()
-
+                    pid = _dbus_get_pid(bus, service, _DBUS_TIMEOUT_FAST)
                     if pid == target_pid or self._is_same_app(pid, target_pid):
                         logger.info(
                             f"[GlobalMenuService] Registrar match: {service} {path}"
                         )
                         return DBusMenuClient(service, path)
-
                 except Exception as e:
-                    # Only remove Registrar entry on NameHasNoOwner, not transient errors
                     if "NameHasNoOwner" in str(e):
                         with self._registry_lock:
                             self._registered_menus.pop(sender, None)
-                            logger.debug(
-                                f"[GlobalMenuService] Cleaned stale Registrar entry: {sender}"
-                            )
-                    else:
-                        logger.debug(
-                            f"[GlobalMenuService] Registrar PID lookup error for {sender}: {e}"
-                        )
 
-            # =========================
             # 2. FALLBACK: Scan DBus services matching the target PID
-            # =========================
-
-            # Static well-known paths (all known DEs and toolkits)
-            static_paths: list[str] = [
-                # Unity/Canonical
+            static_paths = [
                 "/com/canonical/menu/0",
                 "/com/canonical/AppMenu/Registrar/0",
                 "/com/canonical/Unity/Panel/Service",
                 "/appmenu",
-                # GTK generic
                 "/org/gtk/Application/menus/appmenu",
                 "/org/gtk/Application/menus/menubar",
                 "/org/gtk/Application/menus/appmenu/0",
                 "/org/gtk/Application/menus/menubar/0",
-                # appmenu-gtk-module
                 "/org/appmenu/gtk/window/menus/menubar",
                 "/org/appmenu/gtk/window/menus/appmenu",
                 "/org/appmenu/gtk/window/menus/menubar/0",
                 "/org/appmenu/gtk/window/menus/appmenu/0",
-                # KDE/Qt
                 "/MenuBar",
                 "/KDEAppMenu",
-                # XFCE
                 "/org/xfce/Thunar/menus/menubar/0",
             ]
 
@@ -400,12 +414,7 @@ class GlobalMenuService(Service):
                 -1,
                 None,
             )
-
             names = res.get_child_value(0).unpack()
-
-            # Include BOTH well-known names AND unique names (:1.xxx) — many apps
-            # only have a unique name and would be invisible with the old filter.
-            # Only skip the DBus daemon itself.
             services = [
                 n
                 for n in names
@@ -415,42 +424,23 @@ class GlobalMenuService(Service):
 
             for svc in services:
                 try:
-                    pid_res = bus.call_sync(
-                        "org.freedesktop.DBus",
-                        "/org/freedesktop/DBus",
-                        "org.freedesktop.DBus",
-                        "GetConnectionUnixProcessID",
-                        GLib.Variant("(s)", (svc,)),
-                        GLib.VariantType("(u)"),
-                        Gio.DBusCallFlags.NONE,
-                        _DBUS_TIMEOUT_PID,
-                        None,
-                    )
-
-                    pid = pid_res.get_child_value(0).get_uint32()
-
+                    pid = _dbus_get_pid(bus, svc, _DBUS_TIMEOUT_PID)
                     if not (pid == target_pid or self._is_same_app(pid, target_pid)):
                         continue
 
-                    # Check if this app explicitly registered its menu via Registrar
                     with self._registry_lock:
-                        reg_entry = self._registered_menus.get(svc)
-                    if reg_entry:
-                        reg_svc, reg_path = reg_entry
-                        logger.info(
-                            f"[GlobalMenuService] Found Registrar path {reg_path} for {svc}"
-                        )
-                        return DBusMenuClient(reg_svc, reg_path)
+                        if reg_entry := self._registered_menus.get(svc):
+                            logger.info(
+                                f"[GlobalMenuService] Found Registrar path {reg_entry[1]} for {svc}"
+                            )
+                            return DBusMenuClient(reg_entry[0], reg_entry[1])
 
-                    # Sanitize wm_class for use in DBus paths
                     _safe_cls = (
                         re.sub(r"[^A-Za-z0-9_]", "", wm_class) if wm_class else ""
                     )
                     _safe_cap = _safe_cls.capitalize() if _safe_cls else ""
 
-                    # Dynamic bases — introspected for child nodes to expand
-                    # Ordered by likelihood to minimize DBus calls
-                    dynamic_bases: list[str] = [
+                    dynamic_bases = [
                         "/MenuBar",
                         "/com/canonical/menu",
                         "/org/appmenu/gtk/window/menus/menubar",
@@ -458,7 +448,6 @@ class GlobalMenuService(Service):
                         "/org/appmenu/gtk/window",
                         "/org/gtk/Application/menus",
                         "/org/gtk/Application",
-                        # DE namespace roots — DFS handles deeper traversal
                         "/org/libreoffice",
                         "/org/xfce",
                         "/org/mate",
@@ -472,154 +461,74 @@ class GlobalMenuService(Service):
                         "/com/canonical",
                     ]
 
-                    # wm_class-derived paths for each known DE namespace
                     if _safe_cls:
                         cls_lower = _safe_cls.lower()
-                        for ns, app_part in [
-                            ("xfce", _safe_cap),
-                            ("xfce", _safe_cls),
-                            ("mate", _safe_cap),
-                            ("mate", _safe_cls),
-                            ("kde", _safe_cap),
-                            ("kde", _safe_cls),
-                            ("gnome", _safe_cap),
-                            ("gnome", _safe_cls),
-                            ("enlightenment", _safe_cap),
-                            ("enlightenment", _safe_cls),
-                            ("pantheon", _safe_cap),
-                            ("pantheon", _safe_cls),
-                            ("elementary", _safe_cap),
-                            ("elementary", _safe_cls),
-                            ("budgie", _safe_cap),
-                            ("budgie", _safe_cls),
-                            ("deepin", _safe_cap),
-                            ("deepin", _safe_cls),
-                            (cls_lower, _safe_cap),  # generic fallback
-                        ]:
-                            for suffix in ("menus/menubar", "menus/appmenu", "menus"):
-                                p = f"/org/{ns}/{app_part}/{suffix}"
-                                if GLib.Variant.is_object_path(p):
-                                    dynamic_bases.append(p)
+                        for ns in _DE_NAMESPACES + [cls_lower]:
+                            for app_part in (_safe_cap, _safe_cls):
+                                for suffix in (
+                                    "menus/menubar",
+                                    "menus/appmenu",
+                                    "menus",
+                                ):
+                                    p = f"/org/{ns}/{app_part}/{suffix}"
+                                    if GLib.Variant.is_object_path(p):
+                                        dynamic_bases.append(p)
 
                     fallback_paths = list(static_paths)
-                    seen_fallback: set[str] = set(fallback_paths)
+                    seen_fallback = set(fallback_paths)
 
-                    # Multi-level child introspection from dynamic bases
+                    # Helper for safe path addition
+                    def _add_paths(parent_path, xml_str):
+                        for child in re.findall(r'<node name="([^"]+)"', xml_str):
+                            child_path = f"{parent_path}/{child}"
+                            if (
+                                GLib.Variant.is_object_path(child_path)
+                                and child_path not in seen_fallback
+                            ):
+                                seen_fallback.add(child_path)
+                                fallback_paths.insert(0, child_path)
+                                yield child_path
+
+                    # Multi-level child introspection
                     for base in dynamic_bases:
                         if not GLib.Variant.is_object_path(base):
                             continue
-                        try:
-                            xml_res = _get_bus().call_sync(
-                                svc,
-                                base,
-                                "org.freedesktop.DBus.Introspectable",
-                                "Introspect",
-                                None,
-                                GLib.VariantType("(s)"),
-                                Gio.DBusCallFlags.NONE,
-                                _DBUS_TIMEOUT_INTROSPECT,
-                                None,
+                        xml_text = _dbus_introspect(
+                            bus, svc, base, _DBUS_TIMEOUT_INTROSPECT
+                        )
+                        for child_path in _add_paths(base, xml_text):
+                            cxml_text = _dbus_introspect(
+                                bus, svc, child_path, _DBUS_TIMEOUT_FAST
                             )
-                            if not xml_res:
-                                continue
-                            xml_text = xml_res.get_child_value(0).get_string()
-                            for child in re.findall(r'<node name="([^"]+)"', xml_text):
-                                child_path = f"{base}/{child}"
-                                if (
-                                    not GLib.Variant.is_object_path(child_path)
-                                    or child_path in seen_fallback
-                                ):
-                                    continue
-                                seen_fallback.add(child_path)
-                                fallback_paths.insert(0, child_path)
-                                # Recurse one more level for deeply nested structures
-                                try:
-                                    cxml_res = _get_bus().call_sync(
-                                        svc,
-                                        child_path,
-                                        "org.freedesktop.DBus.Introspectable",
-                                        "Introspect",
-                                        None,
-                                        GLib.VariantType("(s)"),
-                                        Gio.DBusCallFlags.NONE,
-                                        _DBUS_TIMEOUT_FAST,
-                                        None,
-                                    )
-                                    if cxml_res:
-                                        for gchild in re.findall(
-                                            r'<node name="([^"]+)"',
-                                            cxml_res.get_child_value(0).get_string(),
-                                        ):
-                                            gp = f"{child_path}/{gchild}"
-                                            if (
-                                                GLib.Variant.is_object_path(gp)
-                                                and gp not in seen_fallback
-                                            ):
-                                                seen_fallback.add(gp)
-                                                fallback_paths.insert(0, gp)
-                                except Exception:
-                                    pass
-                        except Exception:
-                            pass
+                            list(_add_paths(child_path, cxml_text))
 
-                    # Collect ALL GTK menu paths via both fallback_paths and DFS
-                    gtk_candidates: list[tuple[str, str]] = []
+                    gtk_candidates = []
                     for path in fallback_paths:
-                        try:
-                            introspect = bus.call_sync(
-                                svc,
-                                path,
-                                "org.freedesktop.DBus.Introspectable",
-                                "Introspect",
-                                None,
-                                GLib.VariantType("(s)"),
-                                Gio.DBusCallFlags.NONE,
-                                _DBUS_TIMEOUT_INTROSPECT,
-                                None,
+                        xml = _dbus_introspect(bus, svc, path, _DBUS_TIMEOUT_INTROSPECT)
+                        if "com.canonical.dbusmenu" in xml:
+                            logger.info(
+                                f"[GlobalMenuService] DBusMenu found: {svc} {path}"
                             )
+                            with self._registry_lock:
+                                self._registered_menus[svc] = (svc, path)
+                            return DBusMenuClient(svc, path)
+                        elif "org.gtk.Menus" in xml:
+                            gtk_candidates.append((svc, path))
 
-                            xml = introspect.get_child_value(0).get_string()
-
-                            if "com.canonical.dbusmenu" in xml:
-                                logger.info(
-                                    f"[GlobalMenuService] DBusMenu found: {svc} {path}"
-                                )
-                                with self._registry_lock:
-                                    self._registered_menus[svc] = (svc, path)
-                                return DBusMenuClient(svc, path)
-                            elif "org.gtk.Menus" in xml:
-                                logger.debug(
-                                    f"[GlobalMenuService] GTK menu at {path} (deferring for DBusMenu)"
-                                )
-                                gtk_candidates.append((svc, path))
-                            else:
-                                logger.debug(
-                                    f"[GlobalMenuService] {svc} {path}: no menu (interfaces: {re.findall(r'interface name=\"([^\"]+)\"', xml)})"
-                                )
-                        except Exception as e:
-                            logger.debug(
-                                f"[GlobalMenuService] {svc} {path}: introspection error: {e}"
-                            )
-
-                    # Also search the full object tree via DFS for GTK menus
-                    all_dfs_paths = self._dfs_find_gtk_menus(svc)
-                    for dfs_path in all_dfs_paths:
+                    for dfs_path in self._dfs_find_interface(svc, "org.gtk.Menus"):
                         if dfs_path not in {p for _, p in gtk_candidates}:
                             gtk_candidates.append((svc, dfs_path))
 
-                    # Validate each candidate — find one with actual menu items
                     for gsvc, gpath in gtk_candidates:
                         try:
                             test_client = GtkMenuClient(gsvc, gpath)
                             test_items = test_client.get_layout()
-
                             if not test_items:
                                 import time
 
                                 for _ in range(4):
                                     time.sleep(0.05)
-                                    test_items = test_client.get_layout()
-                                    if test_items:
+                                    if test_items := test_client.get_layout():
                                         break
 
                             if test_items:
@@ -629,107 +538,63 @@ class GlobalMenuService(Service):
                                 with self._registry_lock:
                                     self._registered_menus[gsvc] = (gsvc, gpath)
                                 return test_client
-                            else:
-                                logger.debug(
-                                    f"[GlobalMenuService] GTK menu {gpath} returned 0 items — trying next"
-                                )
-                        except Exception as e:
-                            logger.debug(
-                                f"[GlobalMenuService] GTK menu {gpath} validation failed: {e}"
-                            )
+                        except Exception:
+                            pass
 
                     # Final fallback: flat menu from org.gtk.Actions
-                    action_candidates: list[str] = ["/"]
-                    # Convert well-known bus name to path: org.gnome.TextEditor -> /org/gnome/TextEditor
+                    action_candidates = ["/"]
                     name_path = (
                         "/" + svc.replace(".", "/") if not svc.startswith(":") else ""
                     )
                     if name_path and GLib.Variant.is_object_path(name_path):
                         action_candidates.append(name_path)
-                    # Also common GTK application paths
                     action_candidates.append("/org/gtk/Application")
+
                     if _safe_cls:
-                        action_candidates.append(
-                            f"/org/{_safe_cls.lower()}/{_safe_cap}"
-                        )
-                        action_candidates.append(f"/org/{_safe_cls.lower()}")
-                        # Add namespace-prefixed paths (e.g. /org/xfce/Thunar)
                         cls_lower = _safe_cls.lower()
-                        for ns, app_part in [
-                            ("xfce", _safe_cap),
-                            ("xfce", _safe_cls),
-                            ("mate", _safe_cap),
-                            ("mate", _safe_cls),
-                            ("kde", _safe_cap),
-                            ("kde", _safe_cls),
-                            ("gnome", _safe_cap),
-                            ("gnome", _safe_cls),
-                            ("enlightenment", _safe_cap),
-                            ("enlightenment", _safe_cls),
-                            ("pantheon", _safe_cap),
-                            ("pantheon", _safe_cls),
-                            ("elementary", _safe_cap),
-                            ("elementary", _safe_cls),
-                            ("budgie", _safe_cap),
-                            ("budgie", _safe_cls),
-                            ("deepin", _safe_cap),
-                            ("deepin", _safe_cls),
-                            (cls_lower, _safe_cap),
-                        ]:
-                            p = f"/org/{ns}/{app_part}"
-                            if GLib.Variant.is_object_path(p):
-                                action_candidates.append(p)
-                    # DFS for org.gtk.Actions in object tree
-                    action_candidates.extend(self._dfs_find_actions(svc))
+                        action_candidates.extend(
+                            [f"/org/{cls_lower}/{_safe_cap}", f"/org/{cls_lower}"]
+                        )
+                        for ns in _DE_NAMESPACES + [cls_lower]:
+                            for app_part in (_safe_cap, _safe_cls):
+                                p = f"/org/{ns}/{app_part}"
+                                if GLib.Variant.is_object_path(p):
+                                    action_candidates.append(p)
+
+                    action_candidates.extend(
+                        self._dfs_find_interface(svc, "org.gtk.Actions")
+                    )
+
                     for act_base in action_candidates:
-                        try:
-                            ax = bus.call_sync(
-                                svc,
-                                act_base,
-                                "org.freedesktop.DBus.Introspectable",
-                                "Introspect",
-                                None,
-                                GLib.VariantType("(s)"),
-                                Gio.DBusCallFlags.NONE,
-                                _DBUS_TIMEOUT_FAST,
-                                None,
-                            )
-                            xml = ax.get_child_value(0).get_string()
-                            if 'interface name="org.gtk.Actions"' in xml:
-                                test_client = ActionMenuClient(svc, act_base)
-                                test_items = test_client.get_layout()
-                                if test_items:
-                                    logger.info(
-                                        f"[GlobalMenuService] Action flat menu fallback: {svc} {act_base} ({len(test_items)} items)"
-                                    )
-                                    return test_client
-                        except Exception:
-                            continue
+                        xml = _dbus_introspect(bus, svc, act_base, _DBUS_TIMEOUT_FAST)
+                        if 'interface name="org.gtk.Actions"' in xml:
+                            test_client = ActionMenuClient(svc, act_base)
+                            if test_items := test_client.get_layout():
+                                logger.info(
+                                    f"[GlobalMenuService] Action menu fallback: {svc} {act_base} ({len(test_items)} items)"
+                                )
+                                return test_client
 
                     logger.info(
                         f"[GlobalMenuService] No menu found for {svc} wm={wm_class}"
                     )
-
                 except Exception:
                     continue
-
         except Exception as e:
             logger.debug(f"[GlobalMenuService] Discovery failed: {e}")
 
         return None
 
-    def _dfs_find_gtk_menus(
+    def _dfs_find_interface(
         self,
         service: str,
+        interface: str,
         path: str = "/",
         _depth: int = 0,
         _visited: Optional[set] = None,
         _node_count: Optional[list[int]] = None,
     ) -> list[str]:
-        """Bounded DFS returning ALL org.gtk.Menus paths in a service's object tree.
-
-        Uses a mutable list[int] as a shared counter across all branches.
-        """
+        """Bounded DFS returning ALL paths containing a target interface in a service's object tree."""
         if _node_count is None:
             _node_count = [0]
         if (
@@ -744,20 +609,13 @@ class GlobalMenuService(Service):
         _node_count[0] += 1
         results: list[str] = []
         try:
-            xml_res = _get_bus().call_sync(
-                service,
-                path,
-                "org.freedesktop.DBus.Introspectable",
-                "Introspect",
-                None,
-                GLib.VariantType("(s)"),
-                Gio.DBusCallFlags.NONE,
-                _DBUS_TIMEOUT_INTROSPECT,
-                None,
-            )
-            xml = xml_res.get_child_value(0).get_string()
-            if 'interface name="org.gtk.Menus"' in xml:
+            xml = _dbus_introspect(_get_bus(), service, path, _DBUS_TIMEOUT_INTROSPECT)
+            if not xml:
+                return results
+
+            if f'interface name="{interface}"' in xml:
                 results.append(path)
+
             for child in re.findall(r'<node name="([^"]+)"', xml):
                 child_path = (
                     path.rstrip("/") + "/" + child if path != "/" else "/" + child
@@ -765,63 +623,13 @@ class GlobalMenuService(Service):
                 if not GLib.Variant.is_object_path(child_path):
                     continue
                 results.extend(
-                    self._dfs_find_gtk_menus(
-                        service, child_path, _depth + 1, _visited, _node_count
-                    )
-                )
-        except Exception:
-            pass
-        return results
-
-    def _dfs_find_actions(
-        self,
-        service: str,
-        path: str = "/",
-        _depth: int = 0,
-        _visited: Optional[set] = None,
-        _node_count: Optional[list[int]] = None,
-    ) -> list[str]:
-        """Bounded DFS returning ALL org.gtk.Actions paths in a service's object tree.
-
-        Uses a mutable list[int] as a shared counter across all branches.
-        """
-        if _node_count is None:
-            _node_count = [0]
-        if (
-            _depth > 6
-            or _node_count[0] > 100
-            or (_visited is not None and path in _visited)
-        ):
-            return []
-        if _visited is None:
-            _visited = set()
-        _visited.add(path)
-        _node_count[0] += 1
-        results: list[str] = []
-        try:
-            xml_res = _get_bus().call_sync(
-                service,
-                path,
-                "org.freedesktop.DBus.Introspectable",
-                "Introspect",
-                None,
-                GLib.VariantType("(s)"),
-                Gio.DBusCallFlags.NONE,
-                _DBUS_TIMEOUT_INTROSPECT,
-                None,
-            )
-            xml = xml_res.get_child_value(0).get_string()
-            if 'interface name="org.gtk.Actions"' in xml:
-                results.append(path)
-            for child in re.findall(r'<node name="([^"]+)"', xml):
-                child_path = (
-                    path.rstrip("/") + "/" + child if path != "/" else "/" + child
-                )
-                if not GLib.Variant.is_object_path(child_path):
-                    continue
-                results.extend(
-                    self._dfs_find_actions(
-                        service, child_path, _depth + 1, _visited, _node_count
+                    self._dfs_find_interface(
+                        service,
+                        interface,
+                        child_path,
+                        _depth + 1,
+                        _visited,
+                        _node_count,
                     )
                 )
         except Exception:

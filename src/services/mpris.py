@@ -187,19 +187,21 @@ class PlayerService(Service):
             logger.warning(f"Could not get position: {e}")
             return 0
 
-    def set_position(self, pos: float):
+    def seek_position(self, pos: float):
         if self._is_cleaning_up:
             return
         self.pos_fabricator.stop()
         current = self.get_position() / 1_000_000
         try:
             self._player.set_position(int(pos * 1_000_000))
-        except GLib.Error:
+        except Exception:
             try:
                 offset = pos - current
                 self._player.seek(int(offset * 1_000_000))
-            except GLib.Error as e:
-                logger.error(f"Failed to seek: {e}")
+            except Exception:
+                import os
+
+                os.system(f"playerctl -p {self.player_name} position {pos}")
         finally:
             if self.playback_status.lower() == "playing":
                 self.pos_fabricator.start()
