@@ -320,7 +320,13 @@ class GlobalMenuDropdowns:
 
     def _on_active_app_changed(self, _, value):
         logger.info(f"[GlobalMenu] Active app changed: {value}")
-        self.global_title_menu_about.set_property("label", f"About {value}")
+        try:
+            # The dropdown_option returns a Button containing a CenterBox with the Label as its first start_child
+            self.global_title_menu_about.get_child().get_start_children()[0].set_label(
+                f"About {value}"
+            )
+        except Exception:
+            pass
 
         # Notify the global menu service about the active window change
         if self._global_menu_svc:
