@@ -3,8 +3,7 @@
 import json
 import re
 import threading
-import time
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import (
@@ -82,11 +81,10 @@ class GlobalMenuService(Service):
         self._current_wm_class: str = ""
         self._current_pid: int = 0
 
-        # Bounded LRU caches — deliberately small to save memory
-        self._client_cache: dict[str, Optional[DBusMenuClient]] = {}
-        self._menu_cache: dict[str, Optional[List[DBusMenuItem]]] = {}
-        self._cache_order: list[str] = []
-        self._empty_cache_ts: dict[str, float] = {}  # wm_class -> monotonic timestamp
+        # Cached dbus menu clients mapping: wm_class -> Client
+        self._client_cache: Dict[str, Union[GtkMenuClient, DBusMenuClient]] = {}
+        # Cached layout for fast repaints
+        self._menu_cache: Dict[str, List[DBusMenuItem]] = {}
 
         # Registrar mapping: sender -> (service_name, object_path)
         self._registered_menus: dict[str, tuple[str, str]] = {}
@@ -137,8 +135,9 @@ class GlobalMenuService(Service):
             # causing gdk_wayland_window_set_dbus_properties_libgtk_only assertion failures.
             # The hyprctl/dbus-update-activation-environment calls set it for future apps instead.
             exec_shell_command("hyprctl keyword env GTK_MODULES,appmenu-gtk-module")
+            exec_shell_command("hyprctl keyword env UBUNTU_MENUPROXY,1")
             exec_shell_command(
-                "dbus-update-activation-environment --systemd GTK_MODULES=appmenu-gtk-module"
+                "dbus-update-activation-environment --systemd GTK_MODULES=appmenu-gtk-module UBUNTU_MENUPROXY=1"
             )
 
             # 2. Automatically grant Flatpak apps permission to talk to the DBus Registrar
@@ -258,24 +257,10 @@ class GlobalMenuService(Service):
 
         self.active_app_changed(app_name, wm_class)
 
-        # Check cache — snapshot under lock, serve non-empty + non-expired results
+        # Check cache — snapshot under lock, serve non-empty results
         with self._lock:
             cached_menu = self._menu_cache.get(wm_class)
-            has_good_cache = (
-                wm_class in self._client_cache
-                and cached_menu is not None
-                and cached_menu  # non-empty
-                and cached_menu is not _EMPTY_SENTINEL
-            )
-            if has_good_cache:
-                # non-empty, serve it
-                pass
-            elif cached_menu is _EMPTY_SENTINEL:
-                # last attempt returned empty — check TTL
-                empty_ts = self._empty_cache_ts.get(wm_class, 0)
-                if time.monotonic() - empty_ts < _EMPTY_CACHE_TTL:
-                    has_good_cache = True  # still within TTL, skip re-scan
-                    cached_menu = []
+            has_good_cache = wm_class in self._client_cache and cached_menu is not None
 
         if has_good_cache:
             with self._state_lock:
@@ -283,10 +268,8 @@ class GlobalMenuService(Service):
                 self._current_app = app_name
                 self._current_wm_class = wm_class
                 self._current_pid = target_pid
-            logger.info(
-                f"[GlobalMenuService] Cache {'hit' if cached_menu else 'skip (empty TTL)'} for '{wm_class}'"
-            )
-            self.menu_changed(cached_menu or [])
+            logger.info(f"[GlobalMenuService] Cache hit for '{wm_class}'")
+            self.menu_changed(cached_menu)
             return
 
         # Clear menu IMMEDIATELY for the new app (before in_flight check below).
@@ -629,6 +612,16 @@ class GlobalMenuService(Service):
                         try:
                             test_client = GtkMenuClient(gsvc, gpath)
                             test_items = test_client.get_layout()
+
+                            if not test_items:
+                                import time
+
+                                for _ in range(4):
+                                    time.sleep(0.05)
+                                    test_items = test_client.get_layout()
+                                    if test_items:
+                                        break
+
                             if test_items:
                                 logger.info(
                                     f"[GlobalMenuService] GTK menu found: {gsvc} {gpath} ({len(test_items)} items)"
@@ -875,6 +868,8 @@ class GlobalMenuService(Service):
 
     def _evict_cache_if_needed(self, key: str):
         """Evict oldest cache entries when over the size limit. Must be called under _lock."""
+        if not hasattr(self, "_cache_order"):
+            self._cache_order: list[str] = []
         if key not in self._cache_order:
             self._cache_order.append(key)
 
@@ -882,7 +877,6 @@ class GlobalMenuService(Service):
             oldest = self._cache_order.pop(0)
             self._client_cache.pop(oldest, None)
             self._menu_cache.pop(oldest, None)
-            self._empty_cache_ts.pop(oldest, None)
             logger.debug(f"[GlobalMenuService] Evicted cache for '{oldest}'")
 
     def _extract_menu(
@@ -901,24 +895,16 @@ class GlobalMenuService(Service):
             if client:
                 items = client.get_layout()
 
-            with self._lock:
-                if items:
+            if items:
+                with self._lock:
                     self._client_cache[wm_class] = client
                     self._menu_cache[wm_class] = items
-                    self._empty_cache_ts.pop(wm_class, None)
                     self._evict_cache_if_needed(wm_class)
                     logger.info(
                         f"[GlobalMenuService] Found menu for '{wm_class}': {len(items)} items"
                     )
-                else:
-                    # Cache empty result with TTL to avoid repeated DBus scanning
-                    self._client_cache.pop(wm_class, None)
-                    self._menu_cache[wm_class] = _EMPTY_SENTINEL
-                    self._empty_cache_ts[wm_class] = time.monotonic()
-                    self._evict_cache_if_needed(wm_class)
-                    logger.info(
-                        f"[GlobalMenuService] No DBus menu found for '{wm_class}' (cached empty)"
-                    )
+            else:
+                logger.info(f"[GlobalMenuService] No DBus menu found for '{wm_class}'")
 
             with self._seq_lock:
                 current_seq = self._extraction_seq
