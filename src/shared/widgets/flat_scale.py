@@ -119,6 +119,7 @@ class FlatScale(Gtk.DrawingArea, Widget):
         min_value: float = 0.0,
         max_value: float = 1.0,
         step: float = 0.05,
+        draw_value: bool = False,
         orientation: Literal["horizontal", "vertical"]
         | Gtk.Orientation = Gtk.Orientation.HORIZONTAL,
         on_value_changed: Callable[["FlatScale", float], None] | None = None,
@@ -163,6 +164,7 @@ class FlatScale(Gtk.DrawingArea, Widget):
         self._min_value = min_value
         self._max_value = max_value
         self._step = step
+        self._draw_value = draw_value
         self._dragging = False
         self._hovering = False
         self._cached_style: FlatScaleStyle | None = None
@@ -360,10 +362,16 @@ class FlatScale(Gtk.DrawingArea, Widget):
     def _value_from_coords(self, x: float, y: float) -> float:
         width = self.get_allocated_width()
         height = self.get_allocated_height()
+        slider_size = self._anim_press.value
+        slider_half = slider_size / 2.0
+
         if self._is_horizontal():
-            ratio = clamp(x / width, 0.0, 1.0)
+            track_length = max(float(width) - slider_size, 0.001)
+            ratio = clamp((x - slider_half) / track_length, 0.0, 1.0)
         else:
-            ratio = clamp(1.0 - (y / height), 0.0, 1.0)
+            track_length = max(float(height) - slider_size, 0.001)
+            ratio = clamp(1.0 - ((y - slider_half) / track_length), 0.0, 1.0)
+
         return self._min_value + ratio * (self._max_value - self._min_value)
 
     # ------------------------------------------------------------------ #
@@ -420,6 +428,9 @@ class FlatScale(Gtk.DrawingArea, Widget):
         Draws the percentage pill scaling elegantly out from its anchor point
         (bottom-center for horizontal, right-center for vertical).
         """
+        if not self._draw_value:
+            return
+
         self._sync_bubble_progress()
         p = self._bubble_progress
         if p <= 0.0:
@@ -511,10 +522,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
         progress_thickness = styles["progress_thickness"]
         slider_height = self._anim_press.value
         slider_thickness = self._anim_press.value
-        left_gap = styles["left_gap"]
-        right_gap = styles["right_gap"]
-        top_gap = styles["top_gap"]
-        bottom_gap = styles["bottom_gap"]
         corner_radius = styles["corner_radius"]
 
         normalized = self.do_normalize_value()
@@ -531,23 +538,20 @@ class FlatScale(Gtk.DrawingArea, Widget):
             )
             slider_cy = track_y
 
-            # Trough
-            trough_x = slider_cx + slider_half + right_gap
-            trough_w = max(track_end - trough_x, 0.0)
-            if trough_w > 0:
-                Gdk.cairo_set_source_rgba(cr, styles["trough_color"])
-                self.do_draw_rounded_rect(
-                    cr,
-                    trough_x,
-                    track_y - trough_thickness / 2,
-                    trough_w,
-                    trough_thickness,
-                    trough_thickness / 2,
-                )
-                cr.fill()
+            # Full Trough
+            Gdk.cairo_set_source_rgba(cr, styles["trough_color"])
+            self.do_draw_rounded_rect(
+                cr,
+                track_start,
+                track_y - trough_thickness / 2,
+                track_length,
+                trough_thickness,
+                trough_thickness / 2,
+            )
+            cr.fill()
 
-            # Progress
-            progress_w = max(slider_cx - slider_half - left_gap - track_start, 0.0)
+            # Progress (drawn up to right edge of thumb, thumb covers the end)
+            progress_w = max(slider_cx + slider_half - track_start, 0.0)
             if progress_w > 0:
                 Gdk.cairo_set_source_rgba(cr, styles["progress_color"])
                 self.do_draw_rounded_rect(
@@ -587,7 +591,7 @@ class FlatScale(Gtk.DrawingArea, Widget):
             slider_cx = track_x
 
             trough_y = track_start
-            trough_h = max(slider_cy - slider_half - top_gap - track_start, 0.0)
+            trough_h = max(slider_cy - track_start, 0.0)
             if trough_h > 0:
                 Gdk.cairo_set_source_rgba(cr, styles["trough_color"])
                 self.do_draw_rounded_rect(
@@ -600,7 +604,7 @@ class FlatScale(Gtk.DrawingArea, Widget):
                 )
                 cr.fill()
 
-            progress_y = slider_cy + slider_half + bottom_gap
+            progress_y = slider_cy
             progress_h = max(track_end - progress_y, 0.0)
             if progress_h > 0:
                 Gdk.cairo_set_source_rgba(cr, styles["progress_color"])
