@@ -1,5 +1,5 @@
 #osd-container {
-    background-color: alpha(@text-main, 0.09);
+    background-color: @bg-a50;
     padding: 12px 20px;
     margin: 70px;
     min-width: 180px;
@@ -15,14 +15,14 @@
     background: var(--surface);
     min-height: 15px;
     margin-right: 4px;
-    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all apply(transition-slower) cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border-radius: apply(radius-lg);
 }
 
 #osd-container trough highlight {
     border-radius: apply(radius-full);
     background: var(--primary);
-    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all apply(transition-slower) cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #osd-container.muted trough highlight,

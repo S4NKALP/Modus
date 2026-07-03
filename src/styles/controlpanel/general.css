@@ -1,0 +1,31 @@
+.title {
+  font-size: apply(font-lg);
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#separator {
+  min-height: 0.09rem;
+  margin: 3px 0;
+  background-color: @fg-a20;
+  border-radius: apply(radius-sm);
+}
+
+
+#control-center-menu {
+  background-color: @bg-a50;
+  border-radius: apply(radius-md);
+  box-shadow: none;
+  margin: 0;
+}
+
+
+#control-center-widgets {
+  /* background-color: @bg-a50; */
+  box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
+  border: 1px solid @border-strong;
+  border-radius: apply(radius-md);
+  padding: 0.5rem;
+}
+

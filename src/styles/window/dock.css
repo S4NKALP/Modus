@@ -1,5 +1,5 @@
 #dock {
-    background-color: @bg;
+    background-color: @bg-a50;
     padding: 4px 4px;
     margin: 4px 4px;
     border: none;
@@ -8,11 +8,11 @@
 }
 
 #dock.shown {
-    transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all apply(transition-medium) cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 #dock_item_main_container {
-    transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all apply(transition-medium) cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 #dock_item.shown:hover #dock_item_main_container {
@@ -42,13 +42,13 @@
 
 #dock_item.shown.activated #dock_item_icon {
     opacity: 1;
-    /* background-color: #01458e; */
+    /* background-color: @on-primary; */
 }
 
 /* #dock_item.shown.activated #dock_item_indicator { */
 /*   min-width: 4px; */
 /*   margin-top: 8px; */
-/*   background-color: #aac7ff; */
+/*   background-color: @primary; */
 /* } */
 
 #dock_item_icon {
@@ -64,7 +64,7 @@
 /* } */
 
 #dock_item {
-    transition: margin 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: margin apply(transition-slower) cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 #dock_item.shown {
@@ -77,12 +77,12 @@
 }
 
 .dock_separator {
-    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: all apply(transition-slower) cubic-bezier(0.25, 0.1, 0.25, 1);
     min-width: 1.5px;
     min-height: 50px;
     margin: 0px 4px;
-    border-radius: 2px;
-    background-color: @accent;
+    border-radius: apply(radius-2xs);
+    background-color: @primary;
 }
 
 .dock_separator.hidden {

@@ -1,0 +1,22 @@
+#launcher-search {
+    font-weight: 400;
+    font-size: 36px;
+    background-color: transparent;
+    color: @fg-a95;
+    border: none;
+    border-radius: 0;
+    padding: 12px 0;
+    margin: 0;
+}
+
+#launcher-search:focus {
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+}
+
+#launcher-search selection {
+    color: white;
+    background-color: @primary-a80;
+}
+

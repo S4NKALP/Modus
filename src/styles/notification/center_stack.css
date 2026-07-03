@@ -1,0 +1,97 @@
+/* Expandable notification group styles */
+#notification-group {
+  margin: 4px 0;
+}
+
+/* Single notification (no stacking) */
+#single-notification-content {
+  background-color: @bg-a50;
+  border: 1.5px solid @bg-a90;
+  border-radius: apply(radius-md);
+  padding: 12px;
+  transition: all apply(transition-medium) ease;
+}
+
+#single-notification-content:hover {
+  background-color: @fg-a10;
+}
+
+/* Stacked notification container */
+#notification-stack-container {
+  background-color: transparent;
+  margin: 8px 0;
+}
+
+/* Bottom shadow layer (deepest) - offset to show stacking from below */
+#stack-shadow-bottom {
+  background-color: @bg-a50;
+  border-top: 1px solid @bg-a90;
+  border-radius: apply(radius-md);
+  opacity: 1;
+  min-height: 16px;
+  margin-left: 20px;
+  margin-right: -4px;
+  margin-bottom: -10px;
+}
+
+/* Middle shadow layer */
+#stack-shadow-middle {
+  background-color: @bg-a50;
+
+  border-top: 1px solid @bg-a90;
+  border-radius: apply(radius-md);
+  opacity: 1;
+  min-height: 20px;
+  margin-left: 10px;
+  margin-right: -2px;
+  margin-bottom: -14px;
+}
+
+/* Main notification content (top layer) */
+#stack-main-notification {
+  background-color: @bg-a50;
+
+  border: 1.2px solid @bg-a90;
+  border-radius: apply(radius-md);
+  padding: 12px;
+  transition: all apply(transition-medium) ease;
+}
+
+/* Hover effects for stacked notifications */
+#notification-stack-container:hover #stack-main-notification {
+  background-color: @fg-a10;
+}
+
+#notification-stack-container:hover #stack-shadow-middle {
+  opacity: 0.7;
+}
+
+#notification-stack-container:hover #stack-shadow-bottom {
+  opacity: 0.5;
+}
+
+/* Collapsed notification state */
+#notification-content-collapsed {
+  background-color: @bg-a50;
+  border: 1px solid @bg-a90;
+  border-radius: apply(radius-md);
+  padding: 12px;
+  margin: 2px 0;
+  transition: all apply(transition-medium) ease;
+}
+
+#notification-content-collapsed:hover {
+  background-color: @fg-a10;
+}
+
+/* Notification count badge */
+#notification-count-label {
+  background-color: @fg-a20;
+  color: @fg-a80;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: apply(font-2xs);
+  font-weight: 500;
+  min-width: 16px;
+}
+

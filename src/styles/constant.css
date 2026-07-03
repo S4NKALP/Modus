@@ -1,31 +1,73 @@
-@define-color bg alpha(#fff, 0.07);
-@define-color hover alpha(#fff, 0.1);
-@define-color border var(--outline);
-@define-color active alpha(#fff, 0.9);
-@define-color urgent alpha(var(--on-error), 0.7);
-
-/* New common colors */
-@define-color accent #007aff;
-@define-color accent-hover #0056cc;
-@define-color bg-lighter alpha(#fff, 0.12);
-@define-color bg-darker alpha(#000, 0.08);
-@define-color text-main #ffffff;
-@define-color text-secondary alpha(#fff, 0.6);
-@define-color text-dim #999;
-@define-color shadow-color alpha(#000, 0.3);
-
-/* Border and Shadow specific */
-@define-color border-subtle alpha(#111, 0.3);
-@define-color border-strong alpha(#111, 0.4);
-@define-color inner-shadow alpha(#000, 0.3);
-
-/* Constants */
-/* :vars replaced by defines */
 @define radius-xs 4px;
 @define radius-sm 8px;
 @define radius-md 12px;
 @define radius-lg 16px;
 @define radius-xl 20px;
 @define radius-full 999px;
+@define radius-2xs 2px;
+@define transition-xfast 0.1s;
 @define transition-fast 0.15s;
+@define transition-medium 0.2s;
+@define transition-slower 0.25s;
 @define transition-slow 0.3s;
+@define font-2xs 10px;
+@define font-xs 11px;
+@define font-sm 12px;
+@define font-md 13px;
+@define font-base 14px;
+@define font-lg 16px;
+
+@define-color bg-hover alpha(@foreground, 0.1);
+@define-color bg-active alpha(@foreground, 0.2);
+@define-color border-subtle alpha(@outline, 0.3);
+@define-color border-strong alpha(@outline, 0.4);
+@define-color shadow-main alpha(@shadow, 0.3);
+@define-color text-dim alpha(@foreground, 0.6);
+@define-color text-muted alpha(@foreground, 0.4);
+
+@define-color bg-a07 alpha(@background, 0.07);
+@define-color bg-a50 alpha(@background, 0.5);
+@define-color bg-a08 alpha(@background, 0.08);
+@define-color bg-a70 alpha(@background, 0.7);
+@define-color bg-a75 alpha(@background, 0.75);
+@define-color bg-a80 alpha(@background, 0.8);
+@define-color bg-a85 alpha(@background, 0.85);
+@define-color bg-a90 alpha(@background, 0.9);
+@define-color bg-a95 alpha(@background, 0.95);
+@define-color error-a20 alpha(@error, 0.2);
+@define-color error-a40 alpha(@error, 0.4);
+@define-color error-a70 alpha(@error, 0.7);
+@define-color fg-a03 alpha(@foreground, 0.03);
+@define-color fg-a05 alpha(@foreground, 0.05);
+@define-color fg-a06 alpha(@foreground, 0.06);
+@define-color fg-a08 alpha(@foreground, 0.08);
+@define-color fg-a09 alpha(@foreground, 0.09);
+@define-color fg-a12 alpha(@foreground, 0.12);
+@define-color fg-a15 alpha(@foreground, 0.15);
+@define-color fg-a18 alpha(@foreground, 0.18);
+@define-color fg-a25 alpha(@foreground, 0.25);
+@define-color fg-a30 alpha(@foreground, 0.3);
+@define-color fg-a50 alpha(@foreground, 0.5);
+@define-color fg-a70 alpha(@foreground, 0.7);
+@define-color fg-a80 alpha(@foreground, 0.8);
+@define-color fg-a85 alpha(@foreground, 0.85);
+@define-color fg-a90 alpha(@foreground, 0.9);
+@define-color fg-a95 alpha(@foreground, 0.95);
+@define-color outline-a40 alpha(@outline, 0.4);
+@define-color outline-a70 alpha(@outline, 0.7);
+@define-color primary-a20 alpha(@primary, 0.2);
+@define-color primary-a30 alpha(@primary, 0.3);
+@define-color primary-a40 alpha(@primary, 0.4);
+@define-color primary-a50 alpha(@primary, 0.5);
+@define-color primary-a60 alpha(@primary, 0.6);
+@define-color primary-a80 alpha(@primary, 0.8);
+@define-color primary-a90 alpha(@primary, 0.9);
+@define-color shadow-a02 alpha(@shadow, 0.02);
+@define-color shadow-a05 alpha(@shadow, 0.05);
+@define-color shadow-a10 alpha(@shadow, 0.1);
+@define-color shadow-a20 alpha(@shadow, 0.2);
+@define-color shadow-a25 alpha(@shadow, 0.25);
+@define-color shadow-a40 alpha(@shadow, 0.4);
+@define-color surface-a05 alpha(@surface, 0.05);
+@define-color surface-a90 alpha(@surface, 0.9);
+@define-color surface-bright-a90 alpha(@surface-bright, 0.9);

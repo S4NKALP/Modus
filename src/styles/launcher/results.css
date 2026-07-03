@@ -1,0 +1,112 @@
+#launcher-results-scroll {
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0 20px 20px 20px;
+}
+
+#launcher-results-scroll scrollbar {
+    border-radius: 0;
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+#launcher-results-scroll scrollbar slider {
+    border-radius: apply(radius-2xs);
+    min-width: 4px;
+    min-height: 20px;
+    background-color: @fg-a30;
+    margin: 0;
+}
+
+#launcher-results-scroll scrollbar:hover slider {
+    background-color: @fg-a50;
+}
+
+#launcher-results {
+    background: transparent;
+    margin-top: 8px;
+}
+
+#launcher-result-item {
+    border-radius: apply(radius-sm);
+    padding: 12px 16px;
+    margin: 2px 0;
+    min-height: 64px;
+    transition: all apply(transition-fast);
+    background: transparent;
+}
+
+@keyframes loadSlot {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+#launcher-result-item:focus,
+#launcher-result-item:selected,
+#launcher-result-item:hover,
+#launcher-result-item.selected {
+    border-radius: apply(radius-sm);
+    background-color: @primary-a80;
+    padding: 12px 16px;
+    margin: 2px 0;
+}
+
+#launcher-result-item.selected #result-item-title {
+    color: white;
+    font-weight: 600;
+}
+
+#launcher-result-item.selected #result-item-subtitle {
+    color: @fg-a80;
+}
+
+#launcher-result-item.selected #result-item-plugin {
+    color: @fg-a60;
+}
+
+#result-item-main {
+    min-height: 56px;
+}
+
+#launcher-result-item {
+    min-height: 56px;
+}
+
+#result-item-icon {
+    min-width: 56px;
+    min-height: 56px;
+    margin-right: 16px;
+    border-radius: apply(radius-md);
+}
+
+#result-item-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: @fg-a95;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+#result-item-subtitle {
+    font-size: apply(font-base);
+    color: @fg-a60;
+    margin-bottom: 4px;
+}
+
+#result-item-plugin {
+    font-size: apply(font-sm);
+    color: @fg-a40;
+    font-style: normal;
+    margin-bottom: 4px;
+    opacity: 1;
+    font-weight: 400;
+}
+

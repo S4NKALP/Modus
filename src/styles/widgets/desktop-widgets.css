@@ -4,7 +4,7 @@
   min-height: 170px;
   border-radius: apply(radius-lg);
   transition: all apply(transition-slow);
-  background: #202020;
+  background: @surface;
 }
 
 /* Base Weather Layout */
@@ -13,7 +13,7 @@
 }
 
 #city {
-  color: rgba(255, 255, 255, 0.85);
+  color: @fg-a85;
   font-weight: 600;
   font-size: 18px;
 }
@@ -31,7 +31,7 @@
 }
 
 #condition {
-  font-size: 16px;
+  font-size: apply(font-lg);
   font-weight: 600;
   color: white;
 }
@@ -39,56 +39,56 @@
 #feels-like {
   font-weight: 500;
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.8);
+  color: @fg-a80;
 }
 
 /* Weather Condition Gradients */
 .weather-clear {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, @primary 0%, @cyan 100%);
 }
 
 .weather-mostly-clear {
-  background: linear-gradient(135deg, #439cfb 0%, #6bc1f9 100%);
+  background: linear-gradient(135deg, @primary 0%, @primary 100%);
 }
 
 .weather-partly-cloudy {
-  background: linear-gradient(135deg, #6a85b6 0%, #bac8e0 100%);
+  background: linear-gradient(135deg, @outline 0%, #bac8e0 100%);
 }
 
 .weather-overcast {
-  background: linear-gradient(135deg, #485563 0%, #29323c 100%);
+  background: linear-gradient(135deg, @bg-a80 0%, @bg-a80 100%);
 }
 
 .weather-fog {
-  background: linear-gradient(135deg, #757f9a 0%, #d7dde8 100%);
+  background: linear-gradient(135deg, @outline 0%, @foreground 100%);
 }
 
 .weather-light-rain {
-  background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+  background: linear-gradient(135deg, @on-primary 0%, @bg-a90 100%);
 }
 
 .weather-rain {
-  background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+  background: linear-gradient(135deg, @bg-a70 0%, @on-tertiary 100%);
 }
 
 .weather-heavy-rain {
-  background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
+  background: linear-gradient(135deg, @surface 0%, @bg-a90 100%);
 }
 
 .weather-snow,
 .weather-heavy-snow {
-  background: linear-gradient(135deg, #83a4d4 0%, #b6fbff 100%);
+  background: linear-gradient(135deg, @secondary 0%, @cyan 100%);
 }
 
 .weather-storm {
-  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+  background: linear-gradient(135deg, @background 0%, @surface-bright 50%, @outline 100%);
 }
 
 /* # */
 
 /* Calendar Widget */
 #calendar-box-widget {
-  background: linear-gradient(to bottom, #202020, #141414);
+  background: linear-gradient(to bottom, @surface, @background);
   margin: 5px 20px 20px 10px;
   min-width: 170px;
   min-height: 170px;
@@ -100,9 +100,9 @@
 }
 
 #calendar-month {
-  font-size: 16px;
+  font-size: apply(font-lg);
   font-weight: 600;
-  color: var(--blue-dim);
+  color: @primary;
   margin-bottom: 6px;
 }
 
@@ -111,43 +111,43 @@
 }
 
 #calendar-day-header {
-  font-size: 12px;
+  font-size: apply(font-sm);
   font-weight: 600;
-  color: @text-main;
+  color: @foreground;
   min-width: 18px;
   min-height: 10px;
 }
 
 #calendar-day-header-weekend {
-  font-size: 12px;
+  font-size: apply(font-sm);
   font-weight: 600;
-  color: #8e8d93;
+  color: @fg-a50;
   min-width: 18px;
   min-height: 10px;
 }
 
 #calendar-day {
-  font-size: 12px;
+  font-size: apply(font-sm);
   margin: 1.4px 0px 1.4px 0px;
   font-weight: 500;
-  color: @text-main;
+  color: @foreground;
   min-width: 18px;
   min-height: 10px;
 }
 
 #calendar-day-weekend {
-  font-size: 12px;
+  font-size: apply(font-sm);
   font-weight: 500;
-  color: #8e8d93;
+  color: @fg-a50;
   min-width: 18px;
   min-height: 16px;
 }
 
 #calendar-day-today {
-  font-size: 12px;
+  font-size: apply(font-sm);
   font-weight: 700;
-  color: #191919;
-  background-color: var(--blue-dim);
+  color: @foreground;
+  background-color: @primary;
   border-radius: apply(radius-full);
   min-width: 18px;
   min-height: 16px;
@@ -174,12 +174,12 @@
   padding: 5px;
   margin-top: 10px;
   font-size: 30px;
-  color: alpha(@text-main, 0.9);
+  color: @fg-a90;
   font-weight: 600;
 }
 
 #date label {
-  color: alpha(@text-main, 0.9);
+  color: @fg-a90;
 
   margin-top: -10px;
   font-size: 90px;
@@ -187,11 +187,11 @@
 }
 
 #day label {
-  color: alpha(var(--blue-dim), 0.9);
+  color: alpha(@primary, 0.9);
 }
 
 #date-container {
-  background: linear-gradient(to bottom, #202020, #141414);
+  background: linear-gradient(to bottom, @surface, @background);
   margin: 5px 10px 20px 5px;
   min-width: 170px;
   min-height: 170px;
@@ -200,7 +200,7 @@
 
 /* System Info Widget CSS  */
 #info-box-widget {
-  background: linear-gradient(to bottom, #202020, #141414);
+  background: linear-gradient(to bottom, @surface, @background);
   margin: 5px 5px 5px 5px;
   min-width: 170px;
   min-height: 170px;
@@ -214,45 +214,46 @@
 
 #progress-label {
   font-weight: 600;
-  font-size: 13px;
+  font-size: apply(font-md);
 }
 
 #progress {
-  border: solid 8px var(--blue-dim);
-  color: alpha(#aaaaaa, 0.7);
+  background-color: transparent;
+  border: solid 8px @primary-a20;
+  color: @foreground;        /* Filled progress as solid white/foreground */
 }
 
 /* Color indicators for memory usage */
 #used-color-indicator {
-  color: var(--blue-dim);
-  font-size: 10px;
+  color: @primary;
+  font-size: apply(font-2xs);
   font-weight: 900;
 }
 
 #free-color-indicator {
-  color: #7c7c7c;
-  font-size: 10px;
+  color: @outline;
+  font-size: apply(font-2xs);
   font-weight: 900;
 }
 
 #temp-color-indicator {
-  color: var(--blue-dim);
-  font-size: 10px;
+  color: @primary;
+  font-size: apply(font-2xs);
   font-weight: 900;
 }
 
 /* Info text styling */
 #info-text {
-  font-size: 13px;
+  font-size: apply(font-md);
   font-weight: 500;
-  color: #8e8e8e;
+  color: @fg-a60;
   min-width: 32px;
 }
 
 #info-value {
-  font-size: 12px;
+  font-size: apply(font-sm);
   font-weight: 600;
-  color: @text-main;
+  color: @foreground;
 }
 
 #info-container {
@@ -263,47 +264,11 @@
 #info {
   margin-left: -13px;
   margin-top: 5px;
-  font-size: 14px;
+  font-size: apply(font-base);
   font-weight: 600;
 }
 
 #component-name {
-  font-size: 10px;
-}
-/* FlatScale styling */
-.flat-scale {
-    margin: 4px 0px;
+  font-size: apply(font-2xs);
 }
 
-.flat-scale slider {
-    /* background: linear-gradient(135deg, @text-main 0%, #f0f1f2 100%); */
-    background-color: white;
-    min-height: 24px;
-    min-width: 24px;
-    border-radius: apply(radius-full);
-}
-
-
-.flat-scale trough {
-    background-color: alpha(#666, 0.5);
-    min-height: 25px;
-    border-radius: apply(radius-full);
-    border: 1px solid alpha(#444, 0.3);
-}
-.flat-scale highlight {
-    background-color: alpha(@text-main, 0.8);
-    min-height: 25px;
-    border-radius: apply(radius-full);
-}
-
-/* SmoothSwitch styling */
-.smooth-switch {
-    min-width: 44px;
-    min-height: 24px;
-    background-color: alpha(#666, 0.5);
-    color: @text-main;
-}
-.smooth-switch.checked {
-    background-color: alpha(@text-main, 0.8);
-    color: @background;
-}

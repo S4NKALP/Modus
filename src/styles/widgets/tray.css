@@ -1,7 +1,7 @@
 tooltip {
-  border: #474747 solid 1px;
+  border: @bg-a90 solid 1px;
   border-radius: 0.75rem;
-  background-color: alpha(@text-main, 0.05);
+  background-color: @bg-a50;
 }
 
 @keyframes tooltipShow {
@@ -20,17 +20,17 @@ tooltip > * {
 }
 
 menu {
-  border: #474747 solid 1px;
+  border: @bg-a90 solid 1px;
   border-radius: 0.75rem;
-  transition: all 100ms ease-in-out;
-  background-color: alpha(@text-main, 0.05);
+  transition: all apply(transition-xfast) ease-in-out;
+  background-color: @bg-a50;
 }
 
 menu > menuitem {
   padding: 5px 10px;
   margin: 1px 2px;
-  font-size: 13px;
-  border-bottom: #474747 solid 1px;
+  font-size: apply(font-md);
+  border-bottom: @bg-a90 solid 1px;
 }
 
 menu > menuitem:last-child {
@@ -38,13 +38,13 @@ menu > menuitem:last-child {
 }
 menu > menuitem:hover {
   transition: all 20ms ease-in-out;
-  font-size: 13px;
+  font-size: apply(font-md);
   border-radius: apply(radius-xs);
-  color: #222;
-  background-color: alpha(#2369ff, 1);
+  color: @on-primary;
+  background-color: @primary;
 }
 
 menu > menuitem:hover > label {
-  color: @text-main;
+  color: @on-primary;
   font-weight: 400;
 }

@@ -1,0 +1,186 @@
+/* Widgets */
+#wifi-widget,
+#bluetooth-widget,
+#nightlight-widget {
+  min-width: 140px;
+  padding: 5px 0 0px 0;
+}
+
+.icon {
+  background-color: @primary;
+  font-size: 15px;
+  padding: 20px 20px;
+}
+
+#bluetooth-widget-label,
+#wifi-widget-label,
+#nightlight-widget-label {
+  font-size: apply(font-sm);
+  margin-left: 5px;
+  font-weight: 500;
+  color: @fg-a40;
+}
+#bluetooth-widget-title {
+  font-size: apply(font-sm);
+  font-weight: 500;
+  color: @foreground;
+}
+
+/* #bluetooth-widget-top { */
+/*   padding-bottom: 10px; */
+/*   border-bottom: 1px solid alpha(@fg-a80, 0.3); */
+/* } */
+
+#device-icon {
+  border-radius: apply(radius-full);
+  padding: 5px;
+  margin-bottom: 2.5px;
+  margin-top: 2.5px;
+  margin-right: 10px;
+  background-color: @bg-a50;
+}
+
+#devices-title {
+  color: @fg-a60;
+}
+
+#device-icon.paired {
+  background-color: @fg-a60;
+}
+
+#device-icon.connected {
+  background-color: @primary;
+}
+
+#toggle-button {
+  min-width: 40px;
+  min-height: 22px;
+  background-color: @fg-a30;
+  border-radius: apply(radius-full);
+  padding: 3px;
+  transition: background-color apply(transition-slow) ease;
+}
+
+#toggle-button slider {
+  background-color: @foreground;
+  border-radius: apply(radius-full);
+  min-width: 16px;
+  min-height: 16px;
+  margin: -1px;
+  transition: background-color apply(transition-xfast) cubic-bezier(0.5, 0.25, 0, 1.25);
+}
+
+#toggle-button:checked {
+  background-color: @primary;
+}
+
+
+.menu {
+  background-color: alpha(@background, 0.3);
+  box-shadow: inset 0 0 0 0.5px alpha(@fg-a40, 0.4);
+  border: 1px solid @outline-a40;
+  border-radius: apply(radius-md);
+  margin: 5px;
+  padding: 1rem;
+}
+
+.title {
+  padding: 0;
+  font-weight: 500;
+  font-size: apply(font-sm);
+}
+
+#bluetooth-widget-name,
+#wifi-widget-name,
+#nightlight-widget-name {
+  margin-top: 6px;
+  font-size: apply(font-base);
+  font-weight: bold;
+}
+
+.ct {
+  margin-left: 5px;
+}
+#control-center-menu mark indicator {
+  background: none;
+  background-image: none;
+  color: @fg-a20;
+}
+
+#control-center-menu mark label {
+  background: none;
+  background-image: none;
+  color: @fg-a20;
+}
+
+#device-button {
+  background-color: transparent;
+  border-radius: apply(radius-sm);
+}
+
+#device-button button:hover {
+  background-color: @fg-a18;
+  border-radius: apply(radius-sm);
+}
+
+#device-button button:hover #device-icon {
+  background-color: @fg-a25;
+}
+
+.device-slot:hover {
+  background-color: @fg-a05;
+}
+
+.button-hovered {
+  background-color: @fg-a10;
+}
+
+#device-button #battery-label {
+  font-size: apply(font-xs);
+  color: @fg-a60;
+  margin-right: 4px;
+}
+
+#wifi-other-device label,
+#wifi-other-button label {
+  font-size: apply(font-sm);
+  font-weight: bold;
+}
+.wifi-icon-box {
+  background-color: @fg-a80;
+  border-radius: apply(radius-full);
+  padding: 2px;
+}
+
+.wifi-icon-box-connected {
+  background-color: @primary;
+  border-radius: apply(radius-full);
+  padding: 2px;
+}
+
+
+
+.title-widget {
+  font-size: apply(font-md);
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+}
+
+.status-label {
+  font-size: apply(font-xs);
+  font-weight: 500;
+  color: @fg-a80;
+  font-family: "SF Pro Rounded";
+}
+
+#app-control-box {
+  min-width: 100px;
+}
+
+#caffeine-widget,
+#flight-widget {
+  padding: 0px 0 5px 0;
+  min-width: 50px;
+}
+
+

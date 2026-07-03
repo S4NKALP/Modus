@@ -1,0 +1,28 @@
+#notification-icon {
+  border-radius: apply(radius-lg);
+}
+
+#notification-image {
+  border-radius: apply(radius-lg);
+  color: var(--on-surface);
+}
+
+#notification-summary,
+#button-label {
+}
+
+#notification-summary {
+  font-weight: bold;
+  font-size: apply(font-lg);
+  /* color: var(--primary); */
+}
+
+#notification-app-name {
+  color: var(--outline);
+  font-weight: bold;
+}
+
+#action-button {
+  margin-top: 8px;
+}
+

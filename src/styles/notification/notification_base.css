@@ -1,0 +1,9 @@
+#notification {
+  padding: 10px;
+  background-color: @bg-a50;
+  border-radius: apply(radius-sm);
+  margin-top: 10px;
+  margin-right: 10px;
+  /* margin: 5px; */
+}
+

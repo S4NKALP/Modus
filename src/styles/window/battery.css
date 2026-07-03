@@ -1,35 +1,41 @@
 #battery-window {
-  margin: 6px;
-  /* background-color: alpha(@text-main, 0.09); */
-  border: 1px solid @border-subtle;
-  box-shadow: inset 0 0 200px 0 @border-subtle;
+  background-color: @bg-a50;
   border-radius: apply(radius-sm);
 }
 
+#battery-control-window {
+  margin: 6px;
+  background-color: @bg-a50;
+  border: 1px solid @outline-a30;
+  box-shadow: inset 0 0 200px 0 @outline-a30;
+  border-radius: apply(radius-sm);
+}
+
+
 #battery-widget {
-  background: rgba(0, 0, 0, 0);
+  background: transparent;
   padding-left: 5px;
   padding-right: 5px;
 }
 .battery-main-title {
-  font-size: 16px;
+  font-size: apply(font-lg);
   font-weight: bold;
 
-  color: rgba(255, 255, 255, 0.95);
+  color: @fg-a95;
   margin: 6px 10px;
 }
 
 .battery-power-source {
   font-size: 0.9em;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: @fg-a80;
   margin: 0px 12px;
 }
 
 .battery-section-title {
   font-size: 0.9em;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: @fg-a90;
   margin: 8px 12px 4px 12px;
 }
 
@@ -39,18 +45,18 @@
 }
 
 .battery-status-section {
-  /* background: rgba(255, 255, 255, 0.06); */
+  /* background: @fg-a06; */
   /* border-radius: apply(radius-md); */
   padding: 2px;
   /* margin: 8px 0; */
-  /* border: 1px solid rgba(255, 255, 255, 0.08); */
+  /* border: 1px solid @fg-a08; */
 }
 
 .battery-percentage {
-  font-size: 16px;
+  font-size: apply(font-lg);
   margin-right: 8px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.95);
+  color: @fg-a95;
 }
 
 #energy-mode-button-clickable {
@@ -62,7 +68,11 @@
 }
 
 #energy-mode-button-clickable:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: @fg-a10;
+}
+
+#energy-mode-button-clickable:hover #energy-mode-icon {
+  background-color: @fg-a25;
 }
 
 #energy-mode-icon {
@@ -72,31 +82,31 @@
   margin-bottom: -2px;
   margin-right: 6px;
   margin-left: -6px;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
+  background-color: @fg-a10;
+  color: @fg-a70;
 }
 
 #energy-mode-icon.connected {
-  background-color: @accent;
-  color: @text-main;
+  background-color: @primary;
+  color: @foreground;
 }
 .battery-power-source {
-  font-size: 12px;
+  font-size: apply(font-sm);
   margin-bottom: -4px;
-  color: alpha(@text-main, 0.5);
+  color: @fg-a50;
 }
 .battery-section-title {
-  font-size: 14px;
-  color: alpha(@text-main, 0.7);
+  font-size: apply(font-base);
+  color: @fg-a70;
   margin: 2px 0 0 8px;
 }
 .battery-power-mode {
-  font-size: 13px;
+  font-size: apply(font-md);
 }
 
 .battery-settings-button:hover {
   margin-top: -5px;
-  background: alpha(@text-main, 0.1);
+  background: @fg-a10;
   min-height: 30px;
   border-radius: apply(radius-sm);
 }
@@ -107,7 +117,7 @@
 }
 .battery-settings-button label {
   font-weight: 500;
-  color: alpha(@text-main, 1);
+  color: @foreground;
 }
 #energy-mode-button:first-child {
   margin-top: 0;
@@ -115,12 +125,12 @@
 #energy-mode-button {
   margin-top: -8px;
   margin-bottom: 4px;
-  color: rgba(255, 255, 255, 0.85);
+  color: @fg-a85;
 }
 .gamemode-button {
-  font-size: 12px;
+  font-size: apply(font-sm);
   margin-left: -6px;
-  color: rgba(255, 255, 255, 0.85);
+  color: @fg-a85;
 }
 
 #game-mode-button {
@@ -140,18 +150,22 @@
 }
 
 #game-mode-button-clickable:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: @fg-a10;
+}
+
+#game-mode-button-clickable:hover #game-mode-icon {
+  background-color: @fg-a25;
 }
 
 #game-mode-icon {
   border-radius: apply(radius-full);
   padding: 4px;
   margin-right: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
+  background-color: @fg-a10;
+  color: @fg-a70;
 }
 
 #game-mode-icon.connected {
-  background-color: @accent;
-  color: @text-main;
+  background-color: @primary;
+  color: @foreground;
 }

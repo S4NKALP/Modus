@@ -1,5 +1,5 @@
 #application-switcher-container {
-    background-color: var(--shadow);
+    background-color: @bg-a50;
     border-radius: apply(radius-xl);
     padding: 24px;
 }
@@ -12,7 +12,7 @@
 #switcher-button {
     padding: 12px;
     min-width: 100px;
-    transition: all 0.2s ease;
+    transition: all apply(transition-medium) ease;
 }
 
 #window-button {
@@ -26,7 +26,7 @@
 
 .switcher-selection-label {
     color: var(--foreground);
-    font-size: 16px;
+    font-size: apply(font-lg);
     font-weight: 600;
     margin-top: 8px;
 }
@@ -34,7 +34,7 @@
 .switcher-workspace-label {
     color: var(--foreground);
     opacity: 0.6;
-    font-size: 12px;
+    font-size: apply(font-sm);
     margin-top: 4px;
 }
 
@@ -45,4 +45,16 @@
 
 #window-row {
     padding: 0px;
+}
+
+#window-button:hover,
+#window-button.active {
+    background-color: @primary;
+}
+
+#window-button:hover .switcher-selection-label,
+#window-button.active .switcher-selection-label,
+#window-button:hover .switcher-workspace-label,
+#window-button.active .switcher-workspace-label {
+    color: @on-primary;
 }

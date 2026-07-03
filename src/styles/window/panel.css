@@ -1,5 +1,5 @@
 #panel {
-    background-color: @bg;
+    background-color: alpha(@background, 0.50);
     margin: -4px 0;
     transition: all 120ms ease-in-out;
 }
@@ -23,7 +23,8 @@
 #global-menu:hover,
 #global-menu.active,
 #workspaces>button:hover {
-    background-color: @hover;
+    background-color: @primary;
+    color: @on-primary;
 }
 
 #panel-button,
@@ -57,17 +58,34 @@
     padding: 0 16px;
     border-radius: apply(radius-sm);
     min-width: 12px;
-    border: 1px solid @border;
+    border: 1px solid @outline;
 }
 
 #workspaces>button.active {
-    background-color: @active;
+    background-color: alpha(@foreground, 0.4);
 }
 
 #workspaces>button.active label {
-    color: var(--shadow);
+    color: @foreground;
 }
 
 #workspaces>button.urgent {
-    background-color: @urgent;
+    background-color: alpha(@error, 0.7);
+}
+
+
+#panel-button:hover *,
+#panel-button.active *,
+#battery-button:hover *,
+#battery-button.active *,
+#network-button:hover *,
+#network-button.active *,
+#bt-button:hover *,
+#bt-button.active *,
+#tray-button:hover *,
+#tray-button.active *,
+#global-menu:hover *,
+#global-menu.active *,
+#workspaces>button:hover * {
+    color: @on-primary;
 }

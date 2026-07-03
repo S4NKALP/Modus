@@ -1,0 +1,119 @@
+/* Per-app volume control styles */
+#per-app-volume-control {
+  min-height: 140px;
+  min-width: 328px;
+  border-radius: apply(radius-sm);
+  padding: 1rem;
+}
+
+#apps-scrolled-container {
+  min-height: 120px;
+  min-width: 120px;
+}
+
+#back-button {
+  padding: 8px 12px;
+  background-color: @fg-a10;
+  border-radius: apply(radius-sm);
+  border: none;
+  color: @foreground;
+  font-size: apply(font-md);
+  font-weight: 500;
+  transition: background-color apply(transition-medium) ease;
+}
+
+#back-button:hover {
+  background-color: @fg-a18;
+}
+
+.apple-app-volume-item {
+  margin: 3px 0;
+  padding: 16px;
+  background-color: @fg-a08;
+  border-radius: apply(radius-md);
+  border: 1px solid @fg-a12;
+  transition: background-color apply(transition-fast);
+}
+
+.apple-app-volume-item:hover {
+  background-color: @fg-a12;
+}
+
+.apple-app-name {
+  font-size: apply(font-base);
+  font-weight: 600;
+  color: @foreground;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.app-volume-item {
+  margin: 8px 0;
+  padding: 8px;
+  background-color: @fg-a05;
+  border-radius: apply(radius-xs);
+  border: 1px solid @fg-a10;
+}
+
+.app-name {
+  font-size: apply(font-md);
+  font-weight: 500;
+  color: @foreground;
+  margin-bottom: 5px;
+}
+
+#per-app-volume-button {
+  background-color: @fg-a15;
+  border: 1px solid alpha(@fg-a40, 0.6);
+  border-radius: apply(radius-full);
+}
+
+#per-app-volume-button:hover {
+  background-color: @fg-a25;
+  box-shadow: 0 4px 12px @shadow-a20;
+}
+
+#per-app-volume-button:active {
+  background-color: @fg-a20;
+  box-shadow: 0 1px 3px @shadow-a30;
+}
+
+#per-app-volume-icon {
+  background-color: @fg-a15;
+
+  border: 2px solid alpha(@fg-a40, 0.6);
+
+  border-radius: apply(radius-full);
+
+  min-width: 30px;
+}
+
+/* Per app-volume-item */
+
+.compact-app-volume-item {
+  padding-bottom: 5px;
+  padding-right: 14px;
+  border-bottom: 1px solid @fg-a10;
+}
+
+#app-icon {
+  margin-top: 8px;
+}
+
+.app-name-compact {
+  font-size: apply(font-base);
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+#compact-app-volume-slider scale {
+  margin-right: 8px;
+  padding-right: 8px;
+}
+#app-volume-header {
+  font-size: apply(font-lg);
+  padding-left: 5px;
+  margin-top: -2px;
+  font-weight: bold;
+  color: @foreground;
+}

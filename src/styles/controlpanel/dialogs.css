@@ -2,10 +2,12 @@
   background-color: transparent;
 }
 
+/* WiFi Password Dialog */
+
 #wifi-dialog-background {
-  background-color: alpha(@text-main, 0.05);
+  background-color: @bg-a50;
   border-radius: apply(radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid @fg-a10;
   padding: 20px;
   min-width: 450px;
 }
@@ -15,19 +17,19 @@
 }
 
 #wifi-dialog-icon {
-  color: @accent;
+  color: @primary;
   margin-right: 4px;
 }
 
 #wifi-dialog-title {
-  color: @text-main;
-  font-size: 14px;
+  color: @foreground;
+  font-size: apply(font-base);
   font-weight: 500;
 }
 
 #wifi-dialog-error {
-  color: #ff4444;
-  font-size: 12px;
+  color: @error;
+  font-size: apply(font-sm);
   font-weight: 500;
   /* margin-bottom: 8px; */
 }
@@ -37,25 +39,25 @@
 }
 
 #wifi-dialog-password-label {
-  color: @text-main;
-  font-size: 13px;
+  color: @foreground;
+  font-size: apply(font-md);
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 #wifi-dialog-password-entry {
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: @fg-a10;
+  border: 1px solid @fg-a20;
   border-radius: apply(radius-xs);
   padding: 8px 12px;
-  color: @text-main;
-  font-size: 13px;
+  color: @foreground;
+  font-size: apply(font-md);
 }
 
 #wifi-dialog-password-entry:focus {
-  border-color: @accent;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
-  background-color: rgba(255, 255, 255, 0.15);
+  border-color: @primary;
+  box-shadow: 0 0 0 2px @primary-a30;
+  background-color: @fg-a15;
 }
 
 #wifi-dialog-show-password-box {
@@ -72,16 +74,16 @@
 }
 
 #wifi-dialog-show-password-button:hover {
-  background-color: alpha(@text-main, 0.1);
+  background-color: @fg-a10;
 }
 
 #wifi-dialog-show-password-button image {
-  color: @text-main;
+  color: @foreground;
 }
 
 #wifi-dialog-show-password-label {
-  color: @text-main;
-  font-size: 12px;
+  color: @foreground;
+  font-size: apply(font-sm);
 }
 
 #wifi-dialog-button-box {
@@ -91,42 +93,42 @@
 #wifi-dialog-cancel-button,
 #wifi-dialog-join-button {
   border-radius: apply(radius-xs);
-  font-size: 13px;
+  font-size: apply(font-md);
   font-weight: 500;
   min-width: 80px;
   min-height: 30px;
 }
 
 #wifi-dialog-cancel-button {
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: @text-main;
+  background-color: @fg-a10;
+  border: 1px solid @fg-a20;
+  color: @foreground;
 }
 
 #wifi-dialog-cancel-button:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: @fg-a15;
 }
 
 #wifi-dialog-join-button {
-  background-color: @accent;
-  border: 1px solid @accent;
-  color: @text-main;
+  background-color: @primary;
+  border: 1px solid @primary;
+  color: @foreground;
 }
 
 #wifi-dialog-join-button:hover {
-  background-color: @accent-hover;
-  border-color: @accent-hover;
+  background-color: @secondary;
+  border-color: @secondary;
 }
 
 #wifi-dialog-join-button.disabled {
   opacity: 0.5;
-  background-color: #555555;
-  border-color: #555555;
-  color: #aaaaaa;
+  background-color: @bg-a90;
+  border-color: @bg-a90;
+  color: @fg-a80;
 }
 
 #wifi-dialog-join-button.disabled:hover {
-  background-color: #555555;
-  border-color: #555555;
-  color: #aaaaaa;
+  background-color: @bg-a90;
+  border-color: @bg-a90;
+  color: @fg-a80;
 }

@@ -1,0 +1,27 @@
+#notification-close-button {
+  background-color: alpha(@fg-a40, 0.3);
+  border-radius: apply(radius-sm);
+}
+#notification-close-button:hover {
+  background-color: @primary-a90;
+}
+
+#notification-action-buttons button {
+  background-color: alpha(@fg-a40, 0.3);
+  padding: 4px;
+  border-radius: apply(radius-sm);
+  transition: background-color apply(transition-fast);
+}
+
+#notification-action-buttons button:hover {
+  background-color: @primary-a90;
+}
+
+#notification-action-buttons button:active {
+  background-color: var(--primary);
+}
+
+#notification-action-buttons button:active #button-label {
+  color: var(--shadow);
+}
+

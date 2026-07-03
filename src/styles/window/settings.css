@@ -11,7 +11,7 @@
 }
 
 #settings-sidebar {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: @bg-a95;
     padding: 20px 10px;
     min-width: 200px;
     border-right: 1px solid var(--border);
@@ -24,11 +24,11 @@
 }
 
 #settings-sidebar-button:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: @fg-a05;
 }
 
 #settings-sidebar-button Label {
-    font-size: 14px;
+    font-size: apply(font-base);
     font-weight: 500;
 }
 
@@ -54,7 +54,7 @@
 #settings-row {
     padding: 12px 15px;
     border-radius: apply(radius-sm);
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: @fg-a03;
     margin-bottom: 2px;
 }
 
@@ -64,16 +64,16 @@
 }
 
 #settings-row-description {
-    font-size: 12px;
+    font-size: apply(font-sm);
     color: var(--foreground-dim);
 }
 
 #settings-switch {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: @fg-a10;
     padding: 6px 12px;
     border-radius: apply(radius-xl);
     min-width: 50px;
-    transition: all 0.2s ease;
+    transition: all apply(transition-medium) ease;
 }
 
 #settings-switch.active {
@@ -82,7 +82,7 @@
 }
 
 #settings-entry {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: @fg-a05;
     padding: 8px 12px;
     border-radius: apply(radius-xs);
     border: 1px solid var(--border);
@@ -95,7 +95,7 @@
 }
 
 #settings-combo {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: @fg-a05;
     padding: 4px 8px;
     border-radius: apply(radius-xs);
     border: 1px solid var(--border);
@@ -104,7 +104,7 @@
 }
 
 #settings-combo:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: @fg-a10;
 }
 
 #settings-list-tags {
@@ -112,7 +112,7 @@
 }
 
 #settings-list-tag {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: @fg-a08;
     border-radius: apply(radius-md);
     padding: 4px 10px;
     margin-right: 5px;
@@ -120,16 +120,16 @@
 }
 
 #settings-list-tag:hover {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: @fg-a15;
 }
 
 #settings-list-tag Label {
-    font-size: 13px;
+    font-size: apply(font-md);
 }
 
 #settings-list-tag-close {
     color: var(--foreground-dim);
-    font-size: 10px;
+    font-size: apply(font-2xs);
     margin-left: 3px;
 }
 
@@ -138,9 +138,9 @@
 }
 
 #settings-list-entry {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: @fg-a03;
     border: 1px dashed var(--border);
     padding: 6px 12px;
     border-radius: apply(radius-xs);
-    font-size: 13px;
+    font-size: apply(font-md);
 }

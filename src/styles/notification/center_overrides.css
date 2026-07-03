@@ -1,0 +1,74 @@
+/* Expanded view styles - notifications use their default styling */
+#expanded-notification-list {
+  margin-top: 8px;
+}
+
+#expanded-notification-list #notification-group-header:hover {
+  background-color: @fg-a10;
+}
+
+#notification-group-title {
+  font-size: 19px;
+  margin: 10px;
+  font-weight: bold;
+}
+#notification-show-less {
+  background-color: @bg-a50;
+  font-size: apply(font-sm);
+  margin: 10px;
+  border-radius: apply(radius-md);
+}
+
+#notification-close-all {
+  margin: 10px 10px 10px 0;
+  background-color: @bg-a95;
+  border-radius: apply(radius-md);
+}
+
+#notif-close-button {
+  background-color: transparent;
+}
+
+#notification-group-expanded {
+  background-color: transparent;
+  border: none;
+}
+
+#notification-content {
+  background-color: transparent;
+}
+#notification-count-label {
+  background-color: transparent;
+  color: white;
+  font-size: apply(font-md);
+}
+#notification-centre-notifs {
+  background-color: @bg-a50;
+  min-height: 40px;
+  padding: 10px;
+  border: 1px solid @bg-a90;
+  border-radius: apply(radius-md);
+}
+
+#notification-centre-notifs:last-child {
+  margin-bottom: 10px;
+}
+
+#notification-close-header {
+  margin-right: 10px;
+}
+#notification-close,
+#notification-close-header {
+  min-width: 23px;
+  min-height: 23px;
+  border-radius: apply(radius-full);
+}
+#notification-close:hover {
+  background-color: alpha(@bg-a80, 0.8);
+  min-width: 23px;
+  min-height: 23px;
+  border-radius: apply(radius-full);
+}
+#notification-close-summery:hover .notification-close-header button {
+  background-color: transparent;
+}
