@@ -222,7 +222,7 @@ def main():
 
     def set_css():
         app.set_stylesheet_from_file(
-            get_relative_path("shared/styles/main.css"),
+            get_relative_path("styles/main.css"),
         )
 
     app.set_css = set_css  # pyright: ignore[reportAttributeAccessIssue]
