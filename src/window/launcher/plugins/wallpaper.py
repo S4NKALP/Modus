@@ -1,4 +1,3 @@
-import colorsys
 import hashlib
 import threading
 
@@ -12,7 +11,6 @@ from fabric.utils import (
     logger,
     os,
     random,
-    re,
     time,
 )
 
@@ -311,20 +309,6 @@ class WallpaperPlugin(PluginBase):
         )
         return filename
 
-    def _hsl_to_rgb_hex(self, h: float, s: float = 1.0, l_val: float = 0.5) -> str:
-        """Convert HSL color value to RGB HEX string."""
-        # colorsys uses HLS, not HSL, and expects values between 0.0 and 1.0
-        hue = h / 360.0
-        r, g, b = colorsys.hls_to_rgb(hue, l_val, s)  # Note the order: H, L, S
-        r_int, g_int, b_int = int(r * 255), int(g * 255), int(b * 255)
-        return f"#{r_int:02X}{g_int:02X}{b_int:02X}"
-
-    def _is_valid_hex_color(self, hex_color: str) -> bool:
-        """Check if string is a valid hex color."""
-        if not hex_color.startswith("#"):
-            hex_color = "#" + hex_color
-        return bool(re.match(r"^#[0-9A-Fa-f]{6}$", hex_color))
-
     def _get_current_scheme(self) -> str:
         """Get current color scheme from config (default to tonal-spot)."""
         try:
@@ -397,42 +381,6 @@ class WallpaperPlugin(PluginBase):
                 } (matugen disabled)' -a '{data.APP_NAME_CAP}' -e"
             )
 
-    def _apply_hex_color(self, hex_color: str, scheme: str = None):
-        """Apply hex color using matugen. Assumes matugen is enabled."""
-        if not hex_color.startswith("#"):
-            hex_color = "#" + hex_color
-
-        if scheme is None:
-            scheme = self._get_current_scheme()
-
-        exec_shell_command_async(
-            f'matugen color hex "{hex_color}" -t {scheme} --source-color-index 0'
-        )
-
-    def _apply_hex_color_direct(self, hex_color: str, scheme: str = None):
-        """Apply hex color using matugen (following example_wallpapers.py pattern)."""
-        if not hex_color.startswith("#"):
-            hex_color = "#" + hex_color
-
-        if scheme is None:
-            scheme = self._get_current_scheme()
-
-        exec_shell_command_async(
-            f'matugen color hex "{hex_color}" -t {scheme} --source-color-index 0'
-        )
-
-        # Send notification
-        exec_shell_command_async(
-            f"notify-send '🎨 Hex Color Applied' 'Applied color: {hex_color}' -a '{
-                data.APP_NAME_CAP
-            }' -e"
-        )
-
-    def _generate_random_hex_color(self) -> str:
-        """Generate a random hex color."""
-        hue = random.randint(0, 360)
-        return self._hsl_to_rgb_hex(hue)
-
     def _get_status_indicators(self) -> tuple:
         """Get current status indicators for display."""
         current_scheme = self._get_current_scheme()
@@ -495,207 +443,6 @@ class WallpaperPlugin(PluginBase):
                     },
                 )
             )
-
-        # Hex color commands
-        if "color" in query or "hex" in query or query.startswith("#"):
-            # Check for scheme specification in the query
-            scheme = self._get_current_scheme()
-            for scheme_id, scheme_name in self.schemes.items():
-                if (
-                    scheme_name.lower() in query.lower()
-                    or scheme_id.lower() in query.lower()
-                ):
-                    scheme = scheme_id
-                    break
-
-            # Check for hex color patterns
-            hex_match = re.search(r"#?([0-9A-Fa-f]{6})", query)
-            if hex_match:
-                hex_color = "#" + hex_match.group(1)
-                scheme_name = self.schemes.get(scheme, scheme)
-
-                # Check if this is a complete hex color input (6 digits)
-                # Execute immediately when we have a complete 6-digit hex color
-                if len(hex_match.group(1)) == 6:
-                    # Check if there's additional text after the hex color
-                    hex_end_pos = hex_match.end()
-                    remaining_text = query[hex_end_pos:].strip()
-
-                    # Only show result if no additional text after hex color (exact match)
-                    if not remaining_text:
-                        # Hex colors work when matugen is OFF (following example_wallpapers.py pattern)
-                        if not matugen_enabled:
-                            # Show result for hex color (execute on Enter)
-                            results.append(
-                                Result(
-                                    title=f"Apply Hex Color: {hex_color}{
-                                        indicator_text
-                                    }",
-                                    subtitle=f"Apply with {scheme_name} scheme • {
-                                        status_text
-                                    }",
-                                    icon_name="color-picker-symbolic",
-                                    action=lambda c=hex_color, s=scheme: (
-                                        self._apply_hex_color_direct(c, s)
-                                    ),
-                                    relevance=1.0,
-                                    plugin_name=self.display_name,
-                                    data={
-                                        "action": "hex_color",
-                                        "color": hex_color,
-                                        "scheme": scheme,
-                                        "bypass_max_results": True,
-                                        "keep_launcher_open": True,
-                                    },
-                                )
-                            )
-                        else:
-                            # Show error result when matugen is enabled
-                            results.append(
-                                Result(
-                                    title=f"Cannot Apply Hex Color: {hex_color}{
-                                        indicator_text
-                                    }",
-                                    subtitle="Matugen is enabled • Disable matugen to use hex colors",
-                                    icon_name="color-picker-symbolic",
-                                    action=lambda: None,
-                                    relevance=1.0,
-                                    plugin_name=self.display_name,
-                                    data={
-                                        "action": "hex_color_failed",
-                                        "color": hex_color,
-                                        "bypass_max_results": True,
-                                    },
-                                )
-                            )
-                    else:
-                        # Show suggestion for hex color with additional text (partial match)
-                        results.append(
-                            Result(
-                                title=f"Apply Hex Color: {hex_color}{indicator_text}",
-                                subtitle=f"Apply with {scheme_name} scheme • {
-                                    status_text
-                                }",
-                                icon_name="color-picker-symbolic",
-                                action=lambda c=hex_color, s=scheme: (
-                                    self._apply_hex_color_direct(c, s)
-                                    if not matugen_enabled
-                                    else None
-                                ),
-                                relevance=0.9,
-                                plugin_name=self.display_name,
-                                data={
-                                    "action": "hex_color_suggestion",
-                                    "color": hex_color,
-                                    "scheme": scheme,
-                                    "bypass_max_results": True,
-                                    "keep_launcher_open": True,
-                                },
-                            )
-                        )
-                else:
-                    # Incomplete hex color, show as suggestion
-                    results.append(
-                        Result(
-                            title=f"Hex Color (incomplete): {hex_color}",
-                            subtitle="Complete the 6-digit hex color to apply",
-                            icon_name="color-picker-symbolic",
-                            action=lambda: None,
-                            relevance=0.7,
-                            plugin_name=self.display_name,
-                            data={
-                                "action": "hex_color_incomplete",
-                                "color": hex_color,
-                                "bypass_max_results": True,
-                            },
-                        )
-                    )
-            elif "random" in query and ("color" in query or "hex" in query):
-                # Check for exact matches for random color commands
-                if (
-                    query.strip() == "color random"
-                    or query.strip() == "hex random"
-                    or query.strip() == "random color"
-                    or query.strip() == "random hex"
-                ):
-                    # Random hex color - show result (execute on Enter)
-                    scheme_name = self.schemes.get(scheme, scheme)
-
-                    # Check if matugen is disabled (hex colors work when matugen is OFF)
-                    if not matugen_enabled:
-                        results.append(
-                            Result(
-                                title=f"Random Hex Color{indicator_text}",
-                                subtitle=f"Generate and apply random color with {
-                                    scheme_name
-                                } scheme • {status_text}",
-                                icon_name="color-picker-symbolic",
-                                action=lambda s=scheme: self._apply_hex_color_direct(
-                                    self._generate_random_hex_color(), s
-                                ),
-                                relevance=1.0,
-                                plugin_name=self.display_name,
-                                data={
-                                    "action": "random_hex",
-                                    "scheme": scheme,
-                                    "bypass_max_results": True,
-                                    "keep_launcher_open": True,
-                                },
-                            )
-                        )
-                    else:
-                        # Show error result when matugen is enabled
-                        results.append(
-                            Result(
-                                title=f"Cannot Apply Random Color{indicator_text}",
-                                subtitle="Matugen is enabled • Disable matugen to use hex colors",
-                                icon_name="color-picker-symbolic",
-                                action=lambda: None,
-                                relevance=1.0,
-                                plugin_name=self.display_name,
-                                data={
-                                    "action": "random_hex_failed",
-                                    "bypass_max_results": True,
-                                },
-                            )
-                        )
-                else:
-                    # Show suggestion for random hex color (partial match)
-                    results.append(
-                        Result(
-                            title=f"Random Hex Color{indicator_text}",
-                            subtitle=f"Generate and apply random color • {status_text}",
-                            icon_name="color-picker-symbolic",
-                            action=lambda s=scheme: (
-                                self._apply_hex_color_direct(
-                                    self._generate_random_hex_color(), s
-                                )
-                                if not matugen_enabled
-                                else None
-                            ),
-                            relevance=0.8,
-                            plugin_name=self.display_name,
-                            data={
-                                "action": "random_hex_suggestion",
-                                "scheme": scheme,
-                                "bypass_max_results": True,
-                                "keep_launcher_open": True,
-                            },
-                        )
-                    )
-            else:
-                # Show hex color help
-                results.append(
-                    Result(
-                        title="Hex Color Commands",
-                        subtitle="Use: color #FF5733, hex #00FF00, color random",
-                        icon_name="color-picker-symbolic",
-                        action=lambda: None,
-                        relevance=0.8,
-                        plugin_name=self.display_name,
-                        data={"action": "hex_help", "bypass_max_results": True},
-                    )
-                )
 
         # Color scheme commands
         if "scheme" in query:
@@ -927,8 +674,6 @@ class WallpaperPlugin(PluginBase):
             and "scheme" not in query
             and "status" not in query
             and "info" not in query
-            and "color" not in query
-            and "hex" not in query
         ):
             matching_wallpapers = []
             for wallpaper in self.wallpapers:
