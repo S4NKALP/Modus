@@ -1,11 +1,4 @@
 /* Expanded view styles - notifications use their default styling */
-#expanded-notification-list {
-  margin-top: 8px;
-}
-
-#expanded-notification-list #notification-group-header:hover {
-  background-color: @fg-a10;
-}
 
 #notification-group-title {
   font-size: 19px;
@@ -16,12 +9,6 @@
   background-color: @bg-a50;
   font-size: apply(font-sm);
   margin: 10px;
-  border-radius: apply(radius-md);
-}
-
-#notification-close-all {
-  margin: 10px 10px 10px 0;
-  background-color: @bg-a95;
   border-radius: apply(radius-md);
 }
 

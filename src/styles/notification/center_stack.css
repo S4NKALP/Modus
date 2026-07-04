@@ -3,19 +3,6 @@
   margin: 4px 0;
 }
 
-/* Single notification (no stacking) */
-#single-notification-content {
-  background-color: @bg-a50;
-  border: 1.5px solid @bg-a90;
-  border-radius: apply(radius-md);
-  padding: 12px;
-  transition: all apply(transition-medium) ease;
-}
-
-#single-notification-content:hover {
-  background-color: @fg-a10;
-}
-
 /* Stacked notification container */
 #notification-stack-container {
   background-color: transparent;
@@ -70,20 +57,6 @@
   opacity: 0.5;
 }
 
-/* Collapsed notification state */
-#notification-content-collapsed {
-  background-color: @bg-a50;
-  border: 1px solid @bg-a90;
-  border-radius: apply(radius-md);
-  padding: 12px;
-  margin: 2px 0;
-  transition: all apply(transition-medium) ease;
-}
-
-#notification-content-collapsed:hover {
-  background-color: @fg-a10;
-}
-
 /* Notification count badge */
 #notification-count-label {
   background-color: @fg-a20;
@@ -94,4 +67,3 @@
   font-weight: 500;
   min-width: 16px;
 }
-
