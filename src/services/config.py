@@ -198,13 +198,6 @@ def start_config_service() -> ConfigService:
     return _service
 
 
-def stop_config_service() -> None:
-    global _service
-    if _service is not None:
-        _service.stop()
-        _service = None
-
-
 # Convenience helpers for concise usage
 def config() -> ConfigService:
     """Get the singleton service (concise alias)."""

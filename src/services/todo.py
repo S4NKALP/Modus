@@ -1,42 +1,28 @@
-from fabric.utils import logger
-
-# Standard library imports
 import json
-import uuid
+import os
 from datetime import datetime
 from pathlib import Path
 
-# Fabric imports
-from fabric.core.service import Property, Service
+from fabric.core.service import Service
+from fabric.utils import logger
 
-# Local imports
 import shared.data as data
 
 
 class TodoService(Service):
     """Service for managing persistent todo list with JSON storage"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._todos = []
         self._file_path = self._get_todos_file_path()
         self._load_todos()
         self._callbacks = []
 
-    def add_callback(self, callback):
-        """Add a callback function to be notified of changes"""
-        self._callbacks.append(callback)
-
-    def remove_callback(self, callback):
-        """Remove a callback function"""
-        if callback in self._callbacks:
-            self._callbacks.remove(callback)
-
-    def _notify_callbacks(self, event_type, data=None):
-        """Notify all registered callbacks of changes"""
+    def _notify_callbacks(self, event: str, data=None):
         for callback in self._callbacks:
             try:
-                callback(event_type, data)
+                callback(event, data)
             except Exception as e:
                 logger.error(f"Error in todo callback: {e}")
 
@@ -50,7 +36,7 @@ class TodoService(Service):
         """Load todos from JSON file"""
         try:
             if self._file_path.exists():
-                with open(self._file_path, "r", encoding="utf-8") as f:
+                with open(self._file_path, "r") as f:
                     self._todos = json.load(f)
             else:
                 self._todos = []
@@ -61,12 +47,12 @@ class TodoService(Service):
     def _save_todos(self):
         """Save todos to JSON file"""
         try:
-            with open(self._file_path, "w", encoding="utf-8") as f:
+            with open(self._file_path, "w") as f:
                 json.dump(self._todos, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.error(f"Error saving todos: {e}")
 
-    @Property(list, "readable")
+    @property
     def todos(self):
         """Get all todos"""
         return self._todos.copy()
@@ -74,10 +60,10 @@ class TodoService(Service):
     def add_todo(self, text: str, priority: str = "medium") -> dict:
         """Add a new todo item"""
         todo = {
-            "id": str(uuid.uuid4()),
+            "id": os.urandom(8).hex(),
             "text": text,
             "completed": False,
-            "priority": priority,  # low, medium, high
+            "priority": priority,
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
         }
@@ -124,7 +110,11 @@ class TodoService(Service):
 
     def set_priority(self, todo_id: str, priority: str) -> bool:
         """Set the priority of a todo item"""
-        if priority not in ["low", "medium", "high"]:
+        valid_priorities = ["low", "medium", "high"]
+        if priority not in valid_priorities:
+            logger.warning(
+                f"Invalid priority '{priority}'. Must be one of {valid_priorities}"
+            )
             return False
 
         for todo in self._todos:
@@ -156,17 +146,23 @@ class TodoService(Service):
         """Get todo statistics"""
         total = len(self._todos)
         completed = sum(1 for todo in self._todos if todo["completed"])
-        pending = total - completed
-
         return {
             "total": total,
             "completed": completed,
-            "pending": pending,
-            "completion_rate": (completed / total * 100) if total > 0 else 0,
+            "active": total - completed,
         }
 
+    def add_callback(self, callback):
+        """Add a callback for todo events"""
+        if callback not in self._callbacks:
+            self._callbacks.append(callback)
 
-# Global service instance getter
+    def remove_callback(self, callback):
+        """Remove a callback"""
+        if callback in self._callbacks:
+            self._callbacks.remove(callback)
+
+
 _todo_service = None
 
 
