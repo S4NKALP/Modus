@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, Gtk
+from fabric.utils import Gdk, Gtk, GLib
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.shapes import Corner
@@ -29,6 +29,11 @@ class Notch(Box):
         self.player_widget.set_hexpand(True)
         self.player_widget.set_halign(Gtk.Align.FILL)
 
+        self.idle_widget = Box(
+            name="notch-idle",
+            h_expand=True,
+        )
+
         self._mpris = get_shared_mpris_manager()
         self._mpris.connect("new-player", self._on_new_player)
         self._mpris.connect("player-vanish", self._on_player_vanish)
@@ -37,16 +42,19 @@ class Notch(Box):
         screen_capture_service.connect("recording-stopped", self._on_recording_stopped)
 
         self._last_scroll_index = 0
-        self._playing_services: list[str] = []
+        self._last_scroll_time = 0
+        self._last_recording_check = 0
+        self._is_active_recording = False
+        self._music_services: list[str] = []
 
         self.notch_stack = Stack(
             name="panel-notch-stack",
             v_expand=True,
             h_expand=True,
-            transition_type="crossfade",
-            transition_duration=200,
-            children=[self.recording_indicator, self.player_widget],
+            transition_type="none",
+            children=[self.idle_widget, self.recording_indicator, self.player_widget],
         )
+        self._last_stack_page = 0
 
         self.left_corner = Box(
             name="panel-notch-corner-left",
@@ -88,78 +96,83 @@ class Notch(Box):
 
         self._init_state()
 
-        self.connect("scroll-event", self._on_scroll)
+        self.notch_stack.connect("scroll-event", self._on_scroll)
 
     def _init_state(self):
-        """One-time init: check current state, then rely on signals."""
-        if screen_capture_service.is_recording:
+        self._is_active_recording = screen_capture_service.is_recording
+        if self._is_active_recording:
             self.recording_indicator.start_timer()
 
         for name, svc in self._mpris.get_all_services().items():
-            if svc.playback_status.lower() == "playing":
-                self._playing_services.append(name)
-            svc.connect("play", self._on_any_play)
-            svc.connect("pause", self._on_any_pause)
+            self._music_services.append(name)
             svc.connect("artwork-change", self._on_any_artwork)
-            svc.connect("track-position", self._on_any_position)
 
         self._apply_stack_state()
 
     def _on_new_player(self, manager, name: str, service):
-        service.connect("play", self._on_any_play)
-        service.connect("pause", self._on_any_pause)
         service.connect("artwork-change", self._on_any_artwork)
-        service.connect("track-position", self._on_any_position)
-
-        if service.playback_status.lower() == "playing":
-            self._playing_services.append(name)
+        if name not in self._music_services:
+            self._music_services.append(name)
             self._apply_stack_state()
 
     def _on_recording_started(self, service, path: str):
+        self._is_active_recording = True
         self.recording_indicator.start_timer()
         self._apply_stack_state()
 
     def _on_recording_stopped(self, service, path: str):
+        self._is_active_recording = False
         self.recording_indicator.stop_timer()
         self._apply_stack_state()
 
     def _on_any_artwork(self, service, local_path: str):
         self.player_widget._on_artwork_change(service, local_path)
 
-    def _on_any_position(self, service, pos: float, dur: float):
-        self.player_widget._on_track_position(service, pos, dur)
-
     def _on_player_vanish(self, manager, name: str):
-        if name in self._playing_services:
-            self._playing_services.remove(name)
+        if name in self._music_services:
+            self._music_services.remove(name)
             self._apply_stack_state()
 
-    def _on_any_play(self, service):
-        if service.player_name not in self._playing_services:
-            self._playing_services.append(service.player_name)
-        self._apply_stack_state()
-
-    def _on_any_pause(self, service):
-        if service.player_name in self._playing_services:
-            self._playing_services.remove(service.player_name)
-        self._apply_stack_state()
-
     def _on_scroll(self, widget, event):
-        if event.direction == Gdk.ScrollDirection.UP:
-            self._last_scroll_index -= 1
-        elif event.direction == Gdk.ScrollDirection.DOWN:
-            self._last_scroll_index += 1
-        else:
-            return
+        now = GLib.get_monotonic_time()
+        if now - self._last_scroll_time < 100_000:
+            return True
+        self._last_scroll_time = now
 
+        dy = 0
+        if event.direction == Gdk.ScrollDirection.UP:
+            dy = -1
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            dy = 1
+        elif event.direction == Gdk.ScrollDirection.SMOOTH:
+            if event.delta_y < -0.1:
+                dy = -1
+            elif event.delta_y > 0.1:
+                dy = 1
+            else:
+                return True
+        else:
+            return True
+
+        self._last_scroll_index += dy
         self._apply_stack_state()
+        return True
 
     def _apply_stack_state(self):
-        is_recording = screen_capture_service.is_recording
-        has_playing = len(self._playing_services) > 0
+        is_recording = self._is_active_recording
 
-        if has_playing:
-            name = self._playing_services[0]
+        now = GLib.get_monotonic_time()
+        if now - self._last_recording_check > 3_000_000:
+            self._last_recording_check = now
+            if self._is_active_recording and not screen_capture_service.is_recording:
+                self._is_active_recording = False
+                is_recording = False
+                self.recording_indicator.stop_timer()
+
+        has_music = len(self._music_services) > 0
+
+        if has_music:
+            name = self._music_services[0]
             svc = self._mpris.get_player_service(name)
             self.player_widget.set_service(svc)
         else:
@@ -167,28 +180,25 @@ class Notch(Box):
 
         active_pages = []
         if is_recording:
-            active_pages.append(0)
-        if has_playing:
             active_pages.append(1)
+        if has_music:
+            active_pages.append(2)
 
         if not active_pages:
-            if self.get_visible():
-                self.set_visible(False)
+            if self.notch_stack.get_visible_child() != self.idle_widget:
+                self.notch_stack.set_visible_child(self.idle_widget)
             return
 
-        if not self.get_visible():
-            self.set_visible(True)
+        pages = {1: self.recording_indicator, 2: self.player_widget}
 
         if len(active_pages) == 1:
             target = active_pages[0]
         else:
-            idx = self._last_scroll_index % len(active_pages)
-            target = active_pages[idx]
+            target = active_pages[self._last_scroll_index % len(active_pages)]
 
-        current = self.notch_stack.get_visible_child()
-        desired = self.recording_indicator if target == 0 else self.player_widget
+        desired = pages[target]
 
-        if current != desired:
+        if self.notch_stack.get_visible_child() != desired:
             self.notch_stack.set_visible_child(desired)
 
     def destroy(self):

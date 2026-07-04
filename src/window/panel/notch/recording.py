@@ -1,4 +1,4 @@
-from fabric.utils import GLib, os, time, logger
+from fabric.utils import GLib, time
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
@@ -22,10 +22,7 @@ class RecordingIndicator(Box):
             child=self.recording_icon,
         )
         self.recording_button.connect("clicked", self.on_stop_recording)
-        try:
-            setup_cursor_hover(self.recording_button, "pointer")
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
+        setup_cursor_hover(self.recording_button, "pointer")
 
         self.time_label = Label(
             name="notch-recording-time",
@@ -47,9 +44,9 @@ class RecordingIndicator(Box):
         if self.timer_timeout_id is not None:
             return
 
-        self.recording_start_time = self._get_recording_start_time()
-        self.update_timer_display()
-        self.timer_timeout_id = GLib.timeout_add(1000, self.update_timer_display)
+        self.recording_start_time = time.time()
+        self._update_display()
+        self.timer_timeout_id = GLib.timeout_add(1000, self._update_display)
 
     def stop_timer(self):
         self.recording_start_time = None
@@ -58,53 +55,19 @@ class RecordingIndicator(Box):
             GLib.source_remove(self.timer_timeout_id)
             self.timer_timeout_id = None
 
-    def update_timer_display(self):
+    def _update_display(self):
         if self.recording_start_time is None:
             return False
 
-        try:
-            elapsed_seconds = int(time.time() - self.recording_start_time)
-            minutes = elapsed_seconds // 60
-            seconds = elapsed_seconds % 60
-            time_text = f"{minutes:02d}:{seconds:02d}"
+        elapsed_seconds = int(time.time() - self.recording_start_time)
+        minutes = elapsed_seconds // 60
+        seconds = elapsed_seconds % 60
 
-            self.time_label.set_markup(time_text)
-            self.set_tooltip_text(
-                f"Recording in progress ({time_text}) - Click to stop"
-            )
-
-            return True
-        except Exception as e:
-            logger.error(f"[DEBUG] Error updating timer display: {e}")
-            return False
-
-    def _get_recording_start_time(self):
-        wf_file = "/tmp/recording_start_time.txt"
-        gpu_file = "/tmp/gpu_recording_start_time.txt"
-
-        def read_timestamp(path):
-            try:
-                with open(path, "r") as f:
-                    content = f.read().strip()
-                    if content:
-                        t = float(content)
-                        if abs(t - time.time()) <= 3600:
-                            return t
-                    return os.path.getmtime(path)
-            except (OSError, ValueError):
-                return None
-
-        if os.path.exists(wf_file):
-            t = read_timestamp(wf_file)
-            if t:
-                return t
-
-        if os.path.exists(gpu_file):
-            t = read_timestamp(gpu_file)
-            if t:
-                return t
-
-        return time.time()
+        self.time_label.set_markup(f"{minutes:02d}:{seconds:02d}")
+        self.set_tooltip_text(
+            f"Recording in progress ({minutes:02d}:{seconds:02d}) - Click to stop"
+        )
+        return True
 
     def on_stop_recording(self, *args):
         try:
