@@ -4,7 +4,6 @@
 }
 
 .flat-scale slider {
-    /* background: linear-gradient(135deg, @foreground 0%, @foreground 100%); */
     background-color: white;
     min-height: 24px;
     min-width: 24px;
@@ -23,17 +22,4 @@
     background-color: @fg-a80;
     min-height: 25px;
     border-radius: apply(radius-full);
-}
-
-/* SmoothSwitch styling */
-.smooth-switch {
-    min-width: 44px;
-    min-height: 24px;
-    background-color: @bg-a80;
-    color: @foreground;
-}
-
-.smooth-switch.checked {
-    background-color: @fg-a80;
-    color: @foreground;
 }

@@ -10,20 +10,6 @@
   padding: 2rem;
 }
 
-#about-options {
-  background-color: @surface-bright-a90;
-  border-radius: apply(radius-md);
-  padding: 2rem;
-}
-
-#about-logo-box {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-}
-
-#about-button-box {
-  padding: 1rem;
-}
 #vendor-label {
   color: @fg-a40;
   margin-top: -1rem;
@@ -31,32 +17,6 @@
 
 #info-label {
   color: @fg-a60;
-}
-#about-info-title-box {
-  padding-left: 4rem;
-}
-
-#about-name-label {
-  font-size: 24px;
-  margin: 0px;
-  font-weight: 600;
-}
-
-#about-date-label {
-  font-size: apply(font-xs);
-  margin: 0px;
-  color: @text;
-  font-weight: 400;
-  margin-bottom: 2rem;
-}
-
-#about-chip-title-label,
-#about-so-title-label,
-#about-mem-title-label {
-  font-size: apply(font-sm);
-  margin: 0px;
-  margin-right: 10px;
-  font-weight: 500;
 }
 
 #more-info-button {

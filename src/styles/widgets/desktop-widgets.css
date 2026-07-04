@@ -84,8 +84,6 @@
   background: linear-gradient(135deg, @background 0%, @surface-bright 50%, @outline 100%);
 }
 
-/* # */
-
 /* Calendar Widget */
 #calendar-box-widget {
   background: linear-gradient(to bottom, @surface, @background);
@@ -207,10 +205,6 @@
   border-radius: apply(radius-lg);
 }
 
-#ram-progress {
-  margin-left: 12px;
-}
-
 #progress-label {
   font-weight: 600;
   font-size: apply(font-md);
@@ -247,8 +241,3 @@
   font-size: apply(font-base);
   font-weight: 600;
 }
-
-#component-name {
-  font-size: apply(font-2xs);
-}
-
