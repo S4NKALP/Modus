@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Literal
 
-from fabric.utils import Gdk, bulk_connect, exec_shell_command, exec_shell_command_async
-from fabric.widgets.scale import Scale, ScaleMark
+from fabric.utils import Gdk, bulk_connect, exec_shell_command_async
+from fabric.widgets.scale import Scale
 from fabric.widgets.svg import Svg
 
 from shared.widgets.animator import Animator
@@ -29,10 +29,6 @@ class AnimatedScale(Scale):
         self.animator.play()
 
 
-def is_app_running(app_name: str) -> bool:
-    return len(exec_shell_command(f"pidof {app_name}")) != 0
-
-
 # Function to set up cursor hover
 def setup_cursor_hover(
     widget, cursor_name: Literal["pointer", "crosshair", "grab"] = "pointer"
@@ -53,42 +49,6 @@ def setup_cursor_hover(
             "enter-notify-event": on_enter_notify_event,
             "leave-notify-event": on_leave_notify_event,
         },
-    )
-
-
-# Create a scale widget
-def create_scale(
-    name,
-    marks=None,
-    value=0,
-    min_value: float = 0,
-    max_value: float = 100,
-    increments=(1, 1),
-    curve=(0.34, 1.56, 0.64, 1.0),
-    orientation="h",
-    h_expand=True,
-    h_align="center",
-    style_classes="",
-    duration=0.8,
-    **kwargs,
-) -> AnimatedScale:
-    if marks is None:
-        marks = (ScaleMark(value=i) for i in range(1, 100, 10))
-
-    return AnimatedScale(
-        name=name,
-        marks=marks,
-        value=value,
-        min_value=min_value,
-        max_value=max_value,
-        increments=increments,
-        orientation=orientation,
-        curve=curve,
-        h_expand=h_expand,
-        h_align=h_align,
-        duration=duration,
-        style_classes=style_classes,
-        **kwargs,
     )
 
 

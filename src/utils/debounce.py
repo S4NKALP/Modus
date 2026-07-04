@@ -1,34 +1,7 @@
-import asyncio
 import functools
 import typing as t
 
 from fabric.utils import GLib
-
-
-def debounce(delay: float) -> t.Callable[..., t.Any]:
-    def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-        task: asyncio.Task[None] | None = None
-
-        @functools.wraps(func)
-        async def wrapper(*args: t.Any, **kwargs: t.Any) -> None:
-            nonlocal task
-
-            if task is not None and not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-
-            async def delayed_call() -> None:
-                await asyncio.sleep(delay)
-                await func(*args, **kwargs)
-
-            task = asyncio.create_task(delayed_call())
-
-        return wrapper
-
-    return decorator
 
 
 def sync_debounce(
