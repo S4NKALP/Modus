@@ -35,6 +35,8 @@
 }
 
 #outer-no-player-box-c {
+  background-color: alpha(@background, 0.3);
+  border: 1px solid @outline-a40;
   min-height: 55px;
   min-width: 345px;
   border-radius: apply(radius-sm);
