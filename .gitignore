@@ -3,11 +3,8 @@
 *.pyc
 *.pyo
 *.pyd
-config/config.json
-config/dock.json
-config/accounts.json
-config/passwords.json
-config/bookmarks.json
+config/config.toml
+config/dock.toml
 config/hypr/colors.conf
 src/styles/colors.css
 .aider*
