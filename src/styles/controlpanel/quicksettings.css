@@ -20,16 +20,6 @@
   font-weight: 500;
   color: @fg-a40;
 }
-#bluetooth-widget-title {
-  font-size: apply(font-sm);
-  font-weight: 500;
-  color: @foreground;
-}
-
-/* #bluetooth-widget-top { */
-/*   padding-bottom: 10px; */
-/*   border-bottom: 1px solid alpha(@fg-a80, 0.3); */
-/* } */
 
 #device-icon {
   border-radius: apply(radius-full);
@@ -38,14 +28,6 @@
   margin-top: 2.5px;
   margin-right: 10px;
   background-color: @bg-a50;
-}
-
-#devices-title {
-  color: @fg-a60;
-}
-
-#device-icon.paired {
-  background-color: @fg-a60;
 }
 
 #device-icon.connected {
@@ -127,10 +109,6 @@
   background-color: @fg-a25;
 }
 
-.device-slot:hover {
-  background-color: @fg-a05;
-}
-
 .button-hovered {
   background-color: @fg-a10;
 }
@@ -141,7 +119,6 @@
   margin-right: 4px;
 }
 
-#wifi-other-device label,
 #wifi-other-button label {
   font-size: apply(font-sm);
   font-weight: bold;
@@ -182,5 +159,3 @@
   padding: 0px 0 5px 0;
   min-width: 50px;
 }
-
-

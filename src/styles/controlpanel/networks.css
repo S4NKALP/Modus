@@ -4,22 +4,13 @@
   font-weight: bold;
 }
 
-#wifi-window,
-#bluetooth-window {
-  background-color: @bg-a50;
-  border-radius: apply(radius-sm);
-}
-
 /* macOS-style WiFi interface */
 #wifi-connections,
 #bluetooth-connections {
-  /* background-color: @fg-a08; */
   background-color: @fg-a05;
   box-shadow: inset 0 0 0 1px alpha(@fg-a40, 0.4);
   border: 1px solid @outline-a40;
   border-radius: apply(radius-sm);
-  /* padding: 0.5rem; */
-  /* border-radius: apply(radius-md); */
   padding: 10px;
 }
 
@@ -27,7 +18,6 @@
 #wifi-network-slot button {
   border-radius: apply(radius-sm);
   padding: 4px 4px;
-  /* min-width: 280px; */
   margin: 2px 0;
 }
 
@@ -71,7 +61,6 @@
   margin-bottom: -12px;
   margin-top: -6px;
   border-radius: apply(radius-sm);
-  /* transition: background-color 0.2s ease; */
 }
 
 #wifi-other-button:hover {

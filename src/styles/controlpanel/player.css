@@ -67,7 +67,6 @@
 }
 
 #player-title-c {
-  /* margin-top: 18px; */
   font-weight: bold;
   font-size: apply(font-base);
 }
@@ -101,10 +100,6 @@
   margin-bottom: 15px;
 }
 
-.player-icon {
-  font-size: apply(font-lg);
-}
-
 .player-button {
   padding: 1px;
 }
@@ -120,9 +115,6 @@
   opacity: 0.9;
 }
 
-#btn svg {
-  margin: 0 2px;
-}
 .album-image-c {
   min-width: 50px;
   min-height: 50px;
@@ -140,28 +132,4 @@
   background-size: cover;
   margin-left: 12px;
   border-radius: 9px;
-}
-
-#seek-bar slider {
-  background-image: none;
-  background-color: transparent;
-  padding: 0px;
-}
-
-#seek-bar scale {
-  background-color: transparent;
-  margin-top: 10px;
-  border-radius: apply(radius-sm);
-}
-
-#seek-bar trough {
-  min-width: 10px;
-  border-radius: apply(radius-full);
-  background-color: alpha(@bg-a80, 0.5);
-  border: 1px solid alpha(@bg-a95, 0.3);
-}
-
-#seek-bar highlight {
-  background: @fg-a80;
-  border-radius: apply(radius-full);
 }
