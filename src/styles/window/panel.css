@@ -85,3 +85,67 @@
 #workspaces>button:hover * {
     color: @on-primary;
 }
+
+#panel-notch {
+    margin: 0 20px;
+}
+
+#panel-notch-stack {
+    background-color: #000000;
+    border-radius: 0 0 apply(radius-lg) apply(radius-lg);
+    min-width: 200px;
+    min-height: 34px;
+}
+
+#panel-notch-left-corner {
+    margin-left: -16px;
+}
+
+#panel-notch-right-corner {
+    margin-right: -16px;
+}
+
+#panel-notch-corner {
+    background-color: #000000;
+    border-radius: 0;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+#panel-notch-stack #panel-button {
+    margin: 0;
+    padding: 0 4px;
+    margin-left: 8px;
+    background: none;
+    border: none;
+    border-radius: 0;
+}
+
+#panel-notch-stack #panel-button:hover {
+    background: none;
+}
+
+#panel-notch-stack #panel-button:hover * {
+    color: inherit;
+}
+
+#notch-recording-time {
+    font-size: apply(font-xs);
+    font-weight: 500;
+    padding: 0 8px 0 4px;
+}
+
+#panel-notch-stack #notch-player-art {
+    min-width: 24px;
+    min-height: 24px;
+    background-size: cover;
+    background-position: center;
+    border-radius: apply(radius-sm);
+    margin-left: 8px;
+}
+
+#panel-notch-stack #notch-player-time {
+    font-size: apply(font-xs);
+    font-weight: 500;
+    padding: 0 8px 0 4px;
+}
