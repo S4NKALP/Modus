@@ -1,1 +1,1 @@
-# Todo module
+# Todo widget package
