@@ -47,7 +47,7 @@ class ModusDropdown(AppletWindow):
         self.child_box = CenterBox(start_children=[self.dropdown])
 
         self.event_box = EventBox(
-            events=["enter-notify-event", "leave-notify-event"],
+            events=["enter-notify", "leave-notify"],
             child=self.child_box,
             all_visible=True,
         )

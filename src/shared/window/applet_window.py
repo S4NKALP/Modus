@@ -8,10 +8,10 @@ from shared.window.popup_win import PopupWindow  # noqa: E402
 
 class DismissLayer(Window):
     def __init__(self, on_dismiss, **kwargs):
-        self.event_box = EventBox()
+        self.event_box = EventBox(events=["button-press"])
         super().__init__(
             anchor="left right top bottom",
-            layer="overlay",
+            layer="top",
             exclusivity="none",
             keyboard_mode="none",
             child=self.event_box,
