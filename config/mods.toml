@@ -1,0 +1,7 @@
+[Mods.terminal]
+icon = "terminal.svg"
+icon-size = 18
+on-clicked = "kitty"
+order = 1
+
+

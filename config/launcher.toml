@@ -1,0 +1,60 @@
+[launcher_config.em]
+icon = "emoji-people-symbolic"
+description = "Emoji - Search and copy emojis"
+examples = [
+    "em updatejson",
+]
+
+[launcher_config.clip]
+icon = "app.getclipboard.Clipboard"
+description = "Clipboard - Search and manage clipboard history"
+
+[launcher_config."="]
+icon = "calculator"
+description = "Quick Math - Fast mathematical expressions"
+examples = [
+    "= 10*5",
+    "= 2^8",
+    "= sin(30)",
+]
+
+[launcher_config.app]
+icon = "apps"
+description = "Applications - Launch installed applications"
+
+[launcher_config.power]
+icon = "shutdown"
+description = "Power - System power management and session control"
+
+[launcher_config.caffeine]
+icon = "caffeine"
+description = "Caffeine - Prevent system from going idle"
+examples = [
+    "caffeine 30m",
+    "caffeine 1h",
+    "caffeine 2h",
+    "caffeine on",
+]
+
+[launcher_config.sc]
+icon = "cs-screen"
+description = "Screencapture - Record screen and audio"
+
+[launcher_config.wall]
+icon = "daily-wallpaper"
+description = "Wallpapers - Set wallpapers, and tons of features"
+
+[launcher_config."?"]
+icon = "search-symbolic"
+description = "Quick Web Search - Fast web search with question mark"
+examples = [
+    "? cats",
+    "? google cats",
+    "? youtube music",
+]
+
+[settings]
+max_examples_shown = 2
+default_icon = "apps"
+fallback_example_template = "{trigger} <search>"
+config_version = "1.0"
