@@ -16,12 +16,13 @@ from window.notification.notification_center import NotificationCenter
 from window.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from window.panel.components.globalmenu import GlobalMenu
 from window.panel.components.custom_mods import CustomMods
+from window.panel.notch import Notch
 from window.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
     NetworkIndicator,
 )
-from window.panel.components.recording_indicator import RecordingIndicator
+
 from window.panel.components.workspace import WorkspaceIndicator
 
 apply_enhanced_system_tray()
@@ -113,7 +114,6 @@ class Panel(Window):
 
         self.custom_mods = CustomMods(parent_window=self)
         self.workspace_indicator = WorkspaceIndicator()
-        self.recording_indicator = RecordingIndicator()
 
         # Create persistent indicators
         self.battery_indicator = BatteryIndicator()
@@ -133,7 +133,8 @@ class Panel(Window):
 
         # Create boxes and mount
         self.left_box = Box(name="window-left")
-        self.center_box = Box(name="window-center", children=self.recording_indicator)
+        self.notch = Notch()
+        self.center_box = Box(name="window-center", children=self.notch)
         self.right_box = Box(name="window-right", spacing=4, orientation="h")
 
         self.children = CenterBox(
@@ -334,9 +335,9 @@ class Panel(Window):
         # Destroy components
         for component in [
             self.globalmenu,
+            self.notch,
             self.custom_mods,
             self.workspace_indicator,
-            self.recording_indicator,
             self.indicators,
         ]:
             try:
