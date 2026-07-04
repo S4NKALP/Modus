@@ -79,7 +79,7 @@ class ModPopup(AppletWindow):
 
     def _run_command(self, cmd):
         self.close_applet()
-        thread(run_command, cmd.split(), timeout=30)
+        thread(run_command, ["sh", "-c", cmd], timeout=30)
 
     def toggle(self, pointing_to=None):
         if pointing_to:
@@ -112,11 +112,11 @@ class CustomMods(Box):
         mods = {}
         for mod_name, val in data.get("Mods", {}).items():
             icon = val.get("icon", "")
-            icon_size = val.get("icon-size", 18)
+            icon_size = val.get("icon-size", 16)
             order = val.get("order", 99)
             on_clicked = val.get("on-clicked")
             options = val.get("options", [])
-            mods[mod_name] = {
+            mod_data = {
                 "name": mod_name,
                 "icon": icon,
                 "icon_size": icon_size,
@@ -124,11 +124,32 @@ class CustomMods(Box):
                 "on-clicked": on_clicked,
                 "options": options,
             }
+            for k in ("on-left", "on-middle", "on-right"):
+                v = val.get(k)
+                if v is not None:
+                    mod_data[k] = v
+            mods[mod_name] = mod_data
 
         self._rebuild(mods)
 
     def _on_btn_press(self, btn, event, mod):
+        button_map = {1: "on-left", 2: "on-middle", 3: "on-right"}
+        button_key = button_map.get(event.button)
+        per_button_cmd = mod.get(button_key) if button_key else None
         popup = self._mod_popups.get(mod["name"])
+
+        if per_button_cmd is not None:
+            if popup and popup._is_open:
+                popup.toggle()
+            thread(run_command, ["sh", "-c", per_button_cmd], timeout=30)
+            return True
+
+        cmd = mod.get("on-clicked")
+        if cmd:
+            if popup and popup._is_open:
+                popup.toggle()
+            thread(run_command, ["sh", "-c", cmd], timeout=30)
+            return True
 
         if event.button == 3:
             if popup:
@@ -140,16 +161,14 @@ class CustomMods(Box):
                 popup.toggle()
                 return True
 
-            cmd = mod.get("on-clicked")
-            if cmd:
-                thread(run_command, cmd.split(), timeout=30)
-                return True
-
             if popup:
                 popup.toggle(pointing_to=btn)
             return True
 
-        return False
+        if event.button == 2 and popup:
+            popup.toggle(pointing_to=btn)
+
+        return True
 
     def _rebuild(self, mods):
         for child in list(self.get_children()):

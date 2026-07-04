@@ -16,7 +16,6 @@ from window.notification.notification_center import NotificationCenter
 from window.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from window.panel.components.globalmenu import GlobalMenu
 from window.panel.components.custom_mods import CustomMods
-from window.panel.components.google_lens_indicator import GoogleLensIndicator
 from window.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
@@ -111,7 +110,6 @@ class Panel(Window):
         )
         setup_cursor_hover(self.datetime_btn, "pointer")
 
-        self.google_lens_indicator = GoogleLensIndicator()
         self.custom_mods = CustomMods(parent_window=self)
         self.workspace_indicator = WorkspaceIndicator()
         self.recording_indicator = RecordingIndicator()
@@ -241,8 +239,6 @@ class Panel(Window):
         right_children = []
         if config_data.get("custom_mods", True):
             right_children.append(self.custom_mods)
-        if config_data.get("google_lens", True):
-            right_children.append(self.google_lens_indicator)
         if config_data.get("workspace_indicator", True):
             right_children.append(self.workspace_indicator)
 
@@ -276,7 +272,6 @@ class Panel(Window):
         keys = {
             "imac_button",
             "global_menu",
-            "google_lens",
             "custom_mods",
             "workspace_indicator",
             "systray",
@@ -338,7 +333,6 @@ class Panel(Window):
         # Destroy components
         for component in [
             self.globalmenu,
-            self.google_lens_indicator,
             self.custom_mods,
             self.workspace_indicator,
             self.recording_indicator,
