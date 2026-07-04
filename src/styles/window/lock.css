@@ -1,6 +1,25 @@
 #lockscreen-bg {
   background-size: cover;
 }
+
+#lock-notch {
+    margin: 0 20px;
+}
+
+#lock-notch-stack {
+    background-color: #000000;
+    border-radius: 0 0 apply(radius-lg) apply(radius-lg);
+    min-width: 200px;
+    min-height: 34px;
+}
+
+#lock-notch-corner {
+    background-color: #000000;
+    border-radius: 0;
+    min-width: 20px;
+    min-height: 20px;
+}
+
 #indicator-box {
   margin-right: 10px;
   margin-top: 4px;

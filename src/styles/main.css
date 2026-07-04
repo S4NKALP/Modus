@@ -6,6 +6,7 @@
 @import url("./launcher/index.css");
 @import url("./window/index.css");
 @import url("./widgets/index.css");
+@import url("./window/lock.css");
 
 * {
     all: unset;

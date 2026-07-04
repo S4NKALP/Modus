@@ -84,6 +84,7 @@
 #global-menu.active *,
 #workspaces>button:hover * {
     color: @on-primary;
+
 }
 
 #panel-notch {
@@ -136,16 +137,11 @@
 }
 
 #panel-notch-stack #notch-player-art {
-    min-width: 24px;
-    min-height: 24px;
+    min-width: 18px;
+    min-height: 18px;
     background-size: cover;
     background-position: center;
     border-radius: apply(radius-sm);
     margin-left: 8px;
 }
 
-#panel-notch-stack #notch-player-time {
-    font-size: apply(font-xs);
-    font-weight: 500;
-    padding: 0 8px 0 4px;
-}
