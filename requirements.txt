@@ -6,3 +6,4 @@ psutil==7.2.2
 pywayland==0.4.18
 ruff==0.15.12
 six==1.17.0
+tomlkit==0.15.0
