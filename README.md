@@ -56,6 +56,46 @@ cd ~/.config/Modus
 
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png" alt="Rocket" width="25" height="25" /></sub> Todo</h2>
 
+## Configuration
+
+Config files are in `config/` directory, using TOML format:
+
+| File                   | Purpose                |
+| ---------------------- | ---------------------- |
+| `config/config.toml`   | Main app configuration |
+| `config/mods.toml`     | Custom mod definitions |
+| `config/launcher.toml` | Launcher settings      |
+| `config/dock.toml`     | Dock pinned apps       |
+
+## Custom Mods
+
+Define panel buttons that run commands or show dropdowns in `config/mods.toml`:
+
+```toml
+[Mods.terminal]
+icon = "terminal.svg"
+icon-size = 16
+order = 1
+on-clicked = "kitty"
+
+[Mods.color-picker]
+icon = "misc/color-picker.svg"
+icon-size = 22
+order = 0
+on-left = "hyprpicker -a -n -f hex && sleep 0.1 && ..."
+on-middle = "hyprpicker -a -n -f rgb && sleep 0.1 && ..."
+on-right = "hyprpicker -n -f hsv | wl-copy -n && sleep 0.1 && ..."
+```
+
+- `icon` — SVG filename in `src/assets/icons/`
+- `icon-size` — defaults to 16
+- `order` — button position (lower = first)
+- `on-clicked` — shell command on any click
+- `on-left`, `on-middle`, `on-right` — per-mouse-button commands (optional)
+- `options` — dropdown menu entries (optional, each with `label` + `on-clicked`)
+- Supports `&&`, `|`, and full shell syntax (runs via `sh -c`)
+- File monitoring enables live reload — edit `mods.toml` and changes apply instantly
+
 ## Manual Installation
 
 ```bash
@@ -74,7 +114,7 @@ uv run start
 - [x] Music Player
 - [x] Desktop Widgets
 - [x] New Launcher (like Spotlight)
-- [ ] Settings
+- [x] Settings
 - [x] ~~Magnifier hover effect on Dock~~
 - [x] ~~New Application Switcher~~
 - [x] Panel Widget
