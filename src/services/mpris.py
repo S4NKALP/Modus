@@ -155,12 +155,12 @@ class PlayerService(Service):
         self.status = self._player.props.playback_status
         self._last_polled_status = self.playback_status
         self.pos_fabricator = Fabricator(
-            interval=1000,
+            interval=2000,
             poll_from=lambda f, *_: self.get_position(),
             on_changed=lambda f, *_: self.fabricating(),
         )
         self.status_fabricator = Fabricator(
-            interval=250,
+            interval=5000,
             poll_from=lambda f, *_: self.playback_status,
             on_changed=lambda f, value: self._on_polled_status_change(value),
         )
