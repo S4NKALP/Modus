@@ -46,6 +46,7 @@ class Panel(Window):
             on_clicked=lambda *_: self.globalmenu.show_system_dropdown((self.imac)),
         )
         setup_cursor_hover(self.imac, "pointer")
+        self.globalmenu.set_imac_button(self.imac)
 
         self.tray = SystemTray(name="panel-button", spacing=4, icon_size=20)
 

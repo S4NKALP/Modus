@@ -401,7 +401,7 @@ class ModusControlCenter(AppletWindow):
                                 svg_file(
                                     "brightness/brightness.svg",
                                     name="brightness-widget-icon",
-                                    size=32,
+                                    size=28,
                                     h_align="start",
                                     v_align="center",
                                 )
@@ -435,7 +435,7 @@ class ModusControlCenter(AppletWindow):
                                                 svg_file(
                                                     "volume/audio-volume.svg",
                                                     name="volume-widget-icon",
-                                                    size=32,
+                                                    size=28,
                                                     h_align="start",
                                                     v_align="center",
                                                 )

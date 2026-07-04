@@ -161,6 +161,7 @@ class GlobalMenuDropdowns:
     def __init__(self, parent, menu_box=None):
         self.parent = parent
         self._menu_box = menu_box  # The GlobalMenu Box widget to update
+        self._imac_button = None
 
         # Get the global menu service
         self._global_menu_svc = get_global_menu_service()
@@ -268,16 +269,15 @@ class GlobalMenuDropdowns:
 
         # Connect to global menu service signals (Moved to the bottom of __init__)
 
-        self.global_menu_button_title = Button(
-            child=ActiveWindow(
-                formatter=FormattedString(
-                    "{ format_window(win_title, win_class) }",
-                    format_window=format_window,
-                )
+        self.global_menu_button_title = ActiveWindow(
+            formatter=FormattedString(
+                "{ format_window(win_title, win_class) }",
+                format_window=format_window,
             ),
             name="global-menu",
             on_clicked=self._on_title_button_clicked,
         )
+        setup_cursor_hover(self.global_menu_button_title, "pointer")
 
         self.global_menu_title.set_pointing_to(self.global_menu_button_title)
 
@@ -307,12 +307,31 @@ class GlobalMenuDropdowns:
             "global-menu-help": self.global_menu_button_help,
         }
 
+        self.dropdown_button_map["os-menu"] = None
+
         modus_service.connect("current-dropdown-changed", self.changed_dropdown)
         modus_service.connect("dropdowns-hide-changed", self.hide_dropdowns)
 
         # Connect to global menu service signals
         if self._global_menu_svc:
             self._global_menu_svc.connect("menu-changed", self._on_menu_changed)
+
+    def set_imac_button(self, button):
+        self._imac_button = button
+        self.dropdown_button_map["os-menu"] = button
+
+    def _get_all_buttons(self):
+        buttons = list(self.all_menu_buttons)
+        if self._imac_button and self._imac_button not in buttons:
+            buttons.append(self._imac_button)
+        return buttons
+
+    def hide_dropdowns(self, *_):
+        manage_button_style_classes(self._get_all_buttons())
+
+    def changed_dropdown(self, _, dropdown_id):
+        active_button = self.dropdown_button_map.get(dropdown_id)
+        manage_button_style_classes(self._get_all_buttons(), active_button)
 
     def _on_title_button_clicked(self, _):
         if has_active_window():
@@ -480,13 +499,6 @@ class GlobalMenuDropdowns:
         if self._menu_box is not None:
             self._menu_box.children = self.all_menu_buttons
 
-    def hide_dropdowns(self, *_):
-        manage_button_style_classes(self.all_menu_buttons)
-
-    def changed_dropdown(self, _, dropdown_id):
-        active_button = self.dropdown_button_map.get(dropdown_id)
-        manage_button_style_classes(self.all_menu_buttons, active_button)
-
     def destroy(self):
         """Clean up all dropdowns and signal connections"""
         try:
@@ -542,7 +554,11 @@ class GlobalMenu(Box):
 
         self.children = self.dropdown_system.all_menu_buttons
 
+    def set_imac_button(self, button):
+        self.dropdown_system.set_imac_button(button)
+
     def show_system_dropdown(self, imac_button):
+        self.dropdown_system.set_imac_button(imac_button)
         self.dropdown_system.system_dropdown.set_pointing_to(imac_button)
         self.dropdown_system.system_dropdown.toggle()
 
