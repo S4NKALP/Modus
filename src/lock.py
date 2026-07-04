@@ -8,11 +8,13 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
+from fabric.widgets.shapes import Corner
 from fabric.widgets.window import Window
 from gi.repository import GtkSessionLock  # pyright: ignore[reportAttributeAccessIssue]
 
 from shared.widgets.circle_image import CircleImage as Image
 from utils.functions import set_process_name
+from utils.utils import svg_file
 from window.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
@@ -132,16 +134,20 @@ class ContentBox(CenterBox):
 
 class LockScreen(Window):
     def __init__(self, lock: GtkSessionLock.Lock):
-        self._hide_timeout_id = None  # prevent AttributeError
+        self._hide_timeout_id = None
         self.lock = lock
         self.content = ContentBox(self.on_activate)
+        self.lock_notch = self._build_lock_notch()
         super().__init__(
             title="lock",
             visible=False,
             all_visible=False,
             name="lockscreen-bg",
             anchor="center",
-            child=self.content,
+            child=Box(
+                orientation="vertical",
+                children=[self.lock_notch, self.content],
+            ),
         )
 
         self.content.password_entry.set_visible(False)
@@ -151,6 +157,47 @@ class LockScreen(Window):
         if not os.path.exists(bg):
             bg = get_relative_path("./assets/wallpapers_example/example-1.png")
         self.set_style(f"background-image: url('{bg}');")
+
+    def _build_lock_notch(self):
+        return CenterBox(
+            name="lock-notch",
+            orientation="h",
+            h_align="center",
+            v_align="center",
+            start_children=Box(
+                name="lock-notch-corner-left",
+                orientation="v",
+                h_align="start",
+                children=[
+                    Corner(
+                        name="lock-notch-corner",
+                        orientation="top-right",
+                        size=20,
+                    ),
+                ],
+            ),
+            center_children=CenterBox(
+                name="lock-notch-stack",
+                v_expand=True,
+                h_expand=True,
+                end_children=Box(
+                    children=[svg_file("notch/lock.svg", size=16)],
+                    style="margin-right: 12px;",
+                ),
+            ),
+            end_children=Box(
+                name="lock-notch-corner-right",
+                orientation="v",
+                h_align="end",
+                children=[
+                    Corner(
+                        name="lock-notch-corner",
+                        orientation="top-left",
+                        size=20,
+                    ),
+                ],
+            ),
+        )
 
     def _on_keypress(self, widget, event):
         keyval = event.keyval
