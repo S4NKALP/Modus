@@ -1,17 +1,3 @@
-#battery-window {
-  background-color: @bg-a50;
-  border-radius: apply(radius-sm);
-}
-
-#battery-control-window {
-  margin: 6px;
-  background-color: @bg-a50;
-  border: 1px solid @outline-a30;
-  box-shadow: inset 0 0 200px 0 @outline-a30;
-  border-radius: apply(radius-sm);
-}
-
-
 #battery-widget {
   background: transparent;
   padding-left: 5px;
@@ -39,17 +25,8 @@
   margin: 8px 12px 4px 12px;
 }
 
-.battery-energy-item {
-  margin: 4px 12px;
-  padding: 4px 0;
-}
-
 .battery-status-section {
-  /* background: @fg-a06; */
-  /* border-radius: apply(radius-md); */
   padding: 2px;
-  /* margin: 8px 0; */
-  /* border: 1px solid @fg-a08; */
 }
 
 .battery-percentage {
@@ -86,10 +63,6 @@
   color: @fg-a70;
 }
 
-#energy-mode-icon.connected {
-  background-color: @primary;
-  color: @foreground;
-}
 .battery-power-source {
   font-size: apply(font-sm);
   margin-bottom: -4px;
@@ -146,7 +119,6 @@
   border-radius: apply(radius-sm);
   padding: 6px 12px;
   margin: 1px 0;
-  /* min-height: 36px; */
 }
 
 #game-mode-button-clickable:hover {

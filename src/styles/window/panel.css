@@ -4,12 +4,6 @@
     transition: all 120ms ease-in-out;
 }
 
-#modules-left,
-#modules-right {
-    margin: 0 5px;
-    padding: 2px 0;
-}
-
 #panel-button:hover,
 #panel-button.active,
 #battery-button:hover,
@@ -18,8 +12,6 @@
 #network-button.active,
 #bt-button:hover,
 #bt-button.active,
-#tray-button:hover,
-#tray-button.active,
 #global-menu:hover,
 #global-menu.active,
 #workspaces>button:hover {
@@ -30,14 +22,12 @@
 #panel-button,
 #battery-button,
 #network-button,
-#bt-button,
-#tray-button {
+#bt-button {
     margin: 5px 0;
     padding: 0 2px;
     border-radius: apply(radius-sm);
 }
 
-#menubar label,
 #battery-label,
 #date-time {
     font-weight: 500;
@@ -90,8 +80,6 @@
 #network-button.active *,
 #bt-button:hover *,
 #bt-button.active *,
-#tray-button:hover *,
-#tray-button.active *,
 #global-menu:hover *,
 #global-menu.active *,
 #workspaces>button:hover * {
