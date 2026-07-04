@@ -9,10 +9,13 @@ module that needs dynamic configuration.
 
 from __future__ import annotations
 
-import json
 from typing import Any, Callable, Dict, List, Optional
 
 from fabric.utils import Gio, GLib, get_relative_path, logger, os
+from tomlkit import document as toml_document
+from tomlkit import dump as toml_dump
+from tomlkit import load as toml_load
+from tomlkit.items import Integer, String, Bool, Array
 
 
 class ConfigService:
@@ -30,11 +33,11 @@ class ConfigService:
             return
 
         self._initialized = True
-        self._config: Dict[str, Any] = {}
+        self._config: Any = {}
         self._reload_callbacks: List[
             Callable[[Dict[str, Any], Dict[str, Any]], None]
         ] = []
-        self._config_file: str = get_relative_path("../../config/config.json")
+        self._config_file: str = get_relative_path("../../config/config.toml")
         self._monitors: List[Gio.FileMonitor] = []
         self._reload_pending: bool = False
         self.RELOAD_DELAY_MS: int = 100
@@ -61,9 +64,8 @@ class ConfigService:
         try:
             os.makedirs(os.path.dirname(self._config_file), exist_ok=True)
             with open(self._config_file, "w") as f:
-                json.dump(self._config, f, indent=4)
+                toml_dump(self._config, f)
 
-            # Manually trigger a reload to notify listeners immediately
             GLib.idle_add(self._reload_config)
             return True
         except Exception as e:
@@ -90,21 +92,46 @@ class ConfigService:
                 logger.error(f"An error occurred: {e}")
         self._monitors.clear()
 
+    @staticmethod
+    def _dict_to_toml(d: dict) -> Any:
+        doc = toml_document()
+        for k, v in d.items():
+            if isinstance(v, bool):
+                doc[k] = Bool(v)
+            elif isinstance(v, int):
+                doc[k] = Integer(v)
+            elif isinstance(v, str):
+                doc[k] = String(v, String.STANDARD)
+            elif isinstance(v, list):
+                arr = Array()
+                for item in v:
+                    if isinstance(item, bool):
+                        arr.append(Bool(item))
+                    elif isinstance(item, int):
+                        arr.append(Integer(item))
+                    elif isinstance(item, str):
+                        arr.append(String(item, String.STANDARD))
+                    else:
+                        arr.append(item)
+                arr.set_multiline(True) if len(v) > 1 else None
+                doc[k] = arr
+            else:
+                doc[k] = v
+        return doc
+
     def _load_config(self) -> None:
         try:
             if os.path.exists(self._config_file):
                 with open(self._config_file, "r") as f:
-                    self._config = json.load(f)
+                    self._config = toml_load(f)
             else:
                 try:
                     from utils.constants import DEFAULT
 
-                    # Ensure the config directory exists
                     os.makedirs(os.path.dirname(self._config_file), exist_ok=True)
+                    self._config = self._dict_to_toml(DEFAULT)
                     with open(self._config_file, "w") as f:
-                        json.dump(DEFAULT, f, indent=4)
-
-                    self._config = DEFAULT.copy()
+                        toml_dump(self._config, f)
                     logger.info(
                         f"[ConfigService] Generated default config at {self._config_file}"
                     )

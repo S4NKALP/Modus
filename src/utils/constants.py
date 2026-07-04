@@ -21,6 +21,8 @@ DEFAULT = {
     "workspace_indicator": True,
     "bluetooth": True,
     "date_time": True,
+    "google_lens": True,
+    "custom_mods": True,
     "keyboard_layouts": ["us", "np"],
     "window_switcher": True,
     "osd": True,

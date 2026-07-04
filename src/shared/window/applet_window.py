@@ -11,7 +11,7 @@ class DismissLayer(Window):
         self.event_box = EventBox()
         super().__init__(
             anchor="left right top bottom",
-            layer="top",
+            layer="overlay",
             exclusivity="none",
             keyboard_mode="none",
             child=self.event_box,
@@ -70,10 +70,8 @@ class AppletWindow(PopupWindow):
             self.dismiss_layer.show()
 
         self.set_visible(True)
-        self.set_focus(None)
 
     def close_applet(self):
-
         if not self._is_open:
             return
 
@@ -87,6 +85,9 @@ class AppletWindow(PopupWindow):
             self.dismiss_layer.hide()
 
         self.set_visible(False)
+
+        if hasattr(self, "_parent") and self._parent:
+            self._parent.set_visible(True)
 
         if AppletWindow._active_popup == self:
             AppletWindow._active_popup = None
