@@ -1,26 +1,28 @@
-from fabric.utils import logger
-import json
-import os
 from typing import Any, Dict, List
 
+import tomlkit
 from fabric.utils import get_relative_path
 
 
 class TriggerConfig:
     def __init__(self, config_path: str = None):
         if config_path is None:
-            config_path = get_relative_path("../../../config/launcher.json")
+            config_path = get_relative_path("../../../config/launcher.toml")
 
         self.config_path = config_path
 
-        # Load configuration from JSON file
         config = {"launcher_config": {}, "settings": {}}
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-            except Exception as e:
-                logger.error(f"Error loading trigger config: {e}")
+        try:
+            with open(config_path, "r") as f:
+                data = tomlkit.load(f)
+                config["launcher_config"] = dict(data.get("launcher_config", {}))
+                config["settings"] = dict(data.get("settings", {}))
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            from fabric.utils import logger
+
+            logger.error(f"Error loading trigger config: {e}")
 
         self.config = config
         self.launcher_config = self.config.get("launcher_config", {})

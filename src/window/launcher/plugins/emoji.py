@@ -278,7 +278,7 @@ class EmojiPlugin(PluginBase):
         subtitle = f"{keywords}" + (" • Recent" if is_recent else "")
 
         # Use larger font size for emojis to make them visible
-        icon_markup = f"<span size='xx-large'>{emoji}</span>"
+        icon_markup = f"<span size='xx-large'>{GLib.markup_escape_text(emoji)}</span>"
 
         return Result(
             title=name,

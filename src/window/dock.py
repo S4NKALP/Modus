@@ -1,6 +1,8 @@
 import json
 import subprocess
 
+import tomlkit
+
 from fabric.utils import (
     GLib,
     Gtk,
@@ -26,14 +28,12 @@ from services.modus import modus_service
 from utils.functions import (
     clear_children,
     is_special_workspace_id,
-    read_json_file,
-    write_json_file,
 )
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 
 # Pinned apps file
-PINNED_APPS_FILE = get_relative_path("../../config/dock.json")
+PINNED_APPS_FILE = get_relative_path("../../config/dock.toml")
 
 
 class AppBar(Box):
@@ -57,7 +57,7 @@ class AppBar(Box):
         # Initialize GTK menu
         self.menu = Gtk.Menu()
 
-        self.pinned_apps = read_json_file(PINNED_APPS_FILE) or []
+        self.pinned_apps = self._read_pinned_apps()
         self.pinned_apps_container = Box()
         self.add(self.pinned_apps_container)
 
@@ -161,6 +161,34 @@ class AppBar(Box):
             self.menu.destroy()
 
         super().destroy()
+
+    def _read_pinned_apps(self) -> list:
+        try:
+            if os.path.exists(PINNED_APPS_FILE):
+                with open(PINNED_APPS_FILE, "r") as f:
+                    data = tomlkit.load(f)
+                    return list(data.get("pinned", []))
+        except Exception as e:
+            logger.error(f"[AppBar] Failed to read pinned apps: {e}")
+        return []
+
+    def _write_pinned_apps(self):
+        try:
+            doc = tomlkit.document()
+            arr = tomlkit.array()
+            for app in self.pinned_apps:
+                if isinstance(app, dict):
+                    tbl = tomlkit.inline_table()
+                    for k, v in app.items():
+                        tbl[k] = v
+                    arr.append(tbl)
+                else:
+                    arr.append(app)
+            doc["pinned"] = arr
+            with open(PINNED_APPS_FILE, "w") as f:
+                tomlkit.dump(doc, f)
+        except Exception as e:
+            logger.error(f"[AppBar] Failed to write pinned apps: {e}")
 
     def _populate_pinned_apps(self):
         clear_children(self.pinned_apps_container)
@@ -515,7 +543,7 @@ class AppBar(Box):
         except Exception:
             self.pinned_apps.append(app_class)
 
-        write_json_file(self.pinned_apps, PINNED_APPS_FILE)
+        self._write_pinned_apps()
         self._populate_pinned_apps()
         return True
 
@@ -530,7 +558,7 @@ class AppBar(Box):
             self.pinned_apps.pop(i)
 
         if apps_to_remove:
-            write_json_file(self.pinned_apps, PINNED_APPS_FILE)
+            self._write_pinned_apps()
             self._populate_pinned_apps()
             return True
         return False

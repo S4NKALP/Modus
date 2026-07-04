@@ -1,7 +1,8 @@
 import colorsys
 import hashlib
-import json
 import threading
+
+import tomlkit
 from typing import Dict, List, Optional
 
 from fabric.utils import (
@@ -74,39 +75,32 @@ class WallpaperPlugin(PluginBase):
         )
 
     def _get_matugen_state(self) -> bool:
-        """Get current matugen state from config.json."""
-        self.matugen_enabled = True  # Default to True
+        """Get current matugen state from config.toml."""
+        self.matugen_enabled = True
         try:
             with open(data.CONFIG_FILE, "r") as f:
-                config = json.load(f)
+                config = tomlkit.load(f)
                 self.matugen_enabled = config.get("matugen_enabled", True)
         except FileNotFoundError:
-            # File doesn't exist, keep default True
             pass
         except Exception as e:
             logger.error(f"Error reading config file: {e}")
-            # Keep default True on error
 
         return self.matugen_enabled
 
     def _set_matugen_state(self, enabled: bool):
-        """Set matugen state and save to config.json."""
+        """Set matugen state and save to config.toml."""
         self.matugen_enabled = enabled
-
-        # Save the state to config.json
         try:
-            # Read current config
             config = {}
             if os.path.exists(data.CONFIG_FILE):
                 with open(data.CONFIG_FILE, "r") as f:
-                    config = json.load(f)
+                    config = tomlkit.load(f)
 
-            # Update matugen state
             config["matugen_enabled"] = enabled
 
-            # Write back to config file
             with open(data.CONFIG_FILE, "w") as f:
-                json.dump(config, f, indent=4)
+                tomlkit.dump(config, f)
 
         except Exception as e:
             logger.error(f"Error writing matugen state to config: {e}")
@@ -335,10 +329,9 @@ class WallpaperPlugin(PluginBase):
         """Get current color scheme from config (default to tonal-spot)."""
         try:
             with open(data.CONFIG_FILE, "r") as f:
-                config = json.load(f)
+                config = tomlkit.load(f)
                 return config.get("current_scheme", "scheme-tonal-spot")
         except FileNotFoundError:
-            # File doesn't exist, return default
             return "scheme-tonal-spot"
         except Exception as e:
             logger.error(f"Error reading current scheme from config: {e}")
@@ -349,20 +342,16 @@ class WallpaperPlugin(PluginBase):
         scheme_name = self.schemes.get(scheme, scheme)
         matugen_enabled = self._get_matugen_state()
 
-        # Save the scheme to config
         try:
-            # Read current config
-            config = {}
+            config = tomlkit.document()
             if os.path.exists(data.CONFIG_FILE):
                 with open(data.CONFIG_FILE, "r") as f:
-                    config = json.load(f)
+                    config = tomlkit.load(f)
 
-            # Update current scheme
             config["current_scheme"] = scheme
 
-            # Write back to config file
             with open(data.CONFIG_FILE, "w") as f:
-                json.dump(config, f, indent=4)
+                tomlkit.dump(config, f)
 
         except Exception as e:
             logger.error(f"Error saving current scheme to config: {e}")
