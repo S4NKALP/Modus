@@ -1,0 +1,118 @@
+from fabric.utils import GLib, os, time, logger
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
+from fabric.widgets.box import Box
+from services.screencapture import screen_capture_service
+
+from utils.utils import setup_cursor_hover, svg_file
+
+
+class RecordingIndicator(Box):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.recording_start_time = None
+        self.timer_timeout_id = None
+
+        self.recording_icon = svg_file("misc/media-record.svg", size=24)
+
+        self.recording_button = Button(
+            name="panel-button",
+            child=self.recording_icon,
+        )
+        self.recording_button.connect("clicked", self.on_stop_recording)
+        try:
+            setup_cursor_hover(self.recording_button, "pointer")
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+
+        self.time_label = Label(
+            name="notch-recording-time",
+            markup="00:00",
+            max_width_chars=5,
+            ellipsize="none",
+        )
+
+        self.recording_box = CenterBox(
+            orientation="h",
+            h_expand=True,
+            start_children=self.recording_button,
+            end_children=self.time_label,
+        )
+
+        self.add(self.recording_box)
+
+    def start_timer(self):
+        if self.timer_timeout_id is not None:
+            return
+
+        self.recording_start_time = self._get_recording_start_time()
+        self.update_timer_display()
+        self.timer_timeout_id = GLib.timeout_add(1000, self.update_timer_display)
+
+    def stop_timer(self):
+        self.recording_start_time = None
+
+        if self.timer_timeout_id is not None:
+            GLib.source_remove(self.timer_timeout_id)
+            self.timer_timeout_id = None
+
+    def update_timer_display(self):
+        if self.recording_start_time is None:
+            return False
+
+        try:
+            elapsed_seconds = int(time.time() - self.recording_start_time)
+            minutes = elapsed_seconds // 60
+            seconds = elapsed_seconds % 60
+            time_text = f"{minutes:02d}:{seconds:02d}"
+
+            self.time_label.set_markup(time_text)
+            self.set_tooltip_text(
+                f"Recording in progress ({time_text}) - Click to stop"
+            )
+
+            return True
+        except Exception as e:
+            logger.error(f"[DEBUG] Error updating timer display: {e}")
+            return False
+
+    def _get_recording_start_time(self):
+        wf_file = "/tmp/recording_start_time.txt"
+        gpu_file = "/tmp/gpu_recording_start_time.txt"
+
+        def read_timestamp(path):
+            try:
+                with open(path, "r") as f:
+                    content = f.read().strip()
+                    if content:
+                        t = float(content)
+                        if abs(t - time.time()) <= 3600:
+                            return t
+                    return os.path.getmtime(path)
+            except (OSError, ValueError):
+                return None
+
+        if os.path.exists(wf_file):
+            t = read_timestamp(wf_file)
+            if t:
+                return t
+
+        if os.path.exists(gpu_file):
+            t = read_timestamp(gpu_file)
+            if t:
+                return t
+
+        return time.time()
+
+    def on_stop_recording(self, *args):
+        try:
+            screen_capture_service.stop_recording()
+            self.stop_timer()
+        except Exception:
+            pass
+
+    def destroy(self):
+        self.stop_timer()
+        super().destroy()
