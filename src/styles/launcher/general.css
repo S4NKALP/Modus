@@ -6,71 +6,9 @@
     border: 1px solid @fg-a10;
 }
 
-/* #launcher-search { */
-/*   color: @shadow; */
-/* } */
 #header_box {
     padding: 0px 20px 0 20px;
     color: @shadow;
-}
-
-#close-button,
-#config-button {
-    background-color: transparent;
-    border-radius: apply(radius-xs);
-    padding: 6px;
-    transition: all apply(transition-fast) ease;
-}
-
-#close-button:hover,
-#close-button:focus,
-#config-button:hover,
-#config-button:focus {
-    background-color: @fg-a10;
-    border-radius: apply(radius-xs);
-}
-
-#close-button.focused,
-#config-button.focused {
-    background-color: @primary-a20;
-    border-radius: apply(radius-xs);
-    box-shadow: 0 0 0 2px @primary-a40;
-}
-
-#close-button.focused #close-label {
-    color: @primary;
-}
-
-#config-button.focused #config-label {
-    color: @primary;
-}
-
-#close-button:active {
-    background-color: @fg-a20;
-    border-radius: apply(radius-xs);
-}
-
-#close-label {
-    color: @fg-a70;
-    font-size: 18px;
-}
-
-#close-button:active #close-label {
-    color: @fg-a90;
-}
-
-#config-button:active {
-    background-color: @fg-a20;
-    border-radius: apply(radius-xs);
-}
-
-#config-label {
-    color: @fg-a70;
-    font-size: 18px;
-}
-
-#config-button:active #config-label {
-    color: @fg-a90;
 }
 
 #launcher-icon-label {
@@ -78,4 +16,3 @@
     padding: 6px;
     color: @fg-a80;
 }
-

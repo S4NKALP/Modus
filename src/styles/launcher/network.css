@@ -1,15 +1,1 @@
-#network-password-entry {
-    border: 1px solid @fg-a20;
-    background: @fg-a05;
-    color: @fg-a90;
-    padding: 12px;
-    border-radius: apply(radius-sm);
-    margin-bottom: 8px;
-    font-size: apply(font-base);
-}
-
-#network-password-entry:focus {
-    border: 1px solid @primary-a60;
-    background: @fg-a10;
-    box-shadow: 0 0 0 3px @primary-a20;
-}
+/* Network password entry styles removed - unused */
