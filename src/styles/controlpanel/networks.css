@@ -7,7 +7,7 @@
 /* macOS-style WiFi interface */
 #wifi-connections,
 #bluetooth-connections {
-  background-color: @fg-a05;
+  background-color: @bg-a50;
   box-shadow: inset 0 0 0 1px alpha(@fg-a40, 0.4);
   border: 1px solid @outline-a40;
   border-radius: apply(radius-sm);
