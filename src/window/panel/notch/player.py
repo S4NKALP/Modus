@@ -5,15 +5,17 @@ import time
 from fabric.utils import GLib, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
+from gi.repository import GdkPixbuf
 
 from services.mpris import PlayerService
+from shared.widgets.custom_image import CustomImage
 from utils.utils import svg_file
 
 # tunables
-_BARS = 10  # number of bars
+_BARS = 8  # number of bars
 _TICK_MS = 150  # ~7 fps — smooth with sine, very cheap
-_H_MIN = 3  # minimum total bar height (px, both halves)
-_H_MAX = 22  # maximum total bar height (px)
+_H_MIN = 2  # minimum total bar height (px, both halves)
+_H_MAX = 16  # maximum total bar height (px)
 _BAR_W = 1  # bar pixel width
 _SPACING = 4  # gap between bars
 
@@ -101,9 +103,14 @@ class NotchPlayer(Box):
 
         self.fallback_icon = svg_file("music.svg", size=18)
 
+        self.artwork_image = CustomImage()
+        self.artwork_image.set_size_request(18, 18)
+        self.artwork_image.set_no_show_all(True)
+        self.artwork_image.set_visible(False)
+
         self.album_art = Box(
             name="notch-player-art",
-            children=[self.fallback_icon],
+            children=[self.fallback_icon, self.artwork_image],
         )
 
         self.visualizer = Visualizer()
@@ -168,14 +175,19 @@ class NotchPlayer(Box):
         return True
 
     def _show_fallback(self) -> None:
-        self.album_art.set_size_request(-1, -1)
-        self.album_art.set_style("")
+        self.artwork_image.set_visible(False)
         self.fallback_icon.set_visible(True)
 
     def _show_artwork(self, path: str) -> None:
-        self.fallback_icon.set_visible(False)
-        self.album_art.set_size_request(18, 18)
-        self.album_art.set_style(f"background-image:url('{path}')")
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                path, 18, 18, preserve_aspect_ratio=False
+            )
+            self.artwork_image.set_from_pixbuf(pixbuf)
+            self.fallback_icon.set_visible(False)
+            self.artwork_image.set_visible(True)
+        except Exception:
+            self._show_fallback()
 
     def _update_from_service(self) -> None:
         if self._service is None:
