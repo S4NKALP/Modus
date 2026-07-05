@@ -1,26 +1,32 @@
 # Author: Yousef EL-Darsh
 # License (SPDX): AGPL-3.0-or-later
 
-from functools import cache
+from functools import lru_cache
 from typing import Protocol, cast
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import GLib, Gtk, clamp
 
 
-@cache
+# NOTE: Do NOT use @cache here — progress is a continuous float so cache
+# entries are never reused and the cache grows forever, causing a slow
+# CPU/memory spike while music is playing (the pos_fabricator fires every
+# 2 s, each call generating unique float progress values).
+# lru_cache with a small maxsize bounds memory while still getting some hits
+# for identical easing calls.
+@lru_cache(maxsize=512)
 def lerp(start: float, end: float, progress: float) -> float:
     return start + (end - start) * progress
 
 
-@cache
+@lru_cache(maxsize=512)
 def steps(n: int, progress: float, start_jump: bool = False) -> float:
     if start_jump:
         return min(int(progress * n), n - 1) / (n - 1) if n > 1 else 0.0
     return min(int(progress * n + 1e-10), n) / n
 
 
-@cache
+@lru_cache(maxsize=512)
 def cubic_bezier(
     x1: float, y1: float, x2: float, y2: float, progress: float, epsilon=1e-6
 ) -> float:
