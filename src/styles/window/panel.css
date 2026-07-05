@@ -145,3 +145,23 @@
     margin-left: 6px;
 }
 
+/* ── Notch transient indicators (kbd layout + capslock) ── */
+#notch-kbd-layout,
+#notch-capslock {
+    padding: 0 8px;
+}
+
+#notch-indicator-icon {
+    min-width: 16px;
+    min-height: 16px;
+    color: @on-surface-variant;
+    margin-left: 2px;
+}
+
+#notch-indicator-label {
+    font-size: apply(font-xs);
+    font-weight: 600;
+    color: @on-surface-variant;
+    letter-spacing: 0.5px;
+    margin-right: 2px;
+}
