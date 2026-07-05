@@ -158,7 +158,7 @@ class BatteryControl(Box):
         self.set_size_request(354, -1)
 
         self.parent = parent
-        self.battery_service = Battery()
+        self.battery_service = Battery.get_initial()
         self.energy_mode_buttons = []
 
         self.battery_widget = Box(
