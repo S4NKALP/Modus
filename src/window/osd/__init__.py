@@ -3,6 +3,4 @@ from .components import (  # noqa: F401
     AudioOSDContainer,
     BrightnessOSDContainer,
     MicrophoneOSDContainer,
-    CapsLockOSDContainer,
-    KeyboardLayoutOSDContainer,
 )
