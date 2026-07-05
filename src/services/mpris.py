@@ -154,6 +154,8 @@ class PlayerService(Service):
 
         self.status = self._player.props.playback_status
         self._last_polled_status = self.playback_status
+        self._pos_polling = False  # guard: Fabricator.start() blindly creates a new
+        # GLib timer every call — this flag prevents stacking
         self.pos_fabricator = Fabricator(
             interval=2000,
             poll_from=lambda f, *_: self.get_position(),
@@ -187,10 +189,24 @@ class PlayerService(Service):
             logger.warning(f"Could not get position: {e}")
             return 0
 
+    def _start_pos_fabricator(self):
+        """Start position polling only if not already running."""
+        if self._pos_polling:
+            return
+        self._pos_polling = True
+        self.pos_fabricator.start()
+
+    def _stop_pos_fabricator(self):
+        """Stop position polling and clear the guard flag."""
+        if not self._pos_polling:
+            return
+        self._pos_polling = False
+        self.pos_fabricator.stop()
+
     def seek_position(self, pos: float):
         if self._is_cleaning_up:
             return
-        self.pos_fabricator.stop()
+        self._stop_pos_fabricator()
         current = self.get_position() / 1_000_000
         try:
             self._player.set_position(int(pos * 1_000_000))
@@ -204,27 +220,27 @@ class PlayerService(Service):
                 os.system(f"playerctl -p {self.player_name} position {pos}")
         finally:
             if self.playback_status.lower() == "playing":
-                self.pos_fabricator.start()
+                self._start_pos_fabricator()
 
     def seek(self, offset: float):
         if self._is_cleaning_up:
             return
-        self.pos_fabricator.stop()
+        self._stop_pos_fabricator()
         try:
             self._player.seek(int(offset * 1_000_000))
         except GLib.Error as e:
             logger.error(f"Failed to seek: {e}")
         finally:
             if self.playback_status.lower() == "playing":
-                self.pos_fabricator.start()
+                self._start_pos_fabricator()
 
     def poll_progress(self):
         if self._is_cleaning_up:
             return
         if self.playback_status.lower() == "playing":
-            self.pos_fabricator.start()
+            self._start_pos_fabricator()
         else:
-            self.pos_fabricator.stop()
+            self._stop_pos_fabricator()
 
     def fabricating(self, metadata=None):
         if self._is_cleaning_up:
@@ -251,7 +267,7 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return
         if self.playback_status.lower() == "playing":
-            self.pos_fabricator.start()
+            self._start_pos_fabricator()
 
     def on_playback_status(self, player, status):
         """DBus signal handler - instant when it fires (e.g. Modus buttons)."""
@@ -355,7 +371,7 @@ class PlayerService(Service):
 
         try:
             if hasattr(self, "pos_fabricator"):
-                self.pos_fabricator.stop()
+                self._stop_pos_fabricator()
         except Exception as e:
             logger.error(f"Error stopping fabricator: {e}")
 
