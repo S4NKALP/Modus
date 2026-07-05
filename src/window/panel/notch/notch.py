@@ -6,7 +6,12 @@ from fabric.widgets.stack import Stack
 from services.screencapture import screen_capture_service
 from window.panel.notch.recording import RecordingIndicator
 from window.panel.notch.player import NotchPlayer
-from window.panel.notch.indicators import CapsLockIndicator, KeyboardLayoutIndicator
+from window.panel.notch.indicators import (
+    CapsLockIndicator,
+    KeyboardLayoutIndicator,
+    NumLockIndicator,
+    ChargingIndicator,
+)
 from window.controlcenter.player import get_shared_mpris_manager
 
 
@@ -35,12 +40,29 @@ class Notch(Box):
             h_expand=True,
         )
 
+        self._last_scroll_index = 0
+        self._last_scroll_time = 0
+        self._last_recording_check = 0
+        self._is_active_recording = False
+        self._music_services: list[str] = []
+        # Must be set BEFORE indicator widgets are created
+        self._transient_active = False
+
         # Transient indicator pages — shown on change, hidden after 2 s
         self.kbd_indicator = KeyboardLayoutIndicator(
             show_cb=self._show_transient,
             hide_cb=self._hide_transient,
         )
         self.caps_indicator = CapsLockIndicator(
+            show_cb=self._show_transient,
+            hide_cb=self._hide_transient,
+        )
+        self.num_indicator = NumLockIndicator(
+            show_cb=self._show_transient,
+            hide_cb=self._hide_transient,
+        )
+        # Persistent indicator — now also transient (2s), deferred via idle_add
+        self.charging_indicator = ChargingIndicator(
             show_cb=self._show_transient,
             hide_cb=self._hide_transient,
         )
@@ -51,14 +73,6 @@ class Notch(Box):
 
         screen_capture_service.connect("recording-started", self._on_recording_started)
         screen_capture_service.connect("recording-stopped", self._on_recording_stopped)
-
-        self._last_scroll_index = 0
-        self._last_scroll_time = 0
-        self._last_recording_check = 0
-        self._is_active_recording = False
-        self._music_services: list[str] = []
-        # Track if a transient indicator is currently shown
-        self._transient_active = False
 
         self.notch_stack = Stack(
             name="panel-notch-stack",
@@ -71,6 +85,8 @@ class Notch(Box):
                 self.player_widget,
                 self.kbd_indicator,
                 self.caps_indicator,
+                self.num_indicator,
+                self.charging_indicator,
             ],
         )
         self._last_stack_page = 0
@@ -126,7 +142,7 @@ class Notch(Box):
             self.notch_stack.set_visible_child(widget)
 
     def _hide_transient(self):
-        """Return to the normal notch state after the indicator timer expires."""
+        """Return to normal notch state after the indicator timer expires."""
         self._transient_active = False
         self._apply_stack_state()
 
@@ -231,7 +247,10 @@ class Notch(Box):
                 self.notch_stack.set_visible_child(self.idle_widget)
             return
 
-        pages = {1: self.recording_indicator, 2: self.player_widget}
+        pages = {
+            1: self.recording_indicator,
+            2: self.player_widget,
+        }
 
         if len(active_pages) == 1:
             target = active_pages[0]
@@ -248,4 +267,6 @@ class Notch(Box):
         self.player_widget.destroy()
         self.kbd_indicator.destroy()
         self.caps_indicator.destroy()
+        self.num_indicator.destroy()
+        self.charging_indicator.destroy()
         super().destroy()

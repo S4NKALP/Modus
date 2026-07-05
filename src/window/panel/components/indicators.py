@@ -1,10 +1,10 @@
-from services.bluetooth import BluetoothClient
 from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 
 from services.battery import Battery
+from services.bluetooth import BluetoothClient
 from services.network import NetworkClient
 from shared.window.applet_window import AppletWindow
 from shared.window.battery_widget import BatteryControl
@@ -320,7 +320,7 @@ class BatteryIndicator(Box):
         super().__init__(name="battery-indicator", orientation="h", **kwargs)
         self.show_window = show_window
 
-        self.battery_service = Battery()
+        self.battery_service = Battery.get_initial()
 
         self.battery_icon = svg_file("battery/battery-100.svg", size=23)
 
