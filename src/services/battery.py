@@ -21,7 +21,18 @@ DEVICE_STATE = {
 
 
 class Battery(Service):
-    """A service for interacting with the battery's DBus and Power Profiles"""
+    """A service for interacting with the battery's DBus and Power Profiles.
+
+    Use Battery.get_initial() to get the shared singleton instance.
+    """
+
+    _instance = None
+
+    @classmethod
+    def get_initial(cls) -> "Battery":
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
 
     @Signal
     def changed(self) -> None: ...
@@ -95,7 +106,9 @@ class Battery(Service):
         self._bus: Gio.DBusConnection | None = None
         self._proxy = None
         self._power_profile_proxy = None
-        self._prop_cache: dict[str, any] = {}
+        # _prop_cache stores ONLY properties received via PropertiesChanged.
+        # For fresh reads we always fall through to the GDBus proxy cache.
+        self._prop_cache: dict[str, object] = {}
         self.do_register()
 
     def do_register(self) -> None:
@@ -190,13 +203,12 @@ class Battery(Service):
         return result.unpack()
 
     def do_get_cached_property(self, property_name):
-        if property_name in self._prop_cache:
-            return self._prop_cache[property_name]
+        """Read from the GDBus proxy cache, which DBus keeps up-to-date."""
         result = self._proxy.get_cached_property(property_name)
-        value = result.unpack() if result is not None else None
-        if value is not None:
-            self._prop_cache[property_name] = value
-        return value
+        if result is not None:
+            return result.unpack()
+        # Fallback: value not in proxy cache yet (e.g. very early in startup)
+        return self._prop_cache.get(property_name)
 
     def get_power_profile(self) -> str | None:
         """Get the current active power profile."""
