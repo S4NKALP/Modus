@@ -1,4 +1,4 @@
-from fabric.bluetooth import BluetoothClient
+from services.bluetooth import BluetoothClient
 from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -86,6 +86,10 @@ class BluetoothIndicator(Box):
         self.bluetooth.connect("changed", self.on_bluetooth_direct_changed)
         self.bluetooth.connect("device-added", self.on_device_added)
         self.bluetooth.connect("device-removed", self.on_device_removed)
+        # Fix #5 — update icon/state whenever any device connects or disconnects
+        self.bluetooth.connect(
+            "notify::connected-devices", self.on_bluetooth_direct_changed
+        )
 
         self.update_modus_service_bluetooth_state()
         self.update_state()
