@@ -145,9 +145,11 @@
     margin-left: 6px;
 }
 
-/* ── Notch transient indicators (kbd layout + capslock) ── */
+/* ── Notch transient indicators (kbd layout + capslock + numlock + charging) ── */
 #notch-kbd-layout,
-#notch-capslock {
+#notch-capslock,
+#notch-numlock,
+#notch-charging {
     padding: 0 8px;
 }
 
