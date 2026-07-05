@@ -112,6 +112,10 @@ class CapsLockIndicator(Box):
             )
         )
 
+        # Accessing is_on triggers _ensure_monitoring_started() inside the service —
+        # without this the 500ms LED poll never begins and state_changed never fires.
+        _ = self._caps.is_on
+
         self._caps.connect("state_changed", self._on_state_changed)
 
     def _on_state_changed(self, _service, is_on: bool):
