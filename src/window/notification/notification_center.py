@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from fabric.utils import GLib, logger
+from fabric.utils import GLib, GdkPixbuf, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -171,9 +171,10 @@ class ExpandableNotificationGroup(Box):
         self.create_expanded_state()
 
     def _get_notification_pixbuf_for_group(self, cached_notification):
-        """Get notification pixbuf using cached image key - fallback to app icon"""
+        """Get notification pixbuf at 35x35 - matches app icon size for consistency"""
         notification = cached_notification._notification
         getattr(notification, "id", None)
+        pixbuf = None
 
         # First try to get cached notification image using stored cache key
         if (
@@ -189,12 +190,12 @@ class ExpandableNotificationGroup(Box):
                         notification_image_cache_key
                     )
                     if cached_image:
-                        return cached_image
+                        pixbuf = cached_image
                 except Exception as e:
                     logger.debug(f"Failed to load cached notification image: {e}")
 
         # Fallback to app icon using cached key
-        if (
+        if not pixbuf and (
             hasattr(cached_notification, "cache_metadata")
             and cached_notification.cache_metadata
         ):
@@ -205,22 +206,29 @@ class ExpandableNotificationGroup(Box):
                 try:
                     cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
                     if cached_app_icon:
-                        return cached_app_icon
+                        pixbuf = cached_app_icon
                 except Exception as e:
                     logger.debug(f"Failed to load cached app icon: {e}")
 
         # Final fallback - try to cache app icon directly if available
-        try:
-            app_icon_source = getattr(notification, "app_icon", None)
-            if app_icon_source:
-                cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
-                if cached_app_icon:
-                    return cached_app_icon
-        except Exception as e:
-            logger.debug(f"Failed to get directly cached app icon: {e}")
+        if not pixbuf:
+            try:
+                app_icon_source = getattr(notification, "app_icon", None)
+                if app_icon_source:
+                    cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
+                    if cached_app_icon:
+                        pixbuf = cached_app_icon
+            except Exception as e:
+                logger.debug(f"Failed to get directly cached app icon: {e}")
 
-        # Ultimate fallback
-        return get_fallback_notification_icon((35, 35))
+        if not pixbuf:
+            pixbuf = get_fallback_notification_icon((35, 35))
+
+        # Always scale to 35x35 so screenshot thumbnails match app icon size
+        try:
+            return pixbuf.scale_simple(35, 35, GdkPixbuf.InterpType.BILINEAR)
+        except Exception:
+            return pixbuf
 
     def create_expanded_state(self):
         # Create main expanded container
@@ -437,10 +445,14 @@ class NotificationCenterWidget(NotificationWidget):
             name="notification-centre-notifs",
             **kwargs,
         )
+        # Clear the hardcoded NOTIFICATION_WIDTH=360 size so the widget
+        # fills the notification center container width instead of overflowing
+        self.set_size_request(-1, -1)
 
     def _get_notification_pixbuf(self, notification):
-        """Get notification pixbuf using cached image key - fallback to app icon"""
+        """Get notification pixbuf at 35x35 - matches app icon size for consistency"""
         getattr(notification, "id", None)
+        pixbuf = None
 
         # First try to get cached notification image using stored cache key
         if self.cache_metadata:
@@ -453,33 +465,40 @@ class NotificationCenterWidget(NotificationWidget):
                         notification_image_cache_key
                     )
                     if cached_image:
-                        return cached_image
+                        pixbuf = cached_image
                 except Exception as e:
                     logger.debug(f"Failed to load cached notification image: {e}")
 
         # Fallback to app icon using cached key
-        if self.cache_metadata:
+        if not pixbuf and self.cache_metadata:
             app_icon_cache_key = self.cache_metadata.get("app_icon_cache_key")
             if app_icon_cache_key:
                 try:
                     cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
                     if cached_app_icon:
-                        return cached_app_icon
+                        pixbuf = cached_app_icon
                 except Exception as e:
                     logger.debug(f"Failed to load cached app icon: {e}")
 
         # Final fallback - try to cache app icon directly if available
-        try:
-            app_icon_source = getattr(notification, "app_icon", None)
-            if app_icon_source:
-                cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
-                if cached_app_icon:
-                    return cached_app_icon
-        except Exception as e:
-            logger.debug(f"Failed to get directly cached app icon: {e}")
+        if not pixbuf:
+            try:
+                app_icon_source = getattr(notification, "app_icon", None)
+                if app_icon_source:
+                    cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
+                    if cached_app_icon:
+                        pixbuf = cached_app_icon
+            except Exception as e:
+                logger.debug(f"Failed to get directly cached app icon: {e}")
 
-        # Ultimate fallback
-        return get_fallback_notification_icon((35, 35))
+        if not pixbuf:
+            pixbuf = get_fallback_notification_icon((35, 35))
+
+        # Always scale to 35x35 so screenshot thumbnails match app icon size
+        try:
+            return pixbuf.scale_simple(35, 35, GdkPixbuf.InterpType.BILINEAR)
+        except Exception:
+            return pixbuf
 
     def create_content(self, notification):
         # Create our custom close button for notification center
@@ -512,6 +531,7 @@ class NotificationCenterWidget(NotificationWidget):
                     name="notification-text",
                     orientation="v",
                     v_align="center",
+                    h_expand=True,
                     children=[
                         Box(
                             name="notification-summary-box",
@@ -523,8 +543,9 @@ class NotificationCenterWidget(NotificationWidget):
                                         notification.summary.replace("\n", " ")
                                     ),
                                     h_align="start",
-                                    max_chars_width=25,
-                                    ellipsization="end",
+                                    wrap=True,
+                                    wrap_mode="word-char",
+                                    max_chars_width=30,
                                 ),
                             ],
                         ),
@@ -534,14 +555,14 @@ class NotificationCenterWidget(NotificationWidget):
                                     notification.body.replace("\n", " ")
                                 ),
                                 h_align="start",
+                                wrap=True,
+                                wrap_mode="word-char",
                                 max_chars_width=35,
-                                ellipsization="end",
                             )
                             if notification.body
                             else Label(
                                 markup="",
                                 h_align="start",
-                                ellipsization="end",
                             )
                         ),
                     ],
@@ -550,7 +571,7 @@ class NotificationCenterWidget(NotificationWidget):
                 Box(
                     orientation="v",
                     children=[
-                        self.close_button,  # Use our custom close button
+                        self.close_button,
                         Box(v_expand=True),
                     ],
                 ),
@@ -624,7 +645,12 @@ class NotificationCenter(AppletWindow):
             name="noti-center-box",
         )
 
-        self.scrolled = ScrolledWindow(h_expand=False, v_expand=False)
+        self.scrolled = ScrolledWindow(
+            h_expand=False,
+            v_expand=False,
+            h_scrollbar_policy="never",
+            propagate_width=False,
+        )
         self.notifications_box = Box(
             v_expand=False,
             h_expand=False,
