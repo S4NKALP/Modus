@@ -1,10 +1,10 @@
 from fabric.utils import GLib, time
+from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-from fabric.widgets.box import Box
-from services.screencapture import screen_capture_service
 
+from services.screencapture import screen_capture_service
 from utils.utils import setup_cursor_hover, svg_file
 
 
@@ -15,7 +15,7 @@ class RecordingIndicator(Box):
         self.recording_start_time = None
         self.timer_timeout_id = None
 
-        self.recording_icon = svg_file("misc/media-record.svg", size=24)
+        self.recording_icon = svg_file("notch/media-record.svg", size=24)
 
         self.recording_button = Button(
             name="panel-button",

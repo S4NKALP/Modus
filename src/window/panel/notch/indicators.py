@@ -28,7 +28,7 @@ class KeyboardLayoutIndicator(Box):
         self._kbd = KeyboardLayout.get_initial()
 
         self._icon = svg_file(
-            "misc/keyboard-layout.svg",
+            "notch/keyboard-layout.svg",
             size=16,
             name="notch-indicator-icon",
             v_align="center",
@@ -95,7 +95,7 @@ class CapsLockIndicator(Box):
         self._caps = CapsLock.get_initial()
 
         self._icon = svg_file(
-            "misc/caps-lock.svg",
+            "notch/caps-lock.svg",
             size=16,
             name="notch-indicator-icon",
             v_align="center",
@@ -160,7 +160,7 @@ class NumLockIndicator(Box):
         self._num = NumLock.get_initial()
 
         self._icon = svg_file(
-            "misc/num-lock.svg",
+            "notch/num-lock.svg",
             size=16,
             name="notch-indicator-icon",
             v_align="center",
@@ -232,7 +232,7 @@ class ChargingIndicator(Box):
         )
         self._icon = svg_file(
             "notch/charing.svg",
-            size=18,
+            size=24,
             name="notch-indicator-icon",
             v_align="center",
         )
