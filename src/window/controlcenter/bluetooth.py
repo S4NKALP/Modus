@@ -136,6 +136,8 @@ class BluetoothDeviceSlot(Box):
 
         self.device_button.connect("enter-notify-event", self.on_button_enter)
         self.device_button.connect("leave-notify-event", self.on_button_leave)
+        # Right-click for pair / trust / remove actions
+        self.device_button.connect("button-press-event", self._on_button_press)
 
         self._refresh_state()
         self.device.emit("changed")
@@ -281,7 +283,57 @@ class BluetoothDeviceSlot(Box):
             self._set_state(BTState.IDLE)
         return False
 
-        return
+    def _on_button_press(self, widget, event):
+        """Right-click opens a context menu with pair/trust/remove actions."""
+        if self._destroyed or self.device is None:
+            return False
+        if event.button != 3:  # only right-click
+            return False
+
+        from gi.repository import Gtk
+
+        menu = Gtk.Menu()
+
+        if not self.device.paired:
+            item_pair = Gtk.MenuItem(label="Pair")
+            item_pair.connect("activate", lambda *_: self.device.pair())
+            menu.append(item_pair)
+        else:
+            if self.device.trusted:
+                item_trust = Gtk.MenuItem(label="Untrust")
+                item_trust.connect("activate", lambda *_: self.device.untrust())
+            else:
+                item_trust = Gtk.MenuItem(label="Trust")
+                item_trust.connect("activate", lambda *_: self.device.trust())
+            menu.append(item_trust)
+
+            item_remove = Gtk.MenuItem(label="Remove / Forget")
+            item_remove.connect(
+                "activate",
+                lambda *_: self._remove_device(),
+            )
+            menu.append(item_remove)
+
+        menu.show_all()
+        menu.popup_at_pointer(event)
+        return True
+
+    def _remove_device(self):
+        """Ask the client to remove (unpair/forget) this device."""
+        if self._destroyed or self.device is None:
+            return
+        try:
+            # Walk up to find a BluetoothConnections parent that holds the client
+            parent = self.get_parent()
+            while parent is not None:
+                if isinstance(parent, BluetoothConnections):
+                    parent.client.remove_device(self.device)
+                    return
+                parent = parent.get_parent()
+            # Fallback: use device.remove() which sets a flag
+            self.device.remove()
+        except Exception as e:
+            logger.warning(f"[Bluetooth] Failed to remove device: {e}")
 
 
 class BluetoothConnections(Box):
@@ -352,6 +404,9 @@ class BluetoothConnections(Box):
         )
         self._client_signal_ids.append(
             self.client.connect("device-removed", self.update_devices)
+        )
+        self._client_signal_ids.append(
+            self.client.connect("notify::connected-devices", self.update_devices)
         )
 
         self._client_signal_ids.append(
