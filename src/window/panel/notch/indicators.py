@@ -231,7 +231,7 @@ class ChargingIndicator(Box):
             v_align="center",
         )
         self._icon = svg_file(
-            "notch/charing.svg",
+            "notch/charging.svg",
             size=24,
             name="notch-indicator-icon",
             v_align="center",
