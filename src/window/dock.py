@@ -15,7 +15,6 @@ from fabric.utils import (
     Gtk,
     exec_shell_command_async,
     get_desktop_applications,
-    get_relative_path,
     logger,
     os,
     random,
@@ -30,10 +29,10 @@ from services.modus import modus_service
 from utils.functions import is_special_workspace_id
 from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
-from utils.utils import svg_file
+from utils.utils import svg_file, toml_file
 
 # pinned apps config file path
-PINNED_APPS_FILE = get_relative_path("../../config/dock.toml")
+PINNED_APPS_FILE = toml_file("dock.toml")
 
 # Animation
 LERP_FACTOR = 0.20  # per-frame interpolation speed (0–1)

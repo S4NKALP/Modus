@@ -1,13 +1,13 @@
 from typing import Any, Dict, List
 
 import tomlkit
-from fabric.utils import get_relative_path
+from utils.utils import toml_file
 
 
 class TriggerConfig:
     def __init__(self, config_path: str = None):
         if config_path is None:
-            config_path = get_relative_path("../../../config/launcher.toml")
+            config_path = toml_file("launcher.toml")
 
         self.config_path = config_path
 
