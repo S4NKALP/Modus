@@ -5,7 +5,6 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from .components import (
     AudioOSDContainer,
     BrightnessOSDContainer,
-    MicrophoneOSDContainer,
 )
 
 
@@ -24,7 +23,6 @@ class OSD(Box):
         self.containers = {
             "audio": AudioOSDContainer(window),
             "brightness": BrightnessOSDContainer(window),
-            "microphone": MicrophoneOSDContainer(window),
         }
 
         # Set the OSD reference in containers
@@ -44,9 +42,6 @@ class OSD(Box):
 
     def show_brightness_osd(self):
         self.show_container(self.containers.get("brightness"))
-
-    def show_microphone_osd(self):
-        self.show_container(self.containers.get("microphone"))
 
 
 class OSDWindow(Window):
