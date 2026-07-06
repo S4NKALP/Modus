@@ -11,11 +11,13 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional
 
-from fabric.utils import Gio, GLib, get_relative_path, logger, os
+from fabric.utils import Gio, GLib, logger, os
 from tomlkit import document as toml_document
 from tomlkit import dump as toml_dump
 from tomlkit import load as toml_load
 from tomlkit.items import Integer, String, Bool, Array
+
+from utils.utils import toml_file
 
 
 class ConfigService:
@@ -37,7 +39,7 @@ class ConfigService:
         self._reload_callbacks: List[
             Callable[[Dict[str, Any], Dict[str, Any]], None]
         ] = []
-        self._config_file: str = get_relative_path("../../config/config.toml")
+        self._config_file: str = toml_file("config.toml")
         self._monitors: List[Gio.FileMonitor] = []
         self._reload_pending: bool = False
         self.RELOAD_DELAY_MS: int = 100
