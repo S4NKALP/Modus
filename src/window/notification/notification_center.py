@@ -118,22 +118,33 @@ class ExpandableNotificationGroup(Box):
                                 children=[
                                     Label(
                                         name="notification-summary",
-                                        markup=f"<b>{self.app_name}</b>",
+                                        markup=escape_markup_text(
+                                            latest_notification._notification.summary.replace(
+                                                "\n", " "
+                                            )
+                                        ),
                                         h_align="start",
+                                        max_chars_width=25,
                                         ellipsization="end",
                                     ),
                                 ],
                             ),
-                            Label(
-                                name="notification-body",
-                                markup=escape_markup_text(
-                                    latest_notification._notification.summary.replace(
-                                        "\n", " "
-                                    )
-                                ),
-                                max_chars_width=25,
-                                h_align="start",
-                                ellipsization="end",
+                            (
+                                Label(
+                                    markup=escape_markup_text(
+                                        latest_notification._notification.body.replace(
+                                            "\n", " "
+                                        )
+                                    ),
+                                    max_chars_width=25,
+                                    h_align="start",
+                                    ellipsization="end",
+                                )
+                                if latest_notification._notification.body
+                                else Label(
+                                    markup="",
+                                    h_align="start",
+                                )
                             ),
                         ],
                     ),
@@ -543,9 +554,8 @@ class NotificationCenterWidget(NotificationWidget):
                                         notification.summary.replace("\n", " ")
                                     ),
                                     h_align="start",
-                                    wrap=True,
-                                    wrap_mode="word-char",
-                                    max_chars_width=30,
+                                    max_chars_width=40,
+                                    ellipsization="end",
                                 ),
                             ],
                         ),
@@ -555,9 +565,8 @@ class NotificationCenterWidget(NotificationWidget):
                                     notification.body.replace("\n", " ")
                                 ),
                                 h_align="start",
-                                wrap=True,
-                                wrap_mode="word-char",
-                                max_chars_width=35,
+                                max_chars_width=45,
+                                ellipsization="end",
                             )
                             if notification.body
                             else Label(
