@@ -10,11 +10,9 @@ from gi.repository import Gio
 
 from shared.window.applet_window import AppletWindow
 from utils.functions import run_command, thread
-from utils.utils import setup_cursor_hover, svg_file
+from utils.utils import setup_cursor_hover, svg_file, toml_file
 
-MODS_CONFIG_PATH = (
-    Path(__file__).resolve().parent.parent.parent.parent.parent / "config" / "mods.toml"
-)
+MODS_CONFIG_PATH = Path(toml_file("mods.toml"))
 RELOAD_DELAY_MS = 200
 
 
