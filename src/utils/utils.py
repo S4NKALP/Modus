@@ -52,7 +52,10 @@ def setup_cursor_hover(
     )
 
 
-# Base path to your SVG assets (resolve from repository root)
+# Base path to config directory
+BASE_CONFIG_PATH = (Path(__file__).resolve().parent.parent.parent / "config").resolve()
+
+# Base path to SVG assets
 BASE_SVG_PATH = (Path(__file__).resolve().parent.parent / "assets" / "icons").resolve()
 
 
@@ -109,6 +112,11 @@ def svg_file(relative_path: str, **kwargs) -> Svg:
     svg.dynamic_style = _dynamic_style  # type: ignore[attr-defined]
 
     return svg
+
+
+def toml_file(relative_path: str) -> str:
+    """Return absolute path to a TOML file in config/."""
+    return str(BASE_CONFIG_PATH / relative_path)
 
 
 def generate_colors_from_wallpaper(image_path: str) -> bool:
