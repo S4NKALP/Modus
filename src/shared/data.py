@@ -3,6 +3,7 @@ from fabric.utils import logger
 from fabric.utils import Gdk, GLib, get_relative_path, os
 
 from utils.functions import parse_timeout_string
+from utils.utils import toml_file
 
 APP_NAME = "modus1"
 APP_NAME_CAP = "Modus"
@@ -21,7 +22,7 @@ CURRENT_HEIGHT = screen.get_height()
 
 
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")
-CONFIG_FILE = get_relative_path("../../config/config.toml")
+CONFIG_FILE = toml_file("config.toml")
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
 
