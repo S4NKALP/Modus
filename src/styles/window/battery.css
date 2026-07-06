@@ -136,7 +136,12 @@
   color: @fg-a70;
 }
 
+#energy-mode-icon.connected {
+  background-color: @primary;
+  color: @on-primary;
+}
+
 #game-mode-icon.connected {
   background-color: @primary;
-  color: @foreground;
+  color: @on-primary;
 }
