@@ -1,3 +1,4 @@
+from fabric.audio import Audio
 from fabric.utils import GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
@@ -285,4 +286,93 @@ class ChargingIndicator(Box):
             self._battery.disconnect_by_func(self._on_battery_changed)
         except Exception as e:
             logger.warning(f"[NotchIndicators] charging disconnect: {e}")
+        super().destroy()
+
+
+# ── Microphone ─────────────────────────────────────────────────────────────────
+
+
+class MicrophoneIndicator(Box):
+    def __init__(self, show_cb, hide_cb, **kwargs):
+        super().__init__(
+            name="notch-mic",
+            orientation="h",
+            h_expand=True,
+            v_align="center",
+            **kwargs,
+        )
+        self._show_cb = show_cb
+        self._hide_cb = hide_cb
+        self._hide_timer_id = 0
+
+        self._audio = Audio()
+        self._mic_muted = True
+
+        self._label = Label(
+            name="notch-indicator-label",
+            label="Microphone",
+            v_align="center",
+        )
+        self._state_icon = svg_file(
+            "notch/mic-off.svg",
+            size=16,
+            name="notch-indicator-icon",
+            v_align="center",
+        )
+
+        self.add(
+            CenterBox(
+                orientation="h",
+                h_expand=True,
+                start_children=self._label,
+                end_children=self._state_icon,
+            )
+        )
+
+        self._audio.connect("notify::microphone", self._on_mic_device_changed)
+        if self._audio.microphone:
+            self._connect_mic_signals()
+
+    def _connect_mic_signals(self):
+        if self._audio.microphone:
+            self._audio.microphone.connect("changed", self._on_mic_stream_changed)
+            self._sync_state()
+
+    def _on_mic_device_changed(self, *_):
+        self._connect_mic_signals()
+        self._show_cb(self)
+        self._schedule_hide()
+
+    def _on_mic_stream_changed(self, *_):
+        self._sync_state()
+        self._show_cb(self)
+        self._schedule_hide()
+
+    def _sync_state(self):
+        if self._audio.microphone:
+            self._mic_muted = self._audio.microphone.muted
+            self._state_icon.dynamic_file(
+                "notch/mic-off.svg" if self._mic_muted else "notch/mic-on.svg"
+            )
+
+    def _schedule_hide(self):
+        if self._hide_timer_id:
+            GLib.source_remove(self._hide_timer_id)
+        self._hide_timer_id = GLib.timeout_add(DISPLAY_MS, self._do_hide)
+
+    def _do_hide(self):
+        self._hide_timer_id = 0
+        self._hide_cb()
+        return False
+
+    def destroy(self):
+        if self._hide_timer_id:
+            GLib.source_remove(self._hide_timer_id)
+            self._hide_timer_id = 0
+        try:
+            self._audio.disconnect_by_func(self._on_mic_device_changed)
+            if self._audio.microphone:
+                self._audio.microphone.disconnect_by_func(self._on_mic_stream_changed)
+        except Exception as e:
+            logger.warning(f"[NotchIndicators] mic disconnect: {e}")
         super().destroy()

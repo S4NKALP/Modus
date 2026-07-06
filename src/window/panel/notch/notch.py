@@ -9,6 +9,7 @@ from window.panel.notch.player import NotchPlayer
 from window.panel.notch.indicators import (
     CapsLockIndicator,
     KeyboardLayoutIndicator,
+    MicrophoneIndicator,
     NumLockIndicator,
     ChargingIndicator,
 )
@@ -61,6 +62,10 @@ class Notch(Box):
             show_cb=self._show_transient,
             hide_cb=self._hide_transient,
         )
+        self.mic_indicator = MicrophoneIndicator(
+            show_cb=self._show_transient,
+            hide_cb=self._hide_transient,
+        )
         # Persistent indicator — now also transient (2s), deferred via idle_add
         self.charging_indicator = ChargingIndicator(
             show_cb=self._show_transient,
@@ -86,6 +91,7 @@ class Notch(Box):
                 self.kbd_indicator,
                 self.caps_indicator,
                 self.num_indicator,
+                self.mic_indicator,
                 self.charging_indicator,
             ],
         )
@@ -268,5 +274,6 @@ class Notch(Box):
         self.kbd_indicator.destroy()
         self.caps_indicator.destroy()
         self.num_indicator.destroy()
+        self.mic_indicator.destroy()
         self.charging_indicator.destroy()
         super().destroy()
