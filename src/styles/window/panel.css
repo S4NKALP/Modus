@@ -149,7 +149,8 @@
 #notch-kbd-layout,
 #notch-capslock,
 #notch-numlock,
-#notch-charging {
+#notch-charging,
+#notch-mic {
     padding: 0 8px;
 }
 
