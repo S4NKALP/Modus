@@ -10,4 +10,5 @@ src/styles/colors.css
 .aider*
 .venv/*
 .venv/
+src/window/launcher
 
