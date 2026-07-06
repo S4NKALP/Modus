@@ -38,7 +38,7 @@ examples = [
 
 [launcher_config.sc]
 icon = "cs-screen"
-description = "Screencapture - Record screen and audio"
+description = "Screencapture - Record screen"
 
 [launcher_config.wall]
 icon = "daily-wallpaper"
