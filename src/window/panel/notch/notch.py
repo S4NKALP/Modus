@@ -197,6 +197,10 @@ class Notch(Box):
             return True
         self._last_scroll_time = now
 
+        # Cancel transient indicator so scroll can navigate
+        if self._transient_active:
+            self._transient_active = False
+
         dy = 0
         if event.direction == Gdk.ScrollDirection.UP:
             dy = -1
