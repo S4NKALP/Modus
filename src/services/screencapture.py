@@ -12,7 +12,7 @@ from fabric.utils import (
     time,
 )
 
-from utils.functions import is_app_running, run_command, kill_process
+from utils.functions import is_app_running, kill_process, run_command
 
 
 class ScreenCapture(Service):
@@ -38,7 +38,11 @@ class ScreenCapture(Service):
         return cls._instance
 
     def __init__(self, **kwargs):
+        if getattr(self, "_initialized", False):
+            return
+
         super().__init__(**kwargs)
+        self._initialized = True
         self.home = Path.home()
         self.screenshots_dir = self.home / "Pictures" / "Screenshots"
         self.recordings_dir = self.home / "Videos" / "Recordings"
@@ -47,6 +51,7 @@ class ScreenCapture(Service):
 
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         self.recordings_dir.mkdir(parents=True, exist_ok=True)
+        self._pending_screenshot = None
 
     def notify_send(self, title, message, icon=None, actions=None):
         cmd = ["notify-send", "-a", "Modus"]
@@ -147,33 +152,10 @@ class ScreenCapture(Service):
         if not is_app_running("wf-recorder"):
             return False
 
-        kill_process("wf-recorder")
-
-        if self.recording_file.exists():
-            recording_file = self.recording_file.read_text().strip()
-            self.send_recording_notification(recording_file)
-
-        if self.recording_start_time_file.exists():
-            self.recording_start_time_file.unlink()
-
+        self.stop_recording()
         return True
 
     def record_video(self, output_file, *args):
-        cmd = [
-            "wf-recorder",
-            *args,
-            "-f",
-            str(output_file),
-            "-c",
-            "libvpx-vp9",
-            "--pixel-format",
-            "yuv420p",
-            "-F",
-            "eq=brightness=0.12:contrast=1.1",
-        ]
-        return run_command(cmd)
-
-    def record_video_noaudio(self, output_file, *args):
         cmd = [
             "wf-recorder",
             *args,
@@ -205,21 +187,9 @@ class ScreenCapture(Service):
     def screenshot(self, target="region"):
         """
         Take a screenshot.
-        :param target: 'region', 'active', 'output', 'both', or a specific display name like 'eDP-1'
+        :param target: 'region', 'active', 'output', or a specific display name like 'eDP-1'
         """
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        screenshot_path = self.screenshots_dir / f"{timestamp}.png"
-
-        if target == "both":
-            # Special case for multiple displays, similar to the shell script
-            temp_edp = self.screenshots_dir / f"{timestamp}_eDP-1.png"
-            temp_hdmi = self.screenshots_dir / f"{timestamp}_HDMI-A-1.png"
-
-            cmd = f"grim -c -o eDP-1 {temp_edp} && grim -c -o HDMI-A-1 {temp_hdmi} && montage {temp_edp} {temp_hdmi} -tile 2x1 -geometry +0+0 {screenshot_path} && rm {temp_edp} {temp_hdmi}"
-            exec_shell_command_async(
-                cmd, lambda *_: self.send_screenshot_notification(str(screenshot_path))
-            )
-            return True
 
         command = [
             "hyprshot",
@@ -241,28 +211,27 @@ class ScreenCapture(Service):
             # Specific display name
             command.extend(["-m", "output", "-m", target])
 
+        self._pending_screenshot = self.screenshots_dir / f"{timestamp}.png"
+
         command.append("-- ls")
 
         try:
-            exec_shell_command_async(
-                " ".join(command),
-                self._after_screenshot,
-            )
+            proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.NONE)
+            proc.wait_async(None, self._after_screenshot)
         except Exception as e:
             logger.error(f"Screenshot failed: {e}")
             return False
 
         return True
 
-    def _after_screenshot(self, *_):
+    def _after_screenshot(self, proc, task, *_):
         try:
-            screenshot_files = list(self.screenshots_dir.glob("*.png"))
-            if screenshot_files:
-                latest_file = max(screenshot_files, key=lambda f: f.stat().st_mtime)
-                self.send_screenshot_notification(file_path=str(latest_file))
-                time.sleep(0.2)
+            proc.wait_finish(task)
+            path = self._pending_screenshot
+            self._pending_screenshot = None
+            if path and path.exists():
+                self.send_screenshot_notification(file_path=str(path))
             else:
-                # No file found after command: likely user cancelled the selection
                 self.notify_send(
                     "Screenshot cancelled",
                     "Selection was cancelled",
@@ -271,12 +240,10 @@ class ScreenCapture(Service):
         except Exception as e:
             logger.error(f"Screenshot notification failed: {e}")
 
-    def record(self, target="selection", no_audio=False, mode="standard"):
+    def record(self, target="selection"):
         """
         Start recording.
         :param target: 'selection', 'eDP-1', 'HDMI-A-1', etc.
-        :param no_audio: bool
-        :param mode: 'standard', 'hq', 'gif'
         """
         if self.is_recording:
             logger.error(
@@ -285,14 +252,21 @@ class ScreenCapture(Service):
             return False
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        ext = "mp4" if mode == "hq" else "gif" if mode == "gif" else "mkv"
-        output_file = self.recordings_dir / f"{timestamp}.{ext}"
+        output_file = self.recordings_dir / f"{timestamp}.mkv"
 
         self._current_recording_path = str(output_file)
         self.recording_file.write_text(str(output_file))
         self.recording_start_time_file.write_text(str(int(time.time())))
 
-        area = ""
+        cmd = [
+            "wf-recorder",
+            "--file",
+            str(output_file),
+            "--pixel-format",
+            "yuv420p",
+            "--no-audio",
+        ]
+
         if target == "selection":
             geometry = exec_shell_command("slurp")
             if not geometry or not str(geometry).strip():
@@ -302,103 +276,33 @@ class ScreenCapture(Service):
                     icon="camera-video-symbolic",
                 )
                 return False
-            area = f"-g '{geometry}'"
+            cmd.extend(["-g", geometry])
         elif target == "active":
-            active_monitor = self._get_active_monitor()
-            area = f"-o {active_monitor}"
+            cmd.extend(["-o", self._get_active_monitor()])
         else:
-            area = f"-o {target}"
+            cmd.extend(["-o", target])
 
-        if mode == "gif":
-            # GIF optimized recording (lower fps, temp mkv then convert)
-            temp_video = f"/tmp/gif_recording_{int(time.time())}.mkv"
-            self.recording_file.write_text(temp_video)  # Update tracking to temp file
-            command = f"wf-recorder -f {temp_video} -c libvpx-vp9 -r 15 --pixel-format yuv420p --no-audio {area}"
-
-            def after_gif_recording(*_):
-                if Path(temp_video).exists():
-                    self.notify_send("Converting to GIF", "Processing recording...")
-                    conv_cmd = f"ffmpeg -i {temp_video} -vf 'fps=15,scale=iw:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle' -loop 0 {output_file}"
-                    exec_shell_command_async(
-                        conv_cmd,
-                        lambda *_: (
-                            Path(temp_video).unlink(),
-                            self.send_recording_notification(str(output_file)),
-                        ),
-                    )
-
-            exec_shell_command_async(command, after_gif_recording)
-        elif mode == "hq":
-            # High quality preset
-            preset_flags = "-c h264_vaapi -p 'preset=slow' -p 'crf=18' -r 60 -b 8000000 -B 192000 -g 30"
-            if no_audio:
-                preset_flags += " --no-audio"
-            command = f"wf-recorder --file={output_file} --pixel-format yuv420p {preset_flags} {area}"
-            exec_shell_command_async(command)
-        else:
-            # Standard mode
-            audio_flag = "--no-audio" if no_audio else ""
-            command = f"wf-recorder --file={output_file} --pixel-format yuv420p {audio_flag} {area}"
-            exec_shell_command_async(command)
+        Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
 
         self.recording_started(str(output_file))
         return True
 
     def stop_recording(self):
         kill_process("wf-recorder")
-        if hasattr(self, "_current_recording_path"):
-            self.recording_stopped(self._current_recording_path)
-        return True
 
-    def convert(self, format_type, file_path=None):
-        """
-        Convert video to specified format.
-        :param format_type: 'webm', 'iphone', 'youtube', 'gif'
-        :param file_path: Optional path to specific file
-        """
-        if not file_path:
-            # Find latest recording
-            files = list(self.recordings_dir.glob("*.[mkv|mp4]*"))
-            if not files:
-                self.notify_send("Conversion Error", "No recordings found to convert")
-                return False
-            file_path = str(max(files, key=lambda f: f.stat().st_mtime))
+        path = getattr(self, "_current_recording_path", None)
+        if not path and self.recording_file.exists():
+            path = self.recording_file.read_text().strip()
 
-        file_path_obj = Path(file_path)
-        if not file_path_obj.exists():
-            self.notify_send("Conversion Error", f"File not found: {file_path}")
-            return False
+        if path:
+            self.send_recording_notification(path)
 
-        output_path = file_path_obj.with_suffix(f".{format_type}")
-        if format_type == "iphone":
-            output_path = file_path_obj.with_name(f"{file_path_obj.stem}-iphone.mp4")
-        elif format_type == "youtube":
-            output_path = file_path_obj.with_name(f"{file_path_obj.stem}-youtube.mp4")
+        if self.recording_start_time_file.exists():
+            self.recording_start_time_file.unlink()
 
-        self.notify_send(
-            f"Converting to {format_type.upper()}", f"Processing: {file_path_obj.name}"
-        )
+        if self.recording_file.exists():
+            self.recording_file.unlink()
 
-        if format_type == "webm":
-            cmd = f"ffmpeg -y -i {file_path} -c:v libvpx -b:v 1M -c:a libvorbis {output_path}"
-        elif format_type == "iphone":
-            cmd = f"ffmpeg -y -i {file_path} -vcodec h264 -acodec aac {output_path}"
-        elif format_type == "youtube":
-            cmd = f"ffmpeg -y -i {file_path} -c:v libx264 -profile:v high -preset slow -crf 18 -pix_fmt yuv420p -c:a aac -b:a 384k -movflags +faststart {output_path}"
-        elif format_type == "gif":
-            cmd = f"ffmpeg -i {file_path} -vf 'fps=15,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle' -loop 0 {output_path}"
-        else:
-            return False
-
-        def on_done(*_):
-            self.notify_send(
-                f"{format_type.upper()} Conversion Success",
-                f"Saved to {output_path.name}",
-            )
-            if format_type == "gif":
-                exec_shell_command_async(f"wl-copy < {output_path}")
-
-        exec_shell_command_async(cmd, on_done)
         return True
 
     @Property(bool, "readable", default_value=False)
