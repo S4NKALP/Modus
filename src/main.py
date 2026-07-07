@@ -18,6 +18,7 @@ from window.dock import Dock
 from window.notification.notification import ModusNoti
 from window.osd.main import OSDWindow
 from window.panel.main import Panel
+from window.screencapture import ScreenCaptureWindow
 from window.switcher import ApplicationSwitcher
 
 # class LazyLauncher:
@@ -60,6 +61,7 @@ def main():
     deskwidget = Deskwidgets()
     dock = Dock()
     osd = OSDWindow()
+    screencapture = ScreenCaptureWindow()
 
     # Monitor CSS files and subdirectories for changes
     css_monitors = []
@@ -77,6 +79,7 @@ def main():
         osd,
         switcher,
         dock,
+        screencapture,
     )
 
     def set_css():
@@ -98,6 +101,7 @@ def main():
     __main__.deskwidget = deskwidget
     __main__.dock = dock
     __main__.osd = osd
+    __main__.screencapture = screencapture
 
     app.run()
 
