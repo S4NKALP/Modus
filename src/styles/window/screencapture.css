@@ -1,0 +1,174 @@
+#sc-toolbar {
+    background-color: @bg-a50;
+    border: 1px solid @border-subtle;
+    border-radius: apply(radius-sm);
+    padding: 5px 6px 5px 8px;
+}
+
+#sc-close-btn {
+    min-width: 22px;
+    min-height: 22px;
+    padding: 3px 6px;
+    border-radius: apply(radius-sm);
+    transition: background-color apply(transition-fast) ease,
+                color apply(transition-fast) ease;
+}
+
+#sc-close-btn:hover {
+    background-color: @error-a70;
+    color: @on-error;
+    padding: 3px 6px;
+}
+
+#sc-close-label {
+    font-size: apply(font-xs);
+    font-weight: 700;
+    color: inherit;
+}
+
+
+#sc-tool-bar {
+    margin: 0 2px;
+}
+
+#sc-tool-btn {
+    min-width: 34px;
+    min-height: 28px;
+    padding: 3px 5px;
+    border-radius: apply(radius-sm);
+    background-color: transparent;
+    transition: background-color apply(transition-fast) ease;
+}
+
+#sc-tool-btn:hover {
+    background-color: @bg-hover;
+}
+
+#sc-tool-btn.active {
+    background-color: @bg-active;
+}
+
+
+#sc-separator {
+    min-width: 1px;
+    min-height: 18px;
+    background-color: @border-subtle;
+    margin: 5px 8px;
+}
+
+
+#sc-options-btn {
+    padding: 5px 10px;
+    border-radius: apply(radius-sm);
+    background-color: transparent;
+    margin: 0 4px 0 6px;
+    transition: background-color apply(transition-fast) ease;
+}
+
+#sc-options-btn:hover {
+    background-color: @bg-hover;
+}
+
+#sc-options-label {
+    font-size: apply(font-sm);
+    font-weight: 500;
+    color: @foreground;
+}
+
+#sc-options-arrow {
+    font-size: apply(font-xs);
+    color: @text-dim;
+    margin-left: 2px;
+}
+
+
+#sc-action-btn {
+    padding: 5px 20px;
+    border-radius: apply(radius-full);
+    background-color: @primary;
+    color: @on-primary;
+    font-size: apply(font-sm);
+    font-weight: 600;
+    margin-left: 2px;
+    transition: background-color apply(transition-fast) ease,
+                box-shadow apply(transition-fast) ease;
+}
+
+/* GTK3 doesn't reliably inherit into child Label with all:unset — force it */
+#sc-action-btn label {
+    color: @on-primary;
+    font-size: apply(font-sm);
+    font-weight: 600;
+}
+
+#sc-action-btn:hover {
+    background-color: @primary-a80;
+    box-shadow: 0 2px 12px @primary-a50;
+}
+
+#sc-action-btn.recording {
+    background-color: @error;
+    color: @on-error;
+}
+
+#sc-action-btn.recording label {
+    color: @on-error;
+}
+
+#sc-action-btn.recording:hover {
+    background-color: @error-a70;
+    box-shadow: 0 2px 12px @error-a40;
+}
+
+
+#sc-menu {
+    background-color: @bg-a90;
+    border: 1px solid @border-subtle;
+    border-radius: apply(radius-md);
+    padding: 4px 0;
+    box-shadow: 0 8px 32px @shadow-a40;
+}
+
+#sc-menu-item {
+    padding: 6px 16px;
+    border-radius: apply(radius-xs);
+    font-size: apply(font-sm);
+    transition: background-color apply(transition-fast) ease;
+}
+
+#sc-menu-item:hover {
+    background-color: @bg-hover;
+}
+
+#sc-menu-section {
+    font-size: apply(font-xs);
+    font-weight: 700;
+    color: @text-muted;
+    padding: 8px 16px 2px 16px;
+    letter-spacing: 0.5px;
+}
+
+/* Dim hint on the right of submenu parent items (Timer / Microphone) */
+.sc-menu-hint {
+    font-size: apply(font-xs);
+    color: @text-dim;
+    margin-left: 12px;
+}
+
+#sc-menu-sep {
+    background-color: @border-subtle;
+    min-height: 1px;
+    margin: 4px 10px;
+}
+
+
+.sc-switch {
+    background-color: @fg-a25;
+    border-radius: apply(radius-full);
+    transition: background-color apply(transition-slow) ease;
+}
+
+.sc-switch.checked {
+    background-color: @primary;
+    color: @fg-a90;
+}
