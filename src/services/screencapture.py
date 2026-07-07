@@ -184,42 +184,90 @@ class ScreenCapture(Service):
             logger.error(f"[SCREENSHOT] Failed to get active monitor: {e}")
         return "eDP-1"  # Fallback
 
-    def screenshot(self, target="region"):
+    def screenshot(self, target="region", output_dir=None, show_cursor=False):
         """
         Take a screenshot.
-        :param target: 'region', 'active', 'output', or a specific display name like 'eDP-1'
+        :param target: 'region', 'window', 'active', 'output', or a display name
+        :param output_dir: where to save; defaults to self.screenshots_dir
+        :param show_cursor: include the mouse cursor in the capture
         """
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        save_dir = Path(output_dir).expanduser() if output_dir else self.screenshots_dir
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        # When cursor is needed we call grim directly (hyprshot has no cursor flag).
+        # This covers region and fullscreen; window mode still falls back to hyprshot.
+        if show_cursor and target in ("region", "active", "output"):
+            return self._screenshot_with_cursor(target, save_dir, timestamp)
 
         command = [
             "hyprshot",
             "-s",
             "-o",
-            str(self.screenshots_dir),
+            str(save_dir),
             "-f",
             f"{timestamp}.png",
         ]
 
         if target == "region":
             command.extend(["-m", "region"])
+        elif target == "window":
+            command.extend(["-m", "window"])
         elif target == "active":
             active_monitor = self._get_active_monitor()
             command.extend(["-m", "output", "-m", active_monitor])
         elif target == "output":
             command.extend(["-m", "output"])
         else:
-            # Specific display name
             command.extend(["-m", "output", "-m", target])
 
-        self._pending_screenshot = self.screenshots_dir / f"{timestamp}.png"
-
-        command.append("-- ls")
+        self._pending_screenshot = save_dir / f"{timestamp}.png"
 
         try:
             proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.NONE)
             proc.wait_async(None, self._after_screenshot)
         except Exception as e:
             logger.error(f"Screenshot failed: {e}")
+            return False
+
+        return True
+
+    def _screenshot_with_cursor(
+        self, target: str, save_dir: Path, timestamp: str
+    ) -> bool:
+        """Use grim -c directly so the cursor is included in the capture."""
+        import subprocess
+
+        out_file = save_dir / f"{timestamp}.png"
+        self._pending_screenshot = out_file
+
+        try:
+            if target == "region":
+                geo = subprocess.check_output(["slurp"], text=True).strip()
+                if not geo:
+                    raise ValueError("slurp returned empty geometry")
+                cmd = ["grim", "-c", "-g", geo, str(out_file)]
+            else:
+                # active / output — capture all outputs with cursor
+                monitor = self._get_active_monitor() if target == "active" else None
+                cmd = ["grim", "-c"]
+                if monitor:
+                    cmd.extend(["-o", monitor])
+                cmd.append(str(out_file))
+
+            proc = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
+            proc.wait_async(None, self._after_screenshot)
+        except subprocess.CalledProcessError:
+            # slurp cancelled
+            self.notify_send(
+                "Screenshot cancelled",
+                "Selection was cancelled",
+                icon="camera-photo-symbolic",
+            )
+            self.screenshot_taken(None)
+            return True  # process ran; cancel already signalled
+        except Exception as e:
+            logger.error(f"Screenshot (cursor) failed: {e}")
             return False
 
         return True
@@ -237,13 +285,17 @@ class ScreenCapture(Service):
                     "Selection was cancelled",
                     icon="camera-photo-symbolic",
                 )
+                # Emit with None so listeners (e.g. screencapture window) can re-show
+                self.screenshot_taken(None)
         except Exception as e:
             logger.error(f"Screenshot notification failed: {e}")
 
-    def record(self, target="selection"):
+    def record(self, target="selection", use_audio=False, show_cursor=False):
         """
         Start recording.
-        :param target: 'selection', 'eDP-1', 'HDMI-A-1', etc.
+        :param target: 'selection', 'active', a monitor name like 'eDP-1', etc.
+        :param use_audio: capture system/mic audio (removes --no-audio)
+        :param show_cursor: show mouse cursor in the recording
         """
         if self.is_recording:
             logger.error(
@@ -264,8 +316,13 @@ class ScreenCapture(Service):
             str(output_file),
             "--pixel-format",
             "yuv420p",
-            "--no-audio",
         ]
+
+        if not use_audio:
+            cmd.append("--no-audio")
+
+        if show_cursor:
+            cmd.append("--show-cursor")
 
         if target == "selection":
             geometry = exec_shell_command("slurp")
