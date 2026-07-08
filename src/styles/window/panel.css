@@ -1,5 +1,5 @@
 #panel {
-    background-color: alpha(@background, 0.50);
+    background-color: @bg-a50;
     margin: -4px 0;
     transition: all 120ms ease-in-out;
 }
