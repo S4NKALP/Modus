@@ -1,9 +1,9 @@
-import shutil
-import subprocess
 import time
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import GLib, exec_shell_command_async, logger, os, re
+
+from utils.functions import find_binary, run_command
 
 
 class Brightness(Service):
@@ -103,7 +103,7 @@ class Brightness(Service):
             logger.info(f"Using forced backend: {backend}")
             return backend
 
-        if shutil.which("brightnessctl"):
+        if find_binary("brightnessctl"):
             device = self._get_screen_device()
             if device:
                 logger.info(f"Using brightnessctl backend with device: {device}")
@@ -113,7 +113,7 @@ class Brightness(Service):
                     "brightnessctl is available but no backlight devices found in /sys/class/backlight/"
                 )
 
-        if shutil.which("ddcutil"):
+        if find_binary("ddcutil"):
             bus = self._detect_ddcutil_bus()
             if bus != -1:
                 self.ddcutil_bus = bus
@@ -139,9 +139,7 @@ class Brightness(Service):
     def _detect_ddcutil_bus(self):
         """Detect I2C bus number for ddcutil."""
         try:
-            process = subprocess.run(
-                ["ddcutil", "detect"], text=True, capture_output=True, timeout=2
-            )
+            process = run_command(["ddcutil", "detect"], timeout=2)
             if process.returncode == 0:
                 match = re.search(r"I2C bus:\s*/dev/i2c-(\d+)", process.stdout)
                 return int(match.group(1)) if match else -1
@@ -154,7 +152,7 @@ class Brightness(Service):
         if self.backend:
             if self.backend == "ddcutil":
                 try:
-                    process = subprocess.run(
+                    process = run_command(
                         [
                             "ddcutil",
                             "--bus",
@@ -163,8 +161,6 @@ class Brightness(Service):
                             "getvcp",
                             "10",
                         ],
-                        text=True,
-                        capture_output=True,
                         timeout=2,
                     )
 

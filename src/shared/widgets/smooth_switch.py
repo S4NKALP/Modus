@@ -1,5 +1,4 @@
-import cairo
-from fabric.utils import Gdk, Gtk
+from fabric.utils import Gdk, Gtk, cairo
 
 from shared.widgets.animator import Animator, ease_in_out
 

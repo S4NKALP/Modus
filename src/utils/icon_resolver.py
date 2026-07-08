@@ -5,6 +5,7 @@ from fabric.utils import GLib, Gtk, logger, os
 import shared.data as data
 
 ICON_CACHE_FILE = data.CACHE_DIR + "/icons.json"
+ICON_DICT_MAX = 500
 if not os.path.exists(data.CACHE_DIR):
     os.makedirs(data.CACHE_DIR)
 
@@ -23,6 +24,7 @@ class IconResolver:
         else:
             self._icon_dict = {}
 
+        self._icon_dict_order: list[str] = []
         self.default_applicaiton_icon = default_applicaiton_icon
 
     def get_icon_name(self, app_id: str):
@@ -58,6 +60,10 @@ class IconResolver:
 
     def _store_new_icon(self, app_id: str, icon: str):
         self._icon_dict[app_id] = icon
+        self._icon_dict_order.append(app_id)
+        while len(self._icon_dict) > ICON_DICT_MAX:
+            oldest = self._icon_dict_order.pop(0)
+            self._icon_dict.pop(oldest, None)
         with open(ICON_CACHE_FILE, "w") as f:
             json.dump(self._icon_dict, f)
 

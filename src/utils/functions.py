@@ -7,7 +7,6 @@ import threading
 from typing import Dict, NamedTuple, Optional, TypeVar
 
 from fabric.utils import (
-    exec_shell_command,
     exec_shell_command_async,
     logger,
 )
@@ -187,28 +186,64 @@ def escape_markup_text(text: str) -> str:
     return html.escape(text.replace("\n", " "))
 
 
-# Function to toggle a shell command
-def toggle_command(command: str, full_command: str):
-    if is_app_running(command):
-        kill_process(command)
-    else:
-        subprocess.Popen(
-            full_command.split(" "),
-            stdin=subprocess.DEVNULL,  # No input stream
-            stdout=subprocess.DEVNULL,  # Optionally discard the output
-            stderr=subprocess.DEVNULL,  # Optionally discard the error output
-            start_new_session=True,  # This prevents the process from being killed
-        )
+# --- Process management ---
 
 
-# Function to execute a shell command asynchronously
+def spawn_detached(args: list[str]) -> subprocess.Popen:
+    return subprocess.Popen(
+        args,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
 def kill_process(process_name: str):
     exec_shell_command_async(f"pkill {process_name}", lambda *_: None)
 
 
-# Function to check if an app is running
+def is_process_running(process_name: str) -> bool:
+    try:
+        result = subprocess.run(["pidof", process_name], capture_output=True, text=True)
+        return bool(result.stdout.strip())
+    except Exception:
+        return False
+
+
 def is_app_running(app_name: str) -> bool:
-    return len(exec_shell_command(f"pidof {app_name}")) != 0
+    return is_process_running(app_name)
+
+
+def find_process_pid(process_name: str, timeout: float | None = None) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", process_name],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return [pid for pid in result.stdout.strip().split() if pid]
+    except Exception:
+        return []
+
+
+def toggle_command(command: str, full_command: str):
+    if is_process_running(command):
+        kill_process(command)
+    else:
+        spawn_detached(full_command.split(" "))
+
+
+# --- Binary lookup ---
+
+
+def find_binary(name: str) -> str | None:
+    try:
+        result = subprocess.run(["which", name], capture_output=True, text=True)
+        return result.stdout.strip() or None
+    except Exception:
+        return None
 
 
 # General utilities

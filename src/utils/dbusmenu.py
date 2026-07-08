@@ -4,10 +4,11 @@ Supports:
 - com.canonical.dbusmenu (KDE / Unity / XFCE)
 - GTK appmenu-module DBusMenu
 - GTK GMenuModel fallback (best-effort)
+- Incremental updates via DBusMenu signals
 """
 
 import threading
-from typing import List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from fabric.utils import Any, Gio, GLib, logger
 
@@ -25,7 +26,6 @@ def _get_bus() -> Gio.DBusConnection:
     return _SESSION_BUS
 
 
-# DATA MODEL — __slots__ cuts ~200 bytes per instance
 class DBusMenuItem:
     __slots__ = (
         "id",
@@ -39,6 +39,7 @@ class DBusMenuItem:
         "children",
         "action_name",
         "action_target",
+        "parent_id",
     )
 
     def __init__(
@@ -54,6 +55,7 @@ class DBusMenuItem:
         children: Optional[List["DBusMenuItem"]] = None,
         action_name: str = "",
         action_target: Optional[Any] = None,
+        parent_id: int = -1,
     ):
         self.id = id
         self.label = label
@@ -66,9 +68,9 @@ class DBusMenuItem:
         self.children: List["DBusMenuItem"] = children if children is not None else []
         self.action_name = action_name
         self.action_target = action_target
+        self.parent_id = parent_id
 
 
-# MAIN CLIENT
 class DBusMenuClient:
     __slots__ = (
         "service_name",
@@ -78,6 +80,11 @@ class DBusMenuClient:
         "_hash_cache",
         "_lock",
         "_fetching",
+        "_revision",
+        "_signal_ids",
+        "_on_layout_updated_cb",
+        "_on_items_updated_cb",
+        "_on_item_activated_cb",
     )
 
     def __init__(self, service_name: str, object_path: str):
@@ -87,11 +94,15 @@ class DBusMenuClient:
         self._cache: Optional[List[DBusMenuItem]] = None
         self._cache_valid = False
         self._hash_cache: Optional[str] = None
+        self._revision: int = 0
 
         self._lock = threading.Lock()
         self._fetching = False
+        self._signal_ids: List[int] = []
+        self._on_layout_updated_cb: Optional[Callable] = None
+        self._on_items_updated_cb: Optional[Callable] = None
+        self._on_item_activated_cb: Optional[Callable] = None
 
-    # DBUS CALL — uses shared session bus
     def _call(self, method, params, reply_type=None):
         try:
             return _get_bus().call_sync(
@@ -108,7 +119,6 @@ class DBusMenuClient:
         except Exception:
             return None
 
-    # PUBLIC ENTRY
     def get_layout(self, force_refresh=False):
         if self._cache and self._cache_valid and not force_refresh:
             return self._cache
@@ -124,7 +134,6 @@ class DBusMenuClient:
             with self._lock:
                 self._fetching = False
 
-    # CORE FETCH LOGIC
     def _fetch(self):
         params = GLib.Variant("(iias)", (0, -1, []))
         res = self._call("GetLayout", params)
@@ -133,6 +142,9 @@ class DBusMenuClient:
             return []
 
         try:
+            revision = res.get_child_value(0).get_uint32()
+            self._revision = revision
+
             layout = res.get_child_value(1)
             while layout.is_of_type(GLib.VariantType("v")):
                 layout = layout.get_variant()
@@ -152,7 +164,6 @@ class DBusMenuClient:
             logger.error(f"[Menu] parse error: {e}")
             return []
 
-    # HASH DIFF SYSTEM
     def _hash(self, items):
         flat: List[str] = []
 
@@ -164,8 +175,7 @@ class DBusMenuClient:
         walk(items)
         return str(hash("".join(flat)))
 
-    # DBUSMENU PARSER
-    def _parse_dbusmenu(self, node, _depth: int = 0):
+    def _parse_dbusmenu(self, node, _depth: int = 0, _parent_id: int = -1):
         if _depth > 20:
             return DBusMenuItem(id=0)
         item = DBusMenuItem(id=0)
@@ -175,6 +185,7 @@ class DBusMenuClient:
                 return item
 
             item.id = node.get_child_value(0).get_int32()
+            item.parent_id = _parent_id
 
             try:
                 props = node.get_child_value(1).unpack()
@@ -215,7 +226,7 @@ class DBusMenuClient:
                 c = children.get_child_value(i)
                 if c.is_of_type(GLib.VariantType("v")):
                     c = c.get_variant()
-                item.children.append(self._parse_dbusmenu(c, _depth + 1))
+                item.children.append(self._parse_dbusmenu(c, _depth + 1, item.id))
 
             if item.has_submenu and not item.children:
                 try:
@@ -228,7 +239,6 @@ class DBusMenuClient:
 
         return item
 
-    # ACTIONS
     def about_to_show(self, item_id):
         try:
             res = self._call(
@@ -250,7 +260,6 @@ class DBusMenuClient:
         except Exception:
             pass
 
-    # CACHE CONTROL
     def invalidate(self):
         self._cache_valid = False
 
@@ -263,3 +272,130 @@ class DBusMenuClient:
 
     def on_focus(self):
         self.prefetch_async()
+
+    def get_revision(self) -> int:
+        return self._revision
+
+    def connect_signals(
+        self,
+        on_layout_updated: Optional[Callable] = None,
+        on_items_updated: Optional[Callable] = None,
+        on_item_activated: Optional[Callable] = None,
+    ):
+        self._on_layout_updated_cb = on_layout_updated
+        self._on_items_updated_cb = on_items_updated
+        self._on_item_activated_cb = on_item_activated
+
+        bus = _get_bus()
+
+        def handle_layout_updated(
+            _connection, _sender, _path, _iface, _signal, params, _user_data=None
+        ):
+            try:
+                parent_id, revision, properties = params.unpack()
+                self._revision = revision
+                if self._on_layout_updated_cb:
+                    self._on_layout_updated_cb(parent_id, revision, properties)
+            except Exception as e:
+                logger.debug(f"[DBusMenuClient] LayoutUpdated handler error: {e}")
+
+        def handle_items_properties_updated(
+            _connection, _sender, _path, _iface, _signal, params, _user_data=None
+        ):
+            try:
+                updated_props, removed_ids = params.unpack()
+                if self._on_items_updated_cb:
+                    self._on_items_updated_cb(updated_props, removed_ids)
+                self._cache_valid = False
+            except Exception as e:
+                logger.debug(f"[DBusMenuClient] ItemsPropertiesUpdated error: {e}")
+
+        def handle_item_activation_requested(
+            _connection, _sender, _path, _iface, _signal, params, _user_data=None
+        ):
+            try:
+                item_id, timestamp = params.unpack()
+                if self._on_item_activated_cb:
+                    self._on_item_activated_cb(item_id, timestamp)
+            except Exception as e:
+                logger.debug(f"[DBusMenuClient] ItemActivationRequested error: {e}")
+
+        for sig_name, handler in [
+            ("LayoutUpdated", handle_layout_updated),
+            ("ItemsPropertiesUpdated", handle_items_properties_updated),
+            ("ItemActivationRequested", handle_item_activation_requested),
+        ]:
+            sid = bus.signal_subscribe(
+                self.service_name,
+                "com.canonical.dbusmenu",
+                sig_name,
+                self.object_path,
+                None,
+                Gio.DBusCallFlags.NONE,
+                handler,
+                None,
+            )
+            if sid:
+                self._signal_ids.append(sid)
+
+    def disconnect_signals(self):
+        if not self._signal_ids:
+            return
+        bus = _get_bus()
+        for sid in self._signal_ids:
+            try:
+                bus.signal_unsubscribe(sid)
+            except Exception:
+                pass
+        self._signal_ids.clear()
+
+    def update_layout(
+        self, parent_id: int, revision: int
+    ) -> Optional[List[DBusMenuItem]]:
+        self._revision = revision
+        params = GLib.Variant("(iias)", (parent_id, revision, []))
+        res = self._call("GetLayout", params)
+        if not res:
+            return None
+        try:
+            layout = res.get_child_value(1)
+            while layout.is_of_type(GLib.VariantType("v")):
+                layout = layout.get_variant()
+            parsed = self._parse_dbusmenu(layout).children
+            if parent_id == 0:
+                self._hash_cache = self._hash(parsed)
+                self._cache = parsed
+                self._cache_valid = True
+            return parsed
+        except Exception as e:
+            logger.error(f"[Menu] update_layout error: {e}")
+            return None
+
+    def apply_items_update(
+        self, updated_props: List[Tuple[int, Dict]], removed_ids: List[int]
+    ):
+        if not self._cache:
+            return
+        removed_set = set(removed_ids)
+
+        def walk(items):
+            result = []
+            for item in items:
+                if item.id in removed_set:
+                    continue
+                for uid, props in updated_props:
+                    if item.id == uid:
+                        if "label" in props:
+                            item.label = str(props["label"]).replace("_", "")
+                        if "enabled" in props:
+                            item.enabled = bool(props["enabled"])
+                        if "visible" in props:
+                            item.visible = bool(props["visible"])
+                        if "type" in props:
+                            item.type = str(props["type"])
+                item.children = walk(item.children)
+                result.append(item)
+            return result
+
+        self._cache = walk(self._cache)
+        self._hash_cache = None

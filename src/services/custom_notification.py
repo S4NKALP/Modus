@@ -30,6 +30,7 @@ class CachedNotification(Service):
         # Store cache metadata for cleanup
         self.cache_metadata = data.get("cache_metadata", {})
         self.timestamp = data.get("timestamp", int(time.time()))
+        self._pixbuf_cache = {}
 
         return self
 
@@ -82,18 +83,23 @@ class CachedNotification(Service):
 
     @Property(object, "readable")
     def image_pixbuf(self) -> GdkPixbuf.Pixbuf | None:
+        if hasattr(self, "_cached_image_pixbuf"):
+            return self._cached_image_pixbuf
         try:
             if self.image_pixmap:
-                return self.image_pixmap.as_pixbuf()
+                self._cached_image_pixbuf = self.image_pixmap.as_pixbuf()
+                return self._cached_image_pixbuf
             if self.image_file and os.path.exists(self.image_file):
                 try:
-                    return GdkPixbuf.Pixbuf.new_from_file(self.image_file)
+                    self._cached_image_pixbuf = GdkPixbuf.Pixbuf.new_from_file(
+                        self.image_file
+                    )
+                    return self._cached_image_pixbuf
                 except Exception:
-                    # If file can't be loaded, return None
                     pass
         except Exception:
-            # If any error occurs (including temp file gone), return None safely
             pass
+        self._cached_image_pixbuf = None
         return None
 
     @Property(dict, "readable")
@@ -169,6 +175,12 @@ class CachedNotification(Service):
         self._cache_id = cache_id
         self.cache_metadata = {}
         self.timestamp = int(time.time())
+        self._pixbuf_cache: dict[str, GdkPixbuf.Pixbuf | None] = {}
+
+    def get_or_cache_pixbuf(self, cache_key: str, loader) -> GdkPixbuf.Pixbuf | None:
+        if cache_key not in self._pixbuf_cache:
+            self._pixbuf_cache[cache_key] = loader()
+        return self._pixbuf_cache[cache_key]
 
     def remove_from_cache(self):
         self.removed_from_cache.emit()
@@ -280,8 +292,8 @@ class CachedNotifications(Notifications):
 
                 handler_id = cached_notification.connect(
                     "removed-from-cache",
-                    lambda *args: self.remove_cached_notification(
-                        notification_id=cache_id
+                    lambda *args, cid=cache_id: self.remove_cached_notification(
+                        notification_id=cid
                     ),
                 )
                 self._signal_handlers[cache_id] = handler_id
@@ -435,7 +447,9 @@ class CachedNotifications(Notifications):
         # IMMEDIATELY store to history before attempting any caching operations
         handler_id = cached_notification.connect(
             "removed-from-cache",
-            lambda *args: self.remove_cached_notification(notification_id=cache_id),
+            lambda *args, cid=cache_id: self.remove_cached_notification(
+                notification_id=cid
+            ),
         )
         self._signal_handlers[cache_id] = handler_id
         self._cached_notifications[cache_id] = cached_notification

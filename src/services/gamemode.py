@@ -7,21 +7,20 @@ and other visual effects for better performance during gaming.
 Uses a marker file in /tmp to track state.
 """
 
-import subprocess
 import sys
 from datetime import datetime
 from typing import Literal
 
-from utils.functions import read_json_file, write_json_file
+from utils.functions import read_json_file, run_command, write_json_file
 
 STATE_FILE = "/tmp/hyprland_gamemode"
 
 
 def run_hyprctl(command: str) -> str:
     """Run a hyprctl command and return the output (raises on error)."""
-    result = subprocess.run(
-        ["hyprctl"] + command.split(), capture_output=True, text=True, check=True
-    )
+    result = run_command(["hyprctl"] + command.split(), timeout=5)
+    if result.returncode != 0:
+        raise RuntimeError(f"hyprctl failed: {result.stderr}")
     return result.stdout.strip()
 
 

@@ -1,3 +1,4 @@
+import atexit
 import os
 
 from fabric import Application
@@ -87,6 +88,15 @@ def main():
 
     app.set_css = set_css
     app.set_css()
+
+    def cleanup_css_monitors():
+        for m in css_monitors:
+            try:
+                m.cancel()
+            except Exception:
+                pass
+
+    atexit.register(cleanup_css_monitors)
 
     # Inject into the executing module's namespace (__main__)
     # to emulate what happened when this file was run directly.

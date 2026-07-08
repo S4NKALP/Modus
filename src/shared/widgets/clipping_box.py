@@ -1,7 +1,7 @@
 import math
 from typing import cast
 
-import cairo
+from fabric.utils import cairo
 from fabric.widgets.box import Box
 
 

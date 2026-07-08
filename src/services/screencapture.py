@@ -367,4 +367,9 @@ class ScreenCapture(Service):
         return is_app_running("wf-recorder") or is_app_running("gpu-screen-recorder")
 
 
-screen_capture_service = ScreenCapture()
+def __getattr__(name):
+    if name == "screen_capture_service":
+        import sys
+
+        return sys.modules["services.modus"].screen_capture_service
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

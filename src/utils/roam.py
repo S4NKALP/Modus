@@ -1,44 +1,19 @@
-from fabric.audio import Audio
-from fabric.utils import logger
+_services_mod = None
 
-# ruff: noqa: I001
-from services.modus import (
-    ModusService,
-    notification_service as notification_service_instance,
-)
 
-global modus_service
-try:
-    modus_service = ModusService()
-except Exception as e:
-    logger.error(f"[Main] Failed to create ModusService: {e}")
-    modus_service = None
+def _mod():
+    global _services_mod
+    if _services_mod is None:
+        import services.modus as _services_mod  # noqa: F811
+    return _services_mod
 
-if modus_service is None:
-    logger.warning(
-        "[Main] ModusService was not initialized. Functionality may be limited."
-    )
 
-global notification_service
-try:
-    notification_service = notification_service_instance
-except Exception as e:
-    logger.error(f"[Main] Failed to create NotificationService: {e}")
-    notification_service = None
-
-if notification_service is None:
-    logger.warning(
-        "[Main] NotificationService was not initialized. Notifications may not work."
-    )
-
-global audio_service
-try:
-    audio_service = Audio()
-except Exception as e:
-    logger.error(f"[Main] Failed to create AudioService: {e}")
-    audio_service = None
-
-if audio_service is None:
-    logger.warning(
-        "[Main] AudioService was not initialized. Audio features may not work."
-    )
+def __getattr__(name):
+    if name in (
+        "modus_service",
+        "notification_service",
+        "audio_service",
+        "screen_capture_service",
+    ):
+        return getattr(_mod(), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

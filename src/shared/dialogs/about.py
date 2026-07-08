@@ -2,7 +2,7 @@ import subprocess
 
 from fabric.utils import GdkPixbuf, Gtk, get_relative_path, logger, os, re
 
-from utils.functions import escape_markup_text
+from utils.functions import escape_markup_text, find_binary
 from utils.icon_resolver import IconResolver
 from utils.utils import setup_cursor_hover
 
@@ -70,9 +70,9 @@ def get_executable_path(exec_string):
 
     # Search in PATH
     try:
-        result = subprocess.run(["which", executable], capture_output=True, text=True)
-        if result.returncode == 0:
-            return result.stdout.strip()
+        result = find_binary(executable)
+        if result:
+            return result
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
@@ -207,11 +207,9 @@ def get_app_info(wmclass):
     # Fallback: try to find executable in PATH
     location = ""
     try:
-        result = subprocess.run(
-            ["which", wmclass.lower()], capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            location = result.stdout.strip()
+        result = find_binary(wmclass.lower())
+        if result:
+            location = result
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 

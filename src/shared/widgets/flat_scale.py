@@ -1,8 +1,7 @@
 import math
 from typing import Callable, Iterable, Literal, TypedDict
 
-import cairo
-from fabric.utils import Gdk, GObject, Gtk
+from fabric.utils import Gdk, GObject, Gtk, cairo
 from fabric.utils.helpers import clamp
 from fabric.widgets.widget import Widget
 from gi.repository import Pango, PangoCairo  # noqa: E402

@@ -16,9 +16,18 @@ HOME_DIR = GLib.get_home_dir()
 
 CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
 
-screen = Gdk.Screen.get_default()
-CURRENT_WIDTH = screen.get_width()
-CURRENT_HEIGHT = screen.get_height()
+
+def _get_screen_dimensions():
+    try:
+        screen = Gdk.Screen.get_default()
+        if screen:
+            return screen.get_width(), screen.get_height()
+    except Exception:
+        pass
+    return 1920, 1080
+
+
+CURRENT_WIDTH, CURRENT_HEIGHT = _get_screen_dimensions()
 
 
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")

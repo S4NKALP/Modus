@@ -1,8 +1,7 @@
-from fabric.utils import logger
+from fabric.utils import GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
-from gi.repository import GLib
 
 from shared.window.applet_window import AppletWindow
 from utils.roam import modus_service

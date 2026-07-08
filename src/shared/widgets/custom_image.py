@@ -1,8 +1,7 @@
 import math
 from typing import cast
 
-import cairo
-from fabric.utils import Gtk
+from fabric.utils import cairo, Gtk
 
 from fabric.widgets.image import Image
 
