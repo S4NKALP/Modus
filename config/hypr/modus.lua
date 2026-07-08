@@ -1,10 +1,11 @@
 -- local modus = "$HOME/.config/Modus"
 local modus = "$HOME/Projects/dev/Modus"
 
--- Global Menu env is set by Modus's _setup_environment() at runtime via
--- hyprctl keyword env, so it doesn't affect Modus's own windows.
--- (Setting it here via hl.env would cause Modus's GTK windows to also load
---  appmenu-gtk-module, triggering Gdk-CRITICAL assertion failures.)
+-- Global Menu env vars set by environment.py at runtime:
+--   ~/.config/environment.d/appmenu.conf
+--   ~/.pam_environment
+--   systemctl --user set-environment
+-- (Setting via hl.env here would trigger Gdk-CRITICAL in Modus's own GTK windows.)
 
 hl.on("hyprland.start", function()
 	local cmds = {
