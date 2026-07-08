@@ -2,10 +2,9 @@ import math
 import os
 import time
 
-from fabric.utils import GLib, Gtk
+from fabric.utils import GLib, Gtk, GdkPixbuf
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
-from gi.repository import GdkPixbuf
 
 from services.mpris import PlayerService
 from shared.widgets.custom_image import CustomImage

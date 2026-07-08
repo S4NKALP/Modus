@@ -1,7 +1,6 @@
-import json
+from typing import Dict, Tuple
 
-from fabric.hyprland.widgets import get_hyprland_connection
-from fabric.utils import Gdk, GLib, logger
+from fabric.utils import Gdk, GdkPixbuf, logger
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
@@ -9,6 +8,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.config import config, on_config_change
+from services.modus import get_clients, get_active_window, focus_window
 from utils.functions import is_special_workspace
 from utils.icon_resolver import IconResolver
 
@@ -22,18 +22,17 @@ class ApplicationSwitcher(Window):
             anchor="center",
             exclusivity="auto",
             keyboard_mode="exclusive",
-            visible=False,  # Start hidden until explicitly shown
+            visible=False,
             **kwargs,
         )
 
-        self.conn = get_hyprland_connection()
         self.icon_resolver = IconResolver()
         self.windows = []
         self.current_index = 0
         self.tab_pressed = False
         self.icon_size = 96
+        self._pixbuf_cache: Dict[Tuple[str, int], GdkPixbuf.Pixbuf] = {}
 
-        # Subscribe to config changes
         on_config_change(self._on_config_changed)
 
         container = Box(
@@ -83,7 +82,6 @@ class ApplicationSwitcher(Window):
         return config().get("window_switcher_items_per_row", 10)
 
     def _on_config_changed(self, new_config, old_config):
-        # Refresh windows if settings that affect display change
         if config().has_changed(
             "hide_special_workspace", old_config
         ) or config().has_changed("window_switcher_items_per_row", old_config):
@@ -104,18 +102,20 @@ class ApplicationSwitcher(Window):
         self.ungrab_keyboard()
 
     def create_icon_for_window(self, window):
-        """Create an icon image for a specific window"""
         class_name = window.get("class", "").lower()
-        icon_img = self.icon_resolver.get_icon_pixbuf(class_name, self.icon_size)
-        if not icon_img:
-            icon_img = self.icon_resolver.get_icon_pixbuf(
-                "application-x-executable-symbolic", self.icon_size
-            )
-
+        key = (class_name, self.icon_size)
+        if key not in self._pixbuf_cache:
+            icon_img = self.icon_resolver.get_icon_pixbuf(class_name, self.icon_size)
+            if not icon_img:
+                icon_img = self.icon_resolver.get_icon_pixbuf(
+                    "application-x-executable-symbolic", self.icon_size
+                )
+            if icon_img:
+                self._pixbuf_cache[key] = icon_img
+        icon_img = self._pixbuf_cache.get(key)
         icon_image = Image()
         if icon_img:
             icon_image.set_from_pixbuf(icon_img)
-
         return icon_image
 
     def _is_special_workspace(self, client):
@@ -126,29 +126,23 @@ class ApplicationSwitcher(Window):
             child.destroy()
 
         try:
-            clients_data = self.conn.send_command("j/clients").reply
-            if not clients_data:
+            clients = get_clients()
+            if not clients:
                 return
-            clients = json.loads(clients_data.decode("utf-8"))
 
-            # Filter out hidden windows and optionally special workspace windows
-            filtered_windows = []
             hide_special = config().get("hide_special_workspace", True)
 
+            filtered_windows = []
             for c in clients:
                 if c.get("hidden", False):
                     continue
-                # Skip clients in special workspaces if the setting is enabled
                 if hide_special and self._is_special_workspace(c):
                     continue
                 filtered_windows.append(c)
 
             self.windows = filtered_windows
 
-            active_data = self.conn.send_command("j/activewindow").reply
-            active_window = (
-                json.loads(active_data.decode("utf-8")) if active_data else None
-            )
+            active_window = get_active_window()
 
             self.current_index = 0
             if active_window:
@@ -157,7 +151,6 @@ class ApplicationSwitcher(Window):
                         self.current_index = i
                         break
 
-            # Create vertical container for rows
             rows_box = Box(orientation="v", spacing=16)
             self.view.add(rows_box)
 
@@ -175,7 +168,6 @@ class ApplicationSwitcher(Window):
                     )
                     rows_box.add(current_row)
 
-                # Create icon image for this window
                 icon_image = self.create_icon_for_window(window)
 
                 button_content = Box(
@@ -282,7 +274,6 @@ class ApplicationSwitcher(Window):
         return False
 
     def update_selection(self):
-        # Flatten all buttons from all rows to find them by index
         all_buttons = []
         rows_box = self.view.get_children()[0] if self.view.get_children() else None
         if rows_box:
@@ -292,15 +283,12 @@ class ApplicationSwitcher(Window):
         for i, child in enumerate(all_buttons):
             if i == self.current_index:
                 child.add_style_class("active")
-                # Update selection label
                 current_window = self.windows[self.current_index]
                 app_class = current_window.get("class", "Unknown")
-                # capitalize if it's all lowercase
                 if app_class.islower():
                     app_class = app_class.capitalize()
                 self.selection_label.set_label(app_class)
 
-                # Update workspace label
                 workspace = current_window.get("workspace", {})
                 workspace_name = workspace.get("name", "Unknown")
                 self.workspace_label.set_label(f"Workspace {workspace_name}")
@@ -314,12 +302,7 @@ class ApplicationSwitcher(Window):
         window = self.windows[self.current_index]
         address = window.get("address")
         if address:
-            try:
-                GLib.spawn_command_line_async(
-                    f"hyprctl dispatch 'hl.dsp.focus({{ window = \"address:{address}\" }})'"
-                )
-            except Exception as e:
-                logger.error(f"Failed to focus window: {e}")
+            focus_window(address)
 
     def _on_item_clicked(self, index):
         self.current_index = index

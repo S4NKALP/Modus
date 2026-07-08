@@ -13,6 +13,7 @@ class AudioOSDContainer(BaseOSDContainer):
         self.audio = Audio()
         self._last_volume = None
         self._last_muted = None
+        self._speaker_handler_id = None
         self._setup_specific_components()
         self._connect_specific_signals()
 
@@ -44,7 +45,11 @@ class AudioOSDContainer(BaseOSDContainer):
 
     def _connect_speaker_signals(self):
         if self.audio.speaker:
-            self.audio.speaker.connect("changed", self._on_speaker_stream_changed)
+            if self._speaker_handler_id is not None:
+                self.audio.speaker.disconnect(self._speaker_handler_id)
+            self._speaker_handler_id = self.audio.speaker.connect(
+                "changed", self._on_speaker_stream_changed
+            )
             self._sync_with_audio()
 
     def _on_speaker_changed(self, *_):
@@ -104,8 +109,8 @@ class AudioOSDContainer(BaseOSDContainer):
         """Disconnect signals from Audio service"""
         try:
             self.audio.disconnect_by_func(self._on_speaker_changed)
-            if self.audio.speaker:
-                self.audio.speaker.disconnect_by_func(self._on_speaker_stream_changed)
+            if self.audio.speaker and self._speaker_handler_id is not None:
+                self.audio.speaker.disconnect(self._speaker_handler_id)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
         super().destroy()

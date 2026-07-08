@@ -1,5 +1,3 @@
-import subprocess
-
 from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -12,7 +10,11 @@ from services.network import NetworkClient
 from shared.dialogs.wifi_password_dialog import WiFiPasswordDialog
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.window.animated_scrollwindow import AnimatedScrollable
-from utils.functions import get_wifi_connecting_icon, get_wifi_icon_for_strength
+from utils.functions import (
+    get_wifi_connecting_icon,
+    get_wifi_icon_for_strength,
+    spawn_detached,
+)
 from utils.utils import svg_file
 
 
@@ -107,7 +109,7 @@ class WifiNetworkSlot(Box):
             self.dimage.add_style_class("disconnecting")
 
             if self.wifi_service and self.wifi_service._device:
-                subprocess.Popen(
+                spawn_detached(
                     [
                         "nmcli",
                         "device",
@@ -472,7 +474,7 @@ class WifiConnections(Box):
     def open_network_settings(self, *_):
         """Open NetworkManager connection editor"""
         try:
-            subprocess.Popen(["nm-connection-editor"], start_new_session=True)
+            spawn_detached(["nm-connection-editor"])
             if self.parent and hasattr(self.parent, "hide_controlcenter"):
                 self.parent.hide_controlcenter()
         except FileNotFoundError:

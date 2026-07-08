@@ -2,11 +2,10 @@ from pathlib import Path
 
 import tomlkit
 
-from fabric.utils import GLib, logger
+from fabric.utils import GLib, Gio, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
-from gi.repository import Gio
 
 from shared.window.applet_window import AppletWindow
 from utils.functions import run_command, thread
@@ -171,6 +170,7 @@ class CustomMods(Box):
     def _rebuild(self, mods):
         for child in list(self.get_children()):
             self.remove(child)
+            child.destroy()
 
         for popup in self._mod_popups.values():
             if popup:

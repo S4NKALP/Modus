@@ -625,38 +625,63 @@ class NotificationWidget(Box):
             return get_fallback_notification_icon((width, height))
 
     def _get_notification_pixbuf(self, notification):
-        """Simplified notification pixbuf with NO CACHING for image-pixmap to prevent disk bloat"""
-        notification_id = getattr(notification, "id", int(time.time()))
+        """Notification pixbuf — loads notification image or app icon, scaled consistently."""
+        pixbuf = None
 
-        try:
-            # Try to get cached notification image first
-            if hasattr(notification, "image_pixbuf") and notification.image_pixbuf:
+        # 1. Try cache_metadata keys first (cheap — no disk/pixbuf load)
+        cache_meta = getattr(notification, "cache_metadata", {}) or {}
+        notif_key = cache_meta.get("notification_image_cache_key")
+        if notif_key:
+            try:
+                pixbuf = get_cached_notification_image(notif_key)
+            except Exception:
+                pass
+
+        # 2. Try notification image via image_pixbuf (only if no cached)
+        if not pixbuf:
+            try:
+                img = getattr(notification, "image_pixbuf", None)
+                if img is not None:
+                    nid = getattr(notification, "id", 0)
+                    ck = get_notification_image_cache_key(nid, img)
+                    cached = get_cached_notification_image(ck)
+                    if cached:
+                        pixbuf = cached
+            except Exception:
+                pass
+
+        # 3. App icon via cache_metadata
+        if not pixbuf:
+            app_key = cache_meta.get("app_icon_cache_key")
+            if app_key:
                 try:
-                    cache_key = get_notification_image_cache_key(
-                        notification_id, notification.image_pixbuf
-                    )
-                    cached_image = get_cached_notification_image(cache_key)
-                    if cached_image:
-                        return cached_image
-                except Exception as image_error:
-                    logger.debug(f"Notification image processing failed: {image_error}")
-                    # Continue to app icon fallback
+                    from window.notification.unified_cache import get_from_cache
 
-        except Exception as e:
-            logger.debug(f"Failed to process notification image: {e}")
+                    pixbuf = get_from_cache(app_key, (35, 35))
+                except Exception:
+                    pass
 
-        # Use cached app icon as fallback
+        # 4. Direct app icon caching
+        if not pixbuf:
+            app_icon = getattr(notification, "app_icon", None)
+            if app_icon:
+                try:
+                    pixbuf = cache_notification_icon(app_icon, (35, 35))
+                except Exception:
+                    pass
+
+        # 5. Fallback
+        if not pixbuf:
+            pixbuf = get_fallback_notification_icon((35, 35))
+
         try:
-            app_icon_source = getattr(notification, "app_icon", None)
-            if app_icon_source:
-                cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
-                if cached_app_icon:
-                    return cached_app_icon
-        except Exception as e:
-            logger.debug(f"Failed to get cached app icon: {e}")
-
-        # Ultimate fallback
-        return get_fallback_notification_icon((35, 35))
+            return pixbuf.scale_simple(
+                NOTIFICATION_IMAGE_SIZE,
+                NOTIFICATION_IMAGE_SIZE,
+                GdkPixbuf.InterpType.BILINEAR,
+            )
+        except Exception:
+            return pixbuf
 
     def create_action_buttons(self, notification):
         return Box(
@@ -1122,10 +1147,11 @@ class ModusNoti(Window):
 
         self.current_notification = new_box
 
-        # Clear any existing children
+        # Clear and destroy any existing children
         for child in list(self.notifications.children):
             try:
                 self.notifications.remove(child)
+                child.destroy()
             except Exception as e:
                 logger.error(f"An error occurred: {e}")
 
@@ -1154,10 +1180,11 @@ class ModusNoti(Window):
             GLib.source_remove(self._transition_timer_id)
             self._transition_timer_id = None
 
-        # Safely remove notification box
+        # Safely remove and destroy notification box
         try:
             if notification_box in self.notifications.children:
                 self.notifications.remove(notification_box)
+            notification_box.destroy()
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
@@ -1197,8 +1224,11 @@ class ModusNoti(Window):
 
         # Also clean current notification if showing
         if self.current_notification:
-            # Mark for cache cleanup when clearing queue
             self.current_notification.notif_box._should_cleanup_cache = True
+            try:
+                self.current_notification.notification.close("dismissed-by-user")
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
 
         # Clear animation timers
         if self._transition_timer_id:

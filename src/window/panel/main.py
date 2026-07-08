@@ -13,17 +13,16 @@ from utils.roam import modus_service
 from utils.utils import setup_cursor_hover, svg_file
 from window.controlcenter.main import ModusControlCenter
 from window.notification.notification_center import NotificationCenter
+from window.panel.components.custom_mods import CustomMods
 from window.panel.components.enhanced_system_tray import apply_enhanced_system_tray
 from window.panel.components.globalmenu import GlobalMenu
-from window.panel.components.custom_mods import CustomMods
-from window.panel.notch import Notch
 from window.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
     NetworkIndicator,
 )
-
 from window.panel.components.workspace import WorkspaceIndicator
+from window.panel.notch import Notch
 
 apply_enhanced_system_tray()
 

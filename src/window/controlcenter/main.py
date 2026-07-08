@@ -1,6 +1,4 @@
-import subprocess
-
-from fabric.utils import Gdk, GLib, get_relative_path, idle_add, logger
+from fabric.utils import Gdk, GLib, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -9,6 +7,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 
 from services.brightness import Brightness
+from services.modus import is_caffeine_active, toggle_caffeine
 from services.network import NetworkClient
 from shared.widgets.flat_scale import FlatScale
 from shared.window.applet_window import AppletWindow
@@ -24,7 +23,14 @@ from window.controlcenter.per_app_volume import PerAppVolumeControl
 from window.controlcenter.player import PlayerBoxStack, get_shared_mpris_manager
 from window.controlcenter.wifi import WifiConnections
 
-brightness_service = Brightness()
+_brightness_instance: "Brightness | None" = None
+
+
+def get_brightness_service() -> "Brightness":
+    global _brightness_instance
+    if _brightness_instance is None:
+        _brightness_instance = Brightness()
+    return _brightness_instance
 
 
 class ModusControlCenter(AppletWindow):
@@ -48,8 +54,6 @@ class ModusControlCenter(AppletWindow):
         # Flight mode and caffeine states
         self.flight_mode = False
         self.caffeine_mode = False
-        self._caffeine_process = None
-
         # Loading flags - music and expanded player are no longer lazy loaded
         self._per_app_volume_initialized = False
         self._signals_connected = False  # Track if signals are connected
@@ -111,10 +115,10 @@ class ModusControlCenter(AppletWindow):
             h_expand=True,
         )
 
-        current_brightness = brightness_service.screen_brightness
+        current_brightness = get_brightness_service().screen_brightness
         brightness_percentage = (
-            int((current_brightness / brightness_service.max_screen) * 100)
-            if brightness_service.max_screen > 0
+            int((current_brightness / get_brightness_service().max_screen) * 100)
+            if get_brightness_service().max_screen > 0
             else 50
         )
 
@@ -129,7 +133,7 @@ class ModusControlCenter(AppletWindow):
         )
 
         # Only connect brightness controls if brightness service is available
-        if brightness_service.max_screen > 0:
+        if get_brightness_service().max_screen > 0:
             pass
         else:
             # Disable brightness scale if no backlight device available
@@ -577,13 +581,15 @@ class ModusControlCenter(AppletWindow):
             )
 
             # Connect brightness controls if brightness service is available
-            if brightness_service.max_screen > 0:
+            if get_brightness_service().max_screen > 0:
                 self.brightness_scale.connect("value-changed", self.set_brightness)
                 self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
                 self._signal_connections.append(
                     (
-                        brightness_service,
-                        brightness_service.connect("screen", self.brightness_changed),
+                        get_brightness_service(),
+                        get_brightness_service().connect(
+                            "screen", self.brightness_changed
+                        ),
                     )
                 )
 
@@ -715,23 +721,8 @@ class ModusControlCenter(AppletWindow):
             self.per_app_volume_center_box.set_size_request(300, -1)
 
     def _check_initial_states(self):
-        # Check if caffeine is already running - use faster method
-        try:
-            # Use faster check with timeout
-            result = subprocess.run(
-                ["pgrep", "-f", "modus-inhibit"],
-                capture_output=True,
-                text=True,
-                timeout=0.5,  # Add timeout to prevent hanging
-            )
-            self.caffeine_mode = bool(result.stdout.strip())
-        except (subprocess.TimeoutExpired, Exception):
-            self.caffeine_mode = False
-
-        # Flight mode starts as False (normal mode)
+        self.caffeine_mode = is_caffeine_active()
         self.flight_mode = False
-
-        # Update initial labels (will be set after widgets are created)
         GLib.timeout_add(100, self._update_initial_labels)
 
     def _update_initial_labels(self):
@@ -778,30 +769,13 @@ class ModusControlCenter(AppletWindow):
 
     def toggle_caffeine(self, *_):
         try:
-            if self.caffeine_mode:
-                inhibit_script = get_relative_path("../../utils/inhibit.py")
-                subprocess.run(["python3", inhibit_script, "off"], check=False)
-                self.caffeine_mode = False
-                if self._caffeine_process:
-                    try:
-                        self._caffeine_process.terminate()
-                    except Exception as e:
-                        logger.error(f"An error occurred: {e}")
-                    self._caffeine_process = None
-            else:
-                inhibit_script = get_relative_path("../../utils/inhibit.py")
-                self._caffeine_process = subprocess.Popen(
-                    ["python3", inhibit_script, "on"], start_new_session=True
-                )
-                self.caffeine_mode = True
-
+            self.caffeine_mode = toggle_caffeine()
             self.caffeine_icon.dynamic_file(
                 "applets/caffeine-on.svg"
                 if self.caffeine_mode
                 else "applets/caffeine-off.svg"
             )
             self.caffeine_status_label.set_label("On" if self.caffeine_mode else "Off")
-
         except Exception as e:
             logger.warning(f"Failed to toggle caffeine: {e}")
 
@@ -816,17 +790,17 @@ class ModusControlCenter(AppletWindow):
         if not self._signals_connected:
             return
         self._updating_brightness = True
-        brightness_value = int((brightness / 100) * brightness_service.max_screen)
-        brightness_service.screen_brightness = brightness_value
+        brightness_value = int((brightness / 100) * get_brightness_service().max_screen)
+        get_brightness_service().screen_brightness = brightness_value
         self._updating_brightness = False
 
     def brightness_changed(self, _, brightness_value):
         if not self._signals_connected or self._updating_brightness:
             return
 
-        if brightness_service.max_screen > 0:
+        if get_brightness_service().max_screen > 0:
             brightness_percentage = int(
-                (brightness_value / brightness_service.max_screen) * 100
+                (brightness_value / get_brightness_service().max_screen) * 100
             )
 
             GLib.idle_add(
@@ -1214,22 +1188,7 @@ class ModusControlCenter(AppletWindow):
             logger.warning(f"Widget cleanup failed: {e}")
 
     def _cleanup_processes(self):
-        """Clean up any running processes"""
-        try:
-            # Clean up caffeine process
-            if self._caffeine_process:
-                try:
-                    self._caffeine_process.terminate()
-                    self._caffeine_process.wait(timeout=1)
-                except Exception as e:
-                    logger.warning(f"Failed to terminate caffeine process: {e}")
-                finally:
-                    self._caffeine_process = None
-
-            logger.debug("All processes cleaned up successfully")
-
-        except Exception as e:
-            logger.warning(f"Process cleanup failed: {e}")
+        logger.debug("All processes cleaned up successfully")
 
     def _complete_cleanup(self):
         """Perform complete cleanup of all resources"""

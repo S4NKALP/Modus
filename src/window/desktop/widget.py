@@ -35,6 +35,8 @@ executor = ThreadPoolExecutor(max_workers=4)
 # Global cache for weather data
 _weather_cache: Dict[str, Tuple[Any, float]] = {}
 _location_cache: Dict[str, Tuple[float, float, float]] = {}
+_WEATHER_CACHE_MAX = 10
+_LOCATION_CACHE_MAX = 10
 
 
 def http_get_json(
@@ -98,6 +100,8 @@ def get_coordinates(city: str) -> Optional[Tuple[float, float]]:
         try:
             lat = float(data[0]["lat"])
             lon = float(data[0]["lon"])
+            while len(_location_cache) >= _LOCATION_CACHE_MAX:
+                _location_cache.pop(next(iter(_location_cache)), None)
             _location_cache[cache_key] = (lat, lon, current_time)
             return lat, lon
         except (ValueError, KeyError):
@@ -191,6 +195,8 @@ def get_weather(callback):
 
         formatted_data = format_weather_data(weather_data, location)
         if formatted_data:
+            while len(_weather_cache) >= _WEATHER_CACHE_MAX:
+                _weather_cache.pop(next(iter(_weather_cache)), None)
             _weather_cache[cache_key] = (formatted_data, current_time)
             GLib.idle_add(callback, formatted_data)
         else:
@@ -452,6 +458,7 @@ class Calendar(Box):
     def update_calendar(self):
         for child in self.calendar_grid.get_children():
             self.calendar_grid.remove(child)
+            child.destroy()
         self.month_label.set_label(calendar.month_name[self.current_month])
         cal = calendar.monthcalendar(self.current_year, self.current_month)
         for week in cal:

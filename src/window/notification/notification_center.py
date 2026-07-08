@@ -698,6 +698,8 @@ class NotificationCenter(AppletWindow):
 
         self.add_keybinding("Escape", self._on_escape_pressed)
 
+    MAX_GROUPS = 15
+
     def _rebuild_notification_groups(self):
         """Rebuild notification groups from scratch with enhanced asset preloading and debugging"""
         # Clear existing groups
@@ -709,23 +711,27 @@ class NotificationCenter(AppletWindow):
             child.destroy()
 
         # Group notifications by app name and preload assets with debugging
-        rebuild_count = 0
         for cached_notification in notification_service.cached_notifications:
             app_name = cached_notification._notification.app_name
-            getattr(cached_notification._notification, "id", None)
 
             # Skip ignored apps during rebuild
             if app_name in data.NOTIFICATION_IGNORED_APPS_HISTORY:
                 continue
 
-            # Preload assets for each cached notification to ensure display consistency
-            preload_notification_assets(cached_notification._notification)
-
             self.notification_groups[app_name].append(cached_notification)
-            rebuild_count += 1
 
+        # Sort groups by most recent notification
+        sorted_groups = sorted(
+            self.notification_groups.items(),
+            key=lambda item: max(
+                (getattr(n._notification, "id", 0) for n in item[1]), default=0
+            ),
+            reverse=True,
+        )[: self.MAX_GROUPS]
+
+        self.notification_groups.clear()
         # Create group widgets and handle limited apps
-        for app_name, notifications in self.notification_groups.items():
+        for app_name, notifications in sorted_groups:
             # Sort notifications by ID (highest ID first - newest notifications)
             # This ensures the latest notifications appear at the top of each group
             notifications.sort(
@@ -736,11 +742,10 @@ class NotificationCenter(AppletWindow):
             if app_name in data.NOTIFICATION_LIMITED_APPS_HISTORY:
                 if len(notifications) > 5:
                     # Keep only the 5 most recent notifications
-                    self.notification_groups[app_name] = notifications[:5]
+                    notifications = notifications[:5]
 
-            group_widget = ExpandableNotificationGroup(
-                app_name, self.notification_groups[app_name]
-            )
+            group_widget = ExpandableNotificationGroup(app_name, notifications)
+            self.notification_groups[app_name] = notifications
             self.group_widgets[app_name] = group_widget
             self.notifications_box.add(group_widget)
 
@@ -809,9 +814,10 @@ class NotificationCenter(AppletWindow):
     def _refresh_group_widget(self, group_widget):
         """Refresh a group widget's content"""
         try:
-            # Remove existing children
+            # Remove and destroy existing children
             for child in group_widget.get_children():
                 group_widget.remove(child)
+                child.destroy()
 
             # Recreate content
             group_widget.create_collapsed_state()
@@ -886,6 +892,8 @@ class NotificationCenter(AppletWindow):
 
         # Clear all remaining cached notification images AND icons when clear all is clicked
         cleanup_all_notification_caches()  # Clear ALL caches (icons + images)
+        for child in self.notifications_box.get_children():
+            child.destroy()
         notification_service.clear_all_cached_notifications()
         self.hide()
 

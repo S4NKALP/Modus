@@ -1,86 +1,30 @@
-import subprocess
-
-from fabric.utils import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 
+from services.modus import (
+    is_night_light_active,
+    toggle_night_light,
+)
 from utils.utils import svg_file
-
-
-class NightLightControl:
-    """Control night light using hyprsunset"""
-
-    def __init__(self):
-        self.is_active = False
-        self._check_initial_state()
-
-    def _check_initial_state(self):
-        """Check if hyprsunset is currently running"""
-        try:
-            result = subprocess.run(
-                ["pgrep", "-f", "hyprsunset"], capture_output=True, text=True
-            )
-            self.is_active = bool(result.stdout.strip())
-        except Exception as e:
-            logger.warning(f"Failed to check hyprsunset status: {e}")
-            self.is_active = False
-
-    def toggle(self):
-        """Toggle night light on/off"""
-        try:
-            if self.is_active:
-                # Turn off night light by killing hyprsunset
-                subprocess.run(["pkill", "hyprsunset"], check=False)
-                self.is_active = False
-                logger.debug("Night light turned off")
-            else:
-                # Turn on night light with default temperature (3000K)
-                subprocess.Popen(["hyprsunset", "-t", "4500"], start_new_session=True)
-                self.is_active = True
-                logger.debug("Night light turned on")
-            return True
-        except Exception as e:
-            logger.warning(f"Failed to toggle night light: {e}")
-            return False
-
-    def set_temperature(self, temperature: int):
-        """Set night light temperature (1000-6500K)"""
-        try:
-            # Kill existing process
-            subprocess.run(["pkill", "hyprsunset"], check=False)
-
-            # Start with new temperature
-            subprocess.Popen(
-                ["hyprsunset", "-t", str(temperature)], start_new_session=True
-            )
-            self.is_active = True
-            logger.debug(f"Night light temperature set to {temperature}K")
-            return True
-        except Exception as e:
-            logger.warning(f"Failed to set night light temperature: {e}")
-            return False
 
 
 def create_night_light_widget(control_center):
     """Create night light widget for control center"""
 
-    # Initialize night light control
-    night_light = NightLightControl()
+    is_active = is_night_light_active()
 
-    # Create icon
     night_light_icon = svg_file(
         (
             "applets/redshift-status-on.svg"
-            if night_light.is_active
+            if is_active
             else "applets/redshift-status-off.svg"
         ),
         size=42,
     )
 
-    # Create status label
     night_light_status_label = Label(
-        label="On" if night_light.is_active else "Off",
+        label="On" if is_active else "Off",
         name="nightlight-widget-label",
         style_classes="status-label",
         max_chars_width=15,
@@ -88,19 +32,16 @@ def create_night_light_widget(control_center):
         h_align="start",
     )
 
-    def toggle_night_light(*_):
-        """Toggle night light and update UI"""
-        if night_light.toggle():
-            # Update icon
+    def toggle_ui(*_):
+        if toggle_night_light():
+            is_active = is_night_light_active()
             night_light_icon.dynamic_file(
                 "applets/redshift-status-on.svg"
-                if night_light.is_active
+                if is_active
                 else "applets/redshift-status-off.svg"
             )
-            # Update status label
-            night_light_status_label.set_label("On" if night_light.is_active else "Off")
+            night_light_status_label.set_label("On" if is_active else "Off")
 
-    # Create widget box (similar to bluetooth_widget structure)
     night_light_widget = Box(
         name="nightlight-widget",
         orientation="h",
@@ -109,7 +50,7 @@ def create_night_light_widget(control_center):
             Button(
                 name="nightlight-icon-button",
                 child=night_light_icon,
-                on_clicked=toggle_night_light,
+                on_clicked=toggle_ui,
             ),
             Button(
                 name="nightlight-info-button",
@@ -130,7 +71,7 @@ def create_night_light_widget(control_center):
                         night_light_status_label,
                     ],
                 ),
-                on_clicked=toggle_night_light,
+                on_clicked=toggle_ui,
             ),
         ],
     )

@@ -1,6 +1,7 @@
 import hashlib
 import time
 import uuid
+from collections import OrderedDict
 
 from fabric.utils import GdkPixbuf, get_relative_path, logger, os
 
@@ -8,6 +9,9 @@ import shared.data as data
 
 # Unified notification cache directory (for both app icons and notification images)
 UNIFIED_NOTIFICATION_CACHE_DIR = os.path.join(data.CACHE_DIR, "notifications")
+
+_MEMORY_PIXBUF_CACHE: OrderedDict[str, GdkPixbuf.Pixbuf] = OrderedDict()
+_MEMORY_CACHE_MAX = 64
 
 
 def ensure_cache_dir():
@@ -72,16 +76,23 @@ def save_to_cache(pixbuf, cache_key, size=None):
 
 def get_from_cache(cache_key, size=None):
     """Get a cached asset or return None if not found"""
+    mem_key = f"{cache_key}:{size}"
+    if mem_key in _MEMORY_PIXBUF_CACHE:
+        _MEMORY_PIXBUF_CACHE.move_to_end(mem_key)
+        return _MEMORY_PIXBUF_CACHE[mem_key]
     try:
         cache_path = os.path.join(UNIFIED_NOTIFICATION_CACHE_DIR, f"{cache_key}.png")
         if os.path.exists(cache_path):
-            # logger.debug(f"Using cached asset: {cache_key}")
             if size:
-                return GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     cache_path, size[0], size[1], True
                 )
             else:
-                return GdkPixbuf.Pixbuf.new_from_file(cache_path)
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(cache_path)
+            while len(_MEMORY_PIXBUF_CACHE) >= _MEMORY_CACHE_MAX:
+                _MEMORY_PIXBUF_CACHE.popitem(last=False)
+            _MEMORY_PIXBUF_CACHE[mem_key] = pixbuf
+            return pixbuf
     except Exception as e:
         logger.warning(f"Failed to load cached asset: {e}")
     return None
@@ -99,6 +110,9 @@ def cleanup_cache(cache_key=None):
             )
             if os.path.exists(cache_path):
                 os.unlink(cache_path)
+            mem_keys = [k for k in _MEMORY_PIXBUF_CACHE if k.startswith(cache_key)]
+            for k in mem_keys:
+                _MEMORY_PIXBUF_CACHE.pop(k, None)
         else:
             # Remove all cached assets
             for filename in os.listdir(UNIFIED_NOTIFICATION_CACHE_DIR):
@@ -108,6 +122,7 @@ def cleanup_cache(cache_key=None):
                         os.unlink(filepath)
                     except Exception as e:
                         logger.warning(f"Failed to cleanup cache file {filename}: {e}")
+            _MEMORY_PIXBUF_CACHE.clear()
     except Exception as e:
         logger.warning(f"Failed to cleanup cache: {e}")
 

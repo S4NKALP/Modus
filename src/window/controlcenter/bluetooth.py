@@ -1,7 +1,6 @@
-import subprocess
 from enum import Enum, auto
 
-from fabric.utils import Gdk, GLib, exec_shell_command, logger
+from fabric.utils import Gdk, GLib, Gtk, exec_shell_command, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -12,6 +11,7 @@ from fabric.widgets.separator import Separator
 from services.bluetooth import BluetoothClient, BluetoothDevice
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.window.animated_scrollwindow import AnimatedScrollable
+from utils.functions import spawn_detached
 from utils.utils import svg_file
 
 
@@ -290,8 +290,6 @@ class BluetoothDeviceSlot(Box):
         if event.button != 3:  # only right-click
             return False
 
-        from gi.repository import Gtk
-
         menu = Gtk.Menu()
 
         if not self.device.paired:
@@ -567,7 +565,7 @@ class BluetoothConnections(Box):
     def open_bluetooth_settings(self, *_):
         """Open Blueman bluetooth manager"""
         try:
-            subprocess.Popen(["blueman-manager"], start_new_session=True)
+            spawn_detached(["blueman-manager"])
             if self.parent and hasattr(self.parent, "hide_controlcenter"):
                 self.parent.hide_controlcenter()
         except FileNotFoundError:

@@ -357,9 +357,6 @@ class GlobalMenuDropdowns:
 
     def _on_menu_changed(self, _, menu_items: list):
         """Handle menu changes from the GlobalMenuService."""
-        logger.info(
-            f"[GlobalMenu] _on_menu_changed called with {len(menu_items)} items"
-        )
         self._rebuild_dynamic_menus(menu_items)
 
     def _rebuild_dynamic_menus(self, menu_items: list):
