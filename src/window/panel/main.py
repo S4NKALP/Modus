@@ -146,6 +146,9 @@ class Panel(Window):
         # Connect to DND state changes for notification icon
         modus_service.connect("dont-disturb-changed", self.on_dnd_changed)
 
+        # Hide/show panel on fullscreen toggle
+        modus_service.connect("fullscreen-changed", self._on_fullscreen_changed)
+
         # Connect to notification service for icon state updates
         notification_service.connect(
             "notify::count", self.on_notification_count_changed
@@ -165,6 +168,9 @@ class Panel(Window):
 
     def on_dnd_changed(self, _, dnd_state):
         self.update_notification_icon()  # Update notification icon when DND changes
+
+    def _on_fullscreen_changed(self, _, is_fullscreen):
+        self.set_visible(not is_fullscreen)
 
     def on_notification_count_changed(self, service, *args):
         self.update_notification_icon()
