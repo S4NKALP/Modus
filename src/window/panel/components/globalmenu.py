@@ -145,7 +145,9 @@ class SystemDropdown(ModusDropdown):
                     on_clicked=lambda _: get_settings_window().toggle(),
                 ),
                 dropdown_divider("---------------------"),
-                dropdown_option("Force Quit", "", "hyprctl kill"),
+                dropdown_option(
+                    "Force Quit", "", "hyprctl dispatch 'hl.dsp.window.kill()'"
+                ),
                 dropdown_divider("---------------------"),
                 dropdown_option("Sleep", "", "systemctl suspend"),
                 dropdown_option("Restart", "", "systemctl reboot"),
@@ -173,95 +175,18 @@ class GlobalMenuDropdowns:
             f"About {modus_service.current_active_app_name}",
             on_clicked=show_about_app,
         )
+        self.global_title_menu_quit = dropdown_option(
+            f"Quit {modus_service.current_active_app_name}",
+            on_click="hyprctl dispatch 'hl.dsp.window.close()'",
+        )
         self.global_menu_title = create_dropdown_with_capture(
             "global-menu-title",
             parent,
-            [self.global_title_menu_about],
+            [self.global_title_menu_about, self.global_title_menu_quit],
         )
 
         # Dynamic menu dropdowns (populated from extracted app menus)
         self._dynamic_dropdowns: list[ModusDropdown] = []
-
-        # Fallback static Hyprland menu
-        self.global_menu_view = create_dropdown_with_capture(
-            "global-menu-view",
-            parent,
-            [
-                dropdown_option(
-                    "Fullscreen",
-                    on_click="hyprctl dispatch 'hl.dsp.window.fullscreen()'",
-                ),
-            ],
-        )
-        self.global_menu_window = create_dropdown_with_capture(
-            "global-menu-window",
-            parent,
-            [
-                dropdown_option(
-                    "Zoom In",
-                    "󰍉     +",
-                    on_click="hyprctl -q keyword cursor:zoom_factor $(hyprctl getoption cursor:zoom_factor -j | jq '.float * 1.1')",
-                ),
-                dropdown_option(
-                    "Zoom Out",
-                    "󰍉     -",
-                    on_click="hyprctl -q keyword cursor:zoom_factor $(hyprctl getoption cursor:zoom_factor -j | jq '(.float * 0.9) | if . < 1 then 1 else . end')",
-                ),
-                dropdown_divider("---------------------"),
-                dropdown_option(
-                    "Left",
-                    on_click="hyprctl dispatch 'hl.dsp.window.move([[l]])'",
-                ),
-                dropdown_option(
-                    "Right",
-                    on_click="hyprctl dispatch 'hl.dsp.window.move([[r]])'",
-                ),
-                dropdown_option(
-                    "Cycle Next",
-                    on_click="hyprctl dispatch 'hl.dsp.window.cycle_next()'",
-                ),
-                dropdown_divider("---------------------"),
-                dropdown_option(
-                    "Float", on_click="hyprctl dispatch 'hl.dsp.window.float()'"
-                ),
-                dropdown_option(
-                    "Quit", on_click="hyprctl dispatch 'hl.dsp.window.close()'"
-                ),
-                dropdown_option(
-                    "Pseudo", on_click="hyprctl dispatch 'hl.dsp.window.pseudo()'"
-                ),
-                dropdown_option(
-                    "Toggle Split", on_click="hyprctl dispatch 'hl.dsp.togglesplit()'"
-                ),
-                dropdown_option(
-                    "Center", on_click="hyprctl dispatch 'hl.dsp.window.center()'"
-                ),
-                dropdown_option(
-                    "Group", on_click="hyprctl dispatch 'hl.dsp.group.toggle()'"
-                ),
-                dropdown_option(
-                    "Pin",
-                    on_clicked=lambda _: exec_shell_command_async(
-                        "bash ~/.config/scripts/winpin.sh", lambda *_: None
-                    ),
-                ),
-            ],
-        )
-
-        self.global_menu_help = create_dropdown_with_capture(
-            "global-menu-help",
-            parent,
-            [
-                dropdown_option(
-                    "Modus",
-                    on_click="xdg-open https://github.com/S4NKALP/Modus/issues",
-                ),
-                dropdown_divider("---------------------"),
-                dropdown_option(
-                    "Hyprland Wiki", on_click="xdg-open https://wiki.hyprland.org/"
-                ),
-            ],
-        )
 
         modus_service.connect(
             "current-active-app-name-changed", self._on_active_app_changed
@@ -281,20 +206,6 @@ class GlobalMenuDropdowns:
 
         self.global_menu_title.set_pointing_to(self.global_menu_button_title)
 
-        # Fallback buttons (shown when no app menu is extracted)
-        self.global_menu_button_view = create_menu_button(
-            "View", lambda _: self.global_menu_view.toggle()
-        )
-        self.global_menu_view.set_pointing_to(self.global_menu_button_view)
-        self.global_menu_button_window = create_menu_button(
-            "Window", lambda _: self.global_menu_window.toggle()
-        )
-        self.global_menu_window.set_pointing_to(self.global_menu_button_window)
-        self.global_menu_button_help = create_menu_button(
-            "Help", lambda _: self.global_menu_help.toggle()
-        )
-        self.global_menu_help.set_pointing_to(self.global_menu_button_help)
-
         # Start with only title
         self.all_menu_buttons = [
             self.global_menu_button_title,
@@ -302,12 +213,8 @@ class GlobalMenuDropdowns:
 
         self.dropdown_button_map = {
             "global-menu-title": self.global_menu_button_title,
-            "global-menu-view": self.global_menu_button_view,
-            "global-menu-window": self.global_menu_button_window,
-            "global-menu-help": self.global_menu_button_help,
+            "os-menu": None,
         }
-
-        self.dropdown_button_map["os-menu"] = None
 
         modus_service.connect("current-dropdown-changed", self.changed_dropdown)
         modus_service.connect("dropdowns-hide-changed", self.hide_dropdowns)
@@ -340,9 +247,11 @@ class GlobalMenuDropdowns:
     def _on_active_app_changed(self, _, value):
         logger.info(f"[GlobalMenu] Active app changed: {value}")
         try:
-            # The dropdown_option returns a Button containing a CenterBox with the Label as its first start_child
             self.global_title_menu_about.get_child().get_start_children()[0].set_label(
                 f"About {value}"
+            )
+            self.global_title_menu_quit.get_child().get_start_children()[0].set_label(
+                f"Quit {value}"
             )
         except Exception:
             pass
@@ -370,12 +279,7 @@ class GlobalMenuDropdowns:
         # Destroy old buttons to prevent massive GTK memory leaks
         if hasattr(self, "all_menu_buttons"):
             for btn in self.all_menu_buttons:
-                if btn not in (
-                    self.global_menu_button_title,
-                    getattr(self, "global_menu_button_view", None),
-                    getattr(self, "global_menu_button_window", None),
-                    getattr(self, "global_menu_button_help", None),
-                ):
+                if btn not in (self.global_menu_button_title,):
                     try:
                         if btn.get_parent():
                             btn.get_parent().remove(btn)
@@ -524,9 +428,6 @@ class GlobalMenuDropdowns:
         dropdown_captures = [
             getattr(self, "system_dropdown", None),
             getattr(self, "global_menu_title", None),
-            getattr(self, "global_menu_view", None),
-            getattr(self, "global_menu_window", None),
-            getattr(self, "global_menu_help", None),
         ]
         for capture in dropdown_captures:
             try:
