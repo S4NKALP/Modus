@@ -79,7 +79,7 @@ INFO="ℹ"
 WARN="⚠"
 
 # Progress tracking
-TOTAL_STEPS=7
+TOTAL_STEPS=11
 CURRENT_STEP=0
 
 # Function for progress indicator
@@ -342,6 +342,29 @@ else
     info "No existing instance found"
 fi
 
+
+progress "Configuring global environment"
+
+APP_CONF_DIR="$HOME/.config/environment.d"
+APP_CONF_FILE="$APP_CONF_DIR/appmenu.conf"
+
+step "Writing environment.d config..."
+mkdir -p "$APP_CONF_DIR"
+cat > "$APP_CONF_FILE" << 'EOF'
+GTK_MODULES=appmenu-gtk-module
+UBUNTU_MENUPROXY=1
+EOF
+success "Environment config written to $APP_CONF_FILE"
+
+PAM_FILE="$HOME/.pam_environment"
+step "Updating pam_environment..."
+for entry in "GTK_MODULES DEFAULT=appmenu-gtk-module" "UBUNTU_MENUPROXY DEFAULT=1"; do
+    var_name="${entry%% *}"
+    if ! grep -q "^${var_name} " "$PAM_FILE" 2>/dev/null; then
+        echo "$entry" >> "$PAM_FILE"
+    fi
+done
+success ".pam_environment updated"
 
 progress "Configuring Matugen"
 MATUGEN_CONFIG="$HOME/.config/matugen/config.toml"
