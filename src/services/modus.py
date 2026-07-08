@@ -101,6 +101,9 @@ class ModusService(Service):
     def show_notificationcenter_changed(self, value: bool) -> None: ...
 
     @Signal
+    def fullscreen_changed(self, value: bool) -> None: ...
+
+    @Signal
     def notification_count_changed(self, value: int) -> None: ...
 
     @Property(str, flags="read-write")
@@ -166,6 +169,16 @@ class ModusService(Service):
     @Property(bool, flags="read-write", default_value=False)
     def show_notificationcenter(self) -> bool:
         return self._show_notificationcenter
+
+    @Property(bool, flags="read-write", default_value=False)
+    def fullscreen(self) -> bool:
+        return self._fullscreen
+
+    @fullscreen.setter
+    def fullscreen(self, value: bool):
+        if value != self._fullscreen:
+            self._fullscreen = value
+            self.fullscreen_changed(value)
 
     @current_active_app_name.setter
     def current_active_app_name(self, value: str):
@@ -294,6 +307,7 @@ class ModusService(Service):
         self._show_notificationcenter = False
         self._dock_width = 0
         self._dock_height = 0
+        self._fullscreen = False
 
     @property
     def notification_count(self) -> int:
@@ -327,6 +341,7 @@ def _setup_workspace_monitoring():
         active_workspace = json.loads(workspace_data.decode("utf-8"))["name"]
         service._current_workspace = str(active_workspace)
         _hyprland_connection.connect("event::workspace", _on_workspace_changed)
+        _hyprland_connection.connect("event::fullscreen", _on_fullscreen_changed)
     except Exception as e:
         logger.error(f"[ModusService] Failed to setup workspace monitoring: {e}")
         service._current_workspace = "1"
@@ -376,6 +391,16 @@ def _on_workspace_changed(obj, signal):
         service.current_workspace = str(workspace_name)
     except Exception as e:
         logger.error(f"[ModusService] Error processing workspace change: {e}")
+
+
+def _on_fullscreen_changed(obj, event):
+    service = get_modus_service()
+    try:
+        data = event.data[0] if event.data else ""
+        mode = data.split(":")[-1] if ":" in data else "0"
+        service.fullscreen = mode in ("1", "2")
+    except Exception as e:
+        logger.error(f"[ModusService] Error processing fullscreen change: {e}")
 
 
 def remove_notification(id: int):
