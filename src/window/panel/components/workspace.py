@@ -1,5 +1,5 @@
-from fabric.utils import logger
 from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
+from fabric.utils import logger
 from fabric.widgets.box import Box
 
 from services.config import get_config, on_config_change
