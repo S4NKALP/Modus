@@ -9,10 +9,10 @@ local modus = "$HOME/Projects/dev/Modus"
 
 hl.on("hyprland.start", function()
 	local cmds = {
-		-- "uwsm app -- awww-daemon",
-		-- "wl-paste --type text --watch cliphist store",
-		-- "wl-paste --type image --watch cliphist store",
-		-- "pgrep -x hypridle >/dev/null || uwsm app -- hypridle",
+		"uwsm app -- awww-daemon",
+		"wl-paste --type text --watch cliphist store",
+		"wl-paste --type image --watch cliphist store",
+		"pgrep -x hypridle >/dev/null || uwsm app -- hypridle",
 		"cd " .. modus .. " && uwsm app -- uv run start",
 	}
 	for i = 1, #cmds do
@@ -68,15 +68,11 @@ hl.bind("SUPER + ALT + B", hl.dsp.exec_cmd("killall modus1; cd " .. modus .. " &
 
 -- Fabric Launcher Binds
 for key, method in pairs({
-	["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
+	-- ["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
 	["ALT + TAB"] = "switcher.show_switcher()", -- Application Switcher
-	-- ["SUPER + SPACE"] = "launcher.show_launcher()", -- App Launcher
-	-- ["SUPER + V"] = "launcher.show_launcher('clip')", -- Clipboard History
-	-- ["SUPER + W"] = "launcher.show_launcher('wall')", -- Wallpapers
-	-- ["ALT + SHIFT + W"] = "launcher.show_launcher('wall random', external=True)", -- Random Wallpaper
-	-- ["SUPER + Period"] = "launcher.show_launcher('em')", -- Emoji Picker
-	-- ["SUPER + ESCAPE"] = "launcher.show_launcher('power')", -- Power Menu
-	-- ["SUPER + SHIFT + M"] = "launcher.show_launcher('caffeine on', external=True)", -- Toggle Caffeine
+	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
+	["SUPER + SPACE"] = "screencapture.toggle(ss='region')", -- Screenshot Region
+	["ALT + SPACE"] = "switch_keyboard_layout()", -- KB_Layout Switcher
 }) do
 	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. " '" .. method .. "'"))
 end
