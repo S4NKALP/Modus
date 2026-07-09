@@ -12,7 +12,7 @@ from fabric.utils import (
     time,
 )
 
-from utils.functions import is_app_running, kill_process, run_command
+from utils.functions import is_app_running, kill_process
 
 
 class ScreenCapture(Service):
@@ -51,7 +51,6 @@ class ScreenCapture(Service):
 
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         self.recordings_dir.mkdir(parents=True, exist_ok=True)
-        self._pending_screenshot = None
 
     def notify_send(self, title, message, icon=None, actions=None):
         cmd = ["notify-send", "-a", "Modus"]
@@ -64,7 +63,13 @@ class ScreenCapture(Service):
                 cmd.extend(["-A", f"{action}={action}"])
 
         cmd.extend([title, message])
-        run_command(cmd, timeout=5)
+        try:
+            Gio.Subprocess.new(
+                cmd,
+                Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
+            )
+        except Exception:
+            pass
 
     def send_screenshot_notification(self, file_path=None):
         cmd = ["notify-send"]
@@ -198,11 +203,27 @@ class ScreenCapture(Service):
         else:
             command.extend(["-m", "output", "-m", target])
 
-        self._pending_screenshot = save_dir / f"{timestamp}.png"
+        expected = save_dir / f"{timestamp}.png"
+
+        def on_capture(proc, task, *_):
+            try:
+                proc.wait_finish(task)
+                if expected.exists():
+                    self.send_screenshot_notification(file_path=str(expected))
+                else:
+                    self.notify_send(
+                        "Screenshot cancelled",
+                        "Selection was cancelled",
+                        icon="camera-photo-symbolic",
+                    )
+                    self.screenshot_taken(None)
+            except Exception as e:
+                logger.error(f"Screenshot notification failed: {e}")
+                self.screenshot_taken(None)
 
         try:
-            proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.NONE)
-            proc.wait_async(None, self._after_screenshot)
+            proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDERR_SILENCE)
+            proc.wait_async(None, on_capture)
         except Exception as e:
             logger.error(f"Screenshot failed: {e}")
             return False
@@ -213,60 +234,64 @@ class ScreenCapture(Service):
         self, target: str, save_dir: Path, timestamp: str
     ) -> bool:
         """Use grim -c directly so the cursor is included in the capture."""
-        import subprocess
-
         out_file = save_dir / f"{timestamp}.png"
-        self._pending_screenshot = out_file
 
-        try:
-            if target == "region":
-                geo = subprocess.check_output(["slurp"], text=True).strip()
-                if not geo:
-                    raise ValueError("slurp returned empty geometry")
-                cmd = ["grim", "-c", "-g", geo, str(out_file)]
-            else:
-                # active / output — capture all outputs with cursor
-                monitor = self._get_active_monitor() if target == "active" else None
-                cmd = ["grim", "-c"]
-                if monitor:
-                    cmd.extend(["-o", monitor])
-                cmd.append(str(out_file))
-
-            proc = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
-            proc.wait_async(None, self._after_screenshot)
-        except subprocess.CalledProcessError:
-            # slurp cancelled
-            self.notify_send(
-                "Screenshot cancelled",
-                "Selection was cancelled",
-                icon="camera-photo-symbolic",
+        if target == "region":
+            geo_proc = Gio.Subprocess.new(
+                ["slurp"],
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
             )
-            self.screenshot_taken(None)
-            return True  # process ran; cancel already signalled
-        except Exception as e:
-            logger.error(f"Screenshot (cursor) failed: {e}")
-            return False
-
-        return True
-
-    def _after_screenshot(self, proc, task, *_):
-        try:
-            proc.wait_finish(task)
-            path = self._pending_screenshot
-            self._pending_screenshot = None
-            if path and path.exists():
-                self.send_screenshot_notification(file_path=str(path))
-            else:
+            try:
+                geo_proc.wait(None)
+            except Exception:
+                pass
+            if geo_proc.get_exit_status() != 0:
                 self.notify_send(
                     "Screenshot cancelled",
                     "Selection was cancelled",
                     icon="camera-photo-symbolic",
                 )
-                # Emit with None so listeners (e.g. screencapture window) can re-show
                 self.screenshot_taken(None)
-        except Exception as e:
-            logger.error(f"Screenshot notification failed: {e}")
-            self.screenshot_taken(None)
+                return True
+            _, geo_bytes, _ = geo_proc.communicate(None)
+            geo = geo_bytes.decode().strip() if geo_bytes else ""
+            if not geo:
+                self.notify_send(
+                    "Screenshot cancelled",
+                    "Selection was cancelled",
+                    icon="camera-photo-symbolic",
+                )
+                self.screenshot_taken(None)
+                return True
+            cmd = ["grim", "-c", "-g", geo, str(out_file)]
+        else:
+            monitor = self._get_active_monitor() if target == "active" else None
+            cmd = ["grim", "-c"]
+            if monitor:
+                cmd.extend(["-o", monitor])
+            cmd.append(str(out_file))
+
+        expected = out_file
+
+        def on_grim_done(proc, task, *_):
+            try:
+                proc.wait_finish(task)
+                if expected.exists():
+                    self.send_screenshot_notification(file_path=str(expected))
+                else:
+                    self.notify_send(
+                        "Screenshot cancelled",
+                        "Selection was cancelled",
+                        icon="camera-photo-symbolic",
+                    )
+                    self.screenshot_taken(None)
+            except Exception as e:
+                logger.error(f"Screenshot notification failed: {e}")
+                self.screenshot_taken(None)
+
+        proc = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
+        proc.wait_async(None, on_grim_done)
+        return True
 
     def record(self, target="selection", use_audio=False, show_cursor=False):
         """
@@ -304,7 +329,7 @@ class ScreenCapture(Service):
 
         if target == "selection":
             try:
-                geometry = exec_shell_command("slurp")
+                geometry = exec_shell_command("slurp 2>/dev/null")
             except Exception:
                 self.notify_send(
                     "Recording cancelled",
