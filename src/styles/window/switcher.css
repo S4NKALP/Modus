@@ -1,68 +1,50 @@
-#application-switcher-container {
+#app-switcher-container {
     background-color: @bg-a50;
     border-radius: apply(radius-xl);
-    padding: 24px;
+    padding: 16px 24px;
 }
 
-#application-switcher-view {
+#app-switcher-view {
     padding: 0px;
-    margin-bottom: 12px;
 }
 
-#switcher-button {
-    padding: 12px;
-    min-width: 100px;
-    transition: all apply(transition-medium) ease;
-}
-
-#window-button {
+#app-switcher-button {
     background-color: transparent;
-    border-radius: apply(radius-md);
+    border-radius: apply(radius-lg);
+    padding: 8px 10px;
+    transition: all apply(transition-fast) ease-out;
 }
 
-#window-button.active {
-    background-color: @primary;
-}
-
-#window-button:hover {
+#app-switcher-button.hovered {
     background-color: @fg-a10;
 }
 
-#window-button.active:hover {
-    background-color: @primary;
+#app-switcher-button.selected {
+    background-color: @primary-a30;
 }
 
-.switcher-selection-label {
-    color: @foreground;
-    font-size: apply(font-lg);
-    font-weight: 600;
-    margin-top: 8px;
-}
-
-.switcher-workspace-label {
-    color: @foreground;
-    opacity: 0.6;
-    font-size: apply(font-sm);
-    margin-top: 4px;
-}
-
-#switcher-icon-box {
+#app-switcher-icon-box {
     border-radius: apply(radius-md);
     padding: 4px;
 }
 
-#window-row {
-    padding: 0px;
+#app-switcher-item-label {
+    color: @foreground;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: -2px;
 }
 
-#window-button.active .switcher-selection-label,
-#window-button.active .switcher-workspace-label,
-#window-button.active:hover .switcher-selection-label,
-#window-button.active:hover .switcher-workspace-label {
-    color: @on-primary;
+#app-switcher-workspace-badge {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 0px 4px;
+    margin-bottom: 2px;
+    margin-right: 2px;
 }
 
-#window-button:hover .switcher-selection-label,
-#window-button:hover .switcher-workspace-label {
-    color: @fg-a90;
+#app-switcher-workspace-badge-text {
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
 }
