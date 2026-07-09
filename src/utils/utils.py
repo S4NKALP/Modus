@@ -2,31 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 from fabric.utils import Gdk, bulk_connect, exec_shell_command_async
-from fabric.widgets.scale import Scale
 from fabric.widgets.svg import Svg
-
-from shared.widgets.animator import Animator
-
-
-class AnimatedScale(Scale):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.animator = None
-
-    def animate_value(self, value: float):
-        if not self.animator:
-            self.animator = Animator(
-                bezier_curve=(0.34, 1.56, 0.64, 1.0),
-                duration=0.8,
-                min_value=self.min_value,
-                max_value=self.value,
-                tick_widget=self,
-                notify_value=lambda p, *_: self.set_value(p.value),
-            )
-        self.animator.pause()
-        self.animator.min_value = self.value
-        self.animator.max_value = value
-        self.animator.play()
 
 
 # Function to set up cursor hover

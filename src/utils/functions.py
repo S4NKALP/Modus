@@ -1,7 +1,5 @@
 import ctypes
 import html
-import json
-import os
 import subprocess
 import threading
 from typing import Dict, NamedTuple, Optional, TypeVar
@@ -58,38 +56,6 @@ def thread(target, *args, **kwargs) -> threading.Thread:
     th = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
     th.start()
     return th
-
-
-def run_in_thread(func):
-    """
-    Decorator to run the decorated function in a thread.
-    """
-
-    def wrapper(*args, **kwargs):
-        return thread(func, *args, **kwargs)
-
-    return wrapper
-
-
-def write_json_file(data: Dict, path: str):
-    try:
-        with open(path, "w") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        logger.warning(f"Failed to write json: {e}")
-
-
-def read_json_file(file_path: str) -> Optional[Dict]:
-    if not os.path.exists(file_path):
-        logger.error(f"JSON file {file_path} does not exist.")
-        return None
-
-    with open(file_path, "r") as file:
-        try:
-            return json.load(file)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to read JSON file {file_path}: {e}")
-            return None
 
 
 def get_wifi_icon_for_strength(strength: int) -> str:
@@ -226,13 +192,6 @@ def find_process_pid(process_name: str, timeout: float | None = None) -> list[st
         return [pid for pid in result.stdout.strip().split() if pid]
     except Exception:
         return []
-
-
-def toggle_command(command: str, full_command: str):
-    if is_process_running(command):
-        kill_process(command)
-    else:
-        spawn_detached(full_command.split(" "))
 
 
 # --- Binary lookup ---
