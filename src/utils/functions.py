@@ -2,14 +2,12 @@ import ctypes
 import html
 import subprocess
 import threading
-from typing import Dict, NamedTuple, Optional, TypeVar
+from typing import Dict, NamedTuple, Optional
 
 from fabric.utils import (
     exec_shell_command_async,
     logger,
 )
-
-T = TypeVar("T")
 
 
 def set_process_name(name: str):
@@ -85,12 +83,6 @@ def get_wifi_icon_for_strength(strength: int) -> str:
 
 
 def get_wifi_connecting_icon() -> str:
-    """
-    Get the WiFi connecting icon path.
-
-    Returns:
-        Relative path to the WiFi connecting icon
-    """
     return "wifi/wifi-connecting.svg"
 
 

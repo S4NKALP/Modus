@@ -72,21 +72,6 @@ def svg_file(relative_path: str, **kwargs) -> Svg:
 
     svg.dynamic_file = _dynamic_file  # type: ignore[attr-defined]
 
-    # Convenience method to update style and return the same instance
-    def _dynamic_style(
-        style: str,
-        *,
-        compiled: bool = True,
-        append: bool = False,
-        add_brackets: bool = True,
-    ):
-        svg.set_style(
-            style, compiled=compiled, append=append, add_brackets=add_brackets
-        )
-        return svg
-
-    svg.dynamic_style = _dynamic_style  # type: ignore[attr-defined]
-
     return svg
 
 

@@ -6,7 +6,7 @@ class AppName:
         self.files = os.listdir(path)
         self.path = path
 
-    def get_app_name(self, wmclass, format_=False):
+    def get_app_name(self, wmclass, _format_=False):
         desktop_file = ""
         for f in self.files:
             if f.startswith(wmclass + ".desktop"):
@@ -23,31 +23,6 @@ class AppName:
                     desktop_app_name = line.split("=")[1].strip()
                     break
         return desktop_app_name
-
-    def get_app_exec(self, wmclass, format_=False):
-        desktop_file = ""
-        for f in self.files:
-            if f.startswith(wmclass + ".desktop"):
-                desktop_file = f
-
-        desktop_app_name = wmclass
-
-        if desktop_file == "":
-            return wmclass
-        with open(os.path.join(self.path, desktop_file), "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                if line.startswith("Exec="):
-                    desktop_app_name = line.split("=")[1].strip()
-                    break
-        return desktop_app_name
-
-    def get_desktop_file(self, wmclass):
-        desktop_file = ""
-        for f in self.files:
-            if f.startswith(wmclass + ".desktop"):
-                desktop_file = f
-        return desktop_file
 
     def format_app_name(self, title, wmclass, update=False):
         # Handle case when both title and wmclass are empty (no active window)

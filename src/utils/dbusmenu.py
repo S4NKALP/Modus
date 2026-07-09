@@ -270,12 +270,6 @@ class DBusMenuClient:
             target=self.get_layout, kwargs={"force_refresh": True}, daemon=True
         ).start()
 
-    def on_focus(self):
-        self.prefetch_async()
-
-    def get_revision(self) -> int:
-        return self._revision
-
     def connect_signals(
         self,
         on_layout_updated: Optional[Callable] = None,
