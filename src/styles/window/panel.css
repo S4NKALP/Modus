@@ -92,7 +92,7 @@
 }
 
 #panel-notch-stack {
-    background-color: #111111;
+    background-color: #000000;
     border-radius: 0 0 apply(radius-lg) apply(radius-lg);
     min-width: 200px;
     min-height: 34px;
@@ -100,7 +100,7 @@
 
 
 #panel-notch-corner {
-    background-color: #111111;
+    background-color: #000000;
     border-radius: 0;
     min-width: 20px;
     min-height: 20px;
