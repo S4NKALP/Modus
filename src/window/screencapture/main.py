@@ -301,6 +301,7 @@ class ScreenCaptureWindow(Window):
                 "fullscreen": "active",
                 "selectwindow": "window",
             }
+            self.hide()
             self._do_screenshot(target_map.get(ss, ss))
             return
 
