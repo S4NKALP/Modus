@@ -64,7 +64,7 @@ class ScreenCapture(Service):
                 cmd.extend(["-A", f"{action}={action}"])
 
         cmd.extend([title, message])
-        return run_command(cmd)
+        run_command(cmd, timeout=5)
 
     def send_screenshot_notification(self, file_path=None):
         cmd = ["notify-send"]
@@ -289,6 +289,7 @@ class ScreenCapture(Service):
                 self.screenshot_taken(None)
         except Exception as e:
             logger.error(f"Screenshot notification failed: {e}")
+            self.screenshot_taken(None)
 
     def record(self, target="selection", use_audio=False, show_cursor=False):
         """
@@ -325,7 +326,15 @@ class ScreenCapture(Service):
             cmd.append("--show-cursor")
 
         if target == "selection":
-            geometry = exec_shell_command("slurp")
+            try:
+                geometry = exec_shell_command("slurp")
+            except Exception:
+                self.notify_send(
+                    "Recording cancelled",
+                    "Selection was cancelled",
+                    icon="camera-video-symbolic",
+                )
+                return False
             if not geometry or not str(geometry).strip():
                 self.notify_send(
                     "Recording cancelled",

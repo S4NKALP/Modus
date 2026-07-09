@@ -580,9 +580,10 @@ def get_screen_dimensions() -> tuple[int, int]:
 
 
 def focus_window(address: str):
-    conn = _ensure_hyprland()
-    if conn:
-        conn.send_command(f"dispatch focuswindow address:{address}")
+    run_command(
+        ["hyprctl", "dispatch", f'hl.dsp.focus({{ window = "address:{address}" }})'],
+        timeout=2,
+    )
 
 
 def close_window(address: str):
