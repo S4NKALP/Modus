@@ -9,11 +9,14 @@ Uses a marker file in /tmp to track state.
 
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Literal
 
-from utils.functions import read_json_file, run_command, write_json_file
+import tomlkit
 
-STATE_FILE = "/tmp/hyprland_gamemode"
+from utils.functions import run_command
+
+STATE_FILE = Path("/tmp/hyprland_gamemode.toml")
 
 
 def run_hyprctl(command: str) -> str:
@@ -24,9 +27,29 @@ def run_hyprctl(command: str) -> str:
     return result.stdout.strip()
 
 
+def _read_state() -> dict:
+    if not STATE_FILE.exists():
+        return {}
+    try:
+        with open(STATE_FILE, "r") as f:
+            data = tomlkit.load(f)
+        return dict(data) if data else {}
+    except Exception:
+        return {}
+
+
+def _write_state(data: dict):
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    doc = tomlkit.document()
+    for k, v in data.items():
+        doc[k] = v
+    with open(STATE_FILE, "w") as f:
+        tomlkit.dump(doc, f)
+
+
 def check_gamemode() -> Literal["t", "f"]:
     """Check if game mode is active."""
-    state = read_json_file(STATE_FILE)
+    state = _read_state()
     return "t" if state and state.get("enabled") else "f"
 
 
@@ -43,11 +66,12 @@ def enable_gamemode():
     ]
     run_hyprctl(f'--batch "{"; ".join(batch_commands)}"')
 
-    state = {
-        "enabled": True,
-        "last_toggled": datetime.now().isoformat(timespec="seconds"),
-    }
-    write_json_file(state, STATE_FILE)
+    _write_state(
+        {
+            "enabled": True,
+            "last_toggled": datetime.now().isoformat(timespec="seconds"),
+        }
+    )
     print("Game mode enabled - visual effects disabled for better performance")
 
 
@@ -55,17 +79,18 @@ def disable_gamemode():
     """Disable game mode by reloading Hyprland configuration."""
     run_hyprctl("reload")
 
-    state = {
-        "enabled": False,
-        "last_toggled": datetime.now().isoformat(timespec="seconds"),
-    }
-    write_json_file(state, STATE_FILE)
+    _write_state(
+        {
+            "enabled": False,
+            "last_toggled": datetime.now().isoformat(timespec="seconds"),
+        }
+    )
     print("Game mode disabled - visual effects restored")
 
 
 def toggle_gamemode():
-    """Toggle game mode state using JSON file."""
-    state = read_json_file(STATE_FILE) or {}
+    """Toggle game mode state."""
+    state = _read_state()
     if state.get("enabled"):
         disable_gamemode()
     else:
