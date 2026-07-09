@@ -34,40 +34,13 @@ class PlayerService(Service):
     def track_position(self, pos: float, dur: float) -> None: ...
 
     @Property(bool, "readable", default_value=False)
-    def can_go_previous(self) -> bool:
-        return self._player.get_property("can_go_previous")
-
-    @Property(bool, "readable", default_value=False)
-    def can_go_next(self) -> bool:
-        return self._player.get_property("can_go_next")
-
-    @Property(bool, "readable", default_value=False)
-    def can_pause(self) -> bool:
-        return self._player.get_property("can_pause")
-
-    @Property(bool, "readable", default_value=False)
-    def can_play(self) -> bool:
-        return self._player.get_property("can_play")
-
-    @Property(bool, "readable", default_value=False)
     def can_seek(self) -> bool:
         return self._player.get_property("can_seek")
-
-    @Property(bool, "readable", default_value=False)
-    def can_control(self) -> bool:
-        return self._player.get_property("can_control")
 
     @Property(str, "readable", default_value="")
     def player_name(self) -> str:
         try:
             return self._player.props.player_name or ""
-        except Exception:
-            return ""
-
-    @Property(str, "readable", default_value="")
-    def arturl(self) -> str:
-        try:
-            return self._player.props.metadata["mpris:artUrl"] or ""
         except Exception:
             return ""
 
@@ -143,7 +116,6 @@ class PlayerService(Service):
         self._current_artwork_hash = ""
         self._current_artwork_path = ""
         self._is_cleaning_up = False
-        self._cached_playback_status = int(self._player.props.playback_status)
         self._signal_ids = []
 
         self._signal_ids.append(
@@ -153,7 +125,6 @@ class PlayerService(Service):
         self._signal_ids.append(self._player.connect("seeked", self.on_seeked))
 
         self.status = self._player.props.playback_status
-        self._last_polled_status = self.playback_status
         self._pos_polling = False  # guard: Fabricator.start() blindly creates a new
         # GLib timer every call — this flag prevents stacking
         self.pos_fabricator = Fabricator(
@@ -435,10 +406,10 @@ class PlayerManager(Service):
         except Exception as e:
             logger.error(f"Failed to create player {name_str}: {e}")
 
-    def _on_name_appeared(self, sender, name, manager):
+    def _on_name_appeared(self, sender, name, _manager):
         self._create_player(name)
 
-    def _on_player_vanished(self, sender, player, manager):
+    def _on_player_vanished(self, sender, player, _manager):
         name = player.props.player_name
         if name in self._services:
             self._services[name].cleanup()

@@ -65,9 +65,6 @@ class ModusService(Service):
     def battery_changed(self, new_battery: str) -> None: ...
 
     @Signal
-    def dock_apps_changed(self, new_dock_apps: str) -> None: ...
-
-    @Signal
     def dont_disturb_changed(self, value: bool) -> None: ...
 
     @Signal
@@ -221,12 +218,6 @@ class ModusService(Service):
         if value != self._bluetooth:
             self._bluetooth = value
             self.bluetooth_changed(value)
-
-    @dock_apps.setter
-    def dock_apps(self, value: str):
-        if value != self._dock_apps:
-            self._dock_apps = value
-            self.dock_apps_changed(value)
 
     @dont_disturb.setter
     def dont_disturb(self, value: bool):
@@ -403,25 +394,6 @@ def _on_fullscreen_changed(obj, event):
         logger.error(f"[ModusService] Error processing fullscreen change: {e}")
 
 
-def remove_notification(id: int):
-    get_notification_service().remove_cached_notification(id)
-    get_modus_service().notification_count_changed(get_notification_service().count)
-
-
-def clear_all_notifications():
-    get_notification_service().clear_all_cached_notifications()
-    get_modus_service().notification_count_changed(get_notification_service().count)
-
-
-def get_cached_notifications():
-    return get_notification_service().cached_notifications
-
-
-def get_deserialized_with_ids():
-    ns = get_notification_service()
-    return [(notif._notification, notif.cache_id) for notif in ns.cached_notifications]
-
-
 def toggle_dnd():
     ns = get_notification_service()
     ns.toggle_dnd()
@@ -444,18 +416,6 @@ def toggle_night_light() -> bool:
         return True
     except Exception as e:
         logger.error(f"[Modus] Failed to toggle night light: {e}")
-        return False
-
-
-def set_night_light_temperature(temperature: int) -> bool:
-    global _night_light_active
-    try:
-        _kill_process("hyprsunset")
-        spawn_detached(["hyprsunset", "-t", str(temperature)])
-        _night_light_active = True
-        return True
-    except Exception as e:
-        logger.error(f"[Modus] Failed to set night light temperature: {e}")
         return False
 
 

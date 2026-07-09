@@ -61,38 +61,11 @@ class ConfigService:
         """Set a config value (local state only)."""
         self._config[key] = value
 
-    def save(self) -> bool:
-        """Persist the current config state to disk and trigger reloads."""
-        try:
-            os.makedirs(os.path.dirname(self._config_file), exist_ok=True)
-            with open(self._config_file, "w") as f:
-                toml_dump(self._config, f)
-
-            GLib.idle_add(self._reload_config)
-            return True
-        except Exception as e:
-            logger.error(f"[ConfigService] Failed to save config: {e}")
-            return False
-
     def register_reload_callback(
         self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
     ) -> None:
         if callback not in self._reload_callbacks:
             self._reload_callbacks.append(callback)
-
-    def unregister_reload_callback(
-        self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
-    ) -> None:
-        if callback in self._reload_callbacks:
-            self._reload_callbacks.remove(callback)
-
-    def stop(self) -> None:
-        for monitor in self._monitors:
-            try:
-                monitor.cancel()
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
-        self._monitors.clear()
 
     @staticmethod
     def _dict_to_toml(d: dict) -> Any:
@@ -157,7 +130,7 @@ class ConfigService:
             except Exception as e:
                 logger.error(f"[ConfigService] Failed to monitor {file_path}: {e}")
 
-    def _on_file_changed(self, monitor, file, other_file, event_type, file_path: str):
+    def _on_file_changed(self, monitor, file, _other_file, event_type, file_path: str):
         # Trigger on various change events to be more robust across editors/OSs
         valid_events = [
             Gio.FileMonitorEvent.CHANGES_DONE_HINT,

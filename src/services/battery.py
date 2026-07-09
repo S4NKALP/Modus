@@ -86,18 +86,6 @@ class Battery(Service):
         return self.do_get_cached_property("TimeToFull") or 0
 
     @Property(float, "readable", default_value=0.0)
-    def energy(self) -> float:
-        return self.do_get_cached_property("Energy") or 0.0
-
-    @Property(float, "readable", default_value=0.0)
-    def energy_full(self) -> float:
-        return self.do_get_cached_property("EnergyFull") or 0.0
-
-    @Property(float, "readable", default_value=0.0)
-    def energy_rate(self) -> float:
-        return self.do_get_cached_property("EnergyRate") or 0.0
-
-    @Property(float, "readable", default_value=0.0)
     def temperature(self) -> float:
         return self.do_get_cached_property("Temperature") or 0.0
 
@@ -177,30 +165,6 @@ class Battery(Service):
 
     def do_handle_power_profile_change(self, *_):
         self.emit("power_profile_changed")
-
-    def do_call_proxy_method(
-        self,
-        bus_name,
-        object_path,
-        interface_name,
-        method_name,
-        parameters=None,
-        timeout=-1,
-    ):
-        if parameters is None:
-            parameters = GLib.Variant("()", ())
-        result = self._bus.call_sync(
-            bus_name,
-            object_path,
-            interface_name,
-            method_name,
-            parameters,
-            None,
-            Gio.DBusCallFlags.NONE,
-            timeout,
-            None,
-        )
-        return result.unpack()
 
     def do_get_cached_property(self, property_name):
         """Read from the GDBus proxy cache, which DBus keeps up-to-date."""

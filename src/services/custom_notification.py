@@ -177,14 +177,6 @@ class CachedNotification(Service):
         self.timestamp = int(time.time())
         self._pixbuf_cache: dict[str, GdkPixbuf.Pixbuf | None] = {}
 
-    def get_or_cache_pixbuf(self, cache_key: str, loader) -> GdkPixbuf.Pixbuf | None:
-        if cache_key not in self._pixbuf_cache:
-            self._pixbuf_cache[cache_key] = loader()
-        return self._pixbuf_cache[cache_key]
-
-    def remove_from_cache(self):
-        self.removed_from_cache.emit()
-
 
 class CachedNotifications(Notifications):
     """A service to manage the cached notifications."""

@@ -18,9 +18,6 @@ class Wifi(Service):
     @Signal
     def changed(self) -> None: ...
 
-    @Signal
-    def enabled_changed(self) -> bool: ...
-
     def __init__(self, client: NM.Client, device: NM.DeviceWifi, **kwargs):
         self._client: NM.Client = client
         self._device: NM.DeviceWifi = device
@@ -213,9 +210,6 @@ class Ethernet(Service):
     @Signal
     def changed(self) -> None: ...
 
-    @Signal
-    def enabled(self) -> bool: ...
-
     @Property(int, "readable")
     def speed(self) -> int:
         return self._device.get_speed()
@@ -369,7 +363,7 @@ class NetworkClient(Service):
         device = self.wifi_device._device
         handler_id: list[int] = []
 
-        def _on_state_changed(dev, new_state, old_state, reason):
+        def _on_state_changed(_dev, new_state, _old_state, reason):
             if not callback:
                 return
             state = NM.DeviceState(new_state)
@@ -410,7 +404,7 @@ class NetworkClient(Service):
         device = self.wifi_device._device
         handler_id: list[int] = []
 
-        def _on_state_changed(dev, new_state, old_state, reason):
+        def _on_state_changed(_dev, new_state, _old_state, reason):
             state = NM.DeviceState(new_state)
             if state == NM.DeviceState.ACTIVATED:
                 _cleanup()
@@ -439,7 +433,3 @@ class NetworkClient(Service):
             f"nmcli device wifi connect {bssid} password {password!r}",
             lambda *args: logger.debug(f"connect_with_password result: {args}"),
         )
-
-    @Property(str, "readable")
-    def primary_device(self) -> Literal["wifi", "wired"] | None:
-        return self._get_primary_device()

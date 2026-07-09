@@ -148,29 +148,6 @@ class ScreenCapture(Service):
         proc.communicate_utf8_async(None, None, do_callback)
         self.recording_stopped(file_path)
 
-    def check_wf_recorder(self):
-        if not is_app_running("wf-recorder"):
-            return False
-
-        self.stop_recording()
-        return True
-
-    def record_video(self, output_file, *args):
-        cmd = [
-            "wf-recorder",
-            *args,
-            "-f",
-            str(output_file),
-            "-c",
-            "libvpx-vp9",
-            "--pixel-format",
-            "yuv420p",
-            "-F",
-            "eq=brightness=0.12:contrast=1.1",
-            "--no-audio",
-        ]
-        return run_command(cmd)
-
     def _get_active_monitor(self):
         """Get the name of the currently focused monitor."""
         try:

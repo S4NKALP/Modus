@@ -44,7 +44,6 @@ class Brightness(Service):
         self._last_percent = -1
         self._last_raw = -1
         self._last_update_time = 0
-        self._last_file_mtime = 0
 
         self.backend = self._detect_backend(backend)
 
@@ -69,7 +68,6 @@ class Brightness(Service):
                         else 0
                     )
 
-                self._last_file_mtime = os.path.getmtime(file_path)
                 self._poll_timer_id = GLib.timeout_add(
                     self.POLL_INTERVAL, self._check_brightness_file
                 )

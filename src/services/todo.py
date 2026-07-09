@@ -127,13 +127,6 @@ class TodoService(Service):
                 return True
         return False
 
-    def get_todo(self, todo_id: str) -> dict | None:
-        """Get a specific todo by ID"""
-        for todo in self._todos:
-            if todo["id"] == todo_id:
-                return todo.copy()
-        return None
-
     def clear_completed(self):
         """Remove all completed todos"""
         initial_count = len(self._todos)

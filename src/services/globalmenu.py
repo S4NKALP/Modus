@@ -160,14 +160,6 @@ class GlobalMenuService(Service):
     def current_menu(self) -> Optional[List[DBusMenuItem]]:
         return self._current_menu
 
-    @Property(str, flags="read-write")
-    def current_app(self) -> str:
-        return self._current_app
-
-    @Property(str, flags="read-write")
-    def current_wm_class(self) -> str:
-        return self._current_wm_class
-
     def __init__(self):
         super().__init__()
         self._current_menu: Optional[List[DBusMenuItem]] = None
@@ -302,7 +294,7 @@ class GlobalMenuService(Service):
         try:
             self._bus = _get_bus()
             self._node = Gio.DBusNodeInfo.new_for_xml(REGISTRAR_XML)
-            self._reg_id = self._bus.register_object(
+            self._bus.register_object(
                 "/com/canonical/AppMenu/Registrar",
                 self._node.interfaces[0],
                 self._handle_registrar_method,
@@ -328,7 +320,7 @@ class GlobalMenuService(Service):
         connection,
         sender,
         object_path,
-        interface_name,
+        _interface_name,
         method_name,
         parameters,
         invocation,
@@ -475,7 +467,7 @@ class GlobalMenuService(Service):
         entry.importer.connect_signals(
             on_layout_updated=on_layout_updated,
             on_items_updated=on_items_updated,
-            on_item_activated=lambda item_id, ts: logger.debug(
+            on_item_activated=lambda item_id, _ts: logger.debug(
                 f"[GlobalMenuService] Item activated: {item_id}"
             ),
         )
@@ -1053,30 +1045,6 @@ class GlobalMenuService(Service):
             entry.importer.click_item(item_id)
             return True
         return False
-
-    def about_to_show(self, item_id: int) -> bool:
-        with self._state_lock:
-            target_pid = self._current_pid
-        with self._registry_lock:
-            svc = self._pid_to_service.get(target_pid)
-            entry = self._service_registry.get(svc) if svc else None
-        if entry and entry.importer:
-            return entry.importer.about_to_show(item_id)
-        return False
-
-    def refresh_menu_sync(self) -> List[DBusMenuItem]:
-        with self._state_lock:
-            target_pid = self._current_pid
-        with self._registry_lock:
-            svc = self._pid_to_service.get(target_pid)
-            entry = self._service_registry.get(svc) if svc else None
-        if entry and entry.importer:
-            items = entry.importer.get_layout(force_refresh=True)
-            with self._state_lock:
-                if target_pid == self._current_pid:
-                    self._current_menu = items
-            return items
-        return []
 
 
 _global_menu_svc_instance = None

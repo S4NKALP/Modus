@@ -114,32 +114,9 @@ class BluetoothDevice(Service):
     def type(self) -> str:
         return _icon_to_type(str(self._get_prop("Icon") or ""))
 
-    @Property(int, "readable")
-    def battery_level(self) -> int:
-        return int(self._get_battery_prop("Percentage") or 0)
-
     @Property(float, "readable")
     def battery_percentage(self) -> float:
         return float(self._get_battery_prop("Percentage") or 0.0)
-
-    @Property(int, "readable")
-    def rssi(self) -> int:
-        v = self._get_prop("RSSI")
-        return int(v) if v is not None else -100
-
-    @Property(list, "readable")
-    def uuids(self) -> list:
-        return list(self._get_prop("UUIDs") or [])
-
-    @Property(int, "readable")
-    def appearance(self) -> int:
-        v = self._get_prop("Appearance")
-        return int(v) if v is not None else 0
-
-    @Property(int, "readable")
-    def device_class(self) -> int:
-        v = self._get_prop("Class")
-        return int(v) if v is not None else 0
 
     def __init__(
         self, bus: Gio.DBusConnection, object_path: str, props: dict, **kwargs
@@ -269,7 +246,6 @@ class BluetoothDevice(Service):
         # Removal is done via Adapter1.RemoveDevice — expose a convenience
         # flag so the adapter can act on it.
         logger.info(f"[Bluetooth] Remove requested for: {self.address}")
-        self._removal_requested = True
         self.emit("changed")
 
     def trust(self):
@@ -539,9 +515,6 @@ class BluetoothAdapter(Service):
             self._scan_timeout_id = 0
         self.scanning = False
 
-    def toggle_power(self):
-        self.powered = not self.powered
-
     def toggle_scan(self):
         if self.scanning:
             self.stop_scan()
@@ -577,12 +550,6 @@ class BluetoothClient(Service):
 
     @Signal
     def device_removed(self, address: str) -> None: ...
-
-    @Signal
-    def adapter_added(self, path: str) -> None: ...
-
-    @Signal
-    def adapter_removed(self, path: str) -> None: ...
 
     @Property(list, "readable")
     def adapters(self) -> list:
@@ -635,9 +602,6 @@ class BluetoothClient(Service):
         self._adapters: dict[str, BluetoothAdapter] = {}
         self._bus: Gio.DBusConnection | None = None
         self._om_proxy: Gio.DBusProxy | None = None
-        self._iface_added_sub: int = 0
-        self._iface_removed_sub: int = 0
-
         self._bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
         self._om_proxy = Gio.DBusProxy.new_sync(
             self._bus,
@@ -649,7 +613,7 @@ class BluetoothClient(Service):
             None,
         )
 
-        self._iface_added_sub = self._bus.signal_subscribe(
+        self._bus.signal_subscribe(
             BLUEZ_SERVICE,
             DBUS_OM_IFACE,
             "InterfacesAdded",
@@ -659,7 +623,7 @@ class BluetoothClient(Service):
             self._on_interfaces_added,
             None,
         )
-        self._iface_removed_sub = self._bus.signal_subscribe(
+        self._bus.signal_subscribe(
             BLUEZ_SERVICE,
             DBUS_OM_IFACE,
             "InterfacesRemoved",
@@ -723,7 +687,6 @@ class BluetoothClient(Service):
             lambda *_: self.notify("connected-devices"),
         )
         self._adapters[path] = adapter
-        self.emit("adapter-added", path)
         self.notify("adapters")
         self.emit("changed")
 
@@ -760,7 +723,6 @@ class BluetoothClient(Service):
             if adapter:
                 logger.info(f"[Bluetooth] Removing adapter: {obj_path}")
                 adapter.close()
-                self.emit("adapter-removed", obj_path)
                 self.notify("adapters")
                 self.emit("changed")
 
@@ -775,9 +737,6 @@ class BluetoothClient(Service):
             if a.powered:
                 a.scan()
 
-    def toggle_power(self):
-        self.enabled = not self.enabled
-
     def toggle_scan(self):
         for a in self._adapters.values():
             if a.powered:
@@ -788,9 +747,6 @@ class BluetoothClient(Service):
             if d := adapter.get_device(address):
                 return d
         return None
-
-    def get_adapter(self, path: str) -> BluetoothAdapter | None:
-        return self._adapters.get(path)
 
     def connect_device(
         self,
