@@ -1046,6 +1046,30 @@ class GlobalMenuService(Service):
             return True
         return False
 
+    def about_to_show(self, item_id: int) -> bool:
+        with self._state_lock:
+            target_pid = self._current_pid
+        with self._registry_lock:
+            svc = self._pid_to_service.get(target_pid)
+            entry = self._service_registry.get(svc) if svc else None
+        if entry and entry.importer:
+            return entry.importer.about_to_show(item_id)
+        return False
+
+    def refresh_menu_sync(self) -> List[DBusMenuItem]:
+        with self._state_lock:
+            target_pid = self._current_pid
+        with self._registry_lock:
+            svc = self._pid_to_service.get(target_pid)
+            entry = self._service_registry.get(svc) if svc else None
+        if entry and entry.importer:
+            items = entry.importer.get_layout(force_refresh=True)
+            with self._state_lock:
+                if target_pid == self._current_pid:
+                    self._current_menu = items
+            return items
+        return []
+
 
 _global_menu_svc_instance = None
 

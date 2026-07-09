@@ -547,9 +547,11 @@ def focus_window(address: str):
 
 
 def close_window(address: str):
-    conn = _ensure_hyprland()
-    if conn:
-        conn.send_command(f"dispatch closewindow address:{address}")
+    from fabric.utils import exec_shell_command_async
+
+    exec_shell_command_async(
+        f"hyprctl dispatch 'hl.dsp.window.close({{ window = \"address:{address}\" }})'"
+    )
 
 
 def launch_app(command_line: str):
