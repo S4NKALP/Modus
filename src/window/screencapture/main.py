@@ -302,7 +302,8 @@ class ScreenCaptureWindow(Window):
                 "selectwindow": "window",
             }
             self.hide()
-            self._do_screenshot(target_map.get(ss, ss))
+            target = target_map.get(ss, ss)
+            screen_capture_service.screenshot(target)
             return
 
         if sr:
