@@ -22,7 +22,7 @@ class DockLayout:
     def compute(
         items: List[DockItem],
         mouse_x: float,
-        mouse_y: float,
+        _mouse_y: float,
         base_icon_size: int,
         canvas_w: int,
         canvas_h: int,

@@ -511,7 +511,7 @@ class ModusControlCenter(AppletWindow):
         # Connect to visibility changes for cleanup
         self.connect("notify::visible", self._on_visibility_changed)
 
-    def _on_visibility_changed(self, widget, param):
+    def _on_visibility_changed(self, widget, _param):
         """Handle visibility changes for resource management"""
         if not self.get_visible():
             # Suspend player updates

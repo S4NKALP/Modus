@@ -116,7 +116,7 @@ class BluetoothIndicator(Box):
 
         self.bt_button.set_tooltip_text(tooltip)
 
-    def on_bluetooth_changed(self, service, new_bluetooth_state):
+    def on_bluetooth_changed(self, service, _new_bluetooth_state):
         self.update_state()
 
     def on_bluetooth_direct_changed(self, *args):
@@ -203,7 +203,7 @@ class NetworkIndicator(Box):
         self.update_modus_service_wlan_state()
         self.update_state()
 
-    def on_wlan_changed(self, service, new_wlan_state):
+    def on_wlan_changed(self, service, _new_wlan_state):
         self.update_state()
 
     def on_wifi_device_added(self, *args):
@@ -358,7 +358,7 @@ class BatteryIndicator(Box):
         self.update_modus_service_battery_state()
         self.update_state()
 
-    def on_battery_changed(self, service, new_battery_state):
+    def on_battery_changed(self, service, _new_battery_state):
         self.update_state()
 
     def on_battery_direct_changed(self, *args):

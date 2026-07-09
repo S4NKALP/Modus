@@ -165,7 +165,7 @@ class Notch(Box):
 
         self._apply_stack_state()
 
-    def _on_new_player(self, manager, name: str, service):
+    def _on_new_player(self, _manager, name: str, service):
         service.connect("artwork-change", self._on_any_artwork)
         if name not in self._music_services:
             self._music_services.append(name)
@@ -184,7 +184,7 @@ class Notch(Box):
     def _on_any_artwork(self, service, local_path: str):
         self.player_widget._on_artwork_change(service, local_path)
 
-    def _on_player_vanish(self, manager, name: str):
+    def _on_player_vanish(self, _manager, name: str):
         if name in self._music_services:
             self._music_services.remove(name)
             self._apply_stack_state()

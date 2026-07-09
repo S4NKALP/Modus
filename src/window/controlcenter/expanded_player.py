@@ -734,7 +734,7 @@ class PlayerBox(Box):
         self._seek_timeout = GLib.timeout_add(1000, self._clear_seeking)
         return False
 
-    def _on_change_value(self, scale, scroll, value):
+    def _on_change_value(self, scale, _scroll, value):
         if not self.player or self.exit:
             return False
         self._user_seeking = True

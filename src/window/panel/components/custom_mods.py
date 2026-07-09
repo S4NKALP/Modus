@@ -220,7 +220,7 @@ class CustomMods(Box):
         except Exception as e:
             logger.error(f"[CustomMods] Failed to setup monitor: {e}")
 
-    def _on_file_changed(self, monitor, gfile, other_file, event_type):
+    def _on_file_changed(self, monitor, gfile, _other_file, event_type):
         if event_type == Gio.FileMonitorEvent.DELETED and gfile.get_path() == str(
             MODS_CONFIG_PATH
         ):

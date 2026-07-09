@@ -35,7 +35,7 @@ def create_menu_button(label, on_clicked=None):
     return button
 
 
-def create_dropdown_with_capture(dropdown_id, parent, dropdown_children, layer="top"):
+def create_dropdown_with_capture(dropdown_id, parent, dropdown_children):
     dropdown = ModusDropdown(
         dropdown_id=dropdown_id,
         parent=parent,

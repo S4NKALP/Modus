@@ -506,7 +506,7 @@ class DockCanvas(Gtk.DrawingArea):
         self._needs_redraw = True
         self.queue_draw()
 
-    def _on_window_title_changed(self, hyprland, signal) -> None:
+    def _on_window_title_changed(self, _hyprland, signal) -> None:
         try:
             address = signal.data[0]
             if not address:
