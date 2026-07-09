@@ -26,7 +26,7 @@ for key, method in pairs({
 	-- ["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
 	["ALT + TAB"] = "switcher.show_switcher()", -- Application Switcher
 	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
-	["SUPER + S"] = "screencapture.toggle(ss='region')", -- Screenshot Region
+	["SUPER + S"] = 'screencapture.toggle(ss="region")', -- Screenshot Region
 	["ALT + SPACE"] = "switch_keyboard_layout()", -- KB_Layout Switcher
 }) do
 	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. " '" .. method .. "'"))
