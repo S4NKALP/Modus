@@ -156,6 +156,9 @@ class SlideRevealer(Gtk.Overlay):
     def set_slide_direction(self, direction):
         self.direction = direction
 
+    def stop_animation(self):
+        self.animator.stop()
+
     def destroy(self):
         self.stop_animation()
         super().destroy()
