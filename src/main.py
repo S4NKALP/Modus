@@ -12,6 +12,7 @@ for log in [
 ]:
     logger.disable(log)
 
+from services.keyboard_layout import KeyboardLayout
 from shared.data import APP_NAME, load_config
 from utils.functions import set_process_name
 from window.desktop.widget import Deskwidgets
@@ -112,6 +113,7 @@ def main():
     __main__.dock = dock
     __main__.osd = osd
     __main__.screencapture = screencapture
+    __main__.switch_keyboard_layout = KeyboardLayout.switch_keyboard_layout
 
     app.run()
 
