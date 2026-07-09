@@ -54,10 +54,6 @@ class ModusDropdown(AppletWindow):
         self.children = [self.event_box]
         self.add_keybinding("escape", self.hide_dropdown)
 
-    def toggle_dropdown(self, button, parent=None):
-        self.toggle()
-        modus_service.current_dropdown = self.id if self.is_visible() else None
-
     def hide_dropdown(self, *_):
         if self.is_visible():
             GLib.idle_add(lambda: self.hide())
@@ -67,18 +63,6 @@ class ModusDropdown(AppletWindow):
             modus_service.current_dropdown = self.id
         elif str(modus_service.current_dropdown) == str(self.id):
             modus_service.current_dropdown = None
-
-    def hide_via_mousecapture(self):
-        self.hide()
-
-    def on_cursor_enter(self, *_):
-        self.show()
-
-    def on_cursor_leave(self, *_):
-        if self.is_hovered():
-            return
-        self.hide()
-        modus_service.dropdowns_hide = not modus_service.dropdowns_hide
 
     def destroy(self):
         """Clean up resources and global references"""

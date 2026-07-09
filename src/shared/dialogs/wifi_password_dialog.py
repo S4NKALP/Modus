@@ -276,9 +276,6 @@ class WiFiPasswordDialog(Window):
         except Exception:
             return False
 
-    def get_password(self):
-        return self.password_entry.get_text()
-
     def destroy_dialog(self):
         self.hide()
         self.destroy()

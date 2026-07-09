@@ -26,7 +26,6 @@ class SmoothSwitch(Gtk.DrawingArea):
         self._width = width
         self._height = height
         self._on_user_toggle = on_user_toggle
-        self._anim_value = 1.0 if active else 0.0
 
         self.set_size_request(width, height)
         self.set_hexpand(h_expand)

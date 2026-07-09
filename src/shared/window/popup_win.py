@@ -33,8 +33,6 @@ class PopupWindow(WaylandWindow):
         self._pointing_widget = pointing_to
         self._base_margin = self.extract_margin(margin)
         self.margin = self._base_margin.values()
-        self._initial_position = True
-
         self.connect("notify::visible", self.do_update_handlers)
 
     def get_coords_for_widget(self, widget: Gtk.Widget) -> tuple[int, int]:
@@ -86,7 +84,6 @@ class PopupWindow(WaylandWindow):
         GLib.timeout_add(10, self._do_delayed_reposition)
 
     def _do_delayed_reposition(self):
-        self._initial_position = True
         self.do_reposition(self.do_calculate_edges())
         return False
 
@@ -190,4 +187,3 @@ class PopupWindow(WaylandWindow):
 
         if tuple(self.margin) != tuple(new_margin):
             self.margin = new_margin
-        self._initial_position = False

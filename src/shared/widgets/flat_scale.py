@@ -13,18 +13,6 @@ from shared.widgets.animator import Animator, ease_in, ease_in_out, ease_out
 # ------------------------------------------------------------------ #
 
 
-def _ease_out_expo(t: float) -> float:
-    if t >= 1.0:
-        return 1.0
-    return 1.0 - pow(2.0, -10.0 * t)
-
-
-def _ease_in_expo(t: float) -> float:
-    if t <= 0.0:
-        return 0.0
-    return pow(2.0, 10.0 * t - 10.0)
-
-
 def _draw_rounded_rect(cr, x, y, w, h, r):
     r = min(r, w / 2, h / 2)
     if r <= 0:

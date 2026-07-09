@@ -96,24 +96,3 @@ class CircleImage(Gtk.DrawingArea, Widget):
             Gdk.cairo_set_source_pixbuf(ctx, self._image, 0, 0)
             ctx.paint()
             ctx.restore()
-
-    def set_image_from_file(self, new_image_file: str):
-        if not new_image_file:
-            return
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(new_image_file)
-        self._orig_image = pixbuf
-        self._image = self._process_image(pixbuf)
-        self.queue_draw()
-
-    def set_image_from_pixbuf(self, pixbuf: GdkPixbuf.Pixbuf):
-        if not pixbuf:
-            return
-        self._orig_image = pixbuf
-        self._image = self._process_image(pixbuf)
-        self.queue_draw()
-
-    def set_image_size(self, size: int):
-        self.size = size
-        if self._orig_image:
-            self._image = self._process_image(self._orig_image)
-        self.queue_draw()

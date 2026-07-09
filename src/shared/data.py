@@ -1,38 +1,18 @@
 from fabric.utils import logger
 
-from fabric.utils import Gdk, GLib, get_relative_path, os
+from fabric.utils import GLib, get_relative_path, os
 
 from utils.functions import parse_timeout_string
 from utils.utils import toml_file
 
 APP_NAME = "modus1"
-APP_NAME_CAP = "Modus"
-
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
-USERNAME = os.getlogin()
-HOSTNAME = os.uname().nodename
-HOME_DIR = GLib.get_home_dir()
 
 CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
 
-
-def _get_screen_dimensions():
-    try:
-        screen = Gdk.Screen.get_default()
-        if screen:
-            return screen.get_width(), screen.get_height()
-    except Exception:
-        pass
-    return 1920, 1080
-
-
-CURRENT_WIDTH, CURRENT_HEIGHT = _get_screen_dimensions()
-
-
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")
 CONFIG_FILE = toml_file("config.toml")
-MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
 
 def load_config():
@@ -58,50 +38,7 @@ def load_config():
         return config
 
 
-def _load_config_from_toml():
-    """Load config dict from config.toml (module-level helper)."""
-    if os.path.exists(CONFIG_FILE):
-        try:
-            import tomlkit
-
-            with open(CONFIG_FILE, "r") as f:
-                return dict(tomlkit.load(f))
-        except Exception as e:
-            logger.error(f"Error loading config: {e}")
-    return {}
-
-
-config = _load_config_from_toml()
-wallpapers_dir_from_config = config.get("wallpapers_dir", WALLPAPERS_DIR_DEFAULT)
-WALLPAPERS_DIR = os.path.expanduser(wallpapers_dir_from_config)
-DOCK_POSITION = config.get("dock_position", "Bottom")
-DOCK_ENABLED = config.get("dock_enabled", True)
-DOCK_AUTO_HIDE = config.get("dock_auto_hide", True)
-DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", False)
-DOCK_ICON_SIZE = config.get("dock_icon_size", 60)
-WINDOW_SWITCHER_ITEMS_PER_ROW = config.get("window_switcher_items_per_row", 10)
-HIDE_SPECIAL_WORKSPACE = config.get("hide_special_workspace", True)
-DOCK_HIDE_SPECIAL_WORKSPACE_APPS = config.get("dock_hide_special_workspace_apps", True)
-
-NOTIFICATION_TIMEOUT_STR = config.get("notification_timeout", "5s")
+NOTIFICATION_TIMEOUT_STR = "5s"
 NOTIFICATION_TIMEOUT = parse_timeout_string(NOTIFICATION_TIMEOUT_STR)
-NOTIFICATION_IGNORED_APPS_HISTORY = config.get(
-    "notification_ignored_apps_history", ["Hyprshot"]
-)
-NOTIFICATION_LIMITED_APPS_HISTORY = config.get(
-    "notification_limited_apps_history", ["Spotify"]
-)
-
-PANEL_COMPONENTS_VISIBILITY = {
-    "imac_button": config.get("imac_button", True),
-    "systray": config.get("systray", True),
-    "control_center": config.get("control_center", True),
-    "search": config.get("search", True),
-    "global_menu": config.get("global_menu", True),
-    "network": config.get("network", True),
-    "battery": config.get("battery", True),
-    "notification_center": config.get("notification_center", True),
-    "workspace_indicator": config.get("workspace_indicator", True),
-    "bluetooth": config.get("bluetooth", True),
-    "date_time": config.get("date_time", True),
-}
+NOTIFICATION_IGNORED_APPS_HISTORY = ["Hyprshot"]
+NOTIFICATION_LIMITED_APPS_HISTORY = ["Spotify"]

@@ -122,27 +122,12 @@ class SlideRevealer(Gtk.Overlay):
         if not self._revealed:
             self.child.hide()
 
-    def _get_container_for_redraw(self):
-        return self
-
     def _get_dimensions(self):
         if self.fixed_size:
             return self.fixed_size
         else:
             alloc = self.child.get_allocation()
             return alloc.width, alloc.height
-
-    def _get_offscreen_pos_cached(self):
-        w, h = self._cached_dimensions
-        if self.direction == "left":
-            return -w, 0
-        elif self.direction == "right":
-            return w, 0
-        elif self.direction == "top":
-            return 0, -h
-        elif self.direction == "bottom":
-            return 0, h
-        return 0, 0
 
     def _get_position_at_progress_cached(self, progress):
         w, h = self._cached_dimensions
@@ -170,18 +155,6 @@ class SlideRevealer(Gtk.Overlay):
 
     def set_slide_direction(self, direction):
         self.direction = direction
-
-    def is_revealed(self):
-        return self._revealed
-
-    def is_animating(self):
-        return self.animator.playing
-
-    def get_child_revealed(self):
-        return self._revealed
-
-    def stop_animation(self):
-        self.animator.stop()
 
     def destroy(self):
         self.stop_animation()

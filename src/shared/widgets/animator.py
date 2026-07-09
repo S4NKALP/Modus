@@ -20,13 +20,6 @@ def lerp(start: float, end: float, progress: float) -> float:
 
 
 @lru_cache(maxsize=512)
-def steps(n: int, progress: float, start_jump: bool = False) -> float:
-    if start_jump:
-        return min(int(progress * n), n - 1) / (n - 1) if n > 1 else 0.0
-    return min(int(progress * n + 1e-10), n) / n
-
-
-@lru_cache(maxsize=512)
 def cubic_bezier(
     x1: float, y1: float, x2: float, y2: float, progress: float, epsilon=1e-6
 ) -> float:
