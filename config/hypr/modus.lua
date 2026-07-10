@@ -57,10 +57,16 @@ hl.config({
 	decoration = {
 		blur = {
 			enabled = true,
-			size = 3,
-			vibrancy = 0.2,
+			size = 5,
+			noise = 0,
+			contrast = 1,
+			brightness = 1,
+			vibrancy = 0.1696,
+			passes = 2,
 			popups_ignorealpha = true,
 			popups = true,
+			ignore_opacity = false,
+			new_optimizations = true,
 		},
 		rounding = 14,
 		shadow = {
