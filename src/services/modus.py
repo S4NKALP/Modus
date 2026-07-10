@@ -1,26 +1,28 @@
 import json
 import os
+import re
 import subprocess
 import sys
 
 from fabric.core.service import Property, Service, Signal
 from fabric.hyprland.service import Hyprland
-from fabric.utils import logger
+from fabric.utils import exec_shell_command_async, get_relative_path, logger
 
+from services.custom_notification import CachedNotifications
+from utils.app_name_resolver import app_name_resolver
 from utils.functions import (
     find_binary,
     find_process_pid,
-    kill_process as _kill_process,
-    run_command,
     spawn_detached,
+)
+from utils.functions import (
+    kill_process as _kill_process,
 )
 
 
 def __getattr__(name):
     mod = sys.modules[__name__]
     if name == "notification_service":
-        from services.custom_notification import CachedNotifications
-
         _inst = CachedNotifications()
         setattr(mod, name, _inst)
         return _inst
@@ -46,8 +48,6 @@ def __getattr__(name):
 
 
 def get_notification_service():
-    from services.custom_notification import CachedNotifications
-
     return CachedNotifications()
 
 
@@ -365,7 +365,6 @@ def _update_active_window():
         if not title and not wmclass:
             service.current_active_app_name = "Finder"
             return
-        from utils.app_name_resolver import app_name_resolver
 
         name = app_name_resolver.format_app_name(title, wmclass)
         service.current_active_wm_class = wmclass
@@ -447,17 +446,13 @@ def toggle_caffeine() -> bool:
     global _caffeine_process
     try:
         if is_caffeine_active():
-            from fabric.utils import get_relative_path
-
             inhibit_script = get_relative_path("utils/inhibit.py")
-            run_command(["python3", inhibit_script, "off"])
+            spawn_detached(["python3", inhibit_script, "off"])
             if _caffeine_process:
                 _caffeine_process.terminate()
                 _caffeine_process = None
             return False
         else:
-            from fabric.utils import get_relative_path
-
             inhibit_script = get_relative_path("utils/inhibit.py")
             _caffeine_process = spawn_detached(["python3", inhibit_script, "on"])
             return True
@@ -540,15 +535,12 @@ def get_screen_dimensions() -> tuple[int, int]:
 
 
 def focus_window(address: str):
-    run_command(
-        ["hyprctl", "dispatch", f'hl.dsp.focus({{ window = "address:{address}" }})'],
-        timeout=2,
+    exec_shell_command_async(
+        f"hyprctl dispatch 'hl.dsp.focus({{ window = \"address:{address}\" }})'"
     )
 
 
 def close_window(address: str):
-    from fabric.utils import exec_shell_command_async
-
     exec_shell_command_async(
         f"hyprctl dispatch 'hl.dsp.window.close({{ window = \"address:{address}\" }})'"
     )
@@ -557,10 +549,8 @@ def close_window(address: str):
 def launch_app(command_line: str):
     if not command_line:
         return
-    import re
 
     cleaned = re.sub(r"%\w+", "", command_line).strip()
-    from fabric.utils import exec_shell_command_async
 
     exec_shell_command_async(
         f"hyprctl dispatch 'hl.dsp.exec_cmd([[uwsm app -- {cleaned}]])'"

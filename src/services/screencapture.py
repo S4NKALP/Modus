@@ -237,41 +237,50 @@ class ScreenCapture(Service):
         out_file = save_dir / f"{timestamp}.png"
 
         if target == "region":
-            geo_proc = Gio.Subprocess.new(
+            slurp_proc = Gio.Subprocess.new(
                 ["slurp"],
                 Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
             )
-            try:
-                geo_proc.wait(None)
-            except Exception:
-                pass
-            if geo_proc.get_exit_status() != 0:
-                self.notify_send(
-                    "Screenshot cancelled",
-                    "Selection was cancelled",
-                    icon="camera-photo-symbolic",
-                )
-                self.screenshot_taken(None)
-                return True
-            _, geo_bytes, _ = geo_proc.communicate(None)
-            geo = geo_bytes.decode().strip() if geo_bytes else ""
-            if not geo:
-                self.notify_send(
-                    "Screenshot cancelled",
-                    "Selection was cancelled",
-                    icon="camera-photo-symbolic",
-                )
-                self.screenshot_taken(None)
-                return True
-            cmd = ["grim", "-c", "-g", geo, str(out_file)]
-        else:
-            monitor = self._get_active_monitor() if target == "active" else None
-            cmd = ["grim", "-c"]
-            if monitor:
-                cmd.extend(["-o", monitor])
-            cmd.append(str(out_file))
 
-        expected = out_file
+            def on_slurp_done(proc, task, *_):
+                try:
+                    _, stdout, _ = proc.communicate_utf8_finish(task)
+                except Exception:
+                    self.notify_send(
+                        "Screenshot cancelled",
+                        "Selection was cancelled",
+                        icon="camera-photo-symbolic",
+                    )
+                    self.screenshot_taken(None)
+                    return
+
+                geo = stdout.strip() if stdout else ""
+                if not geo:
+                    self.notify_send(
+                        "Screenshot cancelled",
+                        "Selection was cancelled",
+                        icon="camera-photo-symbolic",
+                    )
+                    self.screenshot_taken(None)
+                    return
+                self._capture_grim_with_cursor(geo, str(out_file))
+
+            slurp_proc.communicate_utf8_async(None, None, on_slurp_done)
+            return True
+
+        monitor = self._get_active_monitor() if target == "active" else None
+        self._capture_grim_with_cursor(None, str(out_file), monitor=monitor)
+        return True
+
+    def _capture_grim_with_cursor(self, geometry, out_file, monitor=None):
+        cmd = ["grim", "-c"]
+        if geometry:
+            cmd.extend(["-g", geometry])
+        elif monitor:
+            cmd.extend(["-o", monitor])
+        cmd.append(out_file)
+
+        expected = Path(out_file)
 
         def on_grim_done(proc, task, *_):
             try:
@@ -291,7 +300,31 @@ class ScreenCapture(Service):
 
         proc = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
         proc.wait_async(None, on_grim_done)
-        return True
+
+    def _start_wf_recorder(
+        self, output_file, use_audio, show_cursor, geometry=None, monitor=None
+    ):
+        cmd = [
+            "wf-recorder",
+            "--file",
+            str(output_file),
+            "--pixel-format",
+            "yuv420p",
+        ]
+
+        if not use_audio:
+            cmd.append("--no-audio")
+
+        if show_cursor:
+            cmd.append("--show-cursor")
+
+        if geometry:
+            cmd.extend(["-g", geometry])
+        elif monitor:
+            cmd.extend(["-o", monitor])
+
+        Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
+        self.recording_started(str(output_file))
 
     def record(self, target="selection", use_audio=False, show_cursor=False):
         """
@@ -313,46 +346,40 @@ class ScreenCapture(Service):
         self.recording_file.write_text(str(output_file))
         self.recording_start_time_file.write_text(str(int(time.time())))
 
-        cmd = [
-            "wf-recorder",
-            "--file",
-            str(output_file),
-            "--pixel-format",
-            "yuv420p",
-        ]
-
-        if not use_audio:
-            cmd.append("--no-audio")
-
-        if show_cursor:
-            cmd.append("--show-cursor")
-
         if target == "selection":
-            try:
-                geometry = exec_shell_command("slurp 2>/dev/null")
-            except Exception:
-                self.notify_send(
-                    "Recording cancelled",
-                    "Selection was cancelled",
-                    icon="camera-video-symbolic",
-                )
-                return False
-            if not geometry or not str(geometry).strip():
-                self.notify_send(
-                    "Recording cancelled",
-                    "Selection was cancelled",
-                    icon="camera-video-symbolic",
-                )
-                return False
-            cmd.extend(["-g", geometry])
-        elif target == "active":
-            cmd.extend(["-o", self._get_active_monitor()])
-        else:
-            cmd.extend(["-o", target])
+            slurp_proc = Gio.Subprocess.new(
+                ["slurp"],
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
+            )
 
-        Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
+            def on_slurp_done(proc, task, *_):
+                try:
+                    _, stdout, _ = proc.communicate_utf8_finish(task)
+                except Exception:
+                    self.notify_send(
+                        "Recording cancelled",
+                        "Selection was cancelled",
+                        icon="camera-video-symbolic",
+                    )
+                    return
 
-        self.recording_started(str(output_file))
+                geometry = stdout.strip() if stdout else ""
+                if not geometry:
+                    self.notify_send(
+                        "Recording cancelled",
+                        "Selection was cancelled",
+                        icon="camera-video-symbolic",
+                    )
+                    return
+                self._start_wf_recorder(
+                    output_file, use_audio, show_cursor, geometry=geometry
+                )
+
+            slurp_proc.communicate_utf8_async(None, None, on_slurp_done)
+            return True
+
+        monitor = self._get_active_monitor() if target == "active" else target
+        self._start_wf_recorder(output_file, use_audio, show_cursor, monitor=monitor)
         return True
 
     def stop_recording(self):

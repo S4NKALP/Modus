@@ -6,7 +6,6 @@ from fabric.utils import Gio, GLib, logger
 
 import shared.data as data
 from services.config import on_config_change
-from utils.functions import run_command
 
 HYPRCTL_BIN = "hyprctl"
 
@@ -137,15 +136,15 @@ class KeyboardLayout(Service):
             return
         layouts_str = ",".join(self.layouts)
         lua_eval_cmd = f"hl.config({{ input = {{ kb_layout = '{layouts_str}' }} }})"
-        run_command(
+        Gio.Subprocess.new(
             [HYPRCTL_BIN, "eval", lua_eval_cmd],
-            timeout=2,
+            Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
         )
 
     def _apply_current_layout_index(self):
-        run_command(
+        Gio.Subprocess.new(
             [HYPRCTL_BIN, "switchxkblayout", "all", str(self.current_index)],
-            timeout=2,
+            Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
         )
 
     def switch_to_next(self):
