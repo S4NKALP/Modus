@@ -3,6 +3,7 @@
 *.pyc
 *.pyo
 *.pyd
+*.so
 config/config.toml
 config/dock.toml
 config/hypr/colors.conf
