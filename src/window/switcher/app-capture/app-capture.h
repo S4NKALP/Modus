@@ -38,6 +38,6 @@ AppCapture *app_capture_new(void);
  *   "alloc_failed"       — memfd_create / ftruncate / mmap failed
  *   "internal"           — defensive fallback (should never fire)
  */
-void app_capture_capture_by_handle(AppCapture *self, const gchar *address);
+void app_capture_capture_by_handle(AppCapture *self, const gchar *address, gint target_width, gint target_height, gboolean wait_for_damage);
 
 G_END_DECLS

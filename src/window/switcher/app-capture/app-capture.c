@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <cairo/cairo.h>
 
 #include "hyprland-toplevel-export-v1.h"
 #include "wlr-foreign-toplevel-management-unstable-v1.h"
@@ -25,10 +26,6 @@ enum {
 
 static guint signals[LAST_SIGNAL] = { 0 };
 
-/* How long capture_by_handle() will wait for an unknown address's wlr handle
- * to arrive before giving up and emitting frame-failed. */
-#define PENDING_CAPTURE_TIMEOUT_MS 1500
-
 /* =========================================================================
  * Toplevel entry — one per live wlr toplevel
  * =========================================================================
@@ -44,16 +41,6 @@ typedef struct {
     char address[32];   /* hex string, e.g. "564f60266bd0", no "0x" prefix */
     gboolean mapped;    /* false until window_address event arrives */
 } ToplevelEntry;
-
-/* =========================================================================
- * Pending capture — capture_by_handle() called before mapping arrived
- * ========================================================================= */
-
-typedef struct {
-    AppCapture *self;       /* unowned; pending queue is owned by self */
-    char       *address;    /* owned, stripped of "0x" */
-    guint       timeout_id; /* 0 once consumed */
-} PendingCapture;
 
 /* =========================================================================
  * Object struct
@@ -73,9 +60,6 @@ struct _AppCapture {
     /* Address → wlr_handle table */
     GPtrArray *toplevels;        /* element-type: ToplevelEntry* */
 
-    /* Captures waiting on a not-yet-mapped address */
-    GPtrArray *pending_captures; /* element-type: PendingCapture* */
-
     /* Per-frame state — reset before every capture */
     int            shm_fd;
     unsigned char *pixel_data;
@@ -84,6 +68,8 @@ struct _AppCapture {
     uint32_t       stride;
     uint32_t       format;
     size_t         shm_size;
+    gint           target_width;
+    gint           target_height;
 };
 
 G_DEFINE_TYPE(AppCapture, app_capture, G_TYPE_OBJECT)
@@ -92,16 +78,13 @@ G_DEFINE_TYPE(AppCapture, app_capture, G_TYPE_OBJECT)
  * Forward declarations
  * ========================================================================= */
 
-static void     cleanup_shm(AppCapture *self);
 static void     request_mapping(AppCapture *self, ToplevelEntry *entry);
-static void     emit_frame_failed(AppCapture *self, const char *reason);
+static void     emit_frame_failed(AppCapture *self, const char *address, const char *reason);
 static void     do_capture(AppCapture *self,
-                           struct zwlr_foreign_toplevel_handle_v1 *wlr_handle);
+                           struct zwlr_foreign_toplevel_handle_v1 *wlr_handle,
+                           const char *address, gboolean wait_for_damage);
 static struct zwlr_foreign_toplevel_handle_v1 *find_wlr_handle(AppCapture *self,
                                                                const char *addr);
-static void     flush_pending_for_address(AppCapture *self, const char *address);
-static gboolean pending_capture_timeout_cb(gpointer data);
-static void     pending_capture_free(gpointer data);
 
 /* =========================================================================
  * Hyprland toplevel mapping listener
@@ -119,14 +102,10 @@ static void mapping_handle_window_address(void *data,
 {
     MappingContext *ctx = data;
     ToplevelEntry  *entry = ctx->entry;
-    AppCapture     *self  = ctx->self;
 
     uint64_t full = ((uint64_t)address_hi << 32) | (uint64_t)address;
     snprintf(entry->address, sizeof(entry->address), "%" PRIx64, full);
     entry->mapped = TRUE;
-
-    /* Dispatch any capture that was waiting for this address */
-    flush_pending_for_address(self, entry->address);
 
     hyprland_toplevel_window_mapping_handle_v1_destroy(handle);
     g_free(ctx);
@@ -137,7 +116,7 @@ static void mapping_handle_failed(void *data,
 {
     MappingContext *ctx = data;
     /* Address stays empty — this entry won't be matchable, which is fine.
-     * Any pending capture for that address will time out via its own timer. */
+     * Python will retry and eventually give up. */
     hyprland_toplevel_window_mapping_handle_v1_destroy(handle);
     g_free(ctx);
 }
@@ -295,8 +274,37 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 /* =========================================================================
- * Frame listener
- *
+ * Per-frame Context (enables concurrent/overlapping captures safely)
+ * ========================================================================= */
+typedef struct {
+    AppCapture *self;
+    char *address;
+    int shm_fd;
+    unsigned char *pixel_data;
+    size_t shm_size;
+    uint32_t width;
+    uint32_t height;
+    uint32_t stride;
+    uint32_t format;
+    gint target_width;
+    gint target_height;
+    gboolean wait_for_damage;
+} FrameContext;
+
+static void frame_context_free(FrameContext *ctx) {
+    if (ctx->pixel_data && ctx->pixel_data != MAP_FAILED) {
+        munmap(ctx->pixel_data, ctx->shm_size);
+    }
+    if (ctx->shm_fd >= 0) {
+        close(ctx->shm_fd);
+    }
+    g_free(ctx->address);
+    g_free(ctx);
+}
+
+/* =========================================================================
+ * Frame Listener Callbacks
+ * =========================================================================
  * Event order: buffer → (linux_dmabuf) → buffer_done → [copy()] → flags → ready|failed
  * ========================================================================= */
 
@@ -305,11 +313,11 @@ static void frame_handle_buffer(void *data,
     uint32_t format, uint32_t width, uint32_t height, uint32_t stride)
 {
     (void)frame;
-    AppCapture *self = APP_CAPTURE(data);
-    self->format = format;
-    self->width  = width;
-    self->height = height;
-    self->stride = stride;
+    FrameContext *ctx = data;
+    ctx->format = format;
+    ctx->width  = width;
+    ctx->height = height;
+    ctx->stride = stride;
 }
 
 static void frame_handle_linux_dmabuf(void *data,
@@ -320,53 +328,55 @@ static void frame_handle_linux_dmabuf(void *data,
 static void frame_handle_buffer_done(void *data,
     struct hyprland_toplevel_export_frame_v1 *frame)
 {
-    AppCapture *self = APP_CAPTURE(data);
+    FrameContext *ctx = data;
+    AppCapture *self = ctx->self;
 
-    if (self->width == 0 || self->height == 0 || self->stride == 0) {
+    if (ctx->width == 0 || ctx->height == 0 || ctx->stride == 0) {
         g_warning("AppCapture: buffer_done with zero dimensions");
         hyprland_toplevel_export_frame_v1_destroy(frame);
-        emit_frame_failed(self, "buffer_invalid");
+        emit_frame_failed(self, ctx->address, "buffer_invalid");
+        frame_context_free(ctx);
         return;
     }
 
-    self->shm_size = (size_t)self->stride * self->height;
-
-    self->shm_fd = memfd_create("app-capture-buffer", 0);
-    if (self->shm_fd < 0) {
+    ctx->shm_size = (size_t)ctx->stride * ctx->height;
+    ctx->shm_fd = memfd_create("app-capture-buffer", 0);
+    if (ctx->shm_fd < 0) {
         g_warning("AppCapture: memfd_create failed");
         hyprland_toplevel_export_frame_v1_destroy(frame);
-        emit_frame_failed(self, "alloc_failed");
+        emit_frame_failed(self, ctx->address, "alloc_failed");
+        frame_context_free(ctx);
         return;
     }
 
-    if (ftruncate(self->shm_fd, (off_t)self->shm_size) < 0) {
+    if (ftruncate(ctx->shm_fd, (off_t)ctx->shm_size) < 0) {
         g_warning("AppCapture: ftruncate failed");
-        cleanup_shm(self);
         hyprland_toplevel_export_frame_v1_destroy(frame);
-        emit_frame_failed(self, "alloc_failed");
+        emit_frame_failed(self, ctx->address, "alloc_failed");
+        frame_context_free(ctx);
         return;
     }
 
-    self->pixel_data = mmap(NULL, self->shm_size,
+    ctx->pixel_data = mmap(NULL, ctx->shm_size,
                             PROT_READ | PROT_WRITE, MAP_SHARED,
-                            self->shm_fd, 0);
-    if (self->pixel_data == MAP_FAILED) {
+                            ctx->shm_fd, 0);
+    if (ctx->pixel_data == MAP_FAILED) {
         g_warning("AppCapture: mmap failed");
-        self->pixel_data = NULL;
-        cleanup_shm(self);
+        ctx->pixel_data = NULL;
         hyprland_toplevel_export_frame_v1_destroy(frame);
-        emit_frame_failed(self, "alloc_failed");
+        emit_frame_failed(self, ctx->address, "alloc_failed");
+        frame_context_free(ctx);
         return;
     }
 
-    struct wl_shm_pool *pool = wl_shm_create_pool(self->shm, self->shm_fd,
-                                                   (int32_t)self->shm_size);
+    struct wl_shm_pool *pool = wl_shm_create_pool(self->shm, ctx->shm_fd,
+                                                   (int32_t)ctx->shm_size);
     struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool,
-        0, (int32_t)self->width, (int32_t)self->height,
-        (int32_t)self->stride, self->format);
+        0, (int32_t)ctx->width, (int32_t)ctx->height,
+        (int32_t)ctx->stride, ctx->format);
     wl_shm_pool_destroy(pool);
 
-    hyprland_toplevel_export_frame_v1_copy(frame, buffer, 1);
+    hyprland_toplevel_export_frame_v1_copy(frame, buffer, ctx->wait_for_damage ? 0 : 1);
     wl_buffer_destroy(buffer);
 }
 
@@ -379,32 +389,70 @@ static void frame_handle_ready(void *data,
     uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec)
 {
     (void)tv_sec_hi; (void)tv_sec_lo; (void)tv_nsec;
-    AppCapture *self = APP_CAPTURE(data);
+    FrameContext *ctx = data;
+    AppCapture *self = ctx->self;
 
-    if (!self->pixel_data) {
+    if (!ctx->pixel_data) {
         g_warning("AppCapture: ready fired but pixel_data is NULL");
         hyprland_toplevel_export_frame_v1_destroy(frame);
-        emit_frame_failed(self, "internal");
+        emit_frame_failed(self, ctx->address, "internal");
+        frame_context_free(ctx);
         return;
     }
 
-    GBytes *bytes = g_bytes_new(self->pixel_data, self->shm_size);
-    g_signal_emit(self, signals[SIGNAL_FRAME_READY], 0,
-                  bytes, (gint)self->width, (gint)self->height, (gint)self->stride);
-    g_bytes_unref(bytes);
+    cairo_surface_t *src_surface = cairo_image_surface_create_for_data(
+        (unsigned char *)ctx->pixel_data, CAIRO_FORMAT_ARGB32, ctx->width, ctx->height, ctx->stride);
+    
+    int req_width = ctx->target_width > 0 ? ctx->target_width : 300;
+    int req_height = ctx->target_height > 0 ? ctx->target_height : 168;
+    
+    double scale_x = (double)req_width / (double)ctx->width;
+    double scale_y = (double)req_height / (double)ctx->height;
+    double scale = (scale_x < scale_y) ? scale_x : scale_y;
+    
+    int target_width = (int)(ctx->width * scale);
+    int target_height = (int)(ctx->height * scale);
 
-    cleanup_shm(self);
+    if (target_width <= 0) target_width = 1;
+    if (target_height <= 0) target_height = 1;
+
+    cairo_surface_t *dst_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, target_width, target_height);
+    cairo_t *cr = cairo_create(dst_surface);
+
+    cairo_scale(cr, (double)target_width / ctx->width, (double)target_height / ctx->height);
+    cairo_set_source_surface(cr, src_surface, 0, 0);
+    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
+    
+    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+
+    cairo_surface_flush(dst_surface);
+    unsigned char *dst_data = cairo_image_surface_get_data(dst_surface);
+    int dst_stride = cairo_image_surface_get_stride(dst_surface);
+    int dst_size = dst_stride * target_height;
+
+    GBytes *bytes = g_bytes_new(dst_data, dst_size);
+    g_signal_emit(self, signals[SIGNAL_FRAME_READY], 0,
+                  ctx->address, bytes, target_width, target_height, dst_stride);
+                  
+    g_bytes_unref(bytes);
+    cairo_surface_destroy(dst_surface);
+    cairo_surface_destroy(src_surface);
+
     hyprland_toplevel_export_frame_v1_destroy(frame);
+    frame_context_free(ctx);
 }
 
 static void frame_handle_failed(void *data,
     struct hyprland_toplevel_export_frame_v1 *frame)
 {
-    AppCapture *self = APP_CAPTURE(data);
+    FrameContext *ctx = data;
+    AppCapture *self = ctx->self;
     g_warning("AppCapture: frame capture failed");
-    cleanup_shm(self);
     hyprland_toplevel_export_frame_v1_destroy(frame);
-    emit_frame_failed(self, "frame_failed");
+    emit_frame_failed(self, ctx->address, "frame_failed");
+    frame_context_free(ctx);
 }
 
 static void frame_handle_damage(void *data,
@@ -426,9 +474,9 @@ static const struct hyprland_toplevel_export_frame_v1_listener frame_listener = 
  * Capture helpers
  * ========================================================================= */
 
-static void emit_frame_failed(AppCapture *self, const char *reason)
+static void emit_frame_failed(AppCapture *self, const char *address, const char *reason)
 {
-    g_signal_emit(self, signals[SIGNAL_FRAME_FAILED], 0, reason);
+    g_signal_emit(self, signals[SIGNAL_FRAME_FAILED], 0, address, reason);
 }
 
 static struct zwlr_foreign_toplevel_handle_v1 *find_wlr_handle(AppCapture *self,
@@ -444,9 +492,16 @@ static struct zwlr_foreign_toplevel_handle_v1 *find_wlr_handle(AppCapture *self,
 }
 
 static void do_capture(AppCapture *self,
-                       struct zwlr_foreign_toplevel_handle_v1 *wlr_handle)
+                       struct zwlr_foreign_toplevel_handle_v1 *wlr_handle,
+                       const char *address, gboolean wait_for_damage)
 {
-    self->width = self->height = self->stride = self->format = 0;
+    FrameContext *ctx = g_new0(FrameContext, 1);
+    ctx->self = self;
+    ctx->address = g_strdup(address);
+    ctx->shm_fd = -1;
+    ctx->target_width = self->target_width;
+    ctx->target_height = self->target_height;
+    ctx->wait_for_damage = wait_for_damage;
 
     struct hyprland_toplevel_export_frame_v1 *frame =
         hyprland_toplevel_export_manager_v1_capture_toplevel_with_wlr_toplevel_handle(
@@ -455,88 +510,13 @@ static void do_capture(AppCapture *self,
             wlr_handle
         );
 
-    hyprland_toplevel_export_frame_v1_add_listener(frame, &frame_listener, self);
+    hyprland_toplevel_export_frame_v1_add_listener(frame, &frame_listener, ctx);
     wl_display_flush(self->display);
-}
-
-/* =========================================================================
- * Pending capture queue
- *
- * When capture_by_handle() is called for an address whose wlr handle hasn't
- * been mapped yet (race between Hyprland IPC and wlr foreign-toplevel), we
- * park a PendingCapture and wait for either:
- *   - mapping_handle_window_address → flush_pending_for_address → do_capture
- *   - PENDING_CAPTURE_TIMEOUT_MS elapses → emit frame-failed
- *
- * In practice the JS layer is single-flight so this queue holds ≤ 1 entry.
- * ========================================================================= */
-
-static void pending_capture_free(gpointer data)
-{
-    PendingCapture *pc = data;
-    if (pc->timeout_id != 0) {
-        g_source_remove(pc->timeout_id);
-        pc->timeout_id = 0;
-    }
-    g_free(pc->address);
-    g_free(pc);
-}
-
-static gboolean pending_capture_timeout_cb(gpointer data)
-{
-    PendingCapture *pc   = data;
-    AppCapture     *self = pc->self;
-
-    g_warning("AppCapture: timeout waiting for wlr handle '%s' "
-              "(toplevel table has %u entries)",
-              pc->address, self->toplevels->len);
-
-    /* Mark consumed so pending_capture_free doesn't double-remove */
-    pc->timeout_id = 0;
-
-    /* Remove first (frees pc), THEN emit — emit may re-enter capture_by_handle */
-    g_ptr_array_remove(self->pending_captures, pc);
-    emit_frame_failed(self, "no_handle_timeout");
-    return G_SOURCE_REMOVE;
-}
-
-static void flush_pending_for_address(AppCapture *self, const char *address)
-{
-    if (self->pending_captures->len == 0) return;
-
-    struct zwlr_foreign_toplevel_handle_v1 *wlr_handle =
-        find_wlr_handle(self, address);
-    if (!wlr_handle) return;
-
-    /* Iterate backwards so removals don't shift indices we're about to visit */
-    for (guint i = self->pending_captures->len; i > 0; i--) {
-        PendingCapture *pc = g_ptr_array_index(self->pending_captures, i - 1);
-        if (g_strcmp0(pc->address, address) != 0) continue;
-
-        do_capture(self, wlr_handle);
-        g_ptr_array_remove_index(self->pending_captures, i - 1);
-        /* JS side is single-flight — at most one match expected.
-         * Break to avoid issuing two captures against the same shm state. */
-        break;
-    }
 }
 
 /* =========================================================================
  * SHM helpers
  * ========================================================================= */
-
-static void cleanup_shm(AppCapture *self)
-{
-    if (self->pixel_data && self->pixel_data != MAP_FAILED) {
-        munmap(self->pixel_data, self->shm_size);
-        self->pixel_data = NULL;
-    }
-    if (self->shm_fd >= 0) {
-        close(self->shm_fd);
-        self->shm_fd = -1;
-    }
-    self->shm_size = 0;
-}
 
 static void toplevel_entry_free(gpointer data)
 {
@@ -553,8 +533,6 @@ static void toplevel_entry_free(gpointer data)
 static void app_capture_finalize(GObject *object)
 {
     AppCapture *self = APP_CAPTURE(object);
-    cleanup_shm(self);
-    g_ptr_array_unref(self->pending_captures);
     g_ptr_array_unref(self->toplevels);
     if (self->export_manager)
         hyprland_toplevel_export_manager_v1_destroy(self->export_manager);
@@ -579,8 +557,8 @@ static void app_capture_class_init(AppCaptureClass *klass)
         G_TYPE_FROM_CLASS(klass),
         G_SIGNAL_RUN_LAST,
         0, NULL, NULL, NULL,
-        G_TYPE_NONE, 4,
-        G_TYPE_BYTES, G_TYPE_INT, G_TYPE_INT, G_TYPE_INT
+        G_TYPE_NONE, 5,
+        G_TYPE_STRING, G_TYPE_BYTES, G_TYPE_INT, G_TYPE_INT, G_TYPE_INT
     );
 
     signals[SIGNAL_FRAME_FAILED] = g_signal_new(
@@ -588,8 +566,8 @@ static void app_capture_class_init(AppCaptureClass *klass)
         G_TYPE_FROM_CLASS(klass),
         G_SIGNAL_RUN_LAST,
         0, NULL, NULL, NULL,
-        G_TYPE_NONE, 1,
-        G_TYPE_STRING
+        G_TYPE_NONE, 2,
+        G_TYPE_STRING, G_TYPE_STRING
     );
 }
 
@@ -599,7 +577,6 @@ static void app_capture_init(AppCapture *self)
     self->pixel_data       = NULL;
     self->shm_size         = 0;
     self->toplevels        = g_ptr_array_new_with_free_func(toplevel_entry_free);
-    self->pending_captures = g_ptr_array_new_with_free_func(pending_capture_free);
 
     GdkDisplay *gdk_display = gdk_display_get_default();
     self->display = gdk_wayland_display_get_wl_display(gdk_display);
@@ -636,16 +613,19 @@ AppCapture *app_capture_new(void)
     return g_object_new(APP_TYPE_CAPTURE, NULL);
 }
 
-void app_capture_capture_by_handle(AppCapture *self, const gchar *address)
+void app_capture_capture_by_handle(AppCapture *self, const gchar *address, gint target_width, gint target_height, gboolean wait_for_damage)
 {
     g_return_if_fail(APP_IS_CAPTURE(self));
     g_return_if_fail(address != NULL);
 
     if (!self->export_manager) {
         g_warning("AppCapture: export_manager not available");
-        emit_frame_failed(self, "no_export_manager");
+        emit_frame_failed(self, address, "no_export_manager");
         return;
     }
+
+    self->target_width = target_width;
+    self->target_height = target_height;
 
     /* Strip optional "0x" prefix so matching works regardless of input */
     const gchar *addr = address;
@@ -656,17 +636,12 @@ void app_capture_capture_by_handle(AppCapture *self, const gchar *address)
     struct zwlr_foreign_toplevel_handle_v1 *wlr_handle =
         find_wlr_handle(self, addr);
     if (wlr_handle) {
-        do_capture(self, wlr_handle);
+        do_capture(self, wlr_handle, addr, wait_for_damage);
         return;
     }
 
-    /* Slow path: park and wait up to PENDING_CAPTURE_TIMEOUT_MS for the
-     * wlr_manager toplevel/mapping events to arrive. Race window is
-     * typically <100 ms in practice but can spike under load. */
-    PendingCapture *pc = g_new0(PendingCapture, 1);
-    pc->self       = self;
-    pc->address    = g_strdup(addr);
-    pc->timeout_id = g_timeout_add(PENDING_CAPTURE_TIMEOUT_MS,
-                                   pending_capture_timeout_cb, pc);
-    g_ptr_array_add(self->pending_captures, pc);
+    /* Since Python has a retry loop (invoke_repeater fallback on failure),
+       we don't need a complex C-side pending queue. We just fail immediately
+       and let Python retry 1 second later. */
+    emit_frame_failed(self, addr, "not_mapped_yet");
 }

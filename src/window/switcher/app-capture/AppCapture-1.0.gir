@@ -39,6 +39,15 @@
           <parameter name="address" transfer-ownership="none">
             <type name="utf8" c:type="const gchar*"/>
           </parameter>
+          <parameter name="target_width" transfer-ownership="none">
+            <type name="gint" c:type="gint"/>
+          </parameter>
+          <parameter name="target_height" transfer-ownership="none">
+            <type name="gint" c:type="gint"/>
+          </parameter>
+          <parameter name="wait_for_damage" transfer-ownership="none">
+            <type name="gboolean" c:type="gboolean"/>
+          </parameter>
         </parameters>
         <return-value transfer-ownership="none">
           <type name="none" c:type="void"/>
@@ -50,6 +59,9 @@
           <type name="none" c:type="void"/>
         </return-value>
         <parameters>
+          <parameter name="address" transfer-ownership="none">
+            <type name="utf8" c:type="gchararray"/>
+          </parameter>
           <parameter name="bytes" transfer-ownership="none">
             <type name="GLib.Bytes" c:type="GBytes*"/>
           </parameter>
@@ -70,6 +82,9 @@
           <type name="none" c:type="void"/>
         </return-value>
         <parameters>
+          <parameter name="address" transfer-ownership="none">
+            <type name="utf8" c:type="gchararray"/>
+          </parameter>
           <parameter name="reason" transfer-ownership="none">
             <type name="utf8" c:type="gchararray"/>
           </parameter>

@@ -3,16 +3,17 @@ project('app-capture', 'c',
   default_options: ['c_std=c11', 'warning_level=1']
 )
 
-# ─── Dependencies ─────────────────────────────────────────────────────────────
+# Dependencies
 wayland_client      = dependency('wayland-client')
 wayland_scanner_dep = dependency('wayland-scanner', native: true)
 gobject             = dependency('gobject-2.0')
 gtk3                = dependency('gtk+-3.0')
 gir                 = dependency('gobject-introspection-1.0', required: true)
+cairo_dep           = dependency('cairo')
 
 wayland_scanner = find_program('wayland-scanner')
 
-# ─── Protocol XML files ───────────────────────────────────────────────────────
+# Protocol XML files
 # All must exist under protocols/ in the source tree:
 #
 #   hyprland-toplevel-export-v1.xml     (hyprwm/hyprland-protocols)
@@ -25,7 +26,7 @@ wlr_toplevel_xml = files('protocols/wlr-foreign-toplevel-management-unstable-v1.
 hypr_mapping_xml = files('protocols/hyprland-toplevel-mapping-v1.xml')
 ext_toplevel_xml = files('protocols/ext-foreign-toplevel-list-v1.xml')
 
-# ─── Generate C bindings ──────────────────────────────────────────────────────
+# Generate C bindings
 
 # hyprland-toplevel-export: the capture protocol we call directly
 hypr_export_client_h = custom_target('hypr-export-client-h',
@@ -68,7 +69,7 @@ ext_toplevel_private_c = custom_target('ext-toplevel-private-c',
   command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'],
 )
 
-# ─── Shared library ───────────────────────────────────────────────────────────
+# Shared library
 lib = shared_library('appcapture',
   sources: [
     'app-capture.c',
@@ -87,12 +88,13 @@ lib = shared_library('appcapture',
     wayland_client,
     gobject,
     gtk3,
+    cairo_dep,
   ],
   gnu_symbol_visibility: 'default',
   install: true,
 )
 
-# ─── GObject Introspection ────────────────────────────────────────────────────
+# GObject Introspection
 gir_file = files('AppCapture-1.0.gir')
 
 install_data(gir_file,
