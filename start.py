@@ -7,6 +7,14 @@ src_path = os.path.join(os.path.dirname(__file__), "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
+# App-capture library paths (built via meson in src/window/switcher/app-capture/builddir)
+_app_capture_builddir = os.path.join(src_path, "window", "switcher", "app-capture", "builddir")
+if os.path.isdir(_app_capture_builddir):
+    for env_var in ("GI_TYPELIB_PATH", "LD_LIBRARY_PATH"):
+        current = os.environ.get(env_var, "")
+        if _app_capture_builddir not in current.split(os.pathsep):
+            os.environ[env_var] = f"{_app_capture_builddir}{os.pathsep}{current}" if current else _app_capture_builddir
+
 
 # Apply monkey patch for hyprland lua dispatcher
 def run_app():

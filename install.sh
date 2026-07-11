@@ -306,6 +306,25 @@ else
     warn "native/Makefile not found - skipping C library build"
 fi
 
+progress "Building App Capture module"
+
+step "Compiling libappcapture.so..."
+if [ -d "$INSTALL_DIR/src/window/switcher/app-capture" ]; then
+    cd "$INSTALL_DIR/src/window/switcher/app-capture"
+    if meson setup builddir --wipe >/dev/null 2>&1 || meson setup builddir >/dev/null 2>&1; then
+        if meson compile -C builddir >/dev/null 2>&1; then
+            success "libappcapture.so built successfully"
+        else
+            warn "Failed to compile App Capture module"
+        fi
+    else
+        warn "Failed to setup App Capture builddir"
+    fi
+    cd - >/dev/null
+else
+    warn "App Capture module directory not found"
+fi
+
 progress "Configuring Hyprland"
 
 HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"

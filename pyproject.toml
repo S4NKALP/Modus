@@ -36,6 +36,7 @@ packages = ["src/shared", "src/utils", "src/window", "src/services", "src/global
 
 [tool.ruff.lint.per-file-ignores]
 "src/main.py" = ["E402"]
+"src/window/switcher/main.py" = ["E402"]
 
 [tool.uv.sources]
 fabric = { git = "https://github.com/Fabric-Development/fabric.git" }
