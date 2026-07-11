@@ -1,5 +1,22 @@
+import ctypes
+import os
+
+import gi
+
+_so_path = os.path.join(
+    os.path.dirname(__file__),
+    "app-capture",
+    "builddir",
+    "libappcapture.so",
+)
+_so_path = os.path.normpath(_so_path)
+if os.path.isfile(_so_path):
+    ctypes.CDLL(_so_path)
+
+gi.require_version("AppCapture", "1.0")
 from collections import OrderedDict
 
+import cairo
 from fabric.utils import Gdk, GdkPixbuf, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
@@ -7,6 +24,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.wayland import WaylandWindow as Window
+from gi.repository import AppCapture
 
 from services.config import config, on_config_change
 from services.modus import close_window, focus_window, get_active_window, get_clients
@@ -18,9 +36,10 @@ class _SwitcherItem:
     __slots__ = (
         "button",
         "item_box",
-        "icon_box",
+        "header_box",
+        "app_icon",
         "name_label",
-        "image",
+        "preview_image",
         "overlay",
         "badge_box",
         "badge_label",
@@ -31,9 +50,10 @@ class _SwitcherItem:
         self,
         button,
         item_box,
-        icon_box,
+        header_box,
+        app_icon,
         name_label,
-        image,
+        preview_image,
         overlay,
         badge_box,
         badge_label,
@@ -41,9 +61,10 @@ class _SwitcherItem:
     ):
         self.button = button
         self.item_box = item_box
-        self.icon_box = icon_box
+        self.header_box = header_box
+        self.app_icon = app_icon
         self.name_label = name_label
-        self.image = image
+        self.preview_image = preview_image
         self.overlay = overlay
         self.badge_box = badge_box
         self.badge_label = badge_label
@@ -70,16 +91,24 @@ class ApplicationSwitcher(Window):
         self._pixbuf_cache: OrderedDict = OrderedDict()
         self._items: list[_SwitcherItem] = []
         self._pending_close = None
+        self._capture = AppCapture.Capture()
+        self._capture.connect("frame-ready", self._on_frame_ready)
+        self._capture.connect("frame-failed", self._on_frame_failed)
+        self._addr_to_idx: dict[str, int] = {}
+        self._capture_queue: list[str] = []
+        self._current_capture_addr: str | None = None
+        self._row_boxes: list[Box] = []
 
         on_config_change(self._on_config_changed)
 
         self.view = Box(
             name="app-switcher-view",
-            orientation="h",
-            spacing=4,
+            orientation="v",
+            spacing=8,
             h_align="center",
             v_align="center",
         )
+        self.view.get_style_context().add_class("app-switcher-view")
 
         container = Box(
             name="app-switcher-container",
@@ -97,7 +126,15 @@ class ApplicationSwitcher(Window):
         self.set_visible(False)
 
     def _on_config_changed(self, new_config, old_config):
-        if config().has_changed("hide_special_workspace", old_config):
+        preview_changed = config().has_changed("switcher_live_preview", old_config)
+        if (
+            config().has_changed("hide_special_workspace", old_config)
+            or preview_changed
+        ):
+            if preview_changed:
+                for item in self._items:
+                    item.button.destroy()
+                self._items.clear()
             if self.get_visible():
                 self._rebuild()
 
@@ -121,6 +158,8 @@ class ApplicationSwitcher(Window):
 
     def hide_switcher(self) -> None:
         self.set_opacity(0.0)
+        self._capture_queue.clear()
+        self._current_capture_addr = None
         if self._pending_close is not None:
             close_window(self._pending_close)
             self._pending_close = None
@@ -145,34 +184,81 @@ class ApplicationSwitcher(Window):
         return pixbuf
 
     def _create_item(self) -> _SwitcherItem:
-        image = Image()
-        overlay = Overlay(child=image)
+        use_preview = config().get("switcher_live_preview", True)
 
-        name_label = Label(
-            label="",
-            name="app-switcher-item-label",
-            h_align="center",
-        )
+        if use_preview:
+            app_icon = Image(name="app-switcher-app-icon")
+            name_label = Label(
+                label="",
+                name="app-switcher-item-label",
+                h_align="start",
+                v_align="center",
+            )
 
-        icon_box = Box(
-            name="app-switcher-icon-box",
-            children=[overlay],
-            h_align="center",
-            v_align="center",
-        )
+            header_box = Box(
+                name="app-switcher-header-box",
+                orientation="h",
+                spacing=8,
+                children=[app_icon, name_label],
+                h_align="center",
+                v_align="center",
+            )
 
-        item_box = Box(
-            name="app-switcher-item",
-            orientation="v",
-            h_align="center",
-            v_align="center",
-            spacing=2,
-            children=[icon_box, name_label],
-        )
+            preview_image = Image(name="app-switcher-preview")
+            preview_box = Box(
+                name="app-switcher-preview-box",
+                children=[preview_image],
+                h_align="center",
+                v_align="center",
+            )
+            preview_box.set_size_request(300, 168)
+
+            item_box = Box(
+                name="app-switcher-item",
+                orientation="v",
+                h_align="center",
+                v_align="center",
+                spacing=8,
+                children=[header_box, preview_box],
+            )
+            app_icon_ref = app_icon
+            preview_image_ref = preview_image
+            name_label_ref = name_label
+
+            overlay = Overlay(child=item_box)
+            event_child = overlay
+
+        else:
+            image = Image()
+            overlay = Overlay(child=image)
+            icon_box = Box(
+                name="app-switcher-icon-box",
+                children=[overlay],
+                h_align="center",
+                v_align="center",
+            )
+            name_label = Label(
+                label="",
+                name="app-switcher-item-label",
+                h_align="center",
+            )
+            item_box = Box(
+                name="app-switcher-item",
+                orientation="v",
+                h_align="center",
+                v_align="center",
+                spacing=2,
+                children=[icon_box, name_label],
+            )
+            app_icon_ref = image
+            preview_image_ref = None
+            name_label_ref = name_label
+
+            event_child = item_box
 
         event_box = EventBox(
             name="app-switcher-button",
-            child=item_box,
+            child=event_child,
             events=["button-press-event"],
             can_focus=False,
         )
@@ -180,12 +266,15 @@ class ApplicationSwitcher(Window):
         event_box.connect("enter-notify-event", self._on_item_enter)
         event_box.connect("leave-notify-event", self._on_item_leave)
 
+        event_box.show_all()
+
         return _SwitcherItem(
             button=event_box,
             item_box=item_box,
-            icon_box=icon_box,
-            name_label=name_label,
-            image=image,
+            header_box=None,
+            app_icon=app_icon_ref,
+            name_label=name_label_ref,
+            preview_image=preview_image_ref,
             overlay=overlay,
             badge_box=None,
             badge_label=None,
@@ -202,11 +291,6 @@ class ApplicationSwitcher(Window):
         try:
             self._prev_index = -1
             self._clear_states()
-
-            for child in list(self.view.get_children()):
-                if not any(item.button == child for item in self._items):
-                    self.view.remove(child)
-                    child.destroy()
 
             clients = get_clients()
             if not clients:
@@ -226,17 +310,6 @@ class ApplicationSwitcher(Window):
 
             active = get_active_window()
             active_addr = active.get("address") if active else None
-            if active_addr:
-                idx = next(
-                    (
-                        i
-                        for i, w in enumerate(filtered)
-                        if w.get("address") == active_addr
-                    ),
-                    None,
-                )
-                if idx is not None and idx > 0:
-                    filtered.insert(0, filtered.pop(idx))
 
             self.windows = [
                 {
@@ -246,26 +319,88 @@ class ApplicationSwitcher(Window):
                 }
                 for w in filtered
             ]
+
             self.current_index = 0
+            if active_addr:
+                idx = next(
+                    (
+                        i
+                        for i, w in enumerate(self.windows)
+                        if w["address"] == active_addr
+                    ),
+                    0,
+                )
+                self.current_index = idx
+
+            use_preview = config().get("switcher_live_preview", True)
+
+            display = Gdk.Display.get_default()
+            monitor = display.get_primary_monitor() if display else None
+            geometry = monitor.get_geometry() if monitor else None
+            display_width = geometry.width if geometry else 1920
+
+            item_width = 316 if use_preview else 100
+            items_per_row = max(1, int(display_width * 0.85) // item_width)
+            items_per_row = min(items_per_row, max(1, len(self.windows)))
 
             while len(self._items) < len(self.windows):
                 item = self._create_item()
                 self._items.append(item)
-                self.view.add(item.button)
 
+            num_required_rows = (
+                (len(self.windows) + items_per_row - 1) // items_per_row
+                if self.windows
+                else 0
+            )
+            while len(self._row_boxes) < num_required_rows:
+                row = Box(orientation="h", spacing=8, h_align="center")
+                self._row_boxes.append(row)
+                self.view.add(row)
+                row.show()
+
+            for i, row in enumerate(self._row_boxes):
+                row.set_visible(i < num_required_rows)
+
+            visible_count = 0
             for i, item in enumerate(self._items):
                 visible = i < len(self.windows)
                 item.button.set_visible(visible)
+
                 if not visible:
                     item.button.remove_style_class("hovered")
+                    continue
+
+                row_idx = visible_count // items_per_row
+                target_row = self._row_boxes[row_idx]
+
+                parent = item.button.get_parent()
+                if parent != target_row:
+                    if parent:
+                        parent.remove(item.button)
+                    target_row.add(item.button)
+
+                visible_count += 1
 
             for i, item in enumerate(self._items[: len(self.windows)]):
                 win = self.windows[i]
                 item.address = win["address"]
 
-                pixbuf = self._get_pixbuf(win["class"].lower())
-                if pixbuf:
-                    item.image.set_from_pixbuf(pixbuf)
+                if item.preview_image is not None:
+                    pixbuf = self.icon_resolver.get_icon_pixbuf(
+                        win["class"].lower(), 24
+                    )
+                    if not pixbuf:
+                        pixbuf = self.icon_resolver.get_icon_pixbuf(
+                            "application-x-executable-symbolic", 24
+                        )
+                    if pixbuf:
+                        item.app_icon.set_from_pixbuf(pixbuf)
+                    item.preview_image.clear()
+                else:
+                    pixbuf = self._get_pixbuf(win["class"].lower())
+                    if pixbuf:
+                        item.app_icon.set_from_pixbuf(pixbuf)
+
                 item.name_label.set_text(win["class"])
 
                 ws_id = win["workspace_id"]
@@ -292,6 +427,13 @@ class ApplicationSwitcher(Window):
                         item.badge_box.set_visible(False)
 
             self._update_selection()
+            self._addr_to_idx = {w["address"]: i for i, w in enumerate(self.windows)}
+
+            use_preview = config().get("switcher_live_preview", True)
+            if use_preview:
+                self._capture_queue = [w["address"] for w in self.windows]
+                self._current_capture_addr = None
+                self._pump_capture_queue()
         except Exception:
             logger.exception("Failed to build switcher")
 
@@ -415,6 +557,46 @@ class ApplicationSwitcher(Window):
     def _on_item_leave(self, event_box, _event):
         event_box.remove_style_class("hovered")
         return False
+
+    def _on_frame_ready(self, _capture, data, width, height, stride):
+        try:
+            addr = self._current_capture_addr
+            idx = self._addr_to_idx.get(addr) if addr else None
+            if idx is not None and idx < len(self._items):
+                raw = bytearray(data.get_data())
+                surface = cairo.ImageSurface.create_for_data(
+                    raw, cairo.FORMAT_ARGB32, width, height, stride
+                )
+                pixbuf = Gdk.pixbuf_get_from_surface(surface, 0, 0, width, height)
+                item = self._items[idx]
+                if item.preview_image is not None and pixbuf:
+                    aspect = width / height
+                    new_width = 300
+                    new_height = int(new_width / aspect) if aspect > 0 else 180
+                    scaled = pixbuf.scale_simple(
+                        new_width, new_height, GdkPixbuf.InterpType.BILINEAR
+                    )
+                    item.preview_image.set_from_pixbuf(scaled)
+        except Exception:
+            logger.exception("_on_frame_ready error")
+        finally:
+            self._current_capture_addr = None
+            self._pump_capture_queue()
+
+    def _on_frame_failed(self, _capture, reason):
+        logger.debug(f"AppCapture frame-failed: {reason}")
+        self._current_capture_addr = None
+        self._pump_capture_queue()
+
+    def _pump_capture_queue(self):
+        if self._current_capture_addr is not None:
+            return
+        while self._capture_queue:
+            addr = self._capture_queue.pop(0)
+            if addr in self._addr_to_idx:
+                self._current_capture_addr = addr
+                self._capture.capture_by_handle(addr)
+                return
 
     def grab_keyboard(self):
         try:
