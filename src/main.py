@@ -1,6 +1,20 @@
 import atexit
 import os
 
+# App-capture typelib path (built via meson in src/window/switcher/app-capture/builddir)
+# Must be set before gi is imported so the typelib search path includes it.
+# Note: LD_LIBRARY_PATH does not take effect in the current process, so the
+# .so is preloaded via ctypes in window/switcher/main.py instead.
+_app_capture_builddir = os.path.join(
+    os.path.dirname(__file__), "window", "switcher", "app-capture", "builddir"
+)
+if os.path.isdir(_app_capture_builddir):
+    _cur = os.environ.get("GI_TYPELIB_PATH", "")
+    if _app_capture_builddir not in _cur.split(os.pathsep):
+        os.environ["GI_TYPELIB_PATH"] = _app_capture_builddir + (
+            os.pathsep + _cur if _cur else ""
+        )
+
 from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
