@@ -22,7 +22,7 @@ dev = [
 
 [project.scripts]
 start = "main:main"
-lock = "lock:main"
+lock = "window.lock:main"
 
 [build-system]
 requires = ["hatchling"]

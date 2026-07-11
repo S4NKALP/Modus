@@ -30,7 +30,7 @@ def run_app():
 
 
 def run_lock():
-    from lock import main as lock_main
+    from window.lock import main as lock_main
 
     lock_main()
 

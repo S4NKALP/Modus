@@ -138,7 +138,7 @@ uv run start
 - [x] Installation Script
 - [x] Migrate to a `uv` managed Python virtual environment
 - [x] To-do List Widget
-- [ ] Proper Documentation
+- [x] Proper Documentation
 - [ ] Pomodoro Timer Widget
 
 ## Team
