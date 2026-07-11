@@ -23,6 +23,7 @@ from shared.widgets.custom_image import CustomImage
 from shared.widgets.customrevealer import SlideRevealer
 from utils.functions import escape_markup_text, parse_timeout_string
 from utils.roam import modus_service
+from utils.icon_resolver import IconResolver
 
 # ruff: noqa: I001
 from window.notification.unified_cache import (
@@ -35,6 +36,8 @@ from window.notification.unified_cache import (
     get_unified_cache_key,
     save_to_cache as _unified_save_to_cache,
 )
+
+_icon_resolver = IconResolver()
 
 NOTIFICATION_WIDTH = 360
 NOTIFICATION_IMAGE_SIZE = 48
@@ -160,7 +163,14 @@ def load_and_cache_local_icon(file_path, cache_key, size):
 
 def load_and_cache_theme_icon(icon_name, cache_key, size):
     """Load an icon from the current theme and cache it"""
-    # For simplicity, just use fallback since theme icon loading is complex in GTK4
+    try:
+        pixbuf = _icon_resolver.get_icon_pixbuf(icon_name, size[0])
+        if pixbuf:
+            save_pixbuf_to_cache(pixbuf, cache_key, NOTIFICATION_ICON_CACHE_DIR)
+            return pixbuf
+    except Exception as e:
+        logger.warning(f"Failed to load theme icon {icon_name}: {e}")
+
     return get_fallback_notification_icon(size)
 
 
@@ -247,11 +257,11 @@ def cleanup_notification_specific_caches(
         if notification_image_cache_key:
             _unified_cleanup_cache(notification_image_cache_key)
 
-        # Clean up app icon cache for this specific source (only 35x35 version)
+        # Clean up app icon cache for this specific source (only 64x64 version)
         if app_icon_source:
-            # Only clean 35x35 version since we only cache this size now
-            cache_key_35 = get_unified_cache_key(app_icon_source, (35, 35))
-            _unified_cleanup_cache(cache_key_35)
+            # Only clean 64x64 version since we only cache this size now
+            cache_key_64 = get_unified_cache_key(app_icon_source, (64, 64))
+            _unified_cleanup_cache(cache_key_64)
 
     except Exception as e:
         logger.warning(f"Failed to cleanup notification specific caches: {e}")
@@ -323,7 +333,7 @@ def migrate_persistent_notifications():
                     # Temp file is gone, ensure app icon is cached as fallback
                     try:
                         if hasattr(notification, "app_icon") and notification.app_icon:
-                            cache_notification_icon(notification.app_icon, (35, 35))
+                            cache_notification_icon(notification.app_icon, (64, 64))
                             migrated_count += 1
 
                     except Exception as cache_error:
@@ -352,11 +362,11 @@ except Exception as e:
 def preload_notification_assets(notification):
     """Preload and cache notification assets with robust error handling for persistent notifications - SINGLE ICON SIZE"""
     try:
-        # Cache app icon only at content size (35x35) - scale down for headers at runtime
+        # Cache app icon only at content size (64x64) - scale down for headers at runtime
         if hasattr(notification, "app_icon") and notification.app_icon:
             try:
-                # Only cache at 35x35 to reduce disk usage - headers will scale this down
-                cache_notification_icon(notification.app_icon, (35, 35))
+                # Only cache at 64x64 to reduce disk usage - headers will scale this down
+                cache_notification_icon(notification.app_icon, (64, 64))
             except Exception as icon_error:
                 logger.debug(
                     f"Failed to preload app icon for {notification.app_name}: {
@@ -460,13 +470,13 @@ class NotificationWidget(Box):
     def create_header(self, notification):
         """Create notification header with optimized cached app icon - SINGLE CACHE SIZE"""
         try:
-            # Get 35x35 cached icon and scale down to 24x24 for header
+            # Get 64x64 cached icon and scale down to 24x24 for header
             cached_app_icon_pixbuf = cache_notification_icon(
-                notification.app_icon, (35, 35)
+                notification.app_icon or notification.app_name, (64, 64)
             )
 
             if cached_app_icon_pixbuf:
-                # Scale down the 35x35 cached icon to 24x24 for header display
+                # Scale down the 64x64 cached icon to 24x24 for header display
                 header_icon_pixbuf = cached_app_icon_pixbuf.scale_simple(
                     24, 24, GdkPixbuf.InterpType.BILINEAR
                 )
@@ -647,6 +657,8 @@ class NotificationWidget(Box):
                     cached = get_cached_notification_image(ck)
                     if cached:
                         pixbuf = cached
+                    else:
+                        pixbuf = img
             except Exception:
                 pass
 
@@ -657,22 +669,24 @@ class NotificationWidget(Box):
                 try:
                     from window.notification.unified_cache import get_from_cache
 
-                    pixbuf = get_from_cache(app_key, (35, 35))
+                    pixbuf = get_from_cache(app_key, (64, 64))
                 except Exception:
                     pass
 
         # 4. Direct app icon caching
         if not pixbuf:
-            app_icon = getattr(notification, "app_icon", None)
+            app_icon = getattr(notification, "app_icon", None) or getattr(
+                notification, "app_name", None
+            )
             if app_icon:
                 try:
-                    pixbuf = cache_notification_icon(app_icon, (35, 35))
+                    pixbuf = cache_notification_icon(app_icon, (64, 64))
                 except Exception:
                     pass
 
         # 5. Fallback
         if not pixbuf:
-            pixbuf = get_fallback_notification_icon((35, 35))
+            pixbuf = get_fallback_notification_icon((64, 64))
 
         try:
             return pixbuf.scale_simple(

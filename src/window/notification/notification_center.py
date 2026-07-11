@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from fabric.utils import GLib, GdkPixbuf, logger
+from fabric.utils import GdkPixbuf, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -182,7 +182,7 @@ class ExpandableNotificationGroup(Box):
         self.create_expanded_state()
 
     def _get_notification_pixbuf_for_group(self, cached_notification):
-        """Get notification pixbuf at 35x35 - matches app icon size for consistency"""
+        """Get notification pixbuf at 64x64 - matches app icon size for consistency"""
         notification = cached_notification._notification
         getattr(notification, "id", None)
         pixbuf = None
@@ -215,7 +215,7 @@ class ExpandableNotificationGroup(Box):
             )
             if app_icon_cache_key:
                 try:
-                    cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
+                    cached_app_icon = get_from_cache(app_icon_cache_key, (64, 64))
                     if cached_app_icon:
                         pixbuf = cached_app_icon
                 except Exception as e:
@@ -226,18 +226,18 @@ class ExpandableNotificationGroup(Box):
             try:
                 app_icon_source = getattr(notification, "app_icon", None)
                 if app_icon_source:
-                    cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
+                    cached_app_icon = cache_notification_icon(app_icon_source, (64, 64))
                     if cached_app_icon:
                         pixbuf = cached_app_icon
             except Exception as e:
                 logger.debug(f"Failed to get directly cached app icon: {e}")
 
         if not pixbuf:
-            pixbuf = get_fallback_notification_icon((35, 35))
+            pixbuf = get_fallback_notification_icon((64, 64))
 
-        # Always scale to 35x35 so screenshot thumbnails match app icon size
+        # Always scale to 64x64 so screenshot thumbnails match app icon size
         try:
-            return pixbuf.scale_simple(35, 35, GdkPixbuf.InterpType.BILINEAR)
+            return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
         except Exception:
             return pixbuf
 
@@ -461,7 +461,7 @@ class NotificationCenterWidget(NotificationWidget):
         self.set_size_request(-1, -1)
 
     def _get_notification_pixbuf(self, notification):
-        """Get notification pixbuf at 35x35 - matches app icon size for consistency"""
+        """Get notification pixbuf at 64x64 - matches app icon size for consistency"""
         getattr(notification, "id", None)
         pixbuf = None
 
@@ -485,7 +485,7 @@ class NotificationCenterWidget(NotificationWidget):
             app_icon_cache_key = self.cache_metadata.get("app_icon_cache_key")
             if app_icon_cache_key:
                 try:
-                    cached_app_icon = get_from_cache(app_icon_cache_key, (35, 35))
+                    cached_app_icon = get_from_cache(app_icon_cache_key, (64, 64))
                     if cached_app_icon:
                         pixbuf = cached_app_icon
                 except Exception as e:
@@ -496,18 +496,18 @@ class NotificationCenterWidget(NotificationWidget):
             try:
                 app_icon_source = getattr(notification, "app_icon", None)
                 if app_icon_source:
-                    cached_app_icon = cache_notification_icon(app_icon_source, (35, 35))
+                    cached_app_icon = cache_notification_icon(app_icon_source, (64, 64))
                     if cached_app_icon:
                         pixbuf = cached_app_icon
             except Exception as e:
                 logger.debug(f"Failed to get directly cached app icon: {e}")
 
         if not pixbuf:
-            pixbuf = get_fallback_notification_icon((35, 35))
+            pixbuf = get_fallback_notification_icon((64, 64))
 
-        # Always scale to 35x35 so screenshot thumbnails match app icon size
+        # Always scale to 64x64 so screenshot thumbnails match app icon size
         try:
-            return pixbuf.scale_simple(35, 35, GdkPixbuf.InterpType.BILINEAR)
+            return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
         except Exception:
             return pixbuf
 
