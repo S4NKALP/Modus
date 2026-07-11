@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<repository version="1.2"
+            xmlns="http://www.gtk.org/introspection/core/1.0"
+            xmlns:c="http://www.gtk.org/introspection/c/1.0"
+            xmlns:glib="http://www.gtk.org/introspection/glib/1.0">
+
+  <include name="GObject" version="2.0"/>
+  <include name="GLib" version="2.0"/>
+
+  <package name="appcapture"/>
+  <c:include name="app-capture.h"/>
+
+  <namespace name="AppCapture"
+             version="1.0"
+             shared-library="libappcapture.so"
+             c:identifier-prefixes="App"
+             c:symbol-prefixes="app">
+
+    <class name="Capture"
+           c:symbol-prefix="capture"
+           c:type="AppCapture"
+           parent="GObject.Object"
+           glib:type-name="AppCapture"
+           glib:get-type="app_capture_get_type"
+           glib:type-struct="CaptureClass">
+
+      <constructor name="new" c:identifier="app_capture_new">
+        <return-value transfer-ownership="full">
+          <type name="Capture" c:type="AppCapture*"/>
+        </return-value>
+      </constructor>
+
+      <!-- address accepts "0x564f60266bd0" or "564f60266bd0" -->
+      <method name="capture_by_handle" c:identifier="app_capture_capture_by_handle">
+        <parameters>
+          <instance-parameter name="self" transfer-ownership="none">
+            <type name="Capture" c:type="AppCapture*"/>
+          </instance-parameter>
+          <parameter name="address" transfer-ownership="none">
+            <type name="utf8" c:type="const gchar*"/>
+          </parameter>
+        </parameters>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+      </method>
+
+      <glib:signal name="frame-ready" when="last">
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <parameter name="bytes" transfer-ownership="none">
+            <type name="GLib.Bytes" c:type="GBytes*"/>
+          </parameter>
+          <parameter name="width" transfer-ownership="none">
+            <type name="gint" c:type="gint"/>
+          </parameter>
+          <parameter name="height" transfer-ownership="none">
+            <type name="gint" c:type="gint"/>
+          </parameter>
+          <parameter name="stride" transfer-ownership="none">
+            <type name="gint" c:type="gint"/>
+          </parameter>
+        </parameters>
+      </glib:signal>
+
+      <glib:signal name="frame-failed" when="last">
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <parameter name="reason" transfer-ownership="none">
+            <type name="utf8" c:type="gchararray"/>
+          </parameter>
+        </parameters>
+      </glib:signal>
+
+    </class>
+
+    <record name="CaptureClass"
+            c:type="AppCaptureClass"
+            glib:is-gtype-struct-for="Capture">
+      <field name="parent_class">
+        <type name="GObject.ObjectClass" c:type="GObjectClass"/>
+      </field>
+    </record>
+
+  </namespace>
+</repository>
