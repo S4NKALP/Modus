@@ -24,6 +24,7 @@ DEFAULT = {
     "keyboard_layouts": ["us", "np"],
     "window_switcher": True,
     "switcher_live_preview": True,
+    "switcher_live_preview_delay_ms": 200,
     "osd": True,
     "systray_ignore": ["blueman", "network"],
 }
