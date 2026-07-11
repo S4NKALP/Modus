@@ -279,7 +279,7 @@ class ScreenCaptureWindow(Window):
     def _on_recording_started(self, *_):
         self._action_btn.set_label("Stop")
         self._action_btn.get_style_context().add_class("recording")
-        self.show()
+        self.hide()
 
     def _on_recording_stopped(self, *_):
         tool = self._tool_group.selected_id or ""
