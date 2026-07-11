@@ -141,7 +141,10 @@ def is_special_workspace(client: dict) -> bool:
 
 
 def escape_markup_text(text: str) -> str:
-    return html.escape(text.replace("\n", " "))
+    import re
+
+    clean = re.sub(r"<[^>]+>", "", text)
+    return html.escape(clean.replace("\n", " "))
 
 
 # --- Process management ---
