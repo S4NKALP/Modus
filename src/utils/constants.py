@@ -4,7 +4,6 @@ DEFAULT = {
     "dock_auto_hide": True,
     "dock_always_occluded": False,
     "dock_icon_size": 52,
-    "window_switcher_items_per_row": 10,
     "hide_special_workspace": True,
     "dock_hide_special_workspace_apps": True,
     "notification_timeout": "5s",
@@ -24,6 +23,7 @@ DEFAULT = {
     "custom_mods": True,
     "keyboard_layouts": ["us", "np"],
     "window_switcher": True,
+    "switcher_live_preview": True,
     "osd": True,
     "systray_ignore": ["blueman", "network"],
 }
