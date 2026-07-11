@@ -115,7 +115,7 @@ class CachedNotification(Service):
         notification_image_cache_key = None
 
         if self.app_icon:
-            app_icon_cache_key = get_cache_key(self.app_icon, (35, 35), self.app_name)
+            app_icon_cache_key = get_cache_key(self.app_icon, (64, 64), self.app_name)
 
         # Only try to get notification image cache key if we can safely access image_pixbuf
         if self.id:
@@ -468,10 +468,10 @@ class CachedNotifications(Notifications):
                 try:
                     # Only cache at 35x35 to reduce disk usage - headers will scale this down
                     app_icon_cache_key = get_cache_key(
-                        notification.app_icon, (35, 35), notification.app_name
+                        notification.app_icon, (64, 64), notification.app_name
                     )
                     cache_notification_icon(
-                        notification.app_icon, (35, 35), notification.app_name
+                        notification.app_icon, (64, 64), notification.app_name
                     )
                     cached_notification.cache_metadata["app_icon_cache_key"] = (
                         app_icon_cache_key

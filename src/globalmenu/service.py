@@ -16,9 +16,9 @@ from fabric.utils import (
     os,
 )
 
-from services.environment import setup_global_menu_environment
-from utils.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
-from utils.gtkmenu import ActionMenuClient, GtkMenuClient
+from globalmenu.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
+from globalmenu.environment import setup_global_menu_environment
+from globalmenu.gtkmenu import ActionMenuClient, GtkMenuClient
 
 _DBUS_TIMEOUT_INTROSPECT = 500
 _DBUS_TIMEOUT_PID = 200
@@ -353,7 +353,12 @@ class GlobalMenuService(Service):
                     )
 
             elif method_name == "GetMenus":
-                invocation.return_value(GLib.Variant("(a(uso))", ([],)))
+                with self._registry_lock:
+                    menus = [
+                        (0, svc, path)
+                        for sender, (svc, path) in self._registered_menus.items()
+                    ]
+                invocation.return_value(GLib.Variant("(a(uso))", (menus,)))
         except Exception as e:
             logger.error(f"[GlobalMenuService] Registrar error {method_name}: {e}")
             invocation.return_error_literal(Gio.DBusError.FAILED, "FAILED", str(e))
@@ -1042,7 +1047,7 @@ class GlobalMenuService(Service):
             svc = self._pid_to_service.get(target_pid)
             entry = self._service_registry.get(svc) if svc else None
         if entry and entry.importer:
-            entry.importer.click_item(item_id)
+            entry.importer.click_item(item_id, pid=target_pid)
             return True
         return False
 

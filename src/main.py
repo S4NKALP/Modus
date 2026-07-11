@@ -9,6 +9,7 @@ for log in [
     "services",
     "window",
     "utils",
+    "globalmenu",
 ]:
     logger.disable(log)
 
