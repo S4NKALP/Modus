@@ -2,9 +2,9 @@
 icon = "misc/color-picker.svg"
 icon-size = 18
 order = 0
-on-left = "hyprpicker -a -n -f hex && sleep 0.1 && c=$(wl-paste) && magick -size 64x64 xc:$c /tmp/cp.png && notify-send 'HEX color picked' $c -i /tmp/cp.png -a Hyprpicker && rm -f /tmp/cp.png"
-on-middle = "hyprpicker -a -n -f rgb && sleep 0.1 && c=$(wl-paste) && magick -size 64x64 xc:$c /tmp/cp.png && notify-send 'RGB color picked' $c -i /tmp/cp.png -a Hyprpicker && rm -f /tmp/cp.png"
-on-right = "hyprpicker -n -f hsv | wl-copy -n && sleep 0.1 && c=$(wl-paste) && magick -size 64x64 xc:$c /tmp/cp.png && notify-send 'HSV color picked' $c -i /tmp/cp.png -a Hyprpicker && rm -f /tmp/cp.png"
+on-left = "hyprpicker -a -n -f hex && sleep 0.1 && c=$(wl-paste)"
+on-middle = "hyprpicker -a -n -f rgb && sleep 0.1 && c=$(wl-paste)"
+on-right = "hyprpicker -n -f hsv | wl-copy -n && sleep 0.1 && c=$(wl-paste)"
 
 [Mods.google-lens]
 icon = "google-lens.svg"
