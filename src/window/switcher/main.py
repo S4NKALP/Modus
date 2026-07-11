@@ -1,23 +1,17 @@
 import ctypes
 import os
 
-import gi
+from fabric.utils import get_relative_path
 
-_so_path = os.path.join(
-    os.path.dirname(__file__),
-    "app-capture",
-    "builddir",
-    "libappcapture.so",
-)
-_so_path = os.path.normpath(_so_path)
+_so_path = get_relative_path("app-capture/builddir/libappcapture.so")
 if os.path.isfile(_so_path):
     ctypes.CDLL(_so_path)
 
-gi.require_version("AppCapture", "1.0")
+# gi.require_version("AppCapture", "1.0")
 from collections import OrderedDict
 
 import cairo
-from fabric.utils import Gdk, GdkPixbuf, GLib, logger
+from fabric.utils import Gdk, GdkPixbuf, invoke_repeater, logger
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
@@ -147,7 +141,7 @@ class ApplicationSwitcher(Window):
         self.show()
         self.ungrab_keyboard()
         self.grab_keyboard()
-        GLib.timeout_add(16, self._fade_in)
+        invoke_repeater(16, self._fade_in, initial_call=False)
 
     def _fade_in(self):
         current = self.get_opacity()
@@ -163,7 +157,7 @@ class ApplicationSwitcher(Window):
         if self._pending_close is not None:
             close_window(self._pending_close)
             self._pending_close = None
-        GLib.timeout_add(150, self.hide)
+        invoke_repeater(150, self.hide, initial_call=False)
         self.ungrab_keyboard()
 
     def _get_pixbuf(self, class_name: str) -> GdkPixbuf.Pixbuf | None:
@@ -193,7 +187,9 @@ class ApplicationSwitcher(Window):
                 name="app-switcher-item-label",
                 h_align="start",
                 v_align="center",
+                ellipsize="end",
             )
+            name_label.set_max_width_chars(25)
 
             header_box = Box(
                 name="app-switcher-header-box",
@@ -211,7 +207,6 @@ class ApplicationSwitcher(Window):
                 h_align="center",
                 v_align="center",
             )
-            preview_box.set_size_request(300, 168)
 
             item_box = Box(
                 name="app-switcher-item",
@@ -221,6 +216,7 @@ class ApplicationSwitcher(Window):
                 spacing=8,
                 children=[header_box, preview_box],
             )
+            item_box.set_size_request(300, 210)
             app_icon_ref = app_icon
             preview_image_ref = preview_image
             name_label_ref = name_label
@@ -241,7 +237,9 @@ class ApplicationSwitcher(Window):
                 label="",
                 name="app-switcher-item-label",
                 h_align="center",
+                ellipsize="end",
             )
+            name_label.set_max_width_chars(25)
             item_box = Box(
                 name="app-switcher-item",
                 orientation="v",
@@ -250,6 +248,7 @@ class ApplicationSwitcher(Window):
                 spacing=2,
                 children=[icon_box, name_label],
             )
+            item_box.set_size_request(300, 210)
             app_icon_ref = image
             preview_image_ref = None
             name_label_ref = name_label
@@ -558,10 +557,10 @@ class ApplicationSwitcher(Window):
         event_box.remove_style_class("hovered")
         return False
 
-    def _on_frame_ready(self, _capture, data, width, height, stride):
+    def _on_frame_ready(self, _capture, addr, data, width, height, stride):
         try:
-            addr = self._current_capture_addr
-            idx = self._addr_to_idx.get(addr) if addr else None
+            full_addr = addr if addr.startswith("0x") else f"0x{addr}"
+            idx = self._addr_to_idx.get(full_addr)
             if idx is not None and idx < len(self._items):
                 raw = bytearray(data.get_data())
                 surface = cairo.ImageSurface.create_for_data(
@@ -570,33 +569,55 @@ class ApplicationSwitcher(Window):
                 pixbuf = Gdk.pixbuf_get_from_surface(surface, 0, 0, width, height)
                 item = self._items[idx]
                 if item.preview_image is not None and pixbuf:
-                    aspect = width / height
-                    new_width = 300
-                    new_height = int(new_width / aspect) if aspect > 0 else 180
-                    scaled = pixbuf.scale_simple(
-                        new_width, new_height, GdkPixbuf.InterpType.BILINEAR
+                    item.preview_image.set_from_pixbuf(pixbuf)
+
+                if self.get_visible() and config().get("switcher_live_preview", True):
+                    fps_delay = config().get("switcher_live_preview_delay_ms", 200)
+                    invoke_repeater(
+                        fps_delay,
+                        lambda: (
+                            self._capture.capture_by_handle(full_addr, 300, 168, True)
+                            if self.get_visible()
+                            else False
+                        ),
+                        initial_call=False,
                     )
-                    item.preview_image.set_from_pixbuf(scaled)
         except Exception:
             logger.exception("_on_frame_ready error")
-        finally:
-            self._current_capture_addr = None
-            self._pump_capture_queue()
 
-    def _on_frame_failed(self, _capture, reason):
-        logger.debug(f"AppCapture frame-failed: {reason}")
-        self._current_capture_addr = None
-        self._pump_capture_queue()
+    def _on_frame_failed(self, _capture, addr, reason):
+        full_addr = addr if addr.startswith("0x") else f"0x{addr}"
+        logger.debug(f"AppCapture frame-failed for {full_addr}: {reason}")
+
+        # Retry failed captures after a delay, in case the window was temporarily minimized or mapping
+        if self.get_visible() and config().get("switcher_live_preview", True):
+            invoke_repeater(
+                1000,
+                lambda: (
+                    self._capture.capture_by_handle(full_addr, 300, 168, False)
+                    if self.get_visible()
+                    else False
+                ),
+                initial_call=False,
+            )
 
     def _pump_capture_queue(self):
-        if self._current_capture_addr is not None:
+        use_preview = config().get("switcher_live_preview", True)
+        if not use_preview:
             return
-        while self._capture_queue:
-            addr = self._capture_queue.pop(0)
+
+        # wait_for_damage = False forces an immediate capture so thumbnails populate instantly.
+        for w in self.windows:
+            addr = w["address"]
             if addr in self._addr_to_idx:
-                self._current_capture_addr = addr
-                self._capture.capture_by_handle(addr)
-                return
+                self._capture.capture_by_handle(addr, 300, 168, False)
+
+    def _refill_and_pump(self):
+        # Called when the switcher becomes visible or windows change
+        if not self.get_visible():
+            return False
+        self._pump_capture_queue()
+        return False
 
     def grab_keyboard(self):
         try:
