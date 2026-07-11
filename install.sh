@@ -55,6 +55,9 @@ PACKAGES=(
     appmenu-gtk-module
     libdbusmenu-gtk3
     libdbusmenu-qt5
+    meson
+    ninja
+    wayland-protocols
 )
 
 # Colors and formatting

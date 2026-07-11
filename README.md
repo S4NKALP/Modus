@@ -60,12 +60,12 @@ cd ~/.config/Modus
 
 Config files are in `config/` directory, using TOML format:
 
-| File                   | Purpose                |
-| ---------------------- | ---------------------- |
-| `config/config.toml`   | Main app configuration |
-| `config/mods.toml`     | Custom mod definitions |
-| `config/launcher.toml` | Launcher settings      |
-| `config/dock.toml`     | Dock pinned apps       |
+| File                   | Purpose                                                             |
+| ---------------------- | ------------------------------------------------------------------- |
+| `config/config.toml`   | Main app configuration (including Switcher & Live Preview settings) |
+| `config/mods.toml`     | Custom mod definitions                                              |
+| `config/launcher.toml` | Launcher settings                                                   |
+| `config/dock.toml`     | Dock pinned apps                                                    |
 
 ## Custom Mods
 
@@ -99,12 +99,26 @@ on-right = "hyprpicker -n -f hsv | wl-copy -n && sleep 0.1 && ..."
 ## Manual Installation
 
 ```bash
-paru -S fabric-cli-git gtk-session-lock uv apple-fonts cinnamon-desktop hyprshot hypridle hyprpicker grim slurp gnome-bluetooth-3.0 cliphist matugen-bin awww swappy wl-clipboard webp-pixbuf-loader acpi wf-recorder brightnessctl power-profile-daemon uwsm libnotify playerctl ffmpeg --needed
+paru -S uv fabric-cli-git cliphist gnome-bluetooth-3.0 slurp ffmpeg hypridle hyprsunset hyprpicker hyprshot grim libnotify matugen-bin playerctl gtk-session-lock awww apple-fonts swappy wl-clipboard webp-pixbuf-loader wf-recorder acpi brightnessctl power-profiles-daemon uwsm cinnamon-desktop ddcutil at-spi2-core gcc make pkgconf appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 meson ninja wayland-protocols --needed
 git clone https://github.com/S4NKALP/Modus ~/.config/Modus
 cd ~/.config/Modus
 uv sync
+
+# Compile the high-performance App Switcher C-backend
+cd src/window/switcher/app-capture
+meson setup builddir
+meson compile -C builddir
+cd ../../../..
+
+# Compile the Global Menu Button shim
+cd src/globalmenu
+gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
+cd ../..
+
 uv run start
 ```
+
+## Roadmap
 
 - [x] Launcher
 - [x] Lock Screen
@@ -115,24 +129,17 @@ uv run start
 - [x] Desktop Widgets
 - [x] New Launcher (like Spotlight)
 - [x] Settings
-- [x] ~~Magnifier hover effect on Dock~~
-- [x] ~~New Application Switcher~~
+- [x] Magnifier hover effect on Dock
+- [x] New Application Switcher (with high-performance Live Wayland Previews via custom C-backend)
+- [x] Built-in Screen Capture & Screen Recording Widget
 - [x] Panel Widget
 - [x] MacOS like Widget
 - [x] Expandable Notification Centre
 - [x] Installation Script
 - [x] Migrate to a `uv` managed Python virtual environment
+- [x] To-do List Widget
 - [ ] Proper Documentation
 - [ ] Pomodoro Timer Widget
-- [x] To-do List Widget
-
-## Bug Fixes (the bug found till now)
-
-- [x] WiFi
-- [x] wifi off button looks bigger
-- [x] Metadata Changes delay in Media Player
-- [x] Active Window Title showing `Unknown` when no active window
-- [x] Notification Escape Char Issue
 
 ## Team
 
