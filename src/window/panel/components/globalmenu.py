@@ -7,7 +7,7 @@ from fabric.widgets.label import Label
 
 from shared.dialogs.about import AboutApp, get_about_window
 from shared.window.dropdown import ModusDropdown, dropdown_divider, dropdowns
-from services.globalmenu import get_global_menu_service
+from globalmenu.service import get_global_menu_service
 from utils.app_name_resolver import format_window
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover
