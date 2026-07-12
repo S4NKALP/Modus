@@ -1,0 +1,90 @@
+@keyframes notifications-pop {
+    50% {
+        padding-left: 0.8rem;
+    }
+
+    100% {
+        padding: 0.3rem;
+    }
+}
+
+@define background-shine(--color) {
+    background-image: linear-gradient(-75deg,
+            transparent 0,
+            transparent 0,
+            --color 5%,
+            --color 20%,
+            transparent 10%,
+            transparent 100%);
+    background-size: 200% 100%;
+}
+
+@keyframes shine {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: -150% 0%;
+    }
+}
+
+#notifications {
+    padding: 0.3rem;
+    background-color: var(--shadow);
+
+    /* get rid of default border radius set globally */
+    border-radius: 0rem;
+    border-bottom-left-radius: 16px;
+}
+
+#notifications.popped {
+    animation: 1s cubic-bezier(0.41, 0.42, 0.03, 0.9) notifications-pop;
+    padding: 0.3rem;
+}
+
+.notifications-clip {
+    border-radius: calc(16px - 0.3rem);
+}
+
+#notification {
+    background-color: var(--surface);
+    padding: 0.3rem;
+    border-radius: calc(16px - 0.3rem);
+    min-width: 28rem;
+}
+
+#notification.shine {
+    animation: 1s ease-in-out shine;
+    @apply background-shine(var(--surface-bright));
+}
+
+#notification image,
+#notification button {
+    /* can't use nested "clac" statements. sadage */
+    border-radius: 0.6rem;
+}
+
+#notification button {
+    background-color: var(--surface);
+    padding: 0.3rem;
+}
+
+#notification button:hover {
+    background-color: alpha(var(--surface-bright), 0.3);
+}
+
+#notification .body,
+#notification .summary {
+    margin: 0rem 0.3rem;
+}
+
+#notification .summary {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+}
+
+#notification .body {
+    color: darker(var(--foreground));
+}

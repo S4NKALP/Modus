@@ -1,0 +1,12 @@
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+# config/hypr/modus.conf
+config.json
+styles/colors.css
+config/hypr/colors.lua
+.venv/*
+.venv/
+
+

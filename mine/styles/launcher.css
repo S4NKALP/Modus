@@ -1,0 +1,448 @@
+@keyframes app-slot-shine {
+    50% {
+        background-color: alpha(var(--surface-bright), 0.4);
+        margin: 1rem;
+    }
+
+    100% {
+        background-color: alpha(var(--surface-bright), 0.2);
+        margin: inherit;
+    }
+}
+
+@keyframes overshooting {
+    80% {
+        margin: calc(0.2rem + 0.3rem);
+        padding: calc(0.3rem + 0.2rem);
+    }
+
+    100% {
+        margin: 0.2rem;
+        padding: 0.3rem;
+    }
+}
+
+#launcher.overshoot {
+    animation: 350ms cubic-bezier(0.2, 1, 0.8, 1) overshooting;
+}
+
+#launcher {
+    margin: 0.2rem;
+    padding: 0.3rem;
+    border-radius: 1rem;
+    background-color: var(--shadow);
+}
+
+.launcher-scroll-clip {
+    border-radius: calc(1rem - 0.3rem);
+}
+
+.app-search-entry {
+    color: var(--foreground);
+}
+
+.app-search-header.shine {
+    @apply background-shine(var(--surface-bright));
+    animation: 1s ease-in-out shine infinite;
+}
+
+.app-search-header,
+.app-slot {
+    padding: 0.5rem;
+    border: solid 1px transparent;
+
+    border-radius: calc(1rem - 0.3rem);
+    background-color: alpha(var(--surface-bright), 0.2);
+
+    transition: border 0.1s ease-in-out;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.app-slot.wallpaper>box {
+    min-height: 4rem;
+    transition: all 0.2s cubic-bezier(0.2, 1, 0.8, 1);
+    background-size: cover;
+}
+
+.app-slot.wallpaper:focus > box,
+.app-slot.wallpaper.selected > box {
+    min-height: 12rem;
+}
+
+.app-slot:hover {
+    border-color: var(--outline);
+}
+
+.app-slot:focus {
+    border-color: var(--outline);
+    background-color: var(--surface);
+}
+
+.app-slot.selected {
+    border-color: var(--outline);
+    background-color: var(--surface);
+}
+
+.app-slot.shine {
+    animation: app-slot-shine;
+}
+
+.app-description {
+    color: darker(var(--foreground));
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.calc-expression {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.calc-result-text {
+    color: var(--foreground);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.emoji-slot {
+    min-height: 3rem;
+}
+
+.emoji-char {
+    font-size: 24px;
+    min-width: 2rem;
+}
+
+.emoji-name {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.emoji-no-results {
+    min-height: 3rem;
+}
+
+.emoji-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+.clipboard-no-results {
+    min-height: 3rem;
+}
+
+.clipboard-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+.clipboard-image {
+    min-height: 4rem;
+    transition: all 0.2s cubic-bezier(0.2, 1, 0.8, 1);
+    background-size: cover;
+}
+
+.clipboard-image:focus,
+.clipboard-image.selected {
+    min-height: 12rem;
+}
+
+.clipboard-text {
+    min-height: 3rem;
+}
+
+.clipboard-icon {
+    font-size: 20px;
+    min-width: 2rem;
+}
+
+.clipboard-content {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: normal;
+    margin-left: 1rem;
+}
+
+/* OTP Plugin Styles */
+.otp-slot {
+    min-height: 3rem;
+}
+
+.otp-account-name {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.otp-code {
+    color: var(--foreground);
+    font-size: 18px;
+    font-weight: bold;
+    font-family: monospace;
+    letter-spacing: 2px;
+}
+
+.otp-timer {
+    color: darker(var(--foreground));
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.otp-no-accounts,
+.otp-no-results {
+    min-height: 3rem;
+}
+
+.otp-no-accounts-text,
+.otp-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+.otp-help,
+.otp-success,
+.otp-error {
+    min-height: 3rem;
+}
+
+.otp-help-text,
+.otp-success-text,
+.otp-error-text {
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.otp-success-text {
+    color: var(--success);
+}
+
+.otp-error-text {
+    color: var(--error);
+}
+
+.otp-help-text {
+    color: darker(var(--foreground));
+    font-style: italic;
+}
+
+/* Password Manager Plugin Styles */
+.password-slot {
+    min-height: 3rem;
+}
+
+.password-name {
+    color: var(--foreground);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.password-username {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.password-website {
+    color: darker(var(--foreground));
+    font-size: 12px;
+    font-weight: normal;
+    font-style: italic;
+}
+
+.password-no-passwords,
+.password-no-results {
+    min-height: 3rem;
+}
+
+.password-no-passwords-text,
+.password-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+.password-help,
+.password-success,
+.password-error {
+    min-height: 3rem;
+}
+
+.password-help-text,
+.password-success-text,
+.password-error-text {
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.password-success-text {
+    color: var(--success);
+}
+
+.password-error-text {
+    color: var(--error);
+}
+
+.password-help-text {
+    color: darker(var(--foreground));
+    font-style: italic;
+}
+
+.password-master-required {
+    min-height: 4rem;
+}
+
+.password-master-required-text {
+    color: var(--error);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Window Switcher Plugin Styles */
+.window-slot {
+    min-height: 3rem;
+}
+
+.window-title {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.window-subtitle {
+    color: darker(var(--foreground));
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.window-state {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: normal;
+    font-style: italic;
+}
+
+.window-action-button {
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    background-color: alpha(var(--surface-bright), 0.3);
+    border: 1px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.window-action-button:hover {
+    background-color: alpha(var(--surface-bright), 0.5);
+    border-color: var(--outline);
+}
+
+.window-close-button:hover {
+    background-color: alpha(var(--error), 0.3);
+    border-color: var(--error);
+}
+
+.window-no-windows,
+.window-no-results {
+    min-height: 3rem;
+}
+
+.window-no-windows-text,
+.window-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Power Profile Plugin Styles */
+.power-profile-slot {
+    min-height: 3rem;
+}
+
+.power-profile-name {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.power-profile-status {
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.power-profile-active {
+    color: var(--success);
+}
+
+.power-profile-inactive {
+    color: darker(var(--foreground));
+}
+
+.power-profile-no-profiles {
+    min-height: 3rem;
+}
+
+.power-profile-no-profiles-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Power Menu Styles */
+.power-menu-slot {
+    padding: 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.power-menu-slot:hover {
+    background-color: var(--background);
+}
+
+.power-menu-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--foreground);
+}
+
+.power-menu-description {
+    font-size: 12px;
+    color: var(--unfocused-foreground);
+    margin-top: 2px;
+}
+
+.settings-slot {
+    padding: 6px 12px;
+}
+
+.settings-slot > box {
+    min-height: 28px;
+}
+
+.settings-slot box > box:first-child {
+    padding-right: 12px;
+}
+
+switch {
+    background-color: var(--surface-dim);
+    border: none;
+    border-radius: 15px;
+}
+
+switch:checked {
+    background-color: var(--primary);
+}
+
+switch slider {
+    background-color: white;
+    border: none;
+    border-radius: 50%;
+}
+
+switch:checked slider {
+    background-color: white;
+}

@@ -1,0 +1,10 @@
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[lint]
+ignore = ["E501", "C901", "PLR0915", "PLR0912", "PLR0913", "PLR2004", "N802", "N803", "C901"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]

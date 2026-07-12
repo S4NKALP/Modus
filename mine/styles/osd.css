@@ -1,0 +1,81 @@
+#osd {
+    padding: 0.4rem;
+    border-radius: 1.8rem;
+    background-color: var(--shadow);
+}
+
+#osd-container {
+    border-radius: 1.5rem;
+    background-color: var(--surface);
+    padding-left: 1rem;
+    padding: 0.4rem;
+}
+
+#osd-container * {
+    transition: all 0.4s cubic-bezier(0.15, 0.70, 0, 1);
+}
+
+scale {
+    min-height: 2rem;
+    min-width: 18rem;
+}
+
+trough {
+    min-height: 2rem;
+    min-width: inherit;
+    border-radius: 1rem;
+    background-color: var(--shadow);
+}
+
+highlight {
+    margin: 0.4rem;
+    background-color: var(--primary);
+    border-radius: 0.8rem;
+}
+
+/* Muted state: soften the scale visuals */
+scale.muted trough {
+    background-color: var(--surface-bright);
+}
+
+scale.muted highlight {
+    background-color: var(--surface);
+}
+
+scale:hover,
+#osd-container.focused scale {
+    min-width: 21rem;
+    min-height: inherit;
+}
+
+scale:hover trough,
+#osd-container.focused scale trough {
+    border-radius: 1.2rem;
+    min-width: 21rem;
+    min-height: 3rem;
+}
+
+.capslock-on {
+    color: var(--foreground);
+    font-weight: bold;
+}
+
+.capslock-off {
+    opacity: 0.2;
+}
+
+#osd-container label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-left: 0.1rem;
+}
+
+.mic-muted {
+    opacity: 0.5;
+    color: var(--foreground);
+}
+
+.mic-unmuted {
+    color: var(--primary);
+    font-weight: bold;
+}

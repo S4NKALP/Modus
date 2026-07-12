@@ -1,0 +1,8 @@
+cryptography==46.0.3
+fabric @ git+https://github.com/Fabric-Development/fabric.git@0f3d317b047799191ff04a32352a63084eac11d9
+psutil==7.1.2
+pygobject==3.50.0
+pyotp==2.9.0
+pywayland==0.4.18
+pyzbar==0.1.9
+thefuzz==0.22.1

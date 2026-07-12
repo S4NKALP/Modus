@@ -1,0 +1,53 @@
+#calendar-window {
+    background-color: var(--background);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+#calendar-widget {
+    background-color: transparent;
+    min-width: 280px;
+}
+
+#cal-header {
+    margin-bottom: 8px;
+}
+
+#cal-title {
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+#cal-nav-btn {
+    padding: 2px 6px;
+    margin-top: 10px;
+}
+
+#cal-nav-btn:hover {
+    background-color: var(--surface);
+}
+
+#cal-weekdays {
+    margin-bottom: 4px;
+}
+
+#cal-weekday-label {
+    font-weight: 500;
+    min-width: 40px;
+    padding: 2px 0;
+}
+
+#cal-grid {
+    min-height: 180px;
+}
+
+#cal-day-today label {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--primary);
+    font-weight: bold;
+    border-radius: 6px;
+    min-width: 40px;
+    min-height: 36px;
+}

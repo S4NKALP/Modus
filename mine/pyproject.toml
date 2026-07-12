@@ -1,0 +1,29 @@
+[project]
+name = "Modus"
+version = "0.1.0"
+description = "A modular and extensible shell, built with Fabric, designed for seamless integration with Hyprland"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Sankalp Tharu", email = 'sankalptharu50028@gmail.com' },
+]
+
+dependencies = [
+    "cryptography>=46.0.3",
+    "fabric",
+    "psutil>=7.1.2",
+    "pygobject>=3.50.0",
+    "pyotp>=2.9.0",
+    "pywayland>=0.4.18",
+    "pyzbar>=0.1.9",
+    "qrcode>=8.2",
+    "thefuzz>=0.22.1",
+]
+
+[tool.uv.sources]
+fabric = { git = "https://github.com/Fabric-Development/fabric.git" }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.6",
+]

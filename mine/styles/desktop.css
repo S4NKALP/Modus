@@ -1,0 +1,12 @@
+#clock-widget>#date>label {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+    color: var(--primary);
+}
+
+#clock-widget>#time>label {
+    margin: 0rem;
+    font-weight: 900;
+    font-size: 5.5rem;
+    color: var(--primary);
+}

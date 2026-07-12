@@ -1,0 +1,13 @@
+libqalculate
+tmux
+awww
+matugen-bin
+cliphist
+wl-clip-persist
+wf-recorder
+hypridle
+hyprlock
+hyprshot
+power-profile-daemon
+uv
+wtype

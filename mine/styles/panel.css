@@ -1,0 +1,123 @@
+/* Panel styles - default (bottom position) */
+#panel {
+    background-color: var(--shadow);
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 0.3rem 0;
+}
+
+/* Panel styles when at top position */
+#panel.panel-top {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+#panel-revealer {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#battery {
+    margin: 0 0.3rem;
+}
+
+#date-time {
+    margin: 0 0.25rem;
+    font-weight: 500;
+    background-color: var(--surface);
+    border-radius: 0.5rem;
+    padding: 0 0.5rem;
+}
+
+
+#battery {
+    margin: 0 0.25rem;
+    padding: 0 0.5rem;
+    background-color: var(--surface);
+    border-radius: 0.5rem;
+}
+
+#corner-left,
+#corner-right {
+    margin: 0;
+}
+
+
+#taskbar {
+    margin: 0 0.25rem;
+    background-color: var(--surface);
+    border-radius: 0.5rem;
+    padding: 0 0.25rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#taskbar>button {
+    margin: 0.25rem 0;
+    border-radius: 0.5rem;
+    padding: 0 0.05rem;
+}
+
+#taskbar .active {
+    background-color: var(--primary);
+}
+
+#taskbar>button:hover {
+    background-color: var(--surface-bright);
+}
+
+#workspaces {
+    margin: 0 0.25rem;
+    background-color: var(--surface);
+    border-radius: 0.5rem;
+    padding: 0 0.5rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#workspaces>button {
+    margin: 0.3rem 0;
+    min-width: 0.7rem;
+    min-height: 0.5rem;
+    border-radius: 1rem;
+    padding: 0 0.38rem;
+}
+
+#workspaces>button:hover {
+    background-color: var(--surface-bright);
+}
+
+#workspaces>button.active {
+    background-color: var(--primary);
+    border-radius: 1rem;
+}
+
+#workspaces>button.active label {
+    color: var(--shadow);
+}
+
+#workspaces>button.urgent label {
+    color: var(--error-dim);
+}
+
+menu {
+    border: solid 0.06rem;
+    border-radius: 1rem;
+    border-color: var(--surface);
+    background-color: var(--shadow);
+    padding: 0.4rem;
+}
+
+menu>menuitem {
+    border-radius: 0.6rem;
+    padding: 0.4rem 0.6rem;
+}
+
+menu>menuitem:hover {
+    background-color: var(--primary);
+}
+
+menu>menuitem:hover>label {
+    color: var(--shadow);
+}
