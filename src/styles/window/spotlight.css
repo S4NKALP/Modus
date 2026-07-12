@@ -1,0 +1,175 @@
+@keyframes app-slot-shine {
+    from {
+        background-color: @fg-a12;
+    }
+    to {
+        background-color: alpha(@surface-bright, 0.5);
+    }
+}
+
+@keyframes header-shine {
+    from {
+        background-color: @fg-a12;
+    }
+    to {
+        background-color: alpha(@surface-bright, 0.3);
+    }
+}
+
+#spotlight {
+    margin: 8px;
+    padding: 5px;
+    border-radius: apply(radius-lg);
+    background-color: @bg-a80;
+    border: 1px solid @outline-a40;
+}
+
+.spotlight-scroll-clip {
+    border-radius: apply(radius-md);
+}
+
+.app-search-entry {
+    color: @foreground;
+}
+
+.app-search-header {
+    padding: 8px;
+    border: solid 1px transparent;
+    border-radius: apply(radius-md);
+    background-color: @fg-a12;
+    transition: background-color apply(transition-medium) ease-in-out;
+}
+
+.app-search-header.shine {
+    animation: header-shine 1s ease-in-out infinite alternate;
+}
+
+.app-slot {
+    padding: 8px;
+    border: solid 1px transparent;
+    border-radius: apply(radius-md);
+    background-color: @fg-a12;
+    transition: border apply(transition-fast) ease-in-out,
+                background-color apply(transition-medium) ease-in-out;
+}
+
+.app-slot:hover {
+    border-color: @outline-a40;
+    background-color: @fg-a18;
+}
+
+.app-slot:focus,
+.app-slot.selected {
+    border-color: @primary-a40;
+    background-color: @primary-a20;
+}
+
+.app-slot.shine {
+    animation: app-slot-shine 0.3s ease-in-out;
+}
+
+.app-title {
+    color: @foreground;
+    font-size: apply(font-base);
+    font-weight: 600;
+}
+
+.app-description {
+    color: @text-dim;
+    font-size: apply(font-sm);
+}
+
+.calc-expression {
+    color: @text-dim;
+    font-size: apply(font-base);
+}
+
+.calc-result-text {
+    color: @foreground;
+    font-size: apply(font-lg);
+    font-weight: bold;
+}
+
+.power-menu-name {
+    color: @foreground;
+    font-size: apply(font-lg);
+    font-weight: 600;
+}
+
+.power-menu-description {
+    color: @text-muted;
+    font-size: apply(font-sm);
+}
+
+.app-slot.wallpaper>box {
+    min-height: 4rem;
+    transition: all 0.2s cubic-bezier(0.2, 1, 0.8, 1);
+    background-size: cover;
+}
+
+.app-slot.wallpaper:focus > box,
+.app-slot.wallpaper.selected > box {
+    min-height: 12rem;
+}
+
+.emoji-slot {
+    min-height: 3rem;
+}
+
+.emoji-char {
+    font-size: 24px;
+    min-width: 2rem;
+}
+
+.emoji-name {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.emoji-no-results {
+    min-height: 3rem;
+}
+
+.emoji-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+.clipboard-no-results {
+    min-height: 3rem;
+}
+
+.clipboard-no-results-text {
+    color: darker(var(--foreground));
+    font-size: 14px;
+    font-style: italic;
+}
+
+.clipboard-image {
+    min-height: 4rem;
+    transition: all 0.2s cubic-bezier(0.2, 1, 0.8, 1);
+    background-size: cover;
+}
+
+.clipboard-image:focus,
+.clipboard-image.selected {
+    min-height: 12rem;
+}
+
+.clipboard-text {
+    min-height: 3rem;
+}
+
+.clipboard-icon {
+    font-size: 20px;
+    min-width: 2rem;
+}
+
+.clipboard-content {
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: normal;
+    margin-left: 1rem;
+}

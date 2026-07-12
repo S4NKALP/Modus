@@ -97,10 +97,7 @@ class Spotlight(Box):
 
         self.children = self.header, self.scrolled_clip
 
-    # ------------------------------------------------------------------
     # Search
-    # ------------------------------------------------------------------
-
     @debounce(200)
     def on_entry_changed(self, entry: Entry, *_):
         if getattr(entry, "_ignore_change", False):
@@ -246,10 +243,7 @@ class Spotlight(Box):
 
         self._post_arrange()
 
-    # ------------------------------------------------------------------
     # Rendering
-    # ------------------------------------------------------------------
-
     def _render_result(self, result: SearchResult) -> Button:
         rt = result.render_type
         if rt == "app":
@@ -511,10 +505,7 @@ class Spotlight(Box):
             result.action()
         self.launched()
 
-    # ------------------------------------------------------------------
     # Viewport management
-    # ------------------------------------------------------------------
-
     def _clear_viewport(self):
         old_results = self._current_results
         self._current_results = []
@@ -569,10 +560,7 @@ class Spotlight(Box):
         if self.viewport.children:
             self.set_selected_index(0)
 
-    # ------------------------------------------------------------------
     # Selection & keyboard
-    # ------------------------------------------------------------------
-
     def on_slot_enter(self, button, event):
         children = self.viewport.children
         if button in children:
@@ -611,10 +599,7 @@ class Spotlight(Box):
             return True
         return False
 
-    # ------------------------------------------------------------------
     # Submit
-    # ------------------------------------------------------------------
-
     def on_entry_accept(self, entry: Entry, *_):
         if 0 <= self._selected_index < len(self.viewport.children):
             widget = self.viewport.children[self._selected_index]
@@ -632,10 +617,7 @@ class Spotlight(Box):
         if self._current_results:
             self._activate_result(self._current_results[0])
 
-    # ------------------------------------------------------------------
     # External commands
-    # ------------------------------------------------------------------
-
     def handle_external(self, command: str, text: str = "") -> bool:
         if command == "deep_reload" and text:
             return self.plugin_service.manager.deep_reload(text.strip())
@@ -662,10 +644,10 @@ class SpotlightWindow(Window):
         )
         super().__init__(
             name="spotlight-window",
-            title="fabric-spotlight",
+            title="modus-spotlight",
             anchor="top",
             margin="80px 0px 0px 0px",
-            keyboard_mode="on-demand",
+            keyboard_mode="exclusive",
             child=self.spotlight_box,
             visible=False,
             all_visible=False,
