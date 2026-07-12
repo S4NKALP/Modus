@@ -15,3 +15,5 @@
     font-family: "SF Pro Rounded";
 }
 
+@import url("widgets/pomodoro.css");
+@import url("widgets/todo.css");

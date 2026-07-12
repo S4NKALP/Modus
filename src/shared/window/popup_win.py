@@ -2,8 +2,6 @@ from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.wayland import WaylandWindow
 from gi.repository import GtkLayerShell
 
-EDGE_MARGIN = 0
-
 
 def _get_monitor_geometry(widget: Gtk.Widget) -> tuple[int, int]:
     screen = Gdk.Screen.get_default()
@@ -24,6 +22,7 @@ class PopupWindow(WaylandWindow):
         parent: WaylandWindow | None = None,
         pointing_to: Gtk.Widget | None = None,
         margin: tuple[int, ...] | str = "0px 0px 0px 0px",
+        edge_margin: int = 0,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -33,6 +32,7 @@ class PopupWindow(WaylandWindow):
         self._pointing_widget = pointing_to
         self._base_margin = self.extract_margin(margin)
         self.margin = self._base_margin.values()
+        self.edge_margin = edge_margin
         self.connect("notify::visible", self.do_update_handlers)
 
     def get_coords_for_widget(self, widget: Gtk.Widget) -> tuple[int, int]:
@@ -163,15 +163,15 @@ class PopupWindow(WaylandWindow):
                 raw_margin = round((bar_left + coords_centered[0]) - (width / 2))
             else:
                 raw_margin = round((parent_x_margin + coords_centered[0]) - (width / 2))
-            min_margin = EDGE_MARGIN
-            max_margin = monitor_width - width - EDGE_MARGIN
+            min_margin = self.edge_margin
+            max_margin = monitor_width - width - self.edge_margin
             clamped = max(min_margin, min(raw_margin, max_margin))
             position_margins = (0, 0, 0, clamped)
         else:
             raw_margin = round((parent_y_margin + coords_centered[1]) - (height / 2))
             monitor_height = Gdk.Screen.get_default().get_height()
-            min_margin = EDGE_MARGIN
-            max_margin = monitor_height - height - EDGE_MARGIN
+            min_margin = self.edge_margin
+            max_margin = monitor_height - height - self.edge_margin
             clamped = max(min_margin, min(raw_margin, max_margin))
             position_margins = (clamped, 0, 0, 0)
 

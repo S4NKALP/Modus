@@ -24,12 +24,12 @@ class DismissLayer(Window):
 class AppletWindow(PopupWindow):
     _active_popup = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, edge_margin: int = 0, **kwargs):
         self._is_open = False
         self._hide_timeout_id = None
         self.dismiss_layer = DismissLayer(on_dismiss=self.toggle)
         kwargs["keyboard_mode"] = "on-demand"
-        super().__init__(**kwargs)
+        super().__init__(edge_margin=edge_margin, **kwargs)
         self.add_keybinding("escape", lambda *_: self.toggle())
 
     def toggle(self, *_):
