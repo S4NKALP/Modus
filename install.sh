@@ -369,6 +369,21 @@ else
     info "You may need to manually add: $MODUS_MODULE_LINE"
 fi
 
+step "Symlinking hypridle.conf..."
+HYPR_DIR="$HOME/.config/hypr"
+HYPRIDLE_CONF="$INSTALL_DIR/config/hypr/hypridle.conf"
+HYPRIDLE_TARGET="$HYPR_DIR/hypridle.conf"
+mkdir -p "$HYPR_DIR"
+if [ -f "$HYPRIDLE_CONF" ]; then
+    if [ -L "$HYPRIDLE_TARGET" ]; then
+        rm "$HYPRIDLE_TARGET"
+    fi
+    ln -sf "$HYPRIDLE_CONF" "$HYPRIDLE_TARGET"
+    success "hypridle.conf symlinked"
+else
+    warn "hypridle.conf not found at $HYPRIDLE_CONF"
+fi
+
 progress "Configuring global environment"
 
 APP_CONF_DIR="$HOME/.config/environment.d"
