@@ -1,7 +1,7 @@
 -- local modus = os.getenv("HOME") .. "/.config/Modus"
 local modus = os.getenv("HOME") .. "/Projects/dev/Modus"
 local colors = dofile(modus .. "/config/hypr/colors.lua")
-local fabricSend = "fabric-cli exec modus1"
+local fabricSend = "fabric-cli exec modus"
 
 -- startup
 hl.on("hyprland.start", function()
@@ -19,17 +19,22 @@ hl.on("hyprland.start", function()
 end)
 
 -- Reload Modus
-hl.bind("SUPER + ALT + B", hl.dsp.exec_cmd("killall modus1; cd " .. modus .. " && uwsm app -- uv run start"))
+hl.bind("ALT + SHIFT + R", hl.dsp.exec_cmd("killall modus; cd " .. modus .. " && uwsm app -- uv run start"))
 
--- Fabric Launcher Binds
+-- Fabric Spotlight Binds
 for key, method in pairs({
+	["SUPER + D"] = "spotlight.toggle()", -- Spotlight
+	["SUPER + E"] = "spotlight.toggle('em')", -- Emoji
+	["SUPER + V"] = "spotlight.toggle('clip')", -- Clipboard
+	["SUPER + W"] = "spotlight.toggle('wall')", -- Wallpaper
 	["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
 	["ALT + TAB"] = "switcher.show_switcher()", -- Application Switcher
 	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
 	["SUPER + S"] = 'screencapture.toggle(ss="region")', -- Screenshot Region
 	["ALT + SPACE"] = "switch_keyboard_layout()", -- KB_Layout Switcher
+	["ALT + SHIFT + W"] = "spotlight.toggle('wr', external=True)", -- Random Wallpaper
 }) do
-	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. " '" .. method .. "'"))
+	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. ' "' .. method .. '"'))
 end
 
 -- Layer Rules
