@@ -1,9 +1,7 @@
 @import url("./colors.css");
-
 @import url("./constant.css");
 @import url("./controlpanel/index.css");
 @import url("./notification/index.css");
-@import url("./launcher/index.css");
 @import url("./window/index.css");
 @import url("./widgets/index.css");
 @import url("./window/lock.css");
