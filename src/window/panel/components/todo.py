@@ -5,9 +5,9 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
-from fabric.widgets.scrolledwindow import ScrolledWindow
-
+from shared.window.animated_scrollwindow import AnimatedScrollable
 from services.todo import get_todo_service
+
 from shared.window.applet_window import AppletWindow
 from utils.utils import svg_file
 
@@ -24,7 +24,6 @@ class TodoItem(Box):
             name="todo-item",
             orientation="h",
             spacing=8,
-            style_classes=["menu"],
             **kwargs,
         )
 
@@ -134,13 +133,13 @@ class TodoItem(Box):
             ],
         )
 
-        self.children = [
+        for child in [
             self.checkbox,
             self.text_container,
-            # self.priority_button,
             self.edit_button,
             self.delete_button,
-        ]
+        ]:
+            self.add(child)
 
     def _toggle_completion(self, *_):
         """Toggle todo completion status"""
@@ -149,7 +148,8 @@ class TodoItem(Box):
     def _cycle_priority(self, *_):
         """Cycle through priority levels"""
         priorities = ["low", "medium", "high"]
-        current_index = priorities.index(self.todo_data["priority"])
+        current_priority = self.todo_data.get("priority", "medium")
+        current_index = priorities.index(current_priority)
         new_priority = priorities[(current_index + 1) % len(priorities)]
         get_todo_service().set_priority(self.todo_data["id"], new_priority)
 
@@ -204,7 +204,10 @@ class TodoItem(Box):
             name="todo-checkbox-icon",
             size=20,
         )
-        self.checkbox.set_child(new_checkbox_icon)
+        old_child = self.checkbox.get_child()
+        if old_child:
+            self.checkbox.remove(old_child)
+        self.checkbox.add(new_checkbox_icon)
         self.checkbox_icon = new_checkbox_icon
 
         # Update text and styling with markup
@@ -299,7 +302,6 @@ class TodoListWidget(AppletWindow):
             name="todo-add-section",
             orientation="h",
             spacing=8,
-            style_classes=["menu"],
             children=[
                 self.new_todo_entry,
                 self.add_button,
@@ -311,17 +313,19 @@ class TodoListWidget(AppletWindow):
             name="todos-container",
             orientation="v",
             spacing=4,
+            v_expand=True,
         )
 
         # Scrolled window for todos
-        self.scrolled = ScrolledWindow(
+        self.scrolled = AnimatedScrollable(
             name="todos-scrolled",
-            min_content_height=300,
-            max_content_height=500,
-            min_content_width=400,
+            min_content_size=(400, 300),
+            max_content_size=(-1, 500),
             child=self.todos_container,
-            policy="automatic",
-            v_expand=True,  # Allow vertical expansion
+            h_scrollbar_policy="automatic",
+            v_scrollbar_policy="automatic",
+            propagate_height=False,
+            v_expand=True,
         )
 
         # Clear completed button
@@ -337,7 +341,6 @@ class TodoListWidget(AppletWindow):
             name="todo-main-container",
             orientation="v",
             spacing=8,
-            style_classes=["menu"],
             children=[
                 self.header,
                 self.add_section,
@@ -346,7 +349,7 @@ class TodoListWidget(AppletWindow):
             ],
         )
 
-        self.children = [self.main_container]
+        self.add(self.main_container)
 
     def _add_todo(self, *_):
         """Add a new todo"""
@@ -378,7 +381,8 @@ class TodoListWidget(AppletWindow):
         """Refresh the entire todo list"""
         # Clear existing items
         self.todo_items.clear()
-        self.todos_container.children = []
+        for child in self.todos_container.get_children():
+            self.todos_container.remove(child)
 
         # Get all todos
         todos = get_todo_service().todos
@@ -388,19 +392,20 @@ class TodoListWidget(AppletWindow):
             priority_order = {"high": 0, "medium": 1, "low": 2}
             return (
                 todo["completed"],  # False (incomplete) comes before True (completed)
-                priority_order.get(todo["priority"], 1),
+                priority_order.get(todo.get("priority", "medium"), 1),
                 todo["created_at"],
             )
 
         sorted_todos = sorted(todos, key=sort_key)
 
-        # Create todo item widgets
+        # Create todo item widgets and add them to the container
         for todo in sorted_todos:
             todo_item = TodoItem(todo, self)
             self.todo_items[todo["id"]] = todo_item
+            self.todos_container.add(todo_item)
 
-        # Update container children
-        self.todos_container.children = list(self.todo_items.values())
+        # Ensure they are visible
+        self.todos_container.show_all()
 
         # Update stats
         self._update_stats()

@@ -1,5 +1,5 @@
 from fabric.system_tray.widgets import SystemTray
-from fabric.utils import logger
+from fabric.utils import Gdk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -109,7 +109,15 @@ class Panel(Window):
             name="panel-button",
             child=DateTime(name="date-time", formatters=["%a %-d %b %I:%M %P"]),
         )
+        self.datetime_btn.add_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK
+        )
         setup_cursor_hover(self.datetime_btn, "pointer")
+
+        self._pomodoro_instance = None
+        self._todo_instance = None
+        self.datetime_btn.connect("clicked", self.on_datetime_clicked)
+        self.datetime_btn.connect("button-press-event", self.on_datetime_right_click)
 
         self.custom_mods = CustomMods(parent_window=self)
         self.workspace_indicator = WorkspaceIndicator()
@@ -177,6 +185,36 @@ class Panel(Window):
 
     def on_notification_icon_clicked(self, *_):
         self.notification_center.toggle()
+
+    def on_datetime_clicked(self, *_):
+        self.pomodoro.toggle()
+
+    def on_datetime_right_click(self, widget, event):
+        logger.info(f"[Panel] Right click detected: button={event.button}")
+        if event.button == 3:  # Right click
+            self.todo_widget.toggle()
+            return True
+        return False
+
+    @property
+    def pomodoro(self):
+        if self._pomodoro_instance is None:
+            from window.panel.components.pomodoro import Pomodoro
+
+            self._pomodoro_instance = Pomodoro(
+                parent=self, pointing_to=self.datetime_btn
+            )
+        return self._pomodoro_instance
+
+    @property
+    def todo_widget(self):
+        if self._todo_instance is None:
+            from window.panel.components.todo import TodoListWidget
+
+            self._todo_instance = TodoListWidget(
+                parent=self, pointing_to=self.datetime_btn
+            )
+        return self._todo_instance
 
     @property
     def control_center(self):
@@ -351,9 +389,15 @@ class Panel(Window):
                 logger.error(f"An error occurred: {e}")
 
         # Destroy MouseCapture windows
-        for mc in [self.control_center, self.notification_center]:
+        for mc in [
+            self.control_center,
+            self.notification_center,
+            self._pomodoro_instance,
+            self._todo_instance,
+        ]:
             try:
-                mc.destroy()
+                if mc:
+                    mc.destroy()
             except Exception as e:
                 logger.error(f"An error occurred: {e}")
 

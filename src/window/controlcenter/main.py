@@ -43,6 +43,7 @@ class ModusControlCenter(AppletWindow):
             anchor="top right",
             margin="2px 10px 0px 0px",
             exclusivity="auto",
+            edge_margin=5,
             name="control-center-menu",
             visible=False,
             **kwargs,
