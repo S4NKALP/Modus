@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Any, Concatenate, ParamSpec
 
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import Gio, GLib, logger
+from fabric.utils import Gio, GLib, Gtk, logger
 
 P = ParamSpec("P")
 
@@ -784,14 +784,27 @@ def _path_to_addr(object_path: str) -> str:
 
 
 def _icon_to_type(icon: str) -> str:
+    """Resolve a Bluez icon name to a GTK symbolic icon via the current theme.
+
+    Checks the icon theme for the icon (with ``-symbolic`` suffix) and falls
+    back to a hardcoded mapping when the theme doesn't provide it.
+    """
+    if icon:
+        icon_theme = Gtk.IconTheme.get_default()
+        symbolic = f"{icon}-symbolic"
+        if icon_theme.has_icon(symbolic):
+            return symbolic
+        if icon_theme.has_icon(icon):
+            return icon
+
     return {
-        "audio-headset": "Headset",
-        "audio-headphones": "Headphones",
-        "audio-speakers": "Speaker",
-        "audio-card": "Speaker",
-        "input-keyboard": "Keyboard",
-        "input-mouse": "Mouse",
-        "input-gaming": "Joypad",
-        "phone": "Phone",
-        "printer": "Printer",
-    }.get(icon, icon)
+        "audio-headset": "audio-headset-symbolic",
+        "audio-headphones": "audio-headphones-symbolic",
+        "audio-speakers": "audio-speakers-symbolic",
+        "audio-card": "audio-speakers-symbolic",
+        "input-keyboard": "input-keyboard-symbolic",
+        "input-mouse": "input-mouse-symbolic",
+        "input-gaming": "input-gaming-symbolic",
+        "phone": "phone-symbolic",
+        "printer": "printer-symbolic",
+    }.get(icon, "bluetooth-symbolic")

@@ -143,19 +143,9 @@ class BluetoothDeviceSlot(Box):
         self.device.emit("changed")
 
     def _get_icon_for_device(self, device) -> str:
-        dtype = getattr(device, "type", None) or getattr(
+        return getattr(device, "type", None) or getattr(
             device, "icon_name", "bluetooth"
         )
-        return {
-            "Headset": "audio-headset-symbolic",
-            "Headphones": "audio-headphones-symbolic",
-            "Speaker": "audio-speakers-symbolic",
-            "Keyboard": "input-keyboard-symbolic",
-            "Mouse": "input-mouse-symbolic",
-            "Joypad": "input-gaming-symbolic",
-            "Phone": "phone-symbolic",
-            "Printer": "printer-symbolic",
-        }.get(dtype, dtype + "-symbolic" if not dtype.endswith("-symbolic") else dtype)
 
     def destroy(self):
         """Clean up device signal connections to prevent memory leaks."""
