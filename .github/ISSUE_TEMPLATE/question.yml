@@ -1,0 +1,22 @@
+name: Question
+description: Ask a question about Modus
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening, check the [docs](https://github.com/S4NKALP/Modus/tree/main/docs) and [FAQs](https://github.com/S4NKALP/Modus/blob/main/docs/faqs_tips.md).
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What do you want to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Any relevant details about your setup or what you've tried

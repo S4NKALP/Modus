@@ -1,0 +1,58 @@
+core:
+  - label: "bug"
+    title: "bug"
+    sync: true
+
+  - label: "enhancement"
+    title: "enhancement"
+    sync: true
+
+  - label: "question"
+    title: "question"
+    sync: true
+
+  - label: "documentation"
+    changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+
+  - label: "python"
+    changed-files:
+      - any-glob-to-any-file:
+          - "src/**/*.py"
+          - "config/plugins/**"
+
+  - label: "config"
+    changed-files:
+      - any-glob-to-any-file:
+          - "config/**"
+
+  - label: "c-backend"
+    changed-files:
+      - any-glob-to-any-file:
+          - "src/window/switcher/app-capture/**"
+          - "src/globalmenu/**.c"
+
+  - label: "styling"
+    changed-files:
+      - any-glob-to-any-file:
+          - "src/styles/**"
+
+  - label: "ci"
+    changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+
+  - label: "assets"
+    changed-files:
+      - any-glob-to-any-file:
+          - "src/assets/**"
+
+  - label: "installation"
+    changed-files:
+      - any-glob-to-any-file:
+          - "install.sh"
+          - "pyproject.toml"
+          - "requirements.txt"
+          - "uv.lock"

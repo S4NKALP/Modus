@@ -1,0 +1,86 @@
+name: Bug Report
+description: Report a bug in Modus
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below.
+
+  - type: input
+    id: version
+    attributes:
+      label: Modus version
+      description: "Output of `git rev-parse --short HEAD` or release tag"
+      placeholder: "e.g. v2.0.0 or abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Modus is affected?
+      options:
+        - Panel / Top Bar
+        - Dock
+        - Spotlight / Search
+        - App Switcher
+        - Lock Screen
+        - Notifications / Control Center
+        - Desktop Widgets
+        - Global Menu
+        - Settings / Config
+        - Installation / Dependencies
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug
+      placeholder: |
+        1. Open Modus with `uv run start`
+        2. Press Super+D
+        3. Type ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste any error output or journalctl logs
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        - Distro / Window Manager:
+        - Python version:
+        - GPU / Driver:
+      value: |
+        - Distro:
+        - Python:
+        - GPU:
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config files
+      description: "Paste contents of `config/config.toml` if relevant (redact sensitive values)"
+      render: toml

@@ -1,0 +1,50 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the feature you'd like to see in Modus.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which area does this relate to?
+      options:
+        - Panel / Top Bar
+        - Dock
+        - Spotlight / Search
+        - App Switcher
+        - Lock Screen
+        - Notifications / Control Center
+        - Desktop Widgets
+        - Global Menu
+        - Settings / Config
+        - New Widget
+        - Spotlight Plugin
+        - Installation / Packaging
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature description
+      description: What should it do? How should it work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or similar features you know of?
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Screenshots
+      description: If applicable, attach reference images or screenshots

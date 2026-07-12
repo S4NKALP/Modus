@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discord
+    url: https://discord.gg/tRFxkbQ3Zq
+    about: Chat with the community
+  - name: Documentation
+    url: https://github.com/S4NKALP/Modus/tree/main/docs
+    about: Read the docs before opening an issue
