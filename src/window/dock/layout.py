@@ -1,5 +1,4 @@
 import math
-from typing import TYPE_CHECKING
 
 from .constants import (
     BG_PADDING_H,
@@ -10,15 +9,13 @@ from .constants import (
     MIN_SCALE,
     SIGMA_FACTOR,
 )
-
-if TYPE_CHECKING:
-    from .canvas import DockItem
+from .items import DockItem
 
 
 class DockLayout:
     @staticmethod
     def compute(
-        items: "list[DockItem]",
+        items: list[DockItem],
         mouse_x: float,
         _mouse_y: float,
         base_icon_size: int,
@@ -72,11 +69,11 @@ class DockLayout:
 
     @staticmethod
     def background_rect(
-        items: "list[DockItem]",
+        items: list[DockItem],
         base_icon_size: int,
         canvas_w: int,
         canvas_h: int,
-    ) -> "tuple[float, float, float, float]":
+    ) -> tuple[float, float, float, float]:
         bg_h = base_icon_size + 2 * BG_PADDING_V
         bg_y = canvas_h - INDICATOR_H - bg_h
 
