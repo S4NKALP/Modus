@@ -82,7 +82,7 @@ INFO="ℹ"
 WARN="⚠"
 
 # Progress tracking
-TOTAL_STEPS=11
+TOTAL_STEPS=12
 CURRENT_STEP=0
 
 # Function for progress indicator
@@ -333,7 +333,7 @@ fi
 progress "Configuring Hyprland"
 
 HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
-MODUS_MODULE_LINE='dofile("/home/sankalp/.config/Modus/config/hypr/modus.lua")'
+MODUS_MODULE_LINE="dofile(\"$INSTALL_DIR/config/hypr/modus.lua\")"
 
 if [ -f "$HYPR_CONFIG" ]; then
     step "Checking Hyprland Lua configuration..."
@@ -355,17 +355,6 @@ else
     warn "Hyprland Lua config not found at $HYPR_CONFIG"
     info "You may need to manually add: $MODUS_MODULE_LINE"
 fi
-# Launch Modus
-progress "Launching Modus"
-
-step "Stopping existing instances..."
-if killall modus 2>/dev/null; then
-    success "Stopped running instance"
-    sleep 1
-else
-    info "No existing instance found"
-fi
-
 
 progress "Configuring global environment"
 
@@ -428,6 +417,16 @@ if [ -f "$MATUGEN_CONFIG" ]; then
 else
     warn "matugen config not found at $MATUGEN_CONFIG"
     info "Create it first or install matugen"
+fi
+
+progress "Launching Modus"
+
+step "Stopping existing instances..."
+if killall modus 2>/dev/null; then
+    success "Stopped running instance"
+    sleep 1
+else
+    info "No existing instance found"
 fi
 
 step "Starting Modus..."
