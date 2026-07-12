@@ -572,9 +572,7 @@ def open_trash():
             continue
 
 
-# --- Occlusion (uses Hyprland API above) ---
-
-
+# Occlusion
 def check_occlusion(occlusion_region, workspace=None) -> bool:
     if workspace is None:
         workspace = get_active_workspace_id()

@@ -172,6 +172,7 @@ class Animator(Service):
         self._max_value = 1.0
         self._repeat = False
         self._duration = 0.8
+        self._bezier_curve = (1, 1, 0, 0)
         self._timing_function = timing_function
         self._tick_widget = tick_widget
         self._tick_interval = tick_interval

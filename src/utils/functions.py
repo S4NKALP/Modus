@@ -369,7 +369,6 @@ def run_command(
         return CommandResult(1, "", str(e))
 
 
-
 def fuzzy_score(query: str, text: str) -> int:
     """
     Fuzzy match scoring. Returns score > 0 if all query chars found in order.

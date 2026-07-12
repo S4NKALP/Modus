@@ -8,10 +8,6 @@ from gi.repository import Pango, PangoCairo
 
 from shared.widgets.animator import Animator, ease_in, ease_in_out, ease_out
 
-# ------------------------------------------------------------------ #
-#  Helpers                                                             #
-# ------------------------------------------------------------------ #
-
 
 def _draw_rounded_rect(cr, x, y, w, h, r):
     r = min(r, w / 2, h / 2)
@@ -31,11 +27,6 @@ def _draw_rounded_rect(cr, x, y, w, h, r):
     cr.close_path()
 
 
-# ------------------------------------------------------------------ #
-#  TypedDict                                                           #
-# ------------------------------------------------------------------ #
-
-
 class FlatScaleStyle(TypedDict):
     slider_color: Gdk.RGBA
     slider_height: float
@@ -50,11 +41,6 @@ class FlatScaleStyle(TypedDict):
     trough_color: Gdk.RGBA
     trough_thickness: float
     background_color: Gdk.RGBA
-
-
-# ------------------------------------------------------------------ #
-#  Widget                                                              #
-# ------------------------------------------------------------------ #
 
 
 class FlatScale(Gtk.DrawingArea, Widget):
@@ -232,10 +218,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
         if on_value_changed:
             self.connect("value-changed", on_value_changed)
 
-    # ------------------------------------------------------------------ #
-    #  Value                                                               #
-    # ------------------------------------------------------------------ #
-
     @property
     def value(self) -> float:
         return self._value
@@ -253,10 +235,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
 
     def get_value(self) -> float:
         return self._value
-
-    # ------------------------------------------------------------------ #
-    #  Realize / gadget contexts                                           #
-    # ------------------------------------------------------------------ #
 
     def _on_realize(self, _widget) -> None:
         state = self.get_state_flags()
@@ -297,10 +275,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
         context.set_state(self.get_state_flags())
         self._cached_style = None
         self.queue_draw()
-
-    # ------------------------------------------------------------------ #
-    #  Style resolution                                                    #
-    # ------------------------------------------------------------------ #
 
     def do_get_border_width(
         self, context: Gtk.StyleContext, state: Gtk.StateFlags
@@ -361,10 +335,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
 
         return self._min_value + ratio * (self._max_value - self._min_value)
 
-    # ------------------------------------------------------------------ #
-    #  Bubble animation helpers                                            #
-    # ------------------------------------------------------------------ #
-
     def _bubble_open(self):
         self._bubble_closing = False
         self._anim_bubble_close.pause()
@@ -395,10 +365,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
             self._bubble_progress = max(0.0, 1.0 - self._anim_bubble_close.value)
         else:
             self._bubble_progress = min(1.0, self._anim_bubble_open.value)
-
-    # ------------------------------------------------------------------ #
-    #  Drawing helpers                                                     #
-    # ------------------------------------------------------------------ #
 
     def do_draw_rounded_rect(self, cr, x, y, width, height, radius):
         _draw_rounded_rect(cr, x, y, width, height, radius)
@@ -494,10 +460,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
         PangoCairo.show_layout(cr, layout)
 
         cr.restore()
-
-    # ------------------------------------------------------------------ #
-    #  Main draw                                                           #
-    # ------------------------------------------------------------------ #
 
     def do_draw(self, cr: cairo.Context) -> bool:
         styles = self.do_resolve_style()
@@ -621,10 +583,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
             self._draw_bubble(cr, slider_cy, slider_left_x, styles)
 
         return False
-
-    # ------------------------------------------------------------------ #
-    #  Input events                                                        #
-    # ------------------------------------------------------------------ #
 
     def _on_button_press(self, _widget, event: Gdk.EventButton) -> bool:
         if event.button == 1:

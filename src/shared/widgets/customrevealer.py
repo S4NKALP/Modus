@@ -21,6 +21,7 @@ class SlideRevealer(Gtk.Overlay):
         self.duration = duration
         self.fixed_size = size
         self._revealed = False
+        self._show_animation = False
         self._cached_dimensions = None
 
         self.animator = Animator(
