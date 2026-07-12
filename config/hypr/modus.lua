@@ -23,7 +23,7 @@ hl.bind("SUPER + ALT + B", hl.dsp.exec_cmd("killall modus1; cd " .. modus .. " &
 
 -- Fabric Launcher Binds
 for key, method in pairs({
-	-- ["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
+	["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
 	["ALT + TAB"] = "switcher.show_switcher()", -- Application Switcher
 	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
 	["SUPER + S"] = 'screencapture.toggle(ss="region")', -- Screenshot Region
