@@ -17,6 +17,13 @@ set -e
 set -u
 set -o pipefail
 
+AUTO_YES=false
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes) AUTO_YES=true ;;
+    esac
+done
+
 REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
@@ -196,7 +203,11 @@ progress "Package information"
 
 info "Total packages to install: ${BOLD}${#PACKAGES[@]}${RESET}"
 echo ""
-read -rp "  ${YELLOW}${INFO}${RESET} View full package list? (y/N): " view_packages
+if [ "$AUTO_YES" = false ]; then
+    read -rp "  ${YELLOW}${INFO}${RESET} View full package list? (y/N): " view_packages
+else
+    view_packages="n"
+fi
 if [[ "$view_packages" =~ ^[Yy]$ ]]; then
     echo ""
     printf "  ${DIM}• %s${RESET}\n" "${PACKAGES[@]}"
@@ -204,7 +215,11 @@ if [[ "$view_packages" =~ ^[Yy]$ ]]; then
 fi
 
 # Confirmation
-read -rp "  ${BOLD}Proceed with installation? (y/N):${RESET} " confirm
+if [ "$AUTO_YES" = false ]; then
+    read -rp "  ${BOLD}Proceed with installation? (y/N):${RESET} " confirm
+else
+    confirm="y"
+fi
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     warn "Installation cancelled by user"
     exit 0
@@ -223,7 +238,7 @@ else
     step "Installing yay-bin..."
     tmpdir=$(mktemp -d)
     (
-        git clone --quiet --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin" 2>&1 | grep -v "Cloning into" || true
+        git clone --quiet --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin" 2>/dev/null || true
         cd "$tmpdir/yay-bin"
         makepkg -si --noconfirm >/dev/null 2>&1
     ) &
@@ -242,11 +257,11 @@ progress "Setting up Modus repository"
 
 if [ -d "$INSTALL_DIR" ]; then
     step "Updating existing repository..."
-    git -C "$INSTALL_DIR" pull --quiet 2>&1 | grep -v "Already up to date" || true
+    git -C "$INSTALL_DIR" pull --quiet 2>/dev/null || true
     success "Repository updated"
 else
     step "Cloning repository..."
-    git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>&1 | grep -v "Cloning into" || true
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || true
     success "Repository cloned"
 fi
 info "Location: ${INSTALL_DIR}"
@@ -315,17 +330,15 @@ progress "Building App Capture module"
 
 step "Compiling libappcapture.so..."
 if [ -d "$INSTALL_DIR/src/window/switcher/app-capture" ]; then
-    cd "$INSTALL_DIR/src/window/switcher/app-capture"
-    if meson setup builddir --wipe >/dev/null 2>&1 || meson setup builddir >/dev/null 2>&1; then
-        if meson compile -C builddir >/dev/null 2>&1; then
-            success "libappcapture.so built successfully"
-        else
-            warn "Failed to compile App Capture module"
-        fi
+    if (
+        cd "$INSTALL_DIR/src/window/switcher/app-capture"
+        meson setup builddir --wipe >/dev/null 2>&1 || meson setup builddir >/dev/null 2>&1
+        meson compile -C builddir >/dev/null 2>&1
+    ); then
+        success "libappcapture.so built successfully"
     else
-        warn "Failed to setup App Capture builddir"
+        warn "Failed to compile App Capture module"
     fi
-    cd - >/dev/null
 else
     warn "App Capture module directory not found"
 fi
