@@ -1,13 +1,65 @@
 import ctypes
 import html
+import json
+import os
 import subprocess
 import threading
-from typing import Dict, NamedTuple, Optional
+from collections.abc import Callable
+from functools import reduce
+from typing import Dict, NamedTuple, Optional, TypeVar, cast
 
 from fabric.utils import (
+    Gdk,
+    GdkPixbuf,
+    Gtk,
+    cairo,
     exec_shell_command_async,
     logger,
 )
+from fabric.widgets.box import Box
+
+T = TypeVar("T")
+
+
+class Rectangle(NamedTuple):
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+def get_children_height_limit(
+    viewport: Box,
+    max_n_children: int,
+    transform_func: Callable[[Gtk.Widget], cairo.RectangleInt] | None = None,
+) -> int:
+    spacing: int = viewport.get_spacing()
+
+    children = viewport.children
+    children_len = len(viewport.children)
+
+    if children_len < 1:
+        return 0
+
+    if children_len > max_n_children:
+        children_len = max_n_children
+
+    # calculate the new height
+    # ( <the spacing for each child combined, last child doesn't have spacing> ) + ( <the total height of all the children> )
+    return (spacing * (children_len - 1)) + reduce(
+        lambda x, y: x + y,
+        (
+            (
+                transform_func(children[i])
+                if transform_func
+                else cast(
+                    "cairo.RectangleInt",
+                    children[i].get_preferred_size().minimum_size,  # type: ignore
+                )
+            ).height  # type: ignore
+            for i in range(children_len)
+        ),
+    )
 
 
 def set_process_name(name: str):
@@ -54,6 +106,52 @@ def thread(target, *args, **kwargs) -> threading.Thread:
     th = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
     th.start()
     return th
+
+
+def copy_text(text: str) -> bool:
+    try:
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        clipboard.set_text(text, -1)
+        clipboard.store()
+        return True
+    except Exception:
+        return False
+
+
+def copy_image(image_path: str) -> bool:
+    try:
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        image = GdkPixbuf.Pixbuf.new_from_file(image_path)
+        clipboard.set_image(image)
+        clipboard.store()
+        return True
+    except Exception:
+        return False
+
+
+def read_json_file(file_path: str) -> dict | None:
+    if not os.path.exists(file_path):
+        logger.error(f"JSON file {file_path} does not exist.")
+        return None
+
+    with open(file_path) as file:
+        try:
+            return json.load(file)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to read JSON file {file_path}: {e}")
+            return None
+
+
+def trigger_paste_shortcut():
+    try:
+        subprocess.Popen(
+            ["sh", "-c", "wl-paste | wtype -"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        pass
 
 
 def get_wifi_icon_for_strength(strength: int) -> str:
@@ -103,9 +201,7 @@ def is_special_workspace_id(ws_id) -> bool:
         return workspace_id < 0
     except (ValueError, TypeError):
         # If it's a string, check if it starts with "special:"
-        if isinstance(ws_id, str) and ws_id.startswith("special:"):
-            return True
-        return False
+        return bool(isinstance(ws_id, str) and ws_id.startswith("special:"))
 
 
 def is_special_workspace(client: dict) -> bool:
@@ -147,7 +243,7 @@ def escape_markup_text(text: str) -> str:
     return html.escape(clean.replace("\n", " "))
 
 
-# --- Process management ---
+# Process management
 
 
 def spawn_detached(args: list[str]) -> subprocess.Popen:
@@ -189,9 +285,7 @@ def find_process_pid(process_name: str, timeout: float | None = None) -> list[st
         return []
 
 
-# --- Binary lookup ---
-
-
+# Binary lookup
 def find_binary(name: str) -> str | None:
     try:
         result = subprocess.run(["which", name], capture_output=True, text=True)
@@ -273,3 +367,104 @@ def run_command(
         return CommandResult(127, "", str(e))
     except Exception as e:
         return CommandResult(1, "", str(e))
+
+
+
+def fuzzy_score(query: str, text: str) -> int:
+    """
+    Fuzzy match scoring. Returns score > 0 if all query chars found in order.
+    Heavily rewards prefix matches, word-boundary matches, and consecutive runs.
+    Returns 0 if no match.
+    """
+    if not query or not text:
+        return 0
+
+    query = query.lower()
+    text = text.lower()
+
+    # Exact match
+    if query == text:
+        return 10000
+
+    # Prefix match
+    if text.startswith(query):
+        return 5000 + (100 - len(text))
+
+    # Check all query chars exist in order
+    qi = 0
+    for char in text:
+        if qi < len(query) and char == query[qi]:
+            qi += 1
+    if qi < len(query):
+        return 0
+
+    # Find best alignment — try each possible start position in text
+    best_score = 0
+
+    for start in range(len(text)):
+        if text[start] != query[0]:
+            continue
+
+        qi = 0
+        score = 0
+        prev = start - 1
+
+        for ti in range(start, len(text)):
+            if qi >= len(query):
+                break
+            if text[ti] == query[qi]:
+                # Word boundary bonus (huge)
+                if (
+                    prev < 0
+                    or text[prev] == " "
+                    or text[prev] == "-"
+                    or text[prev] == "_"
+                ):
+                    score += 50
+
+                # Consecutive bonus
+                if prev == ti - 1:
+                    score += 20
+
+                # Exact position in query bonus
+                score += 5
+
+                prev = ti
+                qi += 1
+
+        if qi < len(query):
+            continue
+
+        # How much of the text was consumed (tighter = better)
+        span = prev - start + 1
+        score += max(0, 200 - span * 3)
+
+        # Prefer shorter texts
+        score += max(0, 100 - len(text))
+
+        # Prefer matches at start
+        score += max(0, 50 - start)
+
+        if score > best_score:
+            best_score = score
+
+    return best_score
+
+
+def fuzzy_filter(query: str, items: list, key=None, limit: int = 50) -> list:
+    """
+    Filter and rank items by fuzzy match score.
+    Returns top `limit` items sorted by score (best first).
+    """
+    if not query:
+        return items[:limit]
+
+    scored = []
+    for item in items:
+        text = key(item) if key else str(item)
+        score = fuzzy_score(query, text)
+        if score > 0:
+            scored.append((score, item))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in scored[:limit]]

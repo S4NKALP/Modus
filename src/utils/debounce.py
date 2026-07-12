@@ -1,7 +1,34 @@
 import functools
 import typing as t
+from collections.abc import Callable
 
 from fabric.utils import GLib
+
+
+def debounce(ms: int):
+    """Debounce a class method using GLib timers.
+
+    Stores timer state on the instance (`self`), so this only works
+    as a method decorator.
+    """
+
+    def decorator(func: Callable):
+        timer_id_attr = f"_debounce_timer_{func.__name__}"
+
+        def wrapper(self, *args, **kwargs):
+            if existing_timer := getattr(self, timer_id_attr, None):
+                GLib.source_remove(existing_timer)
+
+            def timeout_cb():
+                setattr(self, timer_id_attr, 0)
+                func(self, *args, **kwargs)
+                return False
+
+            setattr(self, timer_id_attr, GLib.timeout_add(ms, timeout_cb))
+
+        return wrapper
+
+    return decorator
 
 
 def sync_debounce(
