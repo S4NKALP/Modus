@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class DockAnimator:
-    def __init__(self, canvas: DockCanvas):
+    def __init__(self, canvas: "DockCanvas"):
         self._canvas = canvas
         self._timer_id: Optional[int] = None
         self._running = False
