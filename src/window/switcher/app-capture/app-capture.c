@@ -402,14 +402,14 @@ static void frame_handle_ready(void *data,
 
     cairo_surface_t *src_surface = cairo_image_surface_create_for_data(
         (unsigned char *)ctx->pixel_data, CAIRO_FORMAT_ARGB32, ctx->width, ctx->height, ctx->stride);
-    
+
     int req_width = ctx->target_width > 0 ? ctx->target_width : 300;
     int req_height = ctx->target_height > 0 ? ctx->target_height : 168;
-    
+
     double scale_x = (double)req_width / (double)ctx->width;
     double scale_y = (double)req_height / (double)ctx->height;
     double scale = (scale_x < scale_y) ? scale_x : scale_y;
-    
+
     int target_width = (int)(ctx->width * scale);
     int target_height = (int)(ctx->height * scale);
 
@@ -422,7 +422,7 @@ static void frame_handle_ready(void *data,
     cairo_scale(cr, (double)target_width / ctx->width, (double)target_height / ctx->height);
     cairo_set_source_surface(cr, src_surface, 0, 0);
     cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
-    
+
     cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
     cairo_paint(cr);
     cairo_destroy(cr);
@@ -435,7 +435,7 @@ static void frame_handle_ready(void *data,
     GBytes *bytes = g_bytes_new(dst_data, dst_size);
     g_signal_emit(self, signals[SIGNAL_FRAME_READY], 0,
                   ctx->address, bytes, target_width, target_height, dst_stride);
-                  
+
     g_bytes_unref(bytes);
     cairo_surface_destroy(dst_surface);
     cairo_surface_destroy(src_surface);
