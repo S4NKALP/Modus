@@ -1,9 +1,22 @@
 [project]
 name = "modus"
 version = "2.0.0"
-description = "Add your description here"
+description = "A hackable shell for Hyprland, built with Fabric"
 readme = "README.md"
+license = "GPL-3.0-or-later"
 requires-python = ">=3.13"
+authors = [
+    { name = "SANKALP", email = "sankalp@modus.dev" },
+]
+keywords = ["hyprland", "wayland", "shell", "fabric", "desktop"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
+]
 dependencies = [
     "fabric",
     "httpx>=0.28.1",
@@ -14,9 +27,16 @@ dependencies = [
     "tomlkit>=0.15.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/S4NKALP/Modus"
+Documentation = "https://github.com/S4NKALP/Modus/tree/main/docs"
+Repository = "https://github.com/S4NKALP/Modus"
+Issues = "https://github.com/S4NKALP/Modus/issues"
+Discord = "https://discord.gg/tRFxkbQ3Zq"
+
 [dependency-groups]
 dev = [
-    "pyinstrument>=5.1.2",
+    "pre-commit>=4.6.0",
     "ruff>=0.15.2",
 ]
 
