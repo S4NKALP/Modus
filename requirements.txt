@@ -4,6 +4,7 @@ httpx==0.28.1
 pam==0.2.0
 psutil==7.2.2
 pywayland==0.4.18
-ruff==0.15.12
+ruff==0.15.2
 six==1.17.0
 tomlkit==0.15.0
+pre-commit=4.6.0
