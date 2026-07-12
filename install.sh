@@ -296,17 +296,19 @@ else
     success "All packages are up-to-date"
 fi
 
-progress "Building Global Menu C library"
+progress "Building Global Menu shim"
 
-step "Compiling libglobalmenu.so..."
-if [ -f "$INSTALL_DIR/native/Makefile" ]; then
-    if make -C "$INSTALL_DIR/native" clean >/dev/null 2>&1 && make -C "$INSTALL_DIR/native" >/dev/null 2>&1; then
-        success "libglobalmenu.so built successfully"
+step "Compiling libmenu_button_shim.so..."
+SHIM_SRC="$INSTALL_DIR/src/globalmenu/libmenu_button_shim.c"
+SHIM_OUT="$INSTALL_DIR/src/globalmenu/libmenu_button_shim.so"
+if [ -f "$SHIM_SRC" ]; then
+    if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" $(pkg-config --cflags --libs gtk+-3.0) -ldl 2>/dev/null; then
+        success "libmenu_button_shim.so built successfully"
     else
-        warn "Failed to build libglobalmenu.so - global menu may not work"
+        warn "Failed to compile libmenu_button_shim.so - global menu may not work"
     fi
 else
-    warn "native/Makefile not found - skipping C library build"
+    warn "libmenu_button_shim.c not found - skipping shim build"
 fi
 
 progress "Building App Capture module"
