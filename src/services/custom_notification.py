@@ -184,17 +184,14 @@ class CachedNotifications(Notifications):
     @Signal
     def clear_all(self) -> None:
         """Signal emitted when notifications are emptied."""
-        pass
 
     @Signal
     def cached_notification_added(self, notification: CachedNotification) -> None:
         """Signal emitted when a notification is cached."""
-        pass
 
     @Signal
     def cached_notification_removed(self, notification: CachedNotification) -> None:
         """Signal emitted when a notification is removed from cache."""
-        pass
 
     @Property(List[CachedNotification], "readable")
     def cached_notifications(self) -> List[CachedNotification]:
@@ -269,7 +266,7 @@ class CachedNotifications(Notifications):
     def load_cached_notifications(self) -> dict[int, CachedNotification]:
         """Load cached notifications from a JSON file (deserialization)."""
         try:
-            with open(NOTIFICATION_CACHE_FILE, "r") as file:
+            with open(NOTIFICATION_CACHE_FILE) as file:
                 data = json.load(file)  # Load list of serialized notifications
         except (FileNotFoundError, json.JSONDecodeError):
             # If file doesn't exist or is corrupted, start with empty list

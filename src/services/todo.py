@@ -6,6 +6,7 @@ from pathlib import Path
 
 # Fabric imports
 from fabric.core.service import Property, Service
+from fabric.utils import logger
 
 # Local imports
 import shared.data as data
@@ -36,7 +37,7 @@ class TodoService(Service):
             try:
                 callback(event_type, data)
             except Exception as e:
-                print(f"Error in todo callback: {e}")
+                logger.error(f"Error in todo callback: {e}")
 
     def _get_todos_file_path(self):
         """Returns the path to the todos JSON file"""
@@ -48,12 +49,12 @@ class TodoService(Service):
         """Load todos from JSON file"""
         try:
             if self._file_path.exists():
-                with open(self._file_path, "r", encoding="utf-8") as f:
+                with open(self._file_path, encoding="utf-8") as f:
                     self._todos = json.load(f)
             else:
                 self._todos = []
         except Exception as e:
-            print(f"Error loading todos: {e}")
+            logger.error(f"Error loading todos: {e}")
             self._todos = []
 
     def _save_todos(self):
@@ -62,7 +63,7 @@ class TodoService(Service):
             with open(self._file_path, "w", encoding="utf-8") as f:
                 json.dump(self._todos, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"Error saving todos: {e}")
+            logger.error(f"Error saving todos: {e}")
 
     @Property(list, "readable")
     def todos(self):

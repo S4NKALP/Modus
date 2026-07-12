@@ -7,15 +7,13 @@ changes. It is implemented as a singleton and intended to be reused by any
 module that needs dynamic configuration.
 """
 
-from __future__ import annotations
-
 from typing import Any, Callable, Dict, List, Optional
 
 from fabric.utils import Gio, GLib, logger, os
 from tomlkit import document as toml_document
 from tomlkit import dump as toml_dump
 from tomlkit import load as toml_load
-from tomlkit.items import Integer, String, Bool, Array
+from tomlkit.items import Array, Bool, Integer, String
 
 from utils.utils import toml_file
 
@@ -97,7 +95,7 @@ class ConfigService:
     def _load_config(self) -> None:
         try:
             if os.path.exists(self._config_file):
-                with open(self._config_file, "r") as f:
+                with open(self._config_file) as f:
                     self._config = toml_load(f)
             else:
                 try:

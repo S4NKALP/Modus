@@ -1,8 +1,7 @@
 import math
 from typing import cast
 
-from fabric.utils import cairo, Gtk
-
+from fabric.utils import Gtk, cairo
 from fabric.widgets.image import Image
 
 
@@ -30,7 +29,7 @@ class CustomImage(Image):
             cr,
             width,
             height,
-            cast(int, context.get_property("border-radius", Gtk.StateFlags.NORMAL)),
+            cast("int", context.get_property("border-radius", Gtk.StateFlags.NORMAL)),
         )
         cr.clip()
         Image.do_draw(self, cr)

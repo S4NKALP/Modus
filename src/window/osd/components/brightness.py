@@ -1,8 +1,11 @@
-from fabric.utils import logger
 import math
+
+from fabric.utils import logger
+from fabric.widgets.scale import ScaleMark
+
 from services.brightness import Brightness
 from utils.utils import svg_file
-from fabric.widgets.scale import ScaleMark
+
 from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer
 
@@ -49,7 +52,7 @@ class BrightnessOSDContainer(BaseOSDContainer):
 
     def _update_display(self):
         normalized = self._get_normalized_brightness()
-        level = 0 if normalized == 0 else min(int(math.ceil(normalized / 33)), 3)
+        level = 0 if normalized == 0 else min(math.ceil(normalized / 33), 3)
 
         self.osd_window_image.set_from_file(f"brightness/brightness-{level}.svg")
 

@@ -50,7 +50,7 @@ def __getattr__(name):
 def get_notification_service():
     import sys
 
-    return getattr(sys.modules[__name__], "notification_service")
+    return sys.modules[__name__].notification_service
 
 
 class ModusService(Service):

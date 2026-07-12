@@ -1,14 +1,13 @@
-from fabric.utils import logger
-from fabric.utils import GLib
+from fabric.utils import GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
-from services.gamemode import check_gamemode, toggle_gamemode
 
 from services.battery import Battery
+from services.gamemode import check_gamemode, toggle_gamemode
 from utils.functions import clear_children, format_duration
 from utils.utils import svg_file
 

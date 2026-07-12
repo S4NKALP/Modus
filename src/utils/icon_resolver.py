@@ -12,7 +12,7 @@ if not os.path.exists(data.CACHE_DIR):
 
 class IconResolver:
     def __init__(
-        self, default_applicaiton_icon: str = "application-x-executable-symbolic"
+        self, default_application_icon: str = "application-x-executable-symbolic"
     ):
         if os.path.exists(ICON_CACHE_FILE):
             with open(ICON_CACHE_FILE) as f:
@@ -25,7 +25,7 @@ class IconResolver:
             self._icon_dict = {}
 
         self._icon_dict_order: list[str] = []
-        self.default_applicaiton_icon = default_applicaiton_icon
+        self.default_application_icon = default_application_icon
 
     def get_icon_name(self, app_id: str):
         if app_id in self._icon_dict:
@@ -50,11 +50,11 @@ class IconResolver:
             try:
                 # Fallback to the default application icon.
                 return icon_theme.load_icon(
-                    self.default_applicaiton_icon, size, Gtk.IconLookupFlags.FORCE_SIZE
+                    self.default_application_icon, size, Gtk.IconLookupFlags.FORCE_SIZE
                 )
             except GLib.Error as fallback_error:
                 logger.error(
-                    f"Error: Fallback icon '{self.default_applicaiton_icon}' also not found. Error: {fallback_error}"
+                    f"Error: Fallback icon '{self.default_application_icon}' also not found. Error: {fallback_error}"
                 )
                 return None
 
@@ -84,7 +84,7 @@ class IconResolver:
         except Exception as e:
             logger.error(f"[ICONS] Error reading desktop file {desktop_file_path}: {e}")
 
-        return self.default_applicaiton_icon
+        return self.default_application_icon
 
     def _get_desktop_file(self, app_id: str) -> str | None:
         if not app_id:
@@ -131,7 +131,7 @@ class IconResolver:
                     continue
                 path = os.path.join(data_dir, f)
                 try:
-                    with open(path, "r", errors="ignore") as file:
+                    with open(path, errors="ignore") as file:
                         for line in file:
                             line = line.strip()
                             if line.startswith("StartupWMClass="):
@@ -149,7 +149,7 @@ class IconResolver:
 
     def _compositor_find_icon(self, app_id: str):
         if not app_id:
-            return self.default_applicaiton_icon
+            return self.default_application_icon
 
         icon_theme = Gtk.IconTheme.get_default()
 
@@ -169,4 +169,4 @@ class IconResolver:
             if icon and icon_theme.has_icon(icon):
                 return icon
 
-        return self.default_applicaiton_icon
+        return self.default_application_icon

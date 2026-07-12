@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -810,9 +808,9 @@ class DockCanvas(Gtk.DrawingArea):
 
         if item.is_pinned and not item.is_running:
             self._handle_pinned_click(event, item)
-        elif item.is_running and not item.is_pinned:
-            self._handle_instance_click(event, item)
-        elif item.is_pinned and item.is_running:
+        elif (item.is_running and not item.is_pinned) or (
+            item.is_pinned and item.is_running
+        ):
             self._handle_instance_click(event, item)
 
         return True
@@ -894,7 +892,7 @@ class DockCanvas(Gtk.DrawingArea):
     def _read_pinned_apps(self) -> list:
         try:
             if os.path.exists(PINNED_APPS_FILE):
-                with open(PINNED_APPS_FILE, "r") as f:
+                with open(PINNED_APPS_FILE) as f:
                     data = tomlkit.load(f)
                     return list(data.get("pinned", []))
         except Exception as e:

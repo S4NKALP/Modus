@@ -1,8 +1,7 @@
 from pathlib import Path
 
 import tomlkit
-
-from fabric.utils import GLib, Gio, logger
+from fabric.utils import Gio, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label

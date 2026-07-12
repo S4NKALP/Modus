@@ -179,6 +179,7 @@ class Brightness(Service):
                         return int(f.readline().strip())
                 except Exception:
                     return None
+        return None
 
     def _update_brightness_cache(self):
         """Update brightness cache with current value."""
@@ -246,6 +247,7 @@ class Brightness(Service):
                 logger.error(f"Error executing ddcutil async: {e}")
 
             return self._last_raw if self._last_raw != -1 else 0
+        return None
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):

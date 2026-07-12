@@ -28,18 +28,18 @@ def _get_bus() -> Gio.DBusConnection:
 
 class DBusMenuItem:
     __slots__ = (
-        "id",
-        "label",
-        "enabled",
-        "visible",
-        "type",
-        "shortcut",
-        "icon_name",
-        "has_submenu",
-        "children",
         "action_name",
         "action_target",
+        "children",
+        "enabled",
+        "has_submenu",
+        "icon_name",
+        "id",
+        "label",
         "parent_id",
+        "shortcut",
+        "type",
+        "visible",
     )
 
     def __init__(
@@ -65,7 +65,7 @@ class DBusMenuItem:
         self.shortcut = shortcut
         self.icon_name = icon_name
         self.has_submenu = has_submenu
-        self.children: List["DBusMenuItem"] = children if children is not None else []
+        self.children: List[DBusMenuItem] = children if children is not None else []
         self.action_name = action_name
         self.action_target = action_target
         self.parent_id = parent_id
@@ -73,18 +73,18 @@ class DBusMenuItem:
 
 class DBusMenuClient:
     __slots__ = (
-        "service_name",
-        "object_path",
         "_cache",
         "_cache_valid",
+        "_fetching",
         "_hash_cache",
         "_lock",
-        "_fetching",
+        "_on_item_activated_cb",
+        "_on_items_updated_cb",
+        "_on_layout_updated_cb",
         "_revision",
         "_signal_ids",
-        "_on_layout_updated_cb",
-        "_on_items_updated_cb",
-        "_on_item_activated_cb",
+        "object_path",
+        "service_name",
     )
 
     def __init__(self, service_name: str, object_path: str):

@@ -63,7 +63,7 @@ class AnimatedScrollable(ScrolledWindow):
     def animate_size(self, height: int = -1):
         if not self.animate:
             idle_add(lambda: self.snap_to_size(height))
-            return
+            return None
         self._last_req = height
         current_val = self.height_animator.value
         return self.do_animate(current_val, height)

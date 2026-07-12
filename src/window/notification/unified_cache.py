@@ -3,7 +3,7 @@ import time
 import uuid
 from collections import OrderedDict
 
-from fabric.utils import GdkPixbuf, get_relative_path, Gtk, logger, os
+from fabric.utils import GdkPixbuf, Gtk, get_relative_path, logger, os
 
 import shared.data as data
 

@@ -1263,10 +1263,7 @@ class ModusNoti(Window):
             app_name = getattr(notification, "app_name", "")
 
             # Check if app name is in ignored list
-            if app_name in ignored_apps:
-                return True
-
-            return False
+            return app_name in ignored_apps
         except Exception as e:
             logger.warning(f"Failed to check if notification should be ignored: {e}")
             return False

@@ -708,7 +708,7 @@ class GlobalMenuService(Service):
                 _safe_cap = _safe_cls.capitalize() if _safe_cls else ""
 
                 dynamic_bases = self._build_dynamic_bases(svc, _safe_cls, _safe_cap)
-                fallback_paths, seen_fallback = self._introspect_paths(
+                fallback_paths, _seen_fallback = self._introspect_paths(
                     bus, svc, dynamic_bases
                 )
 
@@ -772,7 +772,7 @@ class GlobalMenuService(Service):
                     action_candidates.extend(
                         [f"/org/{cls_lower}/{_safe_cap}", f"/org/{cls_lower}"]
                     )
-                    for ns in _DE_NAMESPACES + [cls_lower]:
+                    for ns in [*_DE_NAMESPACES, cls_lower]:
                         for app_part in (_safe_cap, _safe_cls):
                             p = f"/org/{ns}/{app_part}"
                             if GLib.Variant.is_object_path(p):
@@ -833,7 +833,7 @@ class GlobalMenuService(Service):
 
         if _safe_cls:
             cls_lower = _safe_cls.lower()
-            for ns in _DE_NAMESPACES + [cls_lower]:
+            for ns in [*_DE_NAMESPACES, cls_lower]:
                 for app_part in (_safe_cap, _safe_cls):
                     for suffix in ("menus/menubar", "menus/appmenu", "menus"):
                         p = f"/org/{ns}/{app_part}/{suffix}"

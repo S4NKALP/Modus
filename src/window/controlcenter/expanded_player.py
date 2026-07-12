@@ -13,9 +13,9 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from services.mpris import PlayerManager, PlayerService
 from utils.utils import svg_file
 from window.controlcenter.player import (
+    PLAYER_FALLBACK_ART,
     apply_player_art,
     get_shared_mpris_manager,
-    PLAYER_FALLBACK_ART,
 )
 
 
@@ -667,8 +667,9 @@ class PlayerBox(Box):
                 self.play_pause_icon.dynamic_file(icon_file)
             else:
                 # Fallback if play_pause_icon isn't available
-                from utils.utils import get_relative_path
                 import os
+
+                from utils.utils import get_relative_path
 
                 self.play_pause_button.get_child().set_from_file(
                     os.path.join(get_relative_path("assets/icons/"), icon_file)

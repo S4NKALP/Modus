@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from utils.utils import toml_file
 
 PINNED_APPS_FILE = toml_file("dock.toml")

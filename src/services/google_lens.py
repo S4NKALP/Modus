@@ -61,7 +61,7 @@ class GoogleLens(Service):
                 raise RuntimeError(f"Failed to capture region: {capture_result.stderr}")
 
         except Exception as e:
-            raise RuntimeError(f"Failed to capture region: {e}")
+            raise RuntimeError(f"Failed to capture region: {e}") from e
 
     def upload_file(self, uploader_url, file_path):
         url_resp = None

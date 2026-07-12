@@ -93,7 +93,6 @@ class Animator(Service):
         self._timing_function = lambda progress=0.0, **_: cubic_bezier(
             *value, progress=progress
         )
-        return
 
     @Property(TimingFunctionCallback, "read-write")
     def timing_function(self) -> TimingFunctionCallback:
@@ -102,7 +101,6 @@ class Animator(Service):
     @timing_function.setter
     def timing_function(self, value: TimingFunctionCallback):
         self._timing_function = value
-        return
 
     @Property(float, "read-write")
     def duration(self):
@@ -114,7 +112,6 @@ class Animator(Service):
             raise ValueError("duration can't be smaller than or equal to 0.0")
 
         self._duration = value
-        return
 
     @Property(float, "read-write")
     def value(self):
@@ -123,7 +120,6 @@ class Animator(Service):
     @value.setter
     def value(self, value: float):
         self._value = value
-        return
 
     @Property(float, "read-write")
     def max_value(self):
@@ -132,7 +128,6 @@ class Animator(Service):
     @max_value.setter
     def max_value(self, value: float):
         self._max_value = value
-        return
 
     @Property(float, "read-write")
     def min_value(self):
@@ -141,7 +136,6 @@ class Animator(Service):
     @min_value.setter
     def min_value(self, value: float):
         self._min_value = value
-        return
 
     @Property(bool, "read-write", default_value=False)
     def playing(self):
@@ -150,7 +144,6 @@ class Animator(Service):
     @playing.setter
     def playing(self, value: bool):  # this setter is intended for internal usage only
         self._playing = value
-        return
 
     @Property(bool, "read-write", default_value=False)
     def repeat(self):
@@ -159,7 +152,6 @@ class Animator(Service):
     @repeat.setter
     def repeat(self, value: bool):
         self._repeat = value
-        return
 
     def __init__(
         self,
@@ -203,7 +195,7 @@ class Animator(Service):
         if not self._playing:
             return
 
-        elapsed_time = delta_time - cast(float, self._start_time)
+        elapsed_time = delta_time - cast("float", self._start_time)
 
         self._timeline_pos = min(1.0, elapsed_time / self._duration)
 
@@ -225,7 +217,6 @@ class Animator(Service):
 
         self._start_time = delta_time
         self._timeline_pos = 0.0
-        return
 
     def do_handle_tick(self, *_):
         current_time = self.do_get_time_now()
@@ -241,7 +232,6 @@ class Animator(Service):
         else:
             GLib.source_remove(self._tick_handler)
         self._tick_handler = None
-        return
 
     def play(self):
         if self._playing:
@@ -270,5 +260,5 @@ class Animator(Service):
         if not self._tick_handler:
             self._timeline_pos = 0
             self.playing = False
-            return
+            return None
         return self.do_remove_tick_handlers()

@@ -43,7 +43,7 @@ class Panel(Window):
         self.imac = Button(
             name="panel-button",
             child=svg_file("misc/logo.svg", size=18),
-            on_clicked=lambda *_: self.globalmenu.show_system_dropdown((self.imac)),
+            on_clicked=lambda *_: self.globalmenu.show_system_dropdown(self.imac),
         )
         setup_cursor_hover(self.imac, "pointer")
         self.globalmenu.set_imac_button(self.imac)
@@ -313,7 +313,7 @@ class Panel(Window):
         self.queue_resize()
 
     def _on_config_changed(self, new_config, old_config):
-        print("[Panel] Config changed, checking keys...")
+        logger.debug("Config changed, checking keys...")
         keys = {
             "imac_button",
             "global_menu",
@@ -330,7 +330,7 @@ class Panel(Window):
         }
         changed_keys = [k for k in keys if new_config.get(k) != old_config.get(k)]
         if changed_keys:
-            print(f"[Panel] Rebuilding due to changes in: {changed_keys}")
+            logger.debug(f"Rebuilding due to changes in: {changed_keys}")
             self._rebuild_layout_from_config(new_config)
 
         self._update_tray_visibility()

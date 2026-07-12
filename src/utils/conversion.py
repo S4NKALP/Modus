@@ -1,10 +1,10 @@
-from fabric.utils import logger
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional, Tuple
 
 import httpx
+from fabric.utils import logger
 
 
 class CurrencyCache:
@@ -102,7 +102,7 @@ class CurrencyCache:
                 except Exception as je:
                     logger.error(f"Failed to parse JSON for {from_code}: {je}")
             else:
-                print(
+                logger.warning(
                     f"Background fetch for {from_code} returned status {
                         response.status_code
                     }"

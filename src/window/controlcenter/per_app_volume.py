@@ -3,9 +3,10 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from shared.widgets.flat_scale import FlatScale
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.separator import Separator
+
+from shared.widgets.flat_scale import FlatScale
 
 # Local imports
 from utils.roam import audio_service
@@ -208,9 +209,10 @@ class PerAppVolumeControl(Box):
             for i, app in enumerate(applications):
                 if hasattr(app, "name") and hasattr(app, "volume"):
                     app_widget = self._create_app_control(app)
-                    self.apps_container.children = list(
-                        self.apps_container.children
-                    ) + [app_widget]
+                    self.apps_container.children = [
+                        *list(self.apps_container.children),
+                        app_widget,
+                    ]
 
                     # Add separator between apps (except for last one)
                     if i < len(applications) - 1:
@@ -218,9 +220,10 @@ class PerAppVolumeControl(Box):
                             orientation="horizontal",
                             style_classes="app-volume-separator",
                         )
-                        self.apps_container.children = list(
-                            self.apps_container.children
-                        ) + [separator]
+                        self.apps_container.children = [
+                            *list(self.apps_container.children),
+                            separator,
+                        ]
 
                     self._app_widgets[app.name] = (app_widget, app)
         else:

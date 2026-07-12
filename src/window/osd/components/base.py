@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from fabric.utils import Gdk, GLib, invoke_repeater, remove_handler, time, logger
+
+from fabric.utils import Gdk, GLib, invoke_repeater, logger, remove_handler, time
 from fabric.widgets.box import Box
 from fabric.widgets.wayland import WaylandWindow as Window
 

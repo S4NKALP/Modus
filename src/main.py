@@ -36,25 +36,8 @@ from window.notification.notification import ModusNoti
 from window.osd.main import OSDWindow
 from window.panel.main import Panel
 from window.screencapture import ScreenCaptureWindow
+from window.spotlight.main import SpotlightWindow
 from window.switcher import ApplicationSwitcher
-
-# class LazyLauncher:
-#     def __init__(self):
-#         self._instance = None
-#
-#     def _get_instance(self):
-#         if self._instance is None:
-#             from window.launcher.main import Launcher
-#
-#             self._instance = Launcher()
-#             import __main__
-#
-#             if hasattr(__main__, "app") and __main__.app:
-#                 __main__.app.add_window(self._instance)
-#         return self._instance
-#
-#     def __getattr__(self, name):
-#         return getattr(self._get_instance(), name)
 
 
 def main():
@@ -74,7 +57,7 @@ def main():
     switcher = ApplicationSwitcher()
     panel = Panel()
     modusnoti = ModusNoti()
-    # launcher = LazyLauncher()
+    spotlight = SpotlightWindow()
     deskwidget = Deskwidgets()
     dock = Dock()
     osd = OSDWindow()
@@ -97,6 +80,7 @@ def main():
         switcher,
         dock,
         screencapture,
+        spotlight,
     )
 
     def set_css():
@@ -123,7 +107,7 @@ def main():
     __main__.switcher = switcher
     __main__.panel = panel
     __main__.modusnoti = modusnoti
-    # __main__.launcher = launcher
+    __main__.spotlight = spotlight
     __main__.deskwidget = deskwidget
     __main__.dock = dock
     __main__.osd = osd

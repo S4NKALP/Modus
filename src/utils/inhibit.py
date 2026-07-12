@@ -1,13 +1,13 @@
-from fabric.utils import logger
 # From https://github.com/stwa/wayland-idle-inhibitor
 # License: WTFPL Version 2
-
 import argparse
 import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+from fabric.utils import logger
 
 # Add the project root to sys.path to allow absolute imports from 'utils'
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -47,10 +47,10 @@ def parse_duration(duration_str: str) -> int:
             return int(float(duration_str[:-1]))
         else:
             return int(duration_str)
-    except ValueError:
+    except ValueError as err:
         raise ValueError(
             "Invalid duration format. Use '1h', '30m', '45s', 'on', 'off', etc."
-        )
+        ) from err
 
 
 def kill_existing_inhibit_processes():
@@ -183,7 +183,7 @@ def main() -> None:
         shutdown()
 
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error: {e!s}")
         logger.error("Make sure you're running this under a Wayland session.")
         sys.exit(1)
 

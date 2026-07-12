@@ -89,7 +89,7 @@ class PopupWindow(WaylandWindow):
 
     def do_handle_size_allocate(self, *_):
         if not self.get_visible():
-            return
+            return None
         return self.do_reposition(self.do_calculate_edges())
 
     def do_calculate_edges(self):
@@ -142,7 +142,7 @@ class PopupWindow(WaylandWindow):
         height = self.get_allocated_height()
         width = self.get_allocated_width()
 
-        monitor_x, monitor_width = _get_monitor_geometry(parent_window)
+        _monitor_x, monitor_width = _get_monitor_geometry(parent_window)
 
         if self._pointing_widget:
             coords = self.get_coords_for_widget(self._pointing_widget)
@@ -176,7 +176,8 @@ class PopupWindow(WaylandWindow):
             position_margins = (clamped, 0, 0, 0)
 
         new_margin = tuple(
-            a + b for a, b in zip(position_margins, self._base_margin.values())
+            a + b
+            for a, b in zip(position_margins, self._base_margin.values(), strict=False)
         )
         new_margin = (
             max(0, new_margin[0]),

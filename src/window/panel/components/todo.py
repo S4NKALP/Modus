@@ -5,9 +5,9 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
-from shared.window.animated_scrollwindow import AnimatedScrollable
-from services.todo import get_todo_service
 
+from services.todo import get_todo_service
+from shared.window.animated_scrollwindow import AnimatedScrollable
 from shared.window.applet_window import AppletWindow
 from utils.utils import svg_file
 
@@ -364,11 +364,11 @@ class TodoListWidget(AppletWindow):
 
     def _on_todo_event(self, event_type, data=None):
         """Handle todo service events via callback"""
-        if event_type == "todos-changed":
-            GLib.idle_add(self._refresh_todos)
-        elif event_type == "todo-added":
-            GLib.idle_add(self._refresh_todos)
-        elif event_type == "todo-deleted":
+        if (
+            event_type == "todos-changed"
+            or event_type == "todo-added"
+            or event_type == "todo-deleted"
+        ):
             GLib.idle_add(self._refresh_todos)
         elif event_type in ["todo-toggled", "todo-edited", "todo-priority-changed"]:
             if data and data["id"] in self.todo_items:

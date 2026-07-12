@@ -1,19 +1,20 @@
-from fabric.utils import Gdk, Gtk, GLib
+from fabric.utils import Gdk, GLib, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.shapes import Corner
 from fabric.widgets.stack import Stack
+
 from services.screencapture import screen_capture_service
-from window.panel.notch.recording import RecordingIndicator
-from window.panel.notch.player import NotchPlayer
+from window.controlcenter.player import get_shared_mpris_manager
 from window.panel.notch.indicators import (
     CapsLockIndicator,
+    ChargingIndicator,
     KeyboardLayoutIndicator,
     MicrophoneIndicator,
     NumLockIndicator,
-    ChargingIndicator,
 )
-from window.controlcenter.player import get_shared_mpris_manager
+from window.panel.notch.player import NotchPlayer
+from window.panel.notch.recording import RecordingIndicator
 
 
 class Notch(Box):

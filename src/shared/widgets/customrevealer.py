@@ -113,7 +113,7 @@ class SlideRevealer(Gtk.Overlay):
         x, y = self._get_position_at_progress_cached(progress)
 
         # Round to nearest pixel for actual positioning
-        pixel_x, pixel_y = int(round(x)), int(round(y))
+        pixel_x, pixel_y = round(x), round(y)
         self._fixed.move(self.child, pixel_x, pixel_y)
         self.queue_draw()
 

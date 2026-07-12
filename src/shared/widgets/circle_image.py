@@ -1,6 +1,7 @@
 from typing import Literal
+
 from fabric.core.service import Property
-from fabric.utils import Gdk, GdkPixbuf, Gtk, cairo, math  # noqa: E402
+from fabric.utils import Gdk, GdkPixbuf, Gtk, cairo, math
 from fabric.widgets.widget import Widget
 
 

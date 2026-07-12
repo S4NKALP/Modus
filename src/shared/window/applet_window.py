@@ -1,9 +1,8 @@
-from fabric.utils import logger
-from fabric.utils import GLib
-from fabric.widgets.eventbox import EventBox  # noqa: E402
-from fabric.widgets.wayland import WaylandWindow as Window  # noqa: E402
+from fabric.utils import GLib, logger
+from fabric.widgets.eventbox import EventBox
+from fabric.widgets.wayland import WaylandWindow as Window
 
-from shared.window.popup_win import PopupWindow  # noqa: E402
+from shared.window.popup_win import PopupWindow
 
 
 class DismissLayer(Window):

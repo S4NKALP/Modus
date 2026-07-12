@@ -32,7 +32,7 @@ class ClippingBox(Box):
             self.get_allocated_width(),
             self.get_allocated_height(),
             cast(
-                int,
+                "int",
                 self.get_style_context().get_property(
                     "border-radius", self.get_state_flags()
                 ),

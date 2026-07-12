@@ -4,7 +4,7 @@ from typing import Callable, Iterable, Literal, TypedDict
 from fabric.utils import Gdk, GObject, Gtk, cairo
 from fabric.utils.helpers import clamp
 from fabric.widgets.widget import Widget
-from gi.repository import Pango, PangoCairo  # noqa: E402
+from gi.repository import Pango, PangoCairo
 
 from shared.widgets.animator import Animator, ease_in, ease_in_out, ease_out
 

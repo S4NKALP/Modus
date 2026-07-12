@@ -138,7 +138,7 @@ def get_app_info(wmclass):
                     continue
                 try:
                     full_path = os.path.join(path, f)
-                    with open(full_path, "r", encoding="utf-8") as df:
+                    with open(full_path, encoding="utf-8") as df:
                         content = df.read()
                         if (
                             f"StartupWMClass={wmclass}" in content
@@ -151,7 +151,7 @@ def get_app_info(wmclass):
 
         if desktop_file:
             try:
-                with open(desktop_file, "r", encoding="utf-8") as f:
+                with open(desktop_file, encoding="utf-8") as f:
                     content = f.read()
 
                 name = wmclass.title()
@@ -178,9 +178,7 @@ def get_app_info(wmclass):
                             name = value
                         elif key == "Version":
                             version = value
-                        elif key == "Comment":
-                            comment = value
-                        elif key == "GenericName" and not comment:
+                        elif key == "Comment" or (key == "GenericName" and not comment):
                             comment = value
                         elif key == "Icon":
                             icon = value

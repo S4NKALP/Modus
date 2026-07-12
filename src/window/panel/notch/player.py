@@ -2,7 +2,7 @@ import math
 import os
 import time
 
-from fabric.utils import GLib, Gtk, GdkPixbuf
+from fabric.utils import GdkPixbuf, GLib, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 

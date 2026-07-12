@@ -1,4 +1,5 @@
 from fabric.utils import Gdk, Gtk
+
 from shared.widgets.smooth_switch import SmoothSwitch
 
 

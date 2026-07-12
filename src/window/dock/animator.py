@@ -1,14 +1,10 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from fabric.utils import GLib
 
+from .canvas import DockCanvas
 from .constants import ANIM_INTERVAL_MS, IDLE_THRESHOLD, LERP_FACTOR
 from .layout import DockLayout
-
-if TYPE_CHECKING:
-    from .canvas import DockCanvas
 
 
 class DockAnimator:

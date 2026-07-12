@@ -28,16 +28,16 @@ from utils.icon_resolver import IconResolver
 
 class _SwitcherItem:
     __slots__ = (
-        "button",
-        "item_box",
-        "header_box",
+        "address",
         "app_icon",
-        "name_label",
-        "preview_image",
-        "overlay",
         "badge_box",
         "badge_label",
-        "address",
+        "button",
+        "header_box",
+        "item_box",
+        "name_label",
+        "overlay",
+        "preview_image",
     )
 
     def __init__(

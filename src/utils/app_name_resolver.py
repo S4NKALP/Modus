@@ -16,7 +16,7 @@ class AppName:
             return None
 
         desktop_app_name = wmclass
-        with open(os.path.join(self.path, desktop_file), "r") as f:
+        with open(os.path.join(self.path, desktop_file)) as f:
             lines = f.readlines()
             for line in lines:
                 if line.startswith("Name="):

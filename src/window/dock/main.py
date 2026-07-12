@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from fabric.utils import GLib, logger, random
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox

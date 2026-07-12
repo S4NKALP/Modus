@@ -66,7 +66,7 @@ class KeyboardLayout(Service):
         if not self.layout_state_file.exists():
             return None
         try:
-            with open(self.layout_state_file, "r") as f:
+            with open(self.layout_state_file) as f:
                 data = tomlkit.load(f)
             return dict(data) if data else None
         except Exception as e:

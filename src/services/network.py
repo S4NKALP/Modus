@@ -254,7 +254,7 @@ class Ethernet(Service):
         ):
             self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
 
-        self._device.connect("notify::speed", lambda *_: print(_))
+        self._device.connect("notify::speed", lambda *_: self.notifier("speed"))
 
     def notifier(self, pn):
         self.notify(pn)

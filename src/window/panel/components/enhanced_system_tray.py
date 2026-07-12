@@ -1,5 +1,5 @@
-from pathlib import Path
 import weakref
+from pathlib import Path
 
 from fabric.system_tray.widgets import SystemTrayItem
 from fabric.utils import GdkPixbuf, GLib, logger

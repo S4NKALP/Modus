@@ -77,7 +77,7 @@ def get_location() -> str:
             if city:
                 return city
 
-    print("All location APIs failed")
+    logger.warning("All location APIs failed")
     return ""
 
 
@@ -201,6 +201,7 @@ def get_weather(callback):
             GLib.idle_add(callback, formatted_data)
         else:
             GLib.idle_add(callback, None)
+        return None
 
     executor.submit(fetch_weather)
 

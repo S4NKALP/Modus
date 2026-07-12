@@ -4,7 +4,7 @@ _services_mod = None
 def _mod():
     global _services_mod
     if _services_mod is None:
-        import services.modus as _services_mod  # noqa: F811
+        import services.modus as _services_mod
     return _services_mod
 
 

@@ -1,8 +1,11 @@
-from fabric.utils import logger
 import math
+
 from fabric.audio import Audio
-from utils.utils import svg_file
+from fabric.utils import logger
 from fabric.widgets.scale import ScaleMark
+
+from utils.utils import svg_file
+
 from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer
 
@@ -88,9 +91,7 @@ class AudioOSDContainer(BaseOSDContainer):
         )
 
         display_volume = 0 if (volume == 0 or muted) else volume
-        level = (
-            0 if display_volume == 0 else min(int(math.ceil(display_volume / 33)), 3)
-        )
+        level = 0 if display_volume == 0 else min(math.ceil(display_volume / 33), 3)
 
         self.osd_window_image.set_from_file(f"volume/audio-volume-{level}.svg")
 

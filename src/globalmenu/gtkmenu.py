@@ -115,11 +115,11 @@ class _ActionInfo:
 
 class GtkMenuClient:
     __slots__ = (
-        "service_name",
-        "object_path",
+        "_action_cache",
         "_action_path",
         "_cached_items",
-        "_action_cache",
+        "object_path",
+        "service_name",
     )
 
     def __init__(self, service_name: str, object_path: str):
@@ -342,9 +342,7 @@ class GtkMenuClient:
         action_info = self._describe_action(action_name)
         use_change_state = False
         if action_info and action_info.state is not None:
-            if action_info.state_type == "b":
-                use_change_state = True
-            elif action_info.parameter_type:
+            if action_info.state_type == "b" or action_info.parameter_type:
                 use_change_state = True
 
         try:
@@ -416,12 +414,12 @@ class GtkMenuClient:
 
 class ActionMenuClient:
     __slots__ = (
-        "service_name",
-        "object_path",
+        "_action_cache",
+        "_action_map",
         "_action_path",
         "_cached_items",
-        "_action_map",
-        "_action_cache",
+        "object_path",
+        "service_name",
     )
 
     def __init__(self, service_name: str, object_path: str):
@@ -684,9 +682,7 @@ class ActionMenuClient:
         action_info = self._describe_action(action_name)
         use_change_state = False
         if action_info and action_info.state is not None:
-            if action_info.state_type == "b":
-                use_change_state = True
-            elif action_info.parameter_type:
+            if action_info.state_type == "b" or action_info.parameter_type:
                 use_change_state = True
 
         try:

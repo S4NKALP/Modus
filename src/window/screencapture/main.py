@@ -219,11 +219,7 @@ class ScreenCaptureWindow(Window):
             screen_capture_service.record(
                 "active", use_audio=use_audio, show_cursor=show_cursor
             )
-        elif tool == "record-window":
-            screen_capture_service.record(
-                "selection", use_audio=use_audio, show_cursor=show_cursor
-            )
-        elif tool == "record-region":
+        elif tool == "record-window" or tool == "record-region":
             screen_capture_service.record(
                 "selection", use_audio=use_audio, show_cursor=show_cursor
             )
@@ -289,7 +285,7 @@ class ScreenCaptureWindow(Window):
         )
         ctx.remove_class("recording")
 
-    def toggle(self, ss: str = None, sr: str = None):
+    def toggle(self, ss: str | None = None, sr: str | None = None):
         """
         Toggle the window, or trigger a direct action via CLI.
         :param ss: screenshot mode (e.g. 'region', 'fullscreen', 'selectwindow')

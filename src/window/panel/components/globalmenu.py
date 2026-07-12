@@ -5,9 +5,9 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
+from globalmenu.service import get_global_menu_service
 from shared.dialogs.about import AboutApp, get_about_window
 from shared.window.dropdown import ModusDropdown, dropdown_divider, dropdowns
-from globalmenu.service import get_global_menu_service
 from utils.app_name_resolver import format_window
 from utils.roam import modus_service
 from utils.utils import setup_cursor_hover

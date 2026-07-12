@@ -13,7 +13,9 @@ from utils.utils import setup_cursor_hover, svg_file
 
 
 class SettingsRow(CenterBox):
-    def __init__(self, label: str, child=None, description: str = None, **kwargs):
+    def __init__(
+        self, label: str, child=None, description: str | None = None, **kwargs
+    ):
         label_widget = Label(label=label, name="settings-row-label", h_align="start")
 
         start_children = [label_widget]

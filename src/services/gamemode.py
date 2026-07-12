@@ -21,7 +21,7 @@ STATE_FILE = Path("/tmp/hyprland_gamemode.toml")
 
 def run_hyprctl(command: str) -> str:
     """Run a hyprctl command and return the output (raises on error)."""
-    result = run_command(["hyprctl"] + command.split(), timeout=5)
+    result = run_command(["hyprctl", *command.split()], timeout=5)
     if result.returncode != 0:
         raise RuntimeError(f"hyprctl failed: {result.stderr}")
     return result.stdout.strip()
@@ -31,7 +31,7 @@ def _read_state() -> dict:
     if not STATE_FILE.exists():
         return {}
     try:
-        with open(STATE_FILE, "r") as f:
+        with open(STATE_FILE) as f:
             data = tomlkit.load(f)
         return dict(data) if data else {}
     except Exception:
