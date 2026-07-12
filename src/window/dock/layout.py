@@ -1,7 +1,6 @@
 import math
-from typing import List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
-from .canvas import DockItem
 from .constants import (
     BG_PADDING_H,
     BG_PADDING_V,
@@ -11,6 +10,9 @@ from .constants import (
     MIN_SCALE,
     SIGMA_FACTOR,
 )
+
+if TYPE_CHECKING:
+    from .canvas import DockItem
 
 
 class DockLayout:

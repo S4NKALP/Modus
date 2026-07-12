@@ -85,6 +85,7 @@ ignore = [
     "SIM115", # allow open without context handler
     "SIM116", # allow if-else instead of dict lookup
     "B018",   # allow useless expression (standalone identifiers)
+    "TC004",  # allow imports in TYPE_CHECKING block (circular import prevention)
 ]
 
 [tool.ruff.lint.isort]
