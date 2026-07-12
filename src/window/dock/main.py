@@ -5,7 +5,7 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.config import config, on_config_change
-from utils.occlusion import check_occlusion
+from services.modus import check_occlusion
 
 from .canvas import DockCanvas
 
