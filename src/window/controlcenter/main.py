@@ -1041,7 +1041,6 @@ class ModusControlCenter(AppletWindow):
     def audio_changed(self, *_):
         if not self._signals_connected:
             return
-        pass
 
     def dnd_changed(self, _, dnd_state):
         if not self._signals_connected:
