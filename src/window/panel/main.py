@@ -75,8 +75,13 @@ class Panel(Window):
             spacing=4,
         )
 
+        self._spotlight_toggle_cb = None
         self.search = Button(
-            name="panel-button", child=svg_file("misc/search.svg", size=22)
+            name="panel-button",
+            child=svg_file("misc/search.svg", size=22),
+            on_clicked=lambda *_: (
+                self._spotlight_toggle_cb() if self._spotlight_toggle_cb else None
+            ),
         )
         setup_cursor_hover(self.search, "pointer")
 
@@ -173,6 +178,9 @@ class Panel(Window):
 
         self._update_tray_visibility()
         self.show()
+
+    def set_spotlight_toggle(self, callback):
+        self._spotlight_toggle_cb = callback
 
     def on_dnd_changed(self, _, dnd_state):
         self.update_notification_icon()  # Update notification icon when DND changes

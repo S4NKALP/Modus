@@ -58,6 +58,7 @@ def main():
     panel = Panel()
     modusnoti = ModusNoti()
     spotlight = SpotlightWindow()
+    panel.set_spotlight_toggle(spotlight.toggle)
     deskwidget = Deskwidgets()
     dock = Dock()
     osd = OSDWindow()
