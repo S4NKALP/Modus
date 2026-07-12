@@ -3,35 +3,101 @@
 ## Frequently Asked Questions
 
 ### 1. The Global Menu isn't showing up for some apps?
-Modus uses a custom `libmenu_button_shim.so` along with `appmenu-gtk-module` to export GTK menus over DBus.
-- Ensure `appmenu-gtk-module` is installed.
-- Ensure the shim was compiled correctly during installation.
-- Note that non-GTK apps (like Electron apps or Qt apps) might need specific flags (like `export QT_QPA_PLATFORMTHEME=appmenu-qt5`) to export their menus.
 
-### 2. High CPU Usage when the Application Switcher is open?
-The Modus App Switcher uses a custom Wayland C-Backend (`app-capture`) to generate live video previews of your running windows.
-- The previews are software-rendered via Cairo.
-- If you have many 4k windows open, generating live thumbnails might cause a CPU spike.
-- **Fix:** You can throttle the framerate in `config.toml` by increasing `switcher_live_preview_delay_ms` (e.g., set to `200` for ~5 FPS), or entirely disable live previews by setting `switcher_live_preview = false`.
+Modus uses a custom `libmenu_button_shim.so` with `appmenu-gtk-module` to
+export GTK menus over DBus.
+- Ensure `appmenu-gtk-module` is installed
+- Ensure the shim was compiled correctly during installation
+- Non-GTK apps (Electron, Qt) may need flags like
+  `export QT_QPA_PLATFORMTHEME=appmenu-qt5`
 
-### 3. The Dock is covering my fullscreen games/videos?
-Ensure you have `dock_auto_hide = true` in your `config.toml`. The dock intelligently hides when a window is maximized or goes fullscreen.
+### 2. High CPU usage when App Switcher is open?
 
-### 4. Why isn't my Volume or Brightness OSD showing up?
-Ensure that `osd = true` is set in your `config.toml`. The On-Screen Display relies on `brightnessctl` for brightness and standard audio services (like Pipewire/Wireplumber) for volume. Make sure those underlying tools are working correctly on your system.
+The App Switcher uses a custom C-backend to capture live window previews.
+- 4K windows with many open can spike CPU
+- **Fix**: Increase `switcher_live_preview_delay_ms` in `config.toml` (e.g., `200`
+  for ~5 FPS) or set `switcher_live_preview = false` to disable previews entirely
 
-### 5. The Weather widget is showing the wrong location?
-You can easily fix this by updating the `weather_location` setting in your `config.toml`. Simply type your city and country (e.g., `"London, UK"` or `"Patan, Nepal"`), and the widget will fetch the correct local weather.
+### 3. Dock covering fullscreen games/videos?
+
+Set `dock_auto_hide = true` in `config.toml`. The dock hides automatically
+when a window is maximized or fullscreen.
+
+### 4. Volume/Brightness OSD not showing?
+
+Set `osd = true` in `config.toml`. Requires `brightnessctl` for brightness and
+Pipewire/Wireplumber for audio.
+
+### 5. Weather widget shows wrong location?
+
+Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
+`"Patan, Nepal"`).
+
+### 6. Spotlight plugin isn't showing up?
+
+- Check the file is in `config/plugins/` (not `examples/plugins/`)
+- Check `config/plugins/` is NOT in `.gitignore` for your own repos
+- Run `journalctl --user -f -t modus` and look for `[PluginLoader]` errors
+- Make sure the file has `PLUGIN = YourClassName` at the bottom
+- If using dependencies, ensure `uv` is installed
+- After editing, run `fabric-cli exec modus1 'deep_reload your_plugin_id'`
+
+### 7. Plugin has dependencies but they aren't installed?
+
+- Check `uv` is installed (`which uv`)
+- Check `requirements.txt` is next to your `.py` file or inside your package dir
+- The venv lives at `config/plugins/.venvs/<plugin_name>/`
+- Delete that directory to force re-install on next load
 
 ---
 
 ## Pro Tips
 
-- **Live Reload for Mods:** The `config/mods.toml` file is actively monitored. Any changes you make to custom panel buttons or dropdown menus are instantly loaded—no shell restart required!
-- **Pinning Apps Correctly:** When pinning apps in `dock.toml`, ensure you use the exact `.desktop` file name (excluding the `.desktop` extension). For example, use `"org.gnome.Nautilus"` instead of just `"nautilus"` or `"Files"`.
-- **Custom Scripts in Panel:** You aren't limited to simple commands in `mods.toml`. You can point the `on-clicked` actions to complex bash scripts stored in your home directory to create advanced panel utilities.
-- **Forcing a Theme Update:** Because Modus uses Matugen for styling, the entire shell's color scheme is tethered to your wallpaper. If you want to completely change the look of your desktop, simply set a new wallpaper! Modus will automatically generate a new palette and hot-reload the UI without dropping your session.
-- **Keyboard Shortcuts:**
-  - `uv run start` — Starts the main shell daemon.
-  - `uv run lock` — Triggers the session lock screen.
-- **Wayland Screencapture:** You can quickly toggle the screen recording/capture widget from the panel or bind it to a key using your Hyprland config (e.g. `bind = SUPER, S, exec, fabric-cli exec modus 'screencapture.toggle()'`).
+- **Live Reload for Mods**: `config/mods.toml` is monitored for changes. Edits
+  apply instantly — no restart needed
+
+- **Pinning Apps**: Use exact `.desktop` filename in `dock.toml` (e.g.,
+  `"org.gnome.Nautilus"`, not `"Files"`)
+
+- **Custom Scripts**: `on-clicked` in `mods.toml` can point to bash scripts in
+  your home directory
+
+- **Theme Updates**: Modus uses Matugen tied to your wallpaper. Set a new
+  wallpaper and the shell recolors automatically
+
+- **Spotlight Keyboard Shortcuts** (from `config/hypr/modus.lua`):
+
+  | Key | Action |
+  |-----|--------|
+  | `Super + D` | Open spotlight search |
+  | `Super + E` | Open emoji picker |
+  | `Super + V` | Open clipboard history |
+  | `Super + W` | Open wallpaper browser |
+
+- **Deep Reload a Plugin**: After editing `config/plugins/hello.py`:
+
+  ```bash
+  fabric-cli exec modus1 'deep_reload hello'
+  ```
+
+  No Modus restart required. Works with all plugins.
+
+- **Test a Plugin from Terminal**:
+
+  ```bash
+  fabric-cli exec modus1 'wth london'
+  ```
+
+  Routes to the weather plugin's `search()` and prints results to the Modus log.
+
+- **Check Plugin Load Log**:
+
+  ```bash
+  journalctl --user -f -t modus
+  ```
+
+  Filters to Modus messages only. Shows plugin discovery, load errors, and
+  search crashes.
+
+- **Wayland Screencapture**: Toggle from panel or bind in Hyprland:
+  `bind = SUPER, S, exec, fabric-cli exec modus 'screencapture.toggle()'`

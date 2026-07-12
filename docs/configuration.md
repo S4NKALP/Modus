@@ -8,7 +8,6 @@ Modus is highly configurable using TOML files located in the `config/` directory
 |------|---------|
 | `config.toml` | Main application configuration (modules, features, toggles). |
 | `mods.toml` | Custom panel button definitions (menus, shell commands). |
-| `launcher.toml` | Settings specific to the application launcher/spotlight. |
 | `dock.toml` | Pinned applications for the dock. |
 
 ---
@@ -30,6 +29,20 @@ The `config.toml` file controls which widgets and services are enabled. Most cha
 - `switcher_live_preview`: Enables real-time Wayland video previews of running applications.
 - `switcher_live_preview_delay_ms`: Framerate delay for previews (e.g., `200` = ~5fps). Lower is smoother but uses more CPU.
 - `osd`: Enables on-screen displays for volume and brightness changes.
+
+**Spotlight Search Keybinds** (defined in `config/hypr/modus.lua`):
+
+| Key | Action |
+|-----|--------|
+| `Super + D` | Open spotlight search (default) |
+| `Super + E` | Open emoji picker |
+| `Super + V` | Open clipboard history |
+| `Super + W` | Open wallpaper browser |
+| `Alt + Shift + W` | Set random wallpaper |
+
+These can be customized in `config/hypr/modus.lua`. The spotlight `.toggle()`
+method accepts optional arguments to pre-fill keywords: `toggle('em')` opens
+the emoji picker directly.
 
 ---
 

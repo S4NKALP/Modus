@@ -1,43 +1,99 @@
 # Architecture Overview
 
-Modus is built using **Python** and the **Fabric** framework (a GTK/Wayland wrapper), along with custom C extensions for high-performance Wayland interactions.
+Modus is built with Python and the [Fabric](https://github.com/Fabric-Development/fabric/)
+framework (GTK/Wayland wrapper), plus custom C extensions for high-performance
+Wayland interactions.
 
 ## 1. Core Application Loop
 
-The entry point of Modus is `start.py`, which delegates to `src/main.py`. 
-`main.py` instantiates the `fabric.Application` object. This central application manages the lifecycle of various floating Wayland windows (called "widgets" or "panels" in Modus).
+Entry point is `start.py`, delegates to `src/main.py`. `main.py` instantiates
+`fabric.Application`, which manages lifecycle of floating Wayland windows:
 
-Key windows include:
-- **Panel**: The top bar (`src/window/panel/`)
-- **Dock**: The macOS-style bottom dock (`src/window/dock/`)
-- **Control Center**: The right-side quick settings panel (`src/window/controlcenter/`)
-- **App Switcher**: The Alt-Tab window switcher (`src/window/switcher/`)
-- **Lock Screen**: The session lock screen (`src/window/lock.py`)
+- **Panel**: Top bar (`src/window/panel/`)
+- **Dock**: macOS-style bottom dock (`src/window/dock/`)
+- **Control Center**: Right-side quick settings (`src/window/controlcenter/`)
+- **App Switcher**: Alt-Tab window switcher (`src/window/switcher/`)
+- **Lock Screen**: Session lock (`src/window/lock.py`)
+- **Spotlight Search**: Super+D search overlay (`src/window/spotlight/`)
 
-## 2. High-Performance App Switcher (AppCapture)
+## 2. Spotlight Search Engine
 
-The App Switcher (`Alt+Tab`) needs to display live video previews of running Wayland windows. Doing this in pure Python via DBus polling would be far too slow and resource-intensive.
+The spotlight (`src/window/spotlight/`) is a plugin-powered search overlay.
+It has three layers:
 
-To solve this, Modus uses a custom C-extension located in `src/window/switcher/app-capture/`.
-- **How it works**: It uses the `hyprland-toplevel-export-v1` Wayland protocol to ask Hyprland for direct memory-mapped buffers (dmabuf/shm) of the window contents.
-- **Python Integration**: The C-backend is compiled to `libappcapture.so` and exposed to Python via GObject Introspection.
-- **Optimization**: To prevent CPU spikes when capturing 4K windows, the capture framerate is intentionally throttled by Python using `invoke_repeater`, controlled by `switcher_live_preview_delay_ms` in `config.toml`.
+### Layer 1: UI (`main.py`)
 
-## 3. Global Menu (DBus)
+A GTK window with an entry field and scrollable result list. Renders results
+from plugins. Manages keyboard navigation, viewport sizing, and result
+selection. Uses a 200ms debounce on the entry field to avoid searching on
+every keystroke.
 
-Modus features a macOS-style Global Menu (the application menu bar sits in the top panel instead of inside the app window).
+### Layer 2: Search Pipeline (`core/search.py`)
 
-- **How it works**: Apps export their menus over the `com.canonical.dbusmenu` DBus interface.
-- **The Shim**: To force GTK apps to export their menus even if they weren't natively designed to, Modus preloads a custom C library (`src/globalmenu/libmenu_button_shim.c`). This shim hooks into GTK's menu generation and forces the export.
-- **Python Daemon**: The Python side (`src/globalmenu/service.py`) acts as a DBus server, listens for these exported menus, and dynamically renders them as Fabric widgets in the top panel.
+On each keystroke:
 
-## 4. State Management & Services
+1. Routes the query — if it starts with a keyword (e.g., `gg ` for Google),
+   the query goes exclusively to that plugin
+2. Otherwise, dispatches to all `searchable` plugins in parallel via daemon
+   threads
+3. Collects results via `GLib.idle_add` (main thread callback)
+4. Merges results sorted by plugin priority then result score
+5. Cancels previous in-flight searches with `threading.Event` tokens
 
-Modus relies heavily on asynchronous event-driven services located in `src/services/`.
-These services monitor system states and emit signals when things change, updating the UI reactively:
-- `battery.py`: Uses UPower over DBus to track battery state.
-- `bluetooth.py`: Uses BlueZ over DBus.
-- `brightness.py`: Uses `brightnessctl` or `ddcutil`.
-- `network.py`: Uses NetworkManager over DBus.
+### Layer 3: Plugin System (`core/loader.py`, `core/manager.py`, `core/registry.py`)
 
-By using signals (`connect("changed", update_ui)`), Modus ensures that it uses virtually 0% CPU while idle.
+- **Loader**: Scans `config/plugins/` for `.py` files and package directories.
+  Handles per-plugin virtualenvs via `uv` for dependency isolation. Supports
+  deep reload (re-import from disk without restart).
+- **Manager**: Orchestrates lifecycle — instantiate, enable/disable, reload,
+  release memory. Persists disabled plugin list to `plugins.json`.
+- **Registry**: Stores plugin metadata keyed by id. Maintains keyword-to-plugin
+  map for fast routing.
+
+### Data flow
+
+```
+User types → debounce (200ms) → route query
+  ├─ keyword match → single plugin search → render
+  └─ global search → dispatch to threads → collect → merge → render
+
+User selects result → action callback → (copy, launch, etc.)
+User presses Escape → cancel searches → release plugin memory → hide
+```
+
+## 3. High-Performance App Switcher (AppCapture)
+
+The App Switcher (Alt+Tab) needs live video previews of Wayland windows. Pure
+Python DBus polling is too slow, so Modus uses a C-extension at
+`src/window/switcher/app-capture/`.
+
+- Uses `hyprland-toplevel-export-v1` Wayland protocol to get dmabuf/shm buffers
+  from Hyprland
+- Compiled to `libappcapture.so`, exposed to Python via GObject Introspection
+- Framerate throttled by Python using `invoke_repeater`, controlled by
+  `switcher_live_preview_delay_ms` in `config.toml`
+
+## 4. Global Menu (DBus)
+
+macOS-style menu bar in the top panel.
+
+- Apps export menus over `com.canonical.dbusmenu` DBus
+- Custom C shim (`src/globalmenu/libmenu_button_shim.c`) forces GTK apps to
+  export menus even if they weren't designed to
+- Python daemon (`src/globalmenu/service.py`) listens for exported menus and
+  renders them as Fabric widgets in the panel
+
+## 5. State Management & Services
+
+Services in `src/services/` monitor system state asynchronously and emit
+signals:
+
+| Service | Source | What it tracks |
+|---------|--------|---------------|
+| `battery.py` | UPower over DBus | Battery percentage, charging state |
+| `bluetooth.py` | BlueZ over DBus | Bluetooth devices |
+| `brightness.py` | `brightnessctl` / `ddcutil` | Screen brightness |
+| `network.py` | NetworkManager over DBus | WiFi, ethernet state |
+
+Uses signals (`connect("changed", update_ui)`) for reactive UI — virtually 0%
+CPU while idle.
