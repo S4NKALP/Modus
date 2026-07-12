@@ -139,7 +139,7 @@ uv run start
 - [x] Migrate to a `uv` managed Python virtual environment
 - [x] To-do List Widget
 - [x] Proper Documentation
-- [ ] Pomodoro Timer Widget
+- [x] Pomodoro Timer Widget
 
 ## Team
 
