@@ -33,18 +33,6 @@
 </figure>
 <br>
 
-## Links
-
-| Doc | What's inside |
-|-----|---------------|
-| [Installation Guide](docs/installation.md) | Automated & manual install, dependencies |
-| [Configuration Guide](docs/configuration.md) | `config.toml`, `mods.toml`, `dock.toml`, keybinds |
-| [Styling Guide](docs/styling.md) | Matugen colors, CSS customization |
-| [Architecture Overview](docs/architecture.md) | App Switcher C-backend, Spotlight engine, Services |
-| [Spotlight Plugins](docs/plugins.md) | Install/customize plugins, write your own, examples |
-| [FAQs & Tips](docs/faqs_tips.md) | Troubleshooting, shortcuts, live reload |
-| [Contributing](CONTRIBUTING.md) | Setup, code style, commit conventions |
-
 ## Quick Start
 
 ```bash
@@ -61,33 +49,49 @@ cd ~/.config/Modus
 > - Check `config/hypr/modus.conf` edit it according to your device and copy it to your hyprland config
 > - For Lock Screen Bind keys to `uv run lock`
 
-## Spotlight Plugins
-
-The spotlight search (Super+D) is powered by plugins. Drop a `.py` file in
-`config/plugins/` and it works instantly.
+## Manual Installation
 
 ```bash
-cp -r examples/plugins/hello.py config/plugins/hello.py
-# Hit Super+D, type "hi" — greeting appears
+paru -S uv fabric-cli-git cliphist gnome-bluetooth-3.0 slurp ffmpeg hypridle hyprsunset hyprpicker hyprshot grim libnotify matugen-bin playerctl gtk-session-lock awww apple-fonts swappy wl-clipboard webp-pixbuf-loader wf-recorder acpi brightnessctl power-profiles-daemon uwsm cinnamon-desktop ddcutil at-spi2-core gcc make pkgconf appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 meson ninja wayland-protocols --needed
+git clone https://github.com/S4NKALP/Modus ~/.config/Modus
+cd ~/.config/Modus
+uv sync
+
+# Compile App Switcher C-backend
+cd src/window/switcher/app-capture
+meson setup builddir
+meson compile -C builddir
+cd ../../../..
+
+# Compile Global Menu shim
+cd src/globalmenu
+gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
+cd ../..
+
+uv run start
 ```
 
-Plugin development:
-```bash
-vim config/plugins/hello.py
-fabric-cli exec modus1 'deep_reload hello'   # no restart needed
-```
+## Documentation
 
-See [Spotlight Plugins](docs/plugins.md) for full docs and examples.
+| Doc                                           | What's inside                                       |
+| --------------------------------------------- | --------------------------------------------------- |
+| [Installation Guide](docs/installation.md)    | Automated & manual install, dependencies            |
+| [Configuration Guide](docs/configuration.md)  | `config.toml`, `mods.toml`, `dock.toml`, keybinds   |
+| [Styling Guide](docs/styling.md)              | Matugen colors, CSS customization                   |
+| [Architecture Overview](docs/architecture.md) | App Switcher C-backend, Spotlight engine, Services  |
+| [Spotlight Plugins](docs/plugins.md)          | Install/customize plugins, write your own, examples |
+| [FAQs & Tips](docs/faqs_tips.md)              | Troubleshooting, shortcuts, live reload             |
+| [Contributing](CONTRIBUTING.md)               | Setup, code style, commit conventions               |
 
 ## Configuration
 
 Config files in `config/`, using TOML format:
 
-| File | Purpose |
-|------|---------|
+| File          | Purpose                                            |
+| ------------- | -------------------------------------------------- |
 | `config.toml` | Main settings (switcher, wallpaper, notifications) |
-| `mods.toml` | Custom panel buttons |
-| `dock.toml` | Pinned dock apps |
+| `mods.toml`   | Custom panel buttons                               |
+| `dock.toml`   | Pinned dock apps                                   |
 
 See [Configuration Guide](docs/configuration.md) for full reference.
 
@@ -112,50 +116,24 @@ on-clicked = "kitty"
 - Full shell syntax (`&&`, `|`) via `sh -c`
 - Live reload — edit and changes apply instantly
 
-## Manual Installation
+## Spotlight Plugins
+
+The spotlight search (Super+D) is powered by plugins. Drop a `.py` file in
+`config/plugins/` and it works instantly.
 
 ```bash
-paru -S uv fabric-cli-git cliphist gnome-bluetooth-3.0 slurp ffmpeg hypridle hyprsunset hyprpicker hyprshot grim libnotify matugen-bin playerctl gtk-session-lock awww apple-fonts swappy wl-clipboard webp-pixbuf-loader wf-recorder acpi brightnessctl power-profiles-daemon uwsm cinnamon-desktop ddcutil at-spi2-core gcc make pkgconf appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 meson ninja wayland-protocols --needed
-git clone https://github.com/S4NKALP/Modus ~/.config/Modus
-cd ~/.config/Modus
-uv sync
-
-# Compile App Switcher C-backend
-cd src/window/switcher/app-capture
-meson setup builddir
-meson compile -C builddir
-cd ../../../..
-
-# Compile Global Menu shim
-cd src/globalmenu
-gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
-cd ../..
-
-uv run start
+cp -r examples/plugins/hello.py config/plugins/hello.py
+# Hit Super+D, type "hi" — greeting appears
 ```
 
-## Roadmap
+Plugin development:
 
-- [x] Spotlight
-- [x] Lock Screen
-- [x] Dock
-- [x] Notification
-- [x] Control Center
-- [x] Music Player
-- [x] Desktop Widgets
-- [x] Spotlight
-- [x] Settings
-- [x] Magnifier hover effect on Dock
-- [x] New Application Switcher (with high-performance Live Wayland Previews via custom C-backend)
-- [x] Built-in Screen Capture & Screen Recording Widget
-- [x] Panel Widget
-- [x] MacOS like Widget
-- [x] Expandable Notification Centre
-- [x] Installation Script
-- [x] Migrate to a `uv` managed Python virtual environment
-- [x] To-do List Widget
-- [x] Proper Documentation
-- [x] Pomodoro Timer Widget
+```bash
+nvim config/plugins/hello.py
+fabric-cli exec modus1 'deep_reload hello'   # no restart needed
+```
+
+See [Spotlight Plugins](docs/plugins.md) for full docs and examples.
 
 ## Team
 
