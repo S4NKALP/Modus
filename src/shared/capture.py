@@ -394,9 +394,7 @@ class HyprlandCaptureBackend(CaptureBackend):
         """Build a ``slurp``-compatible box list of currently visible windows."""
         from services.modus import get_clients, get_monitors
 
-        active_ids = {
-            m.get("activeWorkspace", {}).get("id") for m in get_monitors()
-        }
+        active_ids = {m.get("activeWorkspace", {}).get("id") for m in get_monitors()}
         boxes: list[str] = []
         for client in get_clients():
             if not client.get("mapped", True):
