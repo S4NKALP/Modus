@@ -962,6 +962,16 @@ class DockCanvas(Gtk.DrawingArea):
                         if len(part) > 2 and part not in expanded:
                             expanded.append(part)
 
+        # Check exact desktop file name first
+        for app in desktop_apps:
+            app_id = getattr(app, "id", None)
+            if not app_id and hasattr(app, "get_id"):
+                app_id = app.get_id()
+            if app_id:
+                app_id_clean = app_id.lower().replace(".desktop", "")
+                if app_id_clean in search_terms:
+                    return app
+
         for app in desktop_apps:
             ac = getattr(app, "window_class", None)
             if ac and ac.lower() in search_terms:
@@ -988,6 +998,9 @@ class DockCanvas(Gtk.DrawingArea):
                             continue
                     return app
 
+        best_match = None
+        best_score = -1
+
         for app in desktop_apps:
             at = [
                 getattr(app, "name", ""),
@@ -998,10 +1011,21 @@ class DockCanvas(Gtk.DrawingArea):
             for term in expanded:
                 if len(term) < 3:
                     continue
-                if any(term in t for t in at):
-                    return app
+                for t in at:
+                    if term == t:
+                        return app
+                    if term in t:
+                        score = 0
+                        if t.startswith(term):
+                            score += 2
+                        if f" {term} " in f" {t} ":
+                            score += 2
+                        score += len(term) / max(len(t), 1)
+                        if score > best_score:
+                            best_score = score
+                            best_match = app
 
-        return None
+        return best_match
 
     def _get_clients(self) -> list:
         return get_clients()
