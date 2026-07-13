@@ -1,4 +1,4 @@
-from fabric.utils import GLib, logger
+from fabric.utils import GLib
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -7,7 +7,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
 
 from services.battery import Battery
-from services.gamemode import check_gamemode, toggle_gamemode
+from services.gamemode import GameModeService
 from utils.functions import clear_children, format_duration
 from utils.utils import svg_file
 
@@ -88,6 +88,8 @@ class GameModeButton(Box):
     def __init__(self, parent, **kwargs):
         super().__init__(name="energy-mode-button", h_expand=True, **kwargs)
         self.parent = parent
+        self.gamemode_service = GameModeService.get_initial()
+        self.gamemode_service.connect("changed", self.update_state)
 
         self.game_icon = Image(
             icon_name="applications-games-symbolic",
@@ -121,29 +123,13 @@ class GameModeButton(Box):
         self.update_state()
 
     def on_clicked(self, *args):
-        try:
-            toggle_gamemode()
-            GLib.timeout_add(500, lambda: self.update_state())
-        except Exception as e:
-            logger.error(f"Failed to toggle game mode: {e}")
+        self.gamemode_service.toggle()
 
-        GLib.timeout_add(300, lambda: self._reset_icon_state())
-
-    def _reset_icon_state(self):
-        return False  # Remove timeout
-
-    def update_state(self):
-        try:
-            is_active = check_gamemode() == "t"
-            if is_active:
-                self.game_icon.add_style_class("connected")
-            else:
-                self.game_icon.remove_style_class("connected")
-        except Exception as e:
-            logger.error(f"Failed to check game mode status: {e}")
+    def update_state(self, *_):
+        if self.gamemode_service.enabled:
+            self.game_icon.add_style_class("connected")
+        else:
             self.game_icon.remove_style_class("connected")
-
-        return False  # Remove timeout if called from GLib.timeout_add
 
 
 class BatteryControl(Box):

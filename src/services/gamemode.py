@@ -1,126 +1,97 @@
-"""
-Hyprland Game Mode Toggle Script
+"""Hyprland Game Mode service."""
 
-This script toggles game mode in Hyprland by disabling/enabling animations
-and other visual effects for better performance during gaming.
-
-Uses a marker file in /tmp to track state.
-"""
-
-import sys
-from datetime import datetime
-from pathlib import Path
-from typing import Literal
-
-import tomlkit
+from fabric.core.service import Property, Service, Signal
 
 from utils.functions import run_command
 
-STATE_FILE = Path("/tmp/hyprland_gamemode.toml")
+HYPRCTL = "hyprctl"
+
+_ENABLE_LUA = (
+    "hl.config({"
+    " animations = { enabled = false },"
+    " decoration = { shadow = { enabled = false }, blur = { enabled = false },"
+    " rounding = 0 },"
+    " general = { gaps_in = 0, gaps_out = 0, border_size = 1 }"
+    "})"
+)
 
 
-def run_hyprctl(command: str) -> str:
-    """Run a hyprctl command and return the output (raises on error)."""
-    result = run_command(["hyprctl", *command.split()], timeout=5)
-    if result.returncode != 0:
-        raise RuntimeError(f"hyprctl failed: {result.stderr}")
-    return result.stdout.strip()
+class GameModeService(Service):
+    """Owns all Hyprland interaction for game mode and notifies observers."""
 
+    _instance = None
 
-def _read_state() -> dict:
-    if not STATE_FILE.exists():
-        return {}
-    try:
-        with open(STATE_FILE) as f:
-            data = tomlkit.load(f)
-        return dict(data) if data else {}
-    except Exception:
-        return {}
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
+    @staticmethod
+    def get_initial():
+        if GameModeService._instance is None:
+            GameModeService._instance = GameModeService()
+        return GameModeService._instance
 
-def _write_state(data: dict):
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    doc = tomlkit.document()
-    for k, v in data.items():
-        doc[k] = v
-    with open(STATE_FILE, "w") as f:
-        tomlkit.dump(doc, f)
+    @Signal
+    def changed(self, enabled: bool) -> None:
+        """Emitted when game mode is enabled or disabled."""
 
+    def __init__(self, **kwargs):
+        if getattr(self, "_initialized", False):
+            return
+        super().__init__(**kwargs)
+        self._initialized = True
+        self._enabled = False
+        self.sync_state()
 
-def check_gamemode() -> Literal["t", "f"]:
-    """Check if game mode is active."""
-    state = _read_state()
-    return "t" if state and state.get("enabled") else "f"
+    @Property(bool, "readable", default_value=False)
+    def enabled(self) -> bool:
+        """Whether game mode (visual effects off) is currently active."""
+        return self._enabled
 
+    def toggle(self) -> None:
+        if self._enabled:
+            self.disable()
+        else:
+            self.enable()
 
-def enable_gamemode():
-    """Enable game mode by disabling visual effects."""
-    batch_commands = [
-        "keyword animations:enabled 0",
-        "keyword decoration:shadow:enabled 0",
-        "keyword decoration:blur:enabled 0",
-        "keyword general:gaps_in 0",
-        "keyword general:gaps_out 0",
-        "keyword general:border_size 1",
-        "keyword decoration:rounding 0",
-    ]
-    run_hyprctl(f'--batch "{"; ".join(batch_commands)}"')
+    def enable(self) -> None:
+        if self._enabled:
+            return
+        run_command([HYPRCTL, "eval", _ENABLE_LUA], timeout=5)
+        self._set_enabled(True)
 
-    _write_state(
-        {
-            "enabled": True,
-            "last_toggled": datetime.now().isoformat(timespec="seconds"),
-        }
-    )
-    print("Game mode enabled - visual effects disabled for better performance")
+    def disable(self) -> None:
+        if not self._enabled:
+            return
+        # A full reload restores the user's exact prior configuration (gaps,
+        # border, rounding, etc.) which per-option restores cannot reproduce,
+        # so it is kept instead of guessing default values.
+        run_command([HYPRCTL, "reload"], timeout=5)
+        self._set_enabled(False)
 
+    def sync_state(self) -> None:
+        """Read the authoritative state from Hyprland (animations toggle)."""
+        result = run_command(
+            [HYPRCTL, "eval", "return hl.get_config('animations.enabled')"], timeout=5
+        )
+        if result.returncode != 0:
+            return
+        value = result.stdout.strip().lower()
+        if value in ("true", "1", "on"):
+            animations_on = True
+        elif value in ("false", "0", "off"):
+            animations_on = False
+        else:
+            # Unrecognized output (e.g. an error string): keep current state
+            # rather than falsely reporting game mode as active.
+            return
+        # Game mode is on when Hyprland animations are disabled.
+        self._set_enabled(not animations_on)
 
-def disable_gamemode():
-    """Disable game mode by reloading Hyprland configuration."""
-    run_hyprctl("reload")
-
-    _write_state(
-        {
-            "enabled": False,
-            "last_toggled": datetime.now().isoformat(timespec="seconds"),
-        }
-    )
-    print("Game mode disabled - visual effects restored")
-
-
-def toggle_gamemode():
-    """Toggle game mode state."""
-    state = _read_state()
-    if state.get("enabled"):
-        disable_gamemode()
-    else:
-        enable_gamemode()
-
-
-def print_usage():
-    print("Usage:")
-    print("  gamemode check    - Check if game mode is active (t/f)")
-    print("  gamemode toggle   - Toggle game mode")
-
-
-def main():
-    if len(sys.argv) < 2:
-        toggle_gamemode()
-        return
-
-    command = sys.argv[1].lower()
-
-    if command == "check":
-        print(check_gamemode())
-    elif command == "toggle":
-        toggle_gamemode()
-    elif command in ["help", "-h", "--help"]:
-        print_usage()
-    else:
-        print(f"Unknown command: {command}", file=sys.stderr)
-        print_usage()
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+    def _set_enabled(self, enabled: bool) -> None:
+        if enabled == self._enabled:
+            return
+        self._enabled = enabled
+        self.notify("enabled")
+        self.emit("changed", enabled)

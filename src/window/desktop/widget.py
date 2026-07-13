@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 import psutil
+from fabric.core.service import Service, Signal
 from fabric.utils import GLib, invoke_repeater, logger, time
 from fabric.widgets.box import Box
 from fabric.widgets.circularprogressbar import CircularProgressBar
@@ -15,12 +16,10 @@ from fabric.widgets.overlay import Overlay
 from fabric.widgets.wayland import WaylandWindow as Window
 
 from shared.data import load_config
-from utils.debounce import sync_debounce
 from utils.utils import svg_file
 from window.desktop.constants import (
     CALENDAR_UPDATE_INTERVAL,
     LOCATION_APIS,
-    LOCATION_CACHE_TIMEOUT,
     SYSTEM_UPDATE_INTERVAL,
     WEATHER_CACHE_TIMEOUT,
     WEATHER_DESC_MAP,
@@ -29,102 +28,184 @@ from window.desktop.constants import (
     WEATHER_UPDATE_INTERVAL,
 )
 
-# Thread pool for async operations
-executor = ThreadPoolExecutor(max_workers=4)
-
-# Global cache for weather data
-_weather_cache: Dict[str, Tuple[Any, float]] = {}
-_location_cache: Dict[str, Tuple[float, float, float]] = {}
-_WEATHER_CACHE_MAX = 10
-_LOCATION_CACHE_MAX = 10
-
-
-def http_get_json(
-    url: str, timeout: int = 3, headers: Optional[Dict] = None
-) -> Optional[Dict]:
-    """Helper to perform GET requests and return JSON using httpx."""
-    try:
-        # Some APIs require a User-Agent or they will return 403 Forbidden
-        default_headers = {"User-Agent": "Modus-Desktop/1.0"}
-        if headers:
-            default_headers.update(headers)
-        response = httpx.get(
-            url, headers=default_headers, timeout=timeout, follow_redirects=True
-        )
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        logger.error(f"HTTP Request to {url} failed: {e}")
-    return None
-
-
-def get_location() -> str:
-    """Get current location from config or multiple IP geolocation APIs with fallback."""
-    # Try to get location from config first
-    try:
-        config = load_config()
-        manual_location = config.get("weather_location")
-        if manual_location:
-            return manual_location
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-
-    # Fallback to IP geolocation APIs
-    for api_url in LOCATION_APIS:
-        data = http_get_json(api_url, timeout=2)
-        if data:
-            city = data.get("city", "")
-            if city:
-                return city
-
-    logger.warning("All location APIs failed")
-    return ""
-
-
-def get_coordinates(city: str) -> Optional[Tuple[float, float]]:
-    """Get coordinates for a city using Nominatim geocoding API."""
-    cache_key = city.lower()
-    current_time = time.time()
-
-    if cache_key in _location_cache:
-        lat, lon, timestamp = _location_cache[cache_key]
-        if current_time - timestamp < LOCATION_CACHE_TIMEOUT:
-            return lat, lon
-
-    encoded_city = urllib.parse.quote(city)
-    url = f"https://nominatim.openstreetmap.org/search?q={encoded_city}&format=json&limit=1"
-
-    data = http_get_json(url, timeout=3, headers={"User-Agent": "Modus-Desktop/1.0"})
-
-    if data and isinstance(data, list) and len(data) > 0:
-        try:
-            lat = float(data[0]["lat"])
-            lon = float(data[0]["lon"])
-            while len(_location_cache) >= _LOCATION_CACHE_MAX:
-                _location_cache.pop(next(iter(_location_cache)), None)
-            _location_cache[cache_key] = (lat, lon, current_time)
-            return lat, lon
-        except (ValueError, KeyError):
-            pass
-
-    return None
-
-
-def get_weather_data(lat: float, lon: float) -> Optional[Dict[str, Any]]:
-    """Fetch weather data from Open-Meteo API."""
-    url = (
-        f"https://api.open-meteo.com/v1/forecast?"
-        f"latitude={lat}&longitude={lon}"
-        f"&current_weather=true"
-        f"&daily=temperature_2m_max,temperature_2m_min"
-        f"&timezone=auto"
-        f"&forecast_days=1"
+# Icons that have a dedicated -night SVG variant.
+_NIGHT_VARIANT_ICONS = frozenset(
+    (
+        "weather-clear",
+        "weather-clouds",
+        "weather-few-clouds",
+        "weather-overcast",
+        "weather-showers",
+        "weather-showers-scattered",
+        "weather-snow",
+        "weather-snow-scattered",
+        "weather-storm",
     )
-    return http_get_json(url, timeout=3)
+)
+
+_HTTP_HEADERS = {"User-Agent": "Modus-Desktop/1.0"}
 
 
-def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
-    """Format weather data into the expected format."""
+class WeatherService(Service):
+    """Owns HTTP, caching, coordinate lookup and update scheduling for the
+    weather widget. Networking runs on a single background worker; results are
+    delivered back to the GLib main loop through the ``updated`` signal.
+
+    This is an app-lifetime singleton: its executor, client and timer are never
+    torn down. Widgets observe it by connecting to ``updated`` and disconnect on
+    destroy, so the service survives widget rebuilds (config reloads, etc.)."""
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    @staticmethod
+    def get_initial():
+        if WeatherService._instance is None:
+            WeatherService._instance = WeatherService()
+        return WeatherService._instance
+
+    @Signal
+    def updated(self, weather_info: object) -> None:
+        """Emitted on the main loop with fresh weather data (or None on failure)."""
+
+    def __init__(self, **kwargs):
+        if getattr(self, "_initialized", False):
+            return
+        super().__init__(**kwargs)
+        self._initialized = True
+        self._http = httpx.Client(
+            timeout=3.0, follow_redirects=True, headers=_HTTP_HEADERS
+        )
+        self._executor = ThreadPoolExecutor(max_workers=1)
+
+        # This shell shows one location at a time, so caches hold single values.
+        self._weather: Optional[List[str]] = None
+        self._weather_ts: float = 0.0
+        self._location: Optional[str] = None
+        self._coords: Optional[Tuple[float, float]] = None
+        self._coords_location: Optional[str] = None
+
+        # Periodic refresh only; widgets request the first fetch after
+        # connecting (see Weather.__init__) to avoid a race with subscription.
+        GLib.timeout_add_seconds(WEATHER_UPDATE_INTERVAL, self._refresh)
+
+    # -- scheduling -------------------------------------------------------
+
+    def refresh(self) -> None:
+        """Trigger an immediate fetch (e.g. when a widget subscribes)."""
+        self._executor.submit(self._fetch)
+
+    def _refresh(self) -> bool:
+        self._executor.submit(self._fetch)
+        return True
+
+    # -- networking -------------------------------------------------------
+
+    def _get_json(self, url: str, timeout: float) -> Optional[Dict[str, Any]]:
+        try:
+            resp = self._http.get(url, timeout=timeout)
+            if resp.status_code == 200:
+                return resp.json()
+        except Exception as e:
+            logger.error(f"HTTP request to {url} failed: {e}")
+        return None
+
+    def _get_location(self) -> str:
+        try:
+            manual_location = load_config().get("weather_location")
+            if manual_location:
+                return manual_location
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+
+        for api_url in LOCATION_APIS:
+            data = self._get_json(api_url, 2.0)
+            if data:
+                city = data.get("city", "")
+                if city:
+                    return city
+
+        logger.warning("All location APIs failed")
+        return ""
+
+    def _get_coordinates(self, city: str) -> Optional[Tuple[float, float]]:
+        # Only query Nominatim when the location is new or unknown.
+        if self._coords is not None and self._coords_location == city:
+            return self._coords
+
+        encoded_city = urllib.parse.quote(city)
+        url = (
+            "https://nominatim.openstreetmap.org/search?"
+            f"q={encoded_city}&format=json&limit=1"
+        )
+        data = self._get_json(url, 3.0)
+        if isinstance(data, list) and data:
+            try:
+                coords = (float(data[0]["lat"]), float(data[0]["lon"]))
+            except (ValueError, KeyError):
+                return None
+            self._coords = coords
+            self._coords_location = city
+            return coords
+        return None
+
+    def _get_weather_data(self, lat: float, lon: float) -> Optional[Dict[str, Any]]:
+        url = (
+            "https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}"
+            "&current_weather=true"
+            "&daily=temperature_2m_max,temperature_2m_min"
+            "&timezone=auto"
+            "&forecast_days=1"
+        )
+        return self._get_json(url, 3.0)
+
+    # -- background fetch (runs on the worker thread) ---------------------
+
+    def _fetch(self) -> None:
+        location = self._get_location()
+        if not location:
+            return GLib.idle_add(self._deliver, None)
+
+        cache_key = location.lower()
+        now = time.time()
+        if (
+            self._weather is not None
+            and self._location == cache_key
+            and now - self._weather_ts < WEATHER_CACHE_TIMEOUT
+        ):
+            return GLib.idle_add(self._deliver, self._weather)
+
+        coords = self._get_coordinates(location)
+        if not coords:
+            return GLib.idle_add(self._deliver, None)
+
+        weather_data = self._get_weather_data(*coords)
+        if not weather_data:
+            return GLib.idle_add(self._deliver, None)
+
+        formatted = _format_weather_data(weather_data, location)
+        if formatted:
+            self._weather = formatted
+            self._location = cache_key
+            self._weather_ts = now
+            GLib.idle_add(self._deliver, formatted)
+        else:
+            GLib.idle_add(self._deliver, None)
+        return None
+
+    def _deliver(self, weather_info: Optional[List[str]]) -> None:
+        self.emit("updated", weather_info)
+
+
+def _format_weather_data(
+    weather_data: Dict[str, Any], city: str
+) -> Optional[List[str]]:
+    """Format weather data into the list consumed by the widget."""
     try:
         current = weather_data["current_weather"]
         daily = weather_data["daily"]
@@ -133,27 +214,9 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
         is_day = current.get("is_day", 1)  # Default to day if missing
 
         base_icon = WEATHER_ICON_MAP.get(weather_code, "weather-none-available")
-
-        # Determine day/night variant if applicable
         icon_name = base_icon
-        if not is_day:
-            night_variant = f"{base_icon}-night"
-
-            # Fast check if night variant exists using predefined list or checking the path
-            # Since we know the variants from earlier, let's just optimistically build it
-            # then logic in svg_file will handle resolution seamlessly (fallbacks can be tricky, but we assume it's correct)
-            if base_icon in [
-                "weather-clear",
-                "weather-clouds",
-                "weather-few-clouds",
-                "weather-overcast",
-                "weather-showers",
-                "weather-showers-scattered",
-                "weather-snow",
-                "weather-snow-scattered",
-                "weather-storm",
-            ]:
-                icon_name = night_variant
+        if not is_day and base_icon in _NIGHT_VARIANT_ICONS:
+            icon_name = f"{base_icon}-night"
 
         condition = WEATHER_DESC_MAP.get(weather_code, "Unknown")
         gradient_class = WEATHER_GRADIENT_MAP.get(weather_code, "weather-clear")
@@ -166,73 +229,6 @@ def format_weather_data(weather_data: Dict[str, Any], city: str) -> List[str]:
     except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Error formatting weather data: {e}")
         return None
-
-
-def get_weather(callback):
-    """Fetch weather data asynchronously."""
-
-    def fetch_weather():
-        location = get_location()
-        if not location:
-            return GLib.idle_add(callback, None)
-
-        cache_key = location.lower()
-        current_time = time.time()
-
-        if cache_key in _weather_cache:
-            cached_data, timestamp = _weather_cache[cache_key]
-            if current_time - timestamp < WEATHER_CACHE_TIMEOUT:
-                return GLib.idle_add(callback, cached_data)
-
-        coords = get_coordinates(location)
-        if not coords:
-            return GLib.idle_add(callback, None)
-
-        lat, lon = coords
-        weather_data = get_weather_data(lat, lon)
-        if not weather_data:
-            return GLib.idle_add(callback, None)
-
-        formatted_data = format_weather_data(weather_data, location)
-        if formatted_data:
-            while len(_weather_cache) >= _WEATHER_CACHE_MAX:
-                _weather_cache.pop(next(iter(_weather_cache)), None)
-            _weather_cache[cache_key] = (formatted_data, current_time)
-            GLib.idle_add(callback, formatted_data)
-        else:
-            GLib.idle_add(callback, None)
-        return None
-
-    executor.submit(fetch_weather)
-
-
-def update_weather(widget):
-    """Update weather widget with new data."""
-
-    def perform_fetch():
-        get_weather(lambda weather_info: update_widget(widget, weather_info))
-
-    debounced_perform_fetch = sync_debounce(1000, immediate=True)(perform_fetch)
-
-    def fetch_and_update():
-        debounced_perform_fetch()
-        return True
-
-    def initial_fetch():
-        debounced_perform_fetch()
-        return False
-
-    # Trigger first fetch immediately - MUST return False to not loop in idle
-    GLib.idle_add(initial_fetch)
-
-    return GLib.timeout_add_seconds(WEATHER_UPDATE_INTERVAL, fetch_and_update)
-
-
-def update_widget(widget, weather_info):
-    """Update widget labels with weather information."""
-    if weather_info:
-        widget.weatherinfo = weather_info
-        widget.update_labels(weather_info)
 
 
 class Weather(Box):
@@ -248,10 +244,11 @@ class Weather(Box):
         )
         self.parent = parent
         self.weatherinfo = None
-        self._weather_timer_id = None
         self._create_labels()
         self._layout_labels()
-        self._weather_timer_id = update_weather(self)
+        self._service = WeatherService.get_initial()
+        self._service.connect("updated", self._on_service_update)
+        self._service.refresh()
 
     def _create_labels(self):
         self.header = Box(orientation="h", h_expand=True)
@@ -319,11 +316,17 @@ class Weather(Box):
 
         self.parent.set_visible(True)
 
+    def _on_service_update(self, _service, weather_info):
+        if weather_info:
+            self.weatherinfo = weather_info
+            self.update_labels(weather_info)
+
     def destroy(self):
-        """Cleanup weather update timer"""
-        if self._weather_timer_id:
-            GLib.source_remove(self._weather_timer_id)
-            self._weather_timer_id = None
+        """Disconnect from the weather service (the service is app-lifetime)."""
+        try:
+            self._service.disconnect_by_func(self._on_service_update)
+        except ValueError:
+            pass
         super().destroy()
 
 

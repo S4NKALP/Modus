@@ -14,7 +14,6 @@ CALENDAR_UPDATE_INTERVAL = int(
     )
     * 1000
 )  # Calculate time till midnight
-LOCATION_CACHE_TIMEOUT = 604800  # 7 days (extended from 24h)
 
 
 WEATHER_GRADIENT_MAP = {
