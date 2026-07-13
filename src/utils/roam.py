@@ -14,6 +14,8 @@ def __getattr__(name):
         "notification_service",
         "audio_service",
         "screen_capture_service",
+        "screenshot_service",
+        "screen_recorder_service",
     ):
         return getattr(_mod(), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

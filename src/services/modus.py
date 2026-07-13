@@ -43,6 +43,18 @@ def __getattr__(name):
         _inst = ScreenCapture()
         setattr(mod, name, _inst)
         return _inst
+    if name == "screenshot_service":
+        from services.screenshot import Screenshot
+
+        _inst = Screenshot()
+        setattr(mod, name, _inst)
+        return _inst
+    if name == "screen_recorder_service":
+        from services.screenrecorder import ScreenRecorder
+
+        _inst = ScreenRecorder()
+        setattr(mod, name, _inst)
+        return _inst
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -488,6 +500,25 @@ def get_active_window() -> dict:
 def get_monitors() -> list:
     data = _hyprctl_json("j/monitors")
     return data if isinstance(data, list) else []
+
+
+def get_focused_monitor() -> dict | None:
+    monitors = get_monitors()
+    for monitor in monitors:
+        if monitor.get("focused"):
+            return monitor
+    return monitors[0] if monitors else None
+
+
+def get_monitor_names() -> list[str]:
+    return [name for m in get_monitors() if (name := m.get("name"))]
+
+
+def get_active_monitor_name(fallback: str = "eDP-1") -> str:
+    monitor = get_focused_monitor()
+    if monitor and (name := monitor.get("name")):
+        return name
+    return fallback
 
 
 def get_active_workspace_id() -> int:

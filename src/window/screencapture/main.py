@@ -219,7 +219,11 @@ class ScreenCaptureWindow(Window):
             screen_capture_service.record(
                 "active", use_audio=use_audio, show_cursor=show_cursor
             )
-        elif tool == "record-window" or tool == "record-region":
+        elif tool == "record-window":
+            screen_capture_service.record(
+                "window", use_audio=use_audio, show_cursor=show_cursor
+            )
+        elif tool == "record-region":
             screen_capture_service.record(
                 "selection", use_audio=use_audio, show_cursor=show_cursor
             )
@@ -323,7 +327,7 @@ class ScreenCaptureWindow(Window):
             target_map = {
                 "region": "selection",
                 "fullscreen": "active",
-                "selectwindow": "selection",
+                "selectwindow": "window",
             }
             use_audio = (
                 self._options_menu.get_mic_enabled() if self._options_menu else False
