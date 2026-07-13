@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import GLib, exec_shell_command_async, logger, os, re
@@ -44,6 +45,9 @@ class Brightness(Service):
         self._last_percent = -1
         self._last_raw = -1
         self._last_update_time = 0
+        self._screen_device = None
+        self._brightness_path = None
+        self._max_brightness_path = None
 
         self.backend = self._detect_backend(backend)
 
@@ -58,15 +62,13 @@ class Brightness(Service):
     def _setup_polling(self):
         """Setup periodic polling of brightness file."""
         try:
-            file_path = f"/sys/class/backlight/{self._get_screen_device()}/brightness"
-            if os.path.exists(file_path):
-                with open(file_path) as f:
-                    self._last_raw = int(f.readline().strip())
-                    self._last_percent = (
-                        int((self._last_raw / self.max_screen) * 100)
-                        if self.max_screen > 0
-                        else 0
-                    )
+            if self._brightness_path and self._brightness_path.exists():
+                self._last_raw = int(self._brightness_path.read_text().strip())
+                self._last_percent = (
+                    int((self._last_raw / self.max_screen) * 100)
+                    if self.max_screen > 0
+                    else 0
+                )
 
                 self._poll_timer_id = GLib.timeout_add(
                     self.POLL_INTERVAL, self._check_brightness_file
@@ -77,10 +79,8 @@ class Brightness(Service):
     def _check_brightness_file(self):
         """Periodically check brightness file for changes."""
         try:
-            file_path = f"/sys/class/backlight/{self._get_screen_device()}/brightness"
-            if os.path.exists(file_path):
-                with open(file_path) as f:
-                    raw = int(f.readline().strip())
+            if self._brightness_path and self._brightness_path.exists():
+                raw = int(self._brightness_path.read_text().strip())
 
                 if raw != self._last_raw:
                     self._last_raw = raw
@@ -128,11 +128,21 @@ class Brightness(Service):
         return None
 
     def _get_screen_device(self):
-        """Return first backlight device from sysfs."""
+        """Return first backlight device from sysfs, cached."""
+        if getattr(self, "_screen_device", None):
+            return self._screen_device
+
         try:
-            return os.listdir("/sys/class/backlight")[0]
+            devices = os.listdir("/sys/class/backlight")
+            if devices:
+                self._screen_device = devices[0]
+                base_path = Path(f"/sys/class/backlight/{self._screen_device}")
+                self._brightness_path = base_path / "brightness"
+                self._max_brightness_path = base_path / "max_brightness"
+                return self._screen_device
         except Exception:
-            return ""
+            pass
+        return ""
 
     def _detect_ddcutil_bus(self):
         """Detect I2C bus number for ddcutil."""
@@ -173,10 +183,8 @@ class Brightness(Service):
                     logger.error(f"Error executing ddcutil: {e}")
             else:
                 try:
-                    with open(
-                        f"/sys/class/backlight/{self._get_screen_device()}/max_brightness"
-                    ) as f:
-                        return int(f.readline().strip())
+                    if self._max_brightness_path and self._max_brightness_path.exists():
+                        return int(self._max_brightness_path.read_text().strip())
                 except Exception:
                     return None
         return None
@@ -198,15 +206,13 @@ class Brightness(Service):
                 return self._last_raw
 
             try:
-                with open(
-                    f"/sys/class/backlight/{self._get_screen_device()}/brightness"
-                ) as f:
-                    raw = int(f.readline().strip())
-                self._last_raw = raw
-                return raw
+                if self._brightness_path and self._brightness_path.exists():
+                    raw = int(self._brightness_path.read_text().strip())
+                    self._last_raw = raw
+                    return raw
             except Exception as e:
                 logger.error(f"Error reading brightness file: {e}")
-                return -1
+            return -1
         elif self.backend == "ddcutil":
             if (
                 time.time() - self._last_update_time < self.CACHE_INTERVAL
@@ -300,7 +306,7 @@ class Brightness(Service):
             if self.backend == "brightnessctl":
                 self.emit("screen", percent)
                 exec_shell_command_async(
-                    f"brightnessctl --device '{self._get_screen_device()}' set {raw}"
+                    f"brightnessctl --device '{self._screen_device}' set {raw}"
                 )
             elif self.backend == "ddcutil":
                 self._last_update_time = time.time()
