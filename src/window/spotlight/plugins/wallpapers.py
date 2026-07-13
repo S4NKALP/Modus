@@ -1,4 +1,3 @@
-import gc
 import os
 import random
 from typing import Any
@@ -8,7 +7,7 @@ from shared.data import WALLPAPERS_THUMBNAILS_SIZE
 from utils.functions import fuzzy_filter
 from window.spotlight.api import SearchResult, SpotlightPlugin
 
-MAX_THUMBS_PER_SEARCH = 5
+MAX_THUMBS_PER_SEARCH = 3
 
 
 class WallpaperPlugin(SpotlightPlugin):
@@ -28,7 +27,6 @@ class WallpaperPlugin(SpotlightPlugin):
 
     def cleanup(self) -> None:
         self._wallpaper_service = None
-        gc.collect()
 
     def release_memory(self) -> None:
         if self._wallpaper_service:

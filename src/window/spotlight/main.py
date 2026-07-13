@@ -1,4 +1,3 @@
-import gc
 import os
 
 from fabric.core import Signal
@@ -98,7 +97,7 @@ class Spotlight(Box):
         self.children = self.header, self.scrolled_clip
 
     # Search
-    @debounce(200)
+    @debounce(300)
     def on_entry_changed(self, entry: Entry, *_):
         if getattr(entry, "_ignore_change", False):
             entry._ignore_change = False
@@ -128,7 +127,11 @@ class Spotlight(Box):
                 self.header_icon.set_from_icon_name(
                     getattr(inst, "icon", "") or "system-search-symbolic"
                 )
-                self.plugin_service.pipeline.search(text, self._on_search_results)
+                # Scope to the detected plugin only — a global search would
+                # mix in unrelated plugins' results.
+                self.plugin_service.pipeline.search_single(
+                    pe, text, self._on_search_results
+                )
                 return
 
         self.header_icon.set_from_icon_name("system-search-symbolic")
@@ -225,7 +228,27 @@ class Spotlight(Box):
                 self._deactivate_keyword_plugin()
 
     def _on_search_results(self, results: list[SearchResult]):
-        self._clear_viewport()
+        new_ids = [r.id for r in results]
+        old_ids = list(self._result_widgets.keys())
+
+        if new_ids == old_ids:
+            self._current_results = results
+            return
+
+        for rid in set(old_ids) - set(new_ids):
+            self._remove_result_widget(rid)
+
+        for child in list(self.viewport.children):
+            self.viewport.remove(child)
+
+        for result in results:
+            widget = self._result_widgets.get(result.id)
+            if not widget:
+                widget = self._render_result(result)
+                self._result_widgets[result.id] = widget
+                widget.connect("enter-notify-event", self.on_slot_enter)
+            self.viewport.add(widget)
+
         self._current_results = results
 
         if not results:
@@ -234,14 +257,18 @@ class Spotlight(Box):
             return
 
         self._auto_start_refresh_timer(results)
-
-        for result in results:
-            widget = self._render_result(result)
-            self._result_widgets[result.id] = widget
-            self.viewport.add(widget)
-            widget.connect("enter-notify-event", self.on_slot_enter)
-
         self._post_arrange()
+
+    def _remove_result_widget(self, result_id: str):
+        widget = self._result_widgets.pop(result_id, None)
+        if not widget:
+            return
+        try:
+            widget.disconnect_by_func(self.on_slot_enter)
+        except (TypeError, ValueError):
+            pass
+        self.viewport.remove(widget)
+        widget.destroy()
 
     # Rendering
     def _render_result(self, result: SearchResult) -> Button:
@@ -298,7 +325,7 @@ class Spotlight(Box):
             style_classes="app-slot",
             child=Box(orientation="h", spacing=12, children=children),
             tooltip_text=r.subtitle,
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_calc(self, r: SearchResult) -> Button:
@@ -330,7 +357,7 @@ class Spotlight(Box):
                     ),
                 ],
             ),
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_emoji(self, r: SearchResult) -> Button:
@@ -368,7 +395,7 @@ class Spotlight(Box):
                 ],
             ),
             tooltip_text=f"Click to copy {emoji_char}",
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_power(self, r: SearchResult) -> Button:
@@ -399,7 +426,7 @@ class Spotlight(Box):
                 ],
             ),
             tooltip_text=f"Click to {r.title.lower()} the system",
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_wallpaper(self, r: SearchResult) -> Button:
@@ -415,7 +442,7 @@ class Spotlight(Box):
         return Button(
             style_classes="app-slot wallpaper",
             child=child_widget,
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_clipboard_text(self, r: SearchResult) -> Button:
@@ -436,7 +463,7 @@ class Spotlight(Box):
                 ],
             ),
             tooltip_text=r.subtitle,
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_clipboard_image(self, r: SearchResult) -> Button:
@@ -465,7 +492,7 @@ class Spotlight(Box):
         return Button(
             style_classes="app-slot wallpaper clipboard-image",
             child=child_widget,
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _render_default(self, r: SearchResult) -> Button:
@@ -497,7 +524,7 @@ class Spotlight(Box):
         return Button(
             style_classes="app-slot",
             child=Box(orientation="h", spacing=12, children=children),
-            on_clicked=lambda *_: self._activate_result(r),
+            on_clicked=lambda *_: self._activate_result_by_id(r.id),
         )
 
     def _activate_result(self, result: SearchResult):
@@ -505,19 +532,23 @@ class Spotlight(Box):
             result.action()
         self.launched()
 
+    def _activate_result_by_id(self, result_id: str):
+        for r in self._current_results:
+            if r.id == result_id:
+                self._activate_result(r)
+                return
+
     # Viewport management
     def _clear_viewport(self):
-        old_results = self._current_results
         self._current_results = []
-        self._result_widgets.clear()
-        for child in self.viewport.children:
+        for child in list(self.viewport.children):
             try:
                 child.disconnect_by_func(self.on_slot_enter)
             except (TypeError, ValueError):
                 pass
             self.viewport.remove(child)
             child.destroy()
-        del old_results
+        self._result_widgets.clear()
 
     def update_result_subtitle(self, result_id: str, text: str) -> None:
         """Update subtitle label of a rendered result in-place (no re-render)."""
@@ -528,9 +559,6 @@ class Spotlight(Box):
         if not child:
             return
         # Walk: Button → main Box → title_box (last Box) → subtitle Label (2nd)
-        from fabric.widgets.box import Box
-        from fabric.widgets.label import Label
-
         boxes = [c for c in child.get_children() if isinstance(c, Box)]
         if not boxes:
             return
@@ -550,12 +578,6 @@ class Spotlight(Box):
         self.scrolled_clip.show()
         self.scrolled_window.show()
         self.scrolled_window.animate_size(new_height)
-
-        for i, slot in enumerate(self.viewport.children, start=1):
-            if i > 8:
-                break
-            slot.set_style(f"animation-duration: {round(i * 300)}ms;")
-            slot.add_style_class("shine")
 
         if self.viewport.children:
             self.set_selected_index(0)
@@ -660,15 +682,17 @@ class SpotlightWindow(Window):
     def close_spotlight(self):
         self.spotlight_box.plugin_service.pipeline.cancel()
 
+        self.spotlight_box._stop_refresh_timer()
+
+        self.spotlight_box.header_entry.set_text("")
+
         debounce_id = getattr(
             self.spotlight_box, "_debounce_timer_on_entry_changed", None
         )
         if debounce_id:
             GLib.source_remove(debounce_id)
             self.spotlight_box._debounce_timer_on_entry_changed = 0
-        self.spotlight_box._stop_refresh_timer()
 
-        self.spotlight_box.header_entry.set_text("")
         self.spotlight_box._clear_viewport()
         self.spotlight_box.scrolled_window.animate_size(0)
         self.spotlight_box.scrolled_window.hide()
@@ -676,7 +700,6 @@ class SpotlightWindow(Window):
         self.spotlight_box.header_icon.set_from_icon_name("system-search-symbolic")
         self.spotlight_box._deactivate_keyword_plugin()
         self.spotlight_box.plugin_service.manager.release_memory_all()
-        gc.collect()
         self.hide()
 
     def toggle(

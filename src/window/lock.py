@@ -257,12 +257,12 @@ def initialize():
         ),
     )
     lockscreen.show()
+    return lock, lockscreen
 
 
 def main():
     set_process_name("lockscreen")
-    initialize()
-    lockscreen = LockScreen(GtkSessionLock.Lock())
+    _lock, lockscreen = initialize()
 
     global app
     app = Application("lock", lockscreen)

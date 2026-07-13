@@ -11,6 +11,43 @@ from shared.widgets.flat_scale import FlatScale
 # Local imports
 from utils.roam import audio_service
 
+# Mappings used to resolve an app's icon/display name from its description or
+# name. Defined once at module level to avoid rebuilding on every refresh.
+_APP_ICON_MAPPING = {
+    "spotify": "spotify",
+    "firefox": "firefox",
+    "chromium": "chromium-browser",
+    "chrome": "google-chrome",
+    "vlc": "vlc",
+    "discord": "discord",
+    "steam": "steam",
+    "zen": "zen-browser",
+    "code": "vscode",
+    "visual studio code": "vscode",
+    "telegram": "telegram-desktop",
+    "pulse": "audio-card",
+    "pipewire": "audio-card",
+    "alsa": "audio-card",
+    "sink": "audio-speakers",
+    "source": "audio-input-microphone",
+    "youtube": "youtube",
+    "music": "rhythmbox",
+    "media": "multimedia-player",
+}
+
+_APP_SPECIAL_NAMES = {
+    "spotify": "Spotify",
+    "firefox": "Firefox",
+    "chromium": "Chromium",
+    "chrome": "Chrome",
+    "vlc": "VLC",
+    "discord": "Discord",
+    "steam": "Steam",
+    "zen": "Zen Browser",
+    "code": "VS Code",
+    "telegram": "Telegram",
+}
+
 
 class PerAppVolumeControl(Box):
     """Per-application volume control widget"""
@@ -125,27 +162,7 @@ class PerAppVolumeControl(Box):
         # Check description first as it's more reliable
         search_text = app_description if app_description else app_name
 
-        icon_mapping = {
-            "spotify": "spotify",
-            "firefox": "firefox",
-            "chromium": "chromium-browser",
-            "chrome": "google-chrome",
-            "vlc": "vlc",
-            "discord": "discord",
-            "steam": "steam",
-            "zen": "zen-browser",
-            "code": "vscode",
-            "visual studio code": "vscode",
-            "telegram": "telegram-desktop",
-            "pulse": "audio-card",
-            "pipewire": "audio-card",
-            "alsa": "audio-card",
-            "sink": "audio-speakers",
-            "source": "audio-input-microphone",
-            "youtube": "youtube",
-            "music": "rhythmbox",
-            "media": "multimedia-player",
-        }
+        icon_mapping = _APP_ICON_MAPPING
 
         # Check if any key in mapping is contained in search text
         for key, icon in icon_mapping.items():
@@ -167,22 +184,9 @@ class PerAppVolumeControl(Box):
             return "Unknown"
 
         # Handle common app names specially
-        special_names = {
-            "spotify": "Spotify",
-            "firefox": "Firefox",
-            "chromium": "Chromium",
-            "chrome": "Chrome",
-            "vlc": "VLC",
-            "discord": "Discord",
-            "steam": "Steam",
-            "zen": "Zen Browser",
-            "code": "VS Code",
-            "telegram": "Telegram",
-        }
-
         name_lower = name.lower()
-        if name_lower in special_names:
-            return special_names[name_lower]
+        if name_lower in _APP_SPECIAL_NAMES:
+            return _APP_SPECIAL_NAMES[name_lower]
 
         # Default: capitalize first letter
         return name.capitalize()

@@ -188,6 +188,12 @@ class Notch(Box):
     def _on_player_vanish(self, _manager, name: str):
         if name in self._music_services:
             self._music_services.remove(name)
+            try:
+                svc = self._mpris.get_player_service(name)
+                if svc is not None:
+                    svc.disconnect_by_func(self._on_any_artwork)
+            except Exception:
+                pass
             self._apply_stack_state()
 
     # ── Scroll ────────────────────────────────────────────────────────────────

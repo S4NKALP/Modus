@@ -13,6 +13,7 @@ class ClipboardPlugin(SpotlightPlugin):
     id = "clipboard"
     name = "Clipboard"
     icon = "edit-paste-symbolic"
+    keywords = ["clip", "clipboard"]
     searchable = True
     priority = 80
 
@@ -45,7 +46,11 @@ class ClipboardPlugin(SpotlightPlugin):
 
     def search(self, query: str, token: Any) -> list[SearchResult]:
         q = query.strip()
-        if q.lower().startswith("clip "):
+        if q.lower().startswith("clipboard "):
+            q = q[10:].strip()
+        elif q.lower() == "clipboard":
+            q = ""
+        elif q.lower().startswith("clip "):
             q = q[5:].strip()
         elif q.lower() == "clip":
             q = ""

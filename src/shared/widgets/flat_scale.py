@@ -344,7 +344,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
         self._anim_bubble_open.min_value = p
         self._anim_bubble_open.max_value = 1.0
         self._anim_bubble_open.value = p
-        self._anim_bubble_open._start_time = None
         self._anim_bubble_open.play()
 
     def _bubble_close(self):
@@ -356,7 +355,6 @@ class FlatScale(Gtk.DrawingArea, Widget):
         self._anim_bubble_close.min_value = start
         self._anim_bubble_close.max_value = 1.0
         self._anim_bubble_close.value = start
-        self._anim_bubble_close._start_time = None
         self._anim_bubble_close.play()
 
     def _sync_bubble_progress(self):
@@ -578,9 +576,9 @@ class FlatScale(Gtk.DrawingArea, Widget):
             )
             cr.fill()
 
-            # Percentage bubble (drag only) — pass slider_left_x as "slider_top_y"
-            slider_left_x = slider_cx - slider_thickness / 2
-            self._draw_bubble(cr, slider_cy, slider_left_x, styles)
+            # Percentage bubble (drag only)
+            max_thickness = max(self._anim_press.min_value, self._anim_press.max_value)
+            self._draw_bubble(cr, slider_cx, slider_cy, max_thickness, styles)
 
         return False
 

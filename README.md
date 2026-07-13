@@ -71,6 +71,37 @@ cd ../..
 uv run start
 ```
 
+## Global Menu Compatibility
+
+MODUS injects the GTK3 menu-button shim (`libmenu_button_shim.so`) **only into
+GTK3 apps**, and only when launched through MODUS (dock, spotlight, panel).
+GTK4 apps are never touched, so they launch normally — a global `LD_PRELOAD`
+of this shim would otherwise crash every GTK4 process.
+
+### Terminal-launched GTK3 apps
+
+Apps you start directly from a terminal don't go through MODUS, so they don't
+get the shim. They still work fine; they just miss the synthetic
+button-release fix the shim provides. To get it back without a dangerous
+system-wide `LD_PRELOAD`, use a thin wrapper that detects GTK3 and injects the
+shim only for that process:
+
+```bash
+#!/usr/bin/env bash
+# ~/.local/bin/modus-launch — GTK3-aware launcher for the global menu shim
+SHIM=~/.config/Modus/src/globalmenu/libmenu_button_shim.so
+BIN="$(command -v "$1")"
+if [[ -n "$BIN" ]] && readelf -d "$BIN" 2>/dev/null | grep -q 'libgtk-3\.so\.0'; then
+    LD_PRELOAD="$SHIM" "$@"
+else
+    "$@"
+fi
+```
+
+Make it executable (`chmod +x ~/.local/bin/modus-launch`) and run GTK3 apps as
+`modus-launch gedit` from the terminal. GTK4 apps fall through to a normal
+launch.
+
 ## Documentation
 
 | Doc                                           | What's inside                                       |

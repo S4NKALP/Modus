@@ -5,14 +5,19 @@ class AppName:
     def __init__(self, path="/usr/share/applications"):
         self.files = os.listdir(path)
         self.path = path
+        self._cache: dict[str, str | None] = {}
 
     def get_app_name(self, wmclass, _format_=False):
+        if wmclass in self._cache:
+            return self._cache[wmclass]
+
         desktop_file = ""
         for f in self.files:
             if f.startswith(wmclass + ".desktop"):
                 desktop_file = f
 
         if desktop_file == "":
+            self._cache[wmclass] = None
             return None
 
         desktop_app_name = wmclass
@@ -22,6 +27,7 @@ class AppName:
                 if line.startswith("Name="):
                     desktop_app_name = line.split("=")[1].strip()
                     break
+        self._cache[wmclass] = desktop_app_name
         return desktop_app_name
 
     def format_app_name(self, title, wmclass, update=False):

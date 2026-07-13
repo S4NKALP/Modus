@@ -1,14 +1,13 @@
 import json
 import os
-import re
-import subprocess
 import sys
 
 from fabric.core.service import Property, Service, Signal
 from fabric.hyprland.service import Hyprland
-from fabric.utils import exec_shell_command_async, get_relative_path, logger
+from fabric.utils import exec_shell_command_async, logger
 
 from services.custom_notification import CachedNotifications
+from services.inhibit import get_inhibit_service
 from utils.app_name_resolver import app_name_resolver
 from utils.functions import (
     find_binary,
@@ -432,35 +431,14 @@ def is_night_light_active() -> bool:
 
 
 # --- Caffeine orchestration ---
-_caffeine_process: subprocess.Popen | None = None
 
 
 def is_caffeine_active() -> bool:
-    if _caffeine_process is not None:
-        return True
-    try:
-        return bool(find_process_pid("modus-inhibit", timeout=0.5))
-    except Exception:
-        return False
+    return get_inhibit_service().active
 
 
 def toggle_caffeine() -> bool:
-    global _caffeine_process
-    try:
-        if is_caffeine_active():
-            inhibit_script = get_relative_path("utils/inhibit.py")
-            spawn_detached(["python3", inhibit_script, "off"])
-            if _caffeine_process:
-                _caffeine_process.terminate()
-                _caffeine_process = None
-            return False
-        else:
-            inhibit_script = get_relative_path("utils/inhibit.py")
-            _caffeine_process = spawn_detached(["python3", inhibit_script, "on"])
-            return True
-    except Exception as e:
-        logger.error(f"[Modus] Failed to toggle caffeine: {e}")
-        return False
+    return get_inhibit_service().toggle()
 
 
 # --- Hyprland window management API ---
@@ -549,14 +527,9 @@ def close_window(address: str):
 
 
 def launch_app(command_line: str):
-    if not command_line:
-        return
+    from globalmenu.launch import launch_command
 
-    cleaned = re.sub(r"%\w+", "", command_line).strip()
-
-    exec_shell_command_async(
-        f"hyprctl dispatch 'hl.dsp.exec_cmd([[uwsm app -- {cleaned}]])'"
-    )
+    launch_command(command_line)
 
 
 def open_trash():

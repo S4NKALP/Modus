@@ -36,7 +36,6 @@ class EmojiPlugin(SpotlightPlugin):
             return
         cldr = self._load_cldr_annotations()
         self._emoji_data = cldr or {}
-        logger.info(f"[Emoji] Loaded {len(self._emoji_data)} emojis")
 
     def detect(self, text: str) -> bool:
         s = text.strip()

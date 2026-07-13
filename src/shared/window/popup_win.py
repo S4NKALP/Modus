@@ -69,13 +69,16 @@ class PopupWindow(WaylandWindow):
         if not self._pointing_widget:
             return
 
+        # Cleanly (re)connect: always drop any existing handlers first so that
+        # repeated calls while visible do not stack duplicate connections.
+        try:
+            self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
+            self.disconnect_by_func(self.do_handle_size_allocate)
+        except Exception as e:
+            if "nothing connected" not in str(e):
+                logger.error(f"Error disconnecting signal: {e}")
+
         if not self.get_visible():
-            try:
-                self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
-                self.disconnect_by_func(self.do_handle_size_allocate)
-            except Exception as e:
-                if "nothing connected" not in str(e):
-                    logger.error(f"Error disconnecting signal: {e}")
             return
 
         self._pointing_widget.connect("size-allocate", self.do_handle_size_allocate)
@@ -91,6 +94,18 @@ class PopupWindow(WaylandWindow):
         if not self.get_visible():
             return None
         return self.do_reposition(self.do_calculate_edges())
+
+    def destroy(self):
+        if self._pointing_widget:
+            try:
+                self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
+            except Exception:
+                pass
+        try:
+            self.disconnect_by_func(self.do_handle_size_allocate)
+        except Exception:
+            pass
+        super().destroy()
 
     def do_calculate_edges(self):
         move_axe = "x"

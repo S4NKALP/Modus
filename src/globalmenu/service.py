@@ -3,8 +3,9 @@
 import json
 import re
 import threading
+import time
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Optional, Union
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import (
@@ -19,6 +20,8 @@ from fabric.utils import (
 from globalmenu.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
 from globalmenu.environment import setup_global_menu_environment
 from globalmenu.gtkmenu import ActionMenuClient, GtkMenuClient
+
+_NODE_NAME_RE = re.compile(r'<node name="([^"]+)"')
 
 _DBUS_TIMEOUT_INTROSPECT = 500
 _DBUS_TIMEOUT_PID = 200
@@ -36,21 +39,20 @@ _DE_NAMESPACES = [
     "deepin",
 ]
 
+_MenuClient = Union[DBusMenuClient, GtkMenuClient, ActionMenuClient]
+
 
 class _IntrospectionCache:
     """Caches DBus Introspect XML per service+path to avoid redundant round-trips."""
 
     def __init__(self):
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
         self._lock = threading.Lock()
-
-    def _key(self, service: str, path: str) -> str:
-        return f"{service}:{path}"
 
     def get(self, service: str, path: str, bus, timeout: int) -> str:
         if not path or not GLib.Variant.is_object_path(path):
             return ""
-        key = self._key(service, path)
+        key = f"{service}:{path}"
         with self._lock:
             cached = self._cache.get(key)
             if cached is not None:
@@ -61,14 +63,11 @@ class _IntrospectionCache:
         return xml
 
     def invalidate(self, service: str):
+        prefix = f"{service}:"
         with self._lock:
-            keys = [k for k in self._cache if k.startswith(f"{service}:")]
-            for k in keys:
-                self._cache.pop(k, None)
-
-
-_exe_to_service: Dict[str, str] = {}
-"""Maps executable path to last-known DBus service name. Populated during discovery."""
+            self._cache = {
+                k: v for k, v in self._cache.items() if not k.startswith(prefix)
+            }
 
 
 @dataclass
@@ -79,9 +78,16 @@ class AppServiceInfo:
     executable: str = ""
     wm_class: str = ""
     app_id: str = ""
-    importer: Optional[Union[DBusMenuClient, GtkMenuClient, ActionMenuClient]] = None
+    importer: Optional[_MenuClient] = None
     revision: int = 0
     connected_signals: bool = False
+
+
+def _resolve_executable(pid: int) -> str:
+    try:
+        return os.path.realpath(f"/proc/{pid}/exe")
+    except Exception:
+        return ""
 
 
 def _dbus_introspect(bus, service: str, path: str, timeout: int) -> str:
@@ -144,8 +150,6 @@ REGISTRAR_XML = """
 </node>
 """
 
-_EMPTY_SENTINEL: List[DBusMenuItem] = []
-
 
 class GlobalMenuService(Service):
     """Service that extracts and provides application menus for the global menu bar."""
@@ -157,28 +161,26 @@ class GlobalMenuService(Service):
     def active_app_changed(self, app_name: str, wm_class: str) -> None: ...
 
     @Property(object, flags="read-write")
-    def current_menu(self) -> Optional[List[DBusMenuItem]]:
+    def current_menu(self) -> Optional[list[DBusMenuItem]]:
         return self._current_menu
 
     def __init__(self):
         super().__init__()
-        self._current_menu: Optional[List[DBusMenuItem]] = None
+        self._current_menu: Optional[list[DBusMenuItem]] = None
         self._current_app: str = ""
         self._current_wm_class: str = ""
         self._current_pid: int = 0
 
-        # Service registry: service_name -> AppServiceInfo
-        # This is the core event-driven data structure (single source of truth).
-        self._service_registry: Dict[str, AppServiceInfo] = {}
-        self._pid_to_service: Dict[int, str] = {}
+        self._service_registry: dict[str, AppServiceInfo] = {}
+        self._pid_to_service: dict[int, str] = {}
 
         self._introspection_cache = _IntrospectionCache()
 
         self._seq_lock = threading.Lock()
         self._extraction_seq = 0
-        self._extracting_in_flight: Set[str] = set()
+        self._extracting_in_flight: set[str] = set()
 
-        self._lock = threading.Lock()
+        self._inflight_lock = threading.Lock()
         self._registry_lock = threading.Lock()
         self._state_lock = threading.Lock()
 
@@ -236,28 +238,13 @@ class GlobalMenuService(Service):
             self._on_service_disappeared(name)
 
     def _on_service_appeared(self, service_name: str):
-        """Discover a newly appeared DBus service and populate the registry."""
         try:
             bus = _get_bus()
             pid = _dbus_get_pid(bus, service_name, _DBUS_TIMEOUT_FAST)
             if pid <= 0:
                 return
-            executable = ""
-            try:
-                executable = os.path.realpath(f"/proc/{pid}/exe")
-            except Exception:
-                pass
-            with self._registry_lock:
-                if service_name not in self._service_registry:
-                    self._service_registry[service_name] = AppServiceInfo(
-                        service_name=service_name,
-                        pid=pid,
-                        executable=executable,
-                    )
-                    if pid:
-                        self._pid_to_service[pid] = service_name
-                    if executable:
-                        _exe_to_service[executable] = service_name
+            executable = _resolve_executable(pid)
+            self._register_new_service(service_name, pid, executable)
             self._introspection_cache.invalidate(service_name)
             logger.debug(
                 f"[GlobalMenuService] Registered new service: {service_name} pid={pid}"
@@ -274,7 +261,8 @@ class GlobalMenuService(Service):
                 return
             if entry.pid:
                 self._pid_to_service.pop(entry.pid, None)
-            if entry.importer and isinstance(entry.importer, DBusMenuClient):
+            self._registered_menus.pop(service_name, None)
+            if isinstance(entry.importer, DBusMenuClient):
                 try:
                     entry.importer.disconnect_signals()
                 except Exception:
@@ -283,7 +271,7 @@ class GlobalMenuService(Service):
         self._introspection_cache.invalidate(service_name)
 
         with self._state_lock:
-            if entry and entry.wm_class and entry.wm_class == self._current_wm_class:
+            if entry.wm_class and entry.wm_class == self._current_wm_class:
                 self._current_menu = None
 
         logger.debug(
@@ -366,6 +354,30 @@ class GlobalMenuService(Service):
     def _uid(self, wm_class: str, pid: int) -> str:
         return f"{wm_class}:{pid}"
 
+    def _resolve_current_entry(self) -> tuple[Optional[AppServiceInfo], int]:
+        """Return the registry entry and PID for the currently active window."""
+        with self._state_lock:
+            pid = self._current_pid
+        with self._registry_lock:
+            svc = self._pid_to_service.get(pid)
+            entry = self._service_registry.get(svc) if svc else None
+        return entry, pid
+
+    def _register_new_service(
+        self, service_name: str, pid: int, executable: str = ""
+    ) -> None:
+        """Add a newly discovered service to the registry if not already present."""
+        with self._registry_lock:
+            if service_name in self._service_registry:
+                return
+            self._service_registry[service_name] = AppServiceInfo(
+                service_name=service_name,
+                pid=pid,
+                executable=executable,
+            )
+            if pid:
+                self._pid_to_service[pid] = service_name
+
     def update_active_window(self, app_name: str, wm_class: str):
         target_pid = 0
         try:
@@ -402,7 +414,6 @@ class GlobalMenuService(Service):
 
         self.active_app_changed(app_name, wm_class)
 
-        # PRIORITY 1: Registry lookup by PID (persistent importers)
         with self._registry_lock:
             svc_name = self._pid_to_service.get(target_pid) if target_pid else None
             registered_entry = (
@@ -425,13 +436,12 @@ class GlobalMenuService(Service):
             thread.start()
             return
 
-        # No importer found in registry — must discover
         with self._state_lock:
             self._current_menu = None
         self.menu_changed([])
 
         inflight_key = self._uid(wm_class, target_pid)
-        with self._lock:
+        with self._inflight_lock:
             if inflight_key in self._extracting_in_flight:
                 logger.debug(
                     f"[GlobalMenuService] Extraction in-flight for '{inflight_key}' — skipping"
@@ -500,8 +510,8 @@ class GlobalMenuService(Service):
     def _handle_items_updated(
         self,
         svc_name: str,
-        updated_props: List[Tuple[int, dict]],
-        removed_ids: List[int],
+        updated_props: list[tuple[int, dict]],
+        removed_ids: list[int],
     ):
         with self._registry_lock:
             entry = self._service_registry.get(svc_name)
@@ -520,7 +530,7 @@ class GlobalMenuService(Service):
         self,
         wm_class: str,
         seq: int,
-        client: Union[DBusMenuClient, GtkMenuClient, ActionMenuClient],
+        client: _MenuClient,
         inflight_key: str,
     ):
         try:
@@ -547,7 +557,7 @@ class GlobalMenuService(Service):
             )
         finally:
             if inflight_key:
-                with self._lock:
+                with self._inflight_lock:
                     self._extracting_in_flight.discard(inflight_key)
 
     def _scan_initial_services(self):
@@ -573,22 +583,8 @@ class GlobalMenuService(Service):
                 pid = _dbus_get_pid(bus, name, _DBUS_TIMEOUT_FAST)
                 if pid <= 0:
                     continue
-                executable = ""
-                try:
-                    executable = os.path.realpath(f"/proc/{pid}/exe")
-                except Exception:
-                    pass
-                with self._registry_lock:
-                    if name not in self._service_registry:
-                        self._service_registry[name] = AppServiceInfo(
-                            service_name=name,
-                            pid=pid,
-                            executable=executable,
-                        )
-                        if pid:
-                            self._pid_to_service[pid] = name
-                        if executable:
-                            _exe_to_service[executable] = name
+                executable = _resolve_executable(pid)
+                self._register_new_service(name, pid, executable)
             logger.debug(
                 f"[GlobalMenuService] Initial scan: registered {len(names)} services"
             )
@@ -597,7 +593,7 @@ class GlobalMenuService(Service):
 
     def _discover_dbus_client(
         self, wm_class: str, target_pid: int = 0
-    ) -> Optional[Union[DBusMenuClient, GtkMenuClient, ActionMenuClient]]:
+    ) -> Optional[_MenuClient]:
         try:
             if target_pid <= 0:
                 out = exec_shell_command("hyprctl activewindow -j")
@@ -621,9 +617,7 @@ class GlobalMenuService(Service):
             logger.debug(f"[GlobalMenuService] Discovery failed: {e}")
         return None
 
-    def _find_registry(
-        self, wm_class: str, target_pid: int
-    ) -> Optional[Union[DBusMenuClient, GtkMenuClient, ActionMenuClient]]:
+    def _find_registry(self, wm_class: str, target_pid: int) -> Optional[_MenuClient]:
         with self._registry_lock:
             svc_name = self._pid_to_service.get(target_pid)
             entry = self._service_registry.get(svc_name) if svc_name else None
@@ -632,9 +626,7 @@ class GlobalMenuService(Service):
                 return entry.importer
         return None
 
-    def _find_registrar(
-        self, wm_class: str, target_pid: int
-    ) -> Optional[Union[DBusMenuClient, GtkMenuClient, ActionMenuClient]]:
+    def _find_registrar(self, wm_class: str, target_pid: int) -> Optional[_MenuClient]:
         bus = _get_bus()
         with self._registry_lock:
             registered = dict(self._registered_menus)
@@ -663,7 +655,7 @@ class GlobalMenuService(Service):
 
     def _find_fallback_scan(
         self, wm_class: str, target_pid: int
-    ) -> Optional[Union[DBusMenuClient, GtkMenuClient, ActionMenuClient]]:
+    ) -> Optional[_MenuClient]:
         bus = _get_bus()
         try:
             res = bus.call_sync(
@@ -712,7 +704,6 @@ class GlobalMenuService(Service):
                     bus, svc, dynamic_bases
                 )
 
-                # PRIORITY A: DBusMenu (com.canonical.dbusmenu)
                 for path in fallback_paths:
                     xml = self._introspection_cache.get(
                         svc, path, bus, _DBUS_TIMEOUT_INTROSPECT
@@ -723,7 +714,6 @@ class GlobalMenuService(Service):
                         self._cache_discovery(svc, path, pid, wm_class, client)
                         return client
 
-                # PRIORITY B: org.gtk.Menus
                 gtk_candidates = []
                 for path in fallback_paths:
                     xml = self._introspection_cache.get(
@@ -732,17 +722,17 @@ class GlobalMenuService(Service):
                     if "org.gtk.Menus" in xml:
                         gtk_candidates.append((svc, path))
 
+                existing_gtk_paths = {p for _, p in gtk_candidates}
                 for dfs_path in self._dfs_find_interface(svc, "org.gtk.Menus"):
-                    if dfs_path not in {p for _, p in gtk_candidates}:
+                    if dfs_path not in existing_gtk_paths:
                         gtk_candidates.append((svc, dfs_path))
+                        existing_gtk_paths.add(dfs_path)
 
                 for gsvc, gpath in gtk_candidates:
                     try:
                         test_client = GtkMenuClient(gsvc, gpath)
                         test_items = test_client.get_layout()
                         if not test_items:
-                            import time
-
                             for _ in range(4):
                                 time.sleep(0.05)
                                 if test_items := test_client.get_layout():
@@ -758,26 +748,9 @@ class GlobalMenuService(Service):
                     except Exception:
                         pass
 
-                # PRIORITY C: org.gtk.Actions (last resort)
-                action_candidates = ["/"]
-                name_path = (
-                    "/" + svc.replace(".", "/") if not svc.startswith(":") else ""
+                action_candidates = self._build_action_candidates(
+                    svc, _safe_cls, _safe_cap
                 )
-                if name_path and GLib.Variant.is_object_path(name_path):
-                    action_candidates.append(name_path)
-                action_candidates.append("/org/gtk/Application")
-
-                if _safe_cls:
-                    cls_lower = _safe_cls.lower()
-                    action_candidates.extend(
-                        [f"/org/{cls_lower}/{_safe_cap}", f"/org/{cls_lower}"]
-                    )
-                    for ns in [*_DE_NAMESPACES, cls_lower]:
-                        for app_part in (_safe_cap, _safe_cls):
-                            p = f"/org/{ns}/{app_part}"
-                            if GLib.Variant.is_object_path(p):
-                                action_candidates.append(p)
-
                 action_candidates.extend(
                     self._dfs_find_interface(svc, "org.gtk.Actions")
                 )
@@ -803,6 +776,26 @@ class GlobalMenuService(Service):
             except Exception:
                 continue
         return None
+
+    def _build_action_candidates(
+        self, svc: str, safe_cls: str, safe_cap: str
+    ) -> list[str]:
+        candidates = ["/"]
+        name_path = "/" + svc.replace(".", "/") if not svc.startswith(":") else ""
+        if name_path and GLib.Variant.is_object_path(name_path):
+            candidates.append(name_path)
+        candidates.append("/org/gtk/Application")
+
+        if safe_cls:
+            cls_lower = safe_cls.lower()
+            candidates.extend([f"/org/{cls_lower}/{safe_cap}", f"/org/{cls_lower}"])
+            for ns in [*_DE_NAMESPACES, cls_lower]:
+                for app_part in (safe_cap, safe_cls):
+                    p = f"/org/{ns}/{app_part}"
+                    if GLib.Variant.is_object_path(p):
+                        candidates.append(p)
+
+        return candidates
 
     def _build_dynamic_bases(self, svc: str, _safe_cls: str, _safe_cap: str) -> list:
         static_paths = [
@@ -841,12 +834,12 @@ class GlobalMenuService(Service):
                             static_paths.append(p)
         return static_paths
 
-    def _introspect_paths(self, bus, svc: str, bases: list) -> Tuple[list, set]:
+    def _introspect_paths(self, bus, svc: str, bases: list) -> tuple[list, set]:
         fallback_paths = list(bases)
         seen_fallback = set(fallback_paths)
 
         def _add_paths(parent_path, xml_str):
-            for child in re.findall(r'<node name="([^"]+)"', xml_str):
+            for child in _NODE_NAME_RE.findall(xml_str):
                 child_path = f"{parent_path}/{child}"
                 if (
                     GLib.Variant.is_object_path(child_path)
@@ -876,7 +869,7 @@ class GlobalMenuService(Service):
         path: str,
         pid: int,
         wm_class: str,
-        client: Union[DBusMenuClient, GtkMenuClient, ActionMenuClient],
+        client: _MenuClient,
     ):
         with self._registry_lock:
             if service not in self._service_registry:
@@ -890,8 +883,6 @@ class GlobalMenuService(Service):
                 self._service_registry[service] = entry
                 if pid:
                     self._pid_to_service[pid] = service
-                if entry.executable:
-                    _exe_to_service[entry.executable] = service
             else:
                 entry = self._service_registry[service]
                 entry.importer = client
@@ -935,7 +926,7 @@ class GlobalMenuService(Service):
             if f'interface name="{interface}"' in xml:
                 results.append(path)
 
-            for child in re.findall(r'<node name="([^"]+)"', xml):
+            for child in _NODE_NAME_RE.findall(xml):
                 child_path = (
                     path.rstrip("/") + "/" + child if path != "/" else "/" + child
                 )
@@ -1002,10 +993,9 @@ class GlobalMenuService(Service):
                 items = client.get_layout()
 
             if items:
-                with self._lock:
-                    logger.info(
-                        f"[GlobalMenuService] Found menu for '{wm_class}': {len(items)} items"
-                    )
+                logger.info(
+                    f"[GlobalMenuService] Found menu for '{wm_class}': {len(items)} items"
+                )
             else:
                 logger.info(f"[GlobalMenuService] No DBus menu found for '{wm_class}'")
 
@@ -1027,10 +1017,10 @@ class GlobalMenuService(Service):
             )
         finally:
             if inflight_key:
-                with self._lock:
+                with self._inflight_lock:
                     self._extracting_in_flight.discard(inflight_key)
 
-    def _emit_menu_changed(self, items: List[DBusMenuItem], seq: int = 0):
+    def _emit_menu_changed(self, items: list[DBusMenuItem], seq: int = 0):
         if seq:
             with self._seq_lock:
                 if seq != self._extraction_seq:
@@ -1041,39 +1031,27 @@ class GlobalMenuService(Service):
         return False
 
     def click_item(self, item_id: int) -> bool:
-        with self._state_lock:
-            target_pid = self._current_pid
-        with self._registry_lock:
-            svc = self._pid_to_service.get(target_pid)
-            entry = self._service_registry.get(svc) if svc else None
+        entry, pid = self._resolve_current_entry()
         if entry and entry.importer:
-            entry.importer.click_item(item_id, pid=target_pid)
+            entry.importer.click_item(item_id, pid=pid)
             return True
         return False
 
     def about_to_show(self, item_id: int) -> bool:
-        with self._state_lock:
-            target_pid = self._current_pid
-        with self._registry_lock:
-            svc = self._pid_to_service.get(target_pid)
-            entry = self._service_registry.get(svc) if svc else None
+        entry, _pid = self._resolve_current_entry()
         if entry and entry.importer:
             return entry.importer.about_to_show(item_id)
         return False
 
-    def refresh_menu_sync(self) -> List[DBusMenuItem]:
+    def refresh_menu_sync(self) -> list[DBusMenuItem]:
+        entry, pid = self._resolve_current_entry()
+        if not (entry and entry.importer):
+            return []
+        items = entry.importer.get_layout(force_refresh=True)
         with self._state_lock:
-            target_pid = self._current_pid
-        with self._registry_lock:
-            svc = self._pid_to_service.get(target_pid)
-            entry = self._service_registry.get(svc) if svc else None
-        if entry and entry.importer:
-            items = entry.importer.get_layout(force_refresh=True)
-            with self._state_lock:
-                if target_pid == self._current_pid:
-                    self._current_menu = items
-            return items
-        return []
+            if pid == self._current_pid:
+                self._current_menu = items
+        return items
 
 
 _global_menu_svc_instance = None

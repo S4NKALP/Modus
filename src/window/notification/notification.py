@@ -21,7 +21,7 @@ from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
 from shared.widgets.custom_image import CustomImage
 from shared.widgets.customrevealer import SlideRevealer
-from utils.functions import escape_markup_text, parse_timeout_string
+from utils.functions import escape_markup_text
 from utils.roam import modus_service
 from utils.icon_resolver import IconResolver
 
@@ -1071,9 +1071,6 @@ class ModusNoti(Window):
         # Preload assets immediately for optimal caching and display performance
         preload_notification_assets(notification)
 
-        # Implement smart queue management for smooth transitions
-        GLib.get_monotonic_time() / 1000
-
         # If queue is getting full, remove oldest notifications smoothly
         if len(self.notification_queue) >= self.MAX_QUEUE_SIZE:
             # Remove oldest notification from queue (not current showing one)
@@ -1271,21 +1268,6 @@ class ModusNoti(Window):
     def update_config(self, new_config):
         """Update notification configuration dynamically."""
         try:
-            # Handle notification timeout changes
-            if "notification_timeout" in new_config:
-                timeout_str = new_config["notification_timeout"]
-                # Parse the timeout string to milliseconds
-
-                parse_timeout_string(timeout_str)
-
-            # Handle ignored apps changes
-            if "notification_ignored_apps" in new_config:
-                new_config["notification_ignored_apps"]
-
-            # Handle limited apps history changes
-            if "notification_limited_apps_history" in new_config:
-                new_config["notification_limited_apps_history"]
-
             # Update the current config
             self._current_config.update(new_config)
 

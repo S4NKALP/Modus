@@ -25,12 +25,12 @@ class Wifi(Service):
         self._ap_signal: int | None = None
         super().__init__(**kwargs)
 
-        self._client.connect(
+        self._client_handler = self._client.connect(
             "notify::wireless-enabled",
             lambda *args: self.notifier("enabled", args),
         )
         if self._device:
-            bulk_connect(
+            self._device_handlers = bulk_connect(
                 self._device,
                 {
                     "notify::active-access-point": lambda *args: self._activate_ap(),
@@ -40,6 +40,23 @@ class Wifi(Service):
                 },
             )
             self._activate_ap()
+
+    def close(self):
+        """Disconnect all signal handlers so the service can be garbage collected."""
+        try:
+            self._client.disconnect(self._client_handler)
+        except Exception:
+            pass
+        for hid in getattr(self, "_device_handlers", ()):
+            try:
+                self._device.disconnect(hid)
+            except Exception:
+                pass
+        if getattr(self, "_ap", None) and getattr(self, "_ap_signal", None):
+            try:
+                self._ap.disconnect(self._ap_signal)
+            except Exception:
+                pass
 
     def ap_update(self):
         self.emit("changed")
@@ -245,6 +262,7 @@ class Ethernet(Service):
         self._client: NM.Client = client
         self._device: NM.DeviceEthernet = device
 
+        self._handlers: list[int] = []
         for pn in (
             "active-connection",
             "icon-name",
@@ -252,13 +270,25 @@ class Ethernet(Service):
             "speed",
             "state",
         ):
-            self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
+            self._handlers.append(
+                self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
+            )
 
-        self._device.connect("notify::speed", lambda *_: self.notifier("speed"))
+        self._handlers.append(
+            self._device.connect("notify::speed", lambda *_: self.notifier("speed"))
+        )
 
     def notifier(self, pn):
         self.notify(pn)
         self.emit("changed")
+
+    def close(self):
+        """Disconnect all signal handlers so the service can be garbage collected."""
+        for hid in getattr(self, "_handlers", ()):
+            try:
+                self._device.disconnect(hid)
+            except Exception:
+                pass
 
 
 class NetworkClient(Service):
@@ -325,8 +355,15 @@ class NetworkClient(Service):
                 return
             if self.wifi_device is wifi:
                 self.wifi_device = next(iter(self.wifi_devices.values()), None)
+            wifi.close()
             logger.info(f"[Network] Wifi device removed: {iface}")
             self.emit("device-removed", iface)
+
+        elif dtype == NM.DeviceType.ETHERNET:
+            if self.ethernet_device is not None:
+                self.ethernet_device.close()
+                self.ethernet_device = None
+                self.emit("device-removed", nm_device.get_iface())
 
     def _get_primary_device(self) -> Literal["wifi", "wired"] | None:
         if not self._client:

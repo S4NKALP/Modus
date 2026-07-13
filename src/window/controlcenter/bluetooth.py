@@ -657,12 +657,6 @@ class BluetoothConnections(Box):
                             device_slot = BluetoothDeviceSlot(device)
                             self.other_devices.add(device_slot)
 
-                for slot in existing_paired.values():
-                    pass
-
-                for slot in existing_other.values():
-                    pass
-
             if not self._destroyed:
                 has_paired_devices = len(paired_devices) > 0
                 has_other_devices = len(other_devices) > 0
@@ -679,6 +673,7 @@ class BluetoothConnections(Box):
 
     def start_device_monitoring(self):
         """Start periodic monitoring for device changes"""
+        self.stop_device_monitoring()
         self.refresh_timer = GLib.timeout_add_seconds(5, self.periodic_device_refresh)
 
     def stop_device_monitoring(self):

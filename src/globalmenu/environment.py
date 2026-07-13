@@ -14,12 +14,79 @@ ENV_VARS = {
     "UBUNTU_MENUPROXY": "1",
 }
 
+# Marker lines previously written around the global LD_PRELOAD export in shell
+# rc files. Kept so we can strip the stale block from already-configured systems.
 _SHIM_BEGIN = "# >>> modus global-menu shim >>>"
 _SHIM_END = "# <<< modus global-menu shim <<<"
 
 
-def _compile_shim() -> Path | None:
-    """Compile the menu-button shim if needed. Returns path to .so or None."""
+def _remove_global_ld_preload():
+    """Strip the legacy global LD_PRELOAD export from previously configured systems.
+
+    The shim is now injected per-launch into GTK3 apps only (see
+    globalmenu.launch). Any globally exported LD_PRELOAD must be removed so it
+    no longer breaks GTK4 processes.
+    """
+    home = Path.home()
+    shell = os.environ.get("SHELL", "")
+    rc_files = [
+        home / ".zshrc",
+        home / ".bashrc",
+        home / ".profile",
+        home / ".config" / "fish" / "config.fish",
+    ]
+    rc_path = {
+        "zsh": home / ".zshrc",
+        "bash": home / ".bashrc",
+        "fish": home / ".config" / "fish" / "config.fish",
+    }.get(Path(shell).name)
+    if rc_path:
+        rc_files.append(rc_path)
+    rc_files = list(dict.fromkeys(rc_files))  # de-dupe, keep order
+
+    for rc in rc_files:
+        try:
+            if not rc.is_file():
+                continue
+            lines = rc.read_text().splitlines(keepends=True)
+            if not any(_SHIM_BEGIN in ln for ln in lines):
+                continue
+            out = []
+            drop = False
+            for ln in lines:
+                if _SHIM_BEGIN in ln:
+                    drop = True
+                    continue
+                if _SHIM_END in ln:
+                    drop = False
+                    continue
+                if drop:
+                    continue
+                out.append(ln)
+            rc.write_text("".join(out))
+            logger.info(f"[GlobalMenu] Removed stale LD_PRELOAD block from {rc}")
+        except OSError:
+            pass
+
+    # Strip the LD_PRELOAD line from environment.d/appmenu.conf.
+    env_path = home / ".config" / "environment.d" / "appmenu.conf"
+    try:
+        if env_path.is_file():
+            kept = [
+                ln
+                for ln in env_path.read_text().splitlines(keepends=True)
+                if not ln.strip().startswith("LD_PRELOAD=")
+            ]
+            env_path.write_text("".join(kept))
+    except OSError:
+        pass
+
+    # Clear it from the activation environment for future launches.
+    exec_shell_command("dbus-update-activation-environment --systemd LD_PRELOAD=")
+
+
+def get_compiled_shim() -> Path | None:
+    """Compile the GTK3 menu-button shim if needed. Returns path to .so or None."""
     try:
         if SHIM_SO.exists() and SHIM_SO.stat().st_mtime >= SHIM_SRC.stat().st_mtime:
             return SHIM_SO
@@ -48,43 +115,6 @@ def _compile_shim() -> Path | None:
         return None
 
 
-def _write_shell_rc(shim_path: Path | None):
-    """Append LD_PRELOAD export to the user's shell rc file."""
-    if not shim_path:
-        return
-
-    shell = os.environ.get("SHELL", "")
-    home = Path.home()
-
-    rc_map = {
-        "zsh": home / ".zshrc",
-        "bash": home / ".bashrc",
-        "fish": home / ".config" / "fish" / "config.fish",
-    }
-
-    rc_path = rc_map.get(Path(shell).name)
-    if rc_path is None:
-        rc_path = home / ".profile"
-
-    try:
-        if not rc_path.exists():
-            return
-        existing = rc_path.read_text()
-        if _SHIM_BEGIN in existing:
-            return
-
-        is_fish = rc_path.name == "config.fish"
-        with open(rc_path, "a") as f:
-            f.write(f"\n{_SHIM_BEGIN}\n")
-            if is_fish:
-                f.write(f"set -gx LD_PRELOAD {shim_path}\n")
-            else:
-                f.write(f"export LD_PRELOAD={shim_path}\n")
-            f.write(f"{_SHIM_END}\n")
-    except OSError:
-        pass
-
-
 def setup_global_menu_environment():
     """Write env config files so GTK apps register with AppMenu at next login.
 
@@ -93,17 +123,22 @@ def setup_global_menu_environment():
     Uses session-level config files that take effect at login.
     """
     try:
-        shim_path = _compile_shim()
+        shim_path = get_compiled_shim()
+
+        # Remove any legacy global LD_PRELOAD export from older installs.
+        _remove_global_ld_preload()
+
+        # NOTE: The menu-button shim is compiled against GTK3 and must NOT be
+        # exported globally. Injecting it into a GTK4 process aborts the app
+        # ("GTK 2/3 symbols detected"). It is injected per-launch into GTK3
+        # apps only — see globalmenu.launch.
+        if shim_path:
+            logger.debug(f"[GlobalMenu] GTK3 shim ready at {shim_path}")
 
         exec_shell_command(
             "dbus-update-activation-environment --systemd "
             "GTK_MODULES=appmenu-gtk-module UBUNTU_MENUPROXY=1"
         )
-        if shim_path:
-            exec_shell_command(
-                f"dbus-update-activation-environment --systemd LD_PRELOAD={shim_path}"
-            )
-            exec_shell_command("systemctl --user import-environment LD_PRELOAD")
 
         exec_shell_command(
             "flatpak override --user --talk-name=com.canonical.AppMenu.Registrar"
@@ -116,8 +151,6 @@ def setup_global_menu_environment():
             with open(env_path, "w") as f:
                 for k, v in ENV_VARS.items():
                     f.write(f"{k}={v}\n")
-                if shim_path:
-                    f.write(f"LD_PRELOAD={shim_path}\n")
         except OSError:
             pass
 
@@ -148,8 +181,6 @@ def setup_global_menu_environment():
                         f.write(line)
         except OSError:
             pass
-
-        _write_shell_rc(shim_path)
 
         logger.info("[GlobalMenu] GTK environment injected")
     except Exception as e:

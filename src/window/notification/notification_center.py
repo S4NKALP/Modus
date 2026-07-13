@@ -178,13 +178,9 @@ class ExpandableNotificationGroup(Box):
 
         self.add(self.collapsed_eventbox)
 
-        # Create expanded state (hidden initially)
-        self.create_expanded_state()
-
     def _get_notification_pixbuf_for_group(self, cached_notification):
         """Get notification pixbuf at 64x64 - matches app icon size for consistency"""
         notification = cached_notification._notification
-        getattr(notification, "id", None)
         pixbuf = None
 
         # First try to get cached notification image using stored cache key
@@ -372,10 +368,6 @@ class ExpandableNotificationGroup(Box):
         self.expanded_container.set_visible(False)
         return False  # Don't repeat timeout
 
-    def _complete_collapse(self):
-        """Complete the collapse animation - no longer needed but kept for compatibility"""
-        return False  # Don't repeat timeout
-
     def close_all(self, *args):
         """Close all notifications in this group with proper cache cleanup"""
         # Close all notifications in this group
@@ -462,7 +454,6 @@ class NotificationCenterWidget(NotificationWidget):
 
     def _get_notification_pixbuf(self, notification):
         """Get notification pixbuf at 64x64 - matches app icon size for consistency"""
-        getattr(notification, "id", None)
         pixbuf = None
 
         # First try to get cached notification image using stored cache key
@@ -819,8 +810,11 @@ class NotificationCenter(AppletWindow):
                 group_widget.remove(child)
                 child.destroy()
 
-            # Recreate content
+            # Recreate content (collapsed + expanded states)
             group_widget.create_collapsed_state()
+            group_widget.create_expanded_state()
+            group_widget.collapsed_eventbox.set_visible(True)
+            group_widget.expanded_container.set_visible(False)
             group_widget.show_all()
 
         except Exception as e:

@@ -1,3 +1,4 @@
+import time
 from typing import Any
 
 from fabric.utils import DesktopApp, get_desktop_applications
@@ -17,6 +18,8 @@ class ApplicationPlugin(SpotlightPlugin):
     def __init__(self, context):
         super().__init__(context)
         self._desktop_apps: list[DesktopApp] = []
+        self._apps_loaded_at: float = 0.0
+        self._apps_ttl: float = 1.0
 
     def initialize(self) -> None:
         self._desktop_apps = get_desktop_applications()
@@ -27,6 +30,16 @@ class ApplicationPlugin(SpotlightPlugin):
     def search(self, query: str, token: Any) -> list[SearchResult]:
         if not query:
             return []
+
+        # Re-scan (throttled) so newly installed .desktop files appear
+        # without a restart, while avoiding a disk scan on every keystroke.
+        now = time.monotonic()
+        if now - self._apps_loaded_at > self._apps_ttl:
+            try:
+                self._desktop_apps = get_desktop_applications()
+                self._apps_loaded_at = now
+            except Exception:
+                pass
 
         results: list[SearchResult] = []
         for app in self._desktop_apps:
@@ -60,7 +73,9 @@ class ApplicationPlugin(SpotlightPlugin):
 
     @staticmethod
     def _launch_app(app: DesktopApp) -> None:
-        app.launch()
+        from globalmenu.launch import launch_desktop_app
+
+        launch_desktop_app(app)
 
 
 PLUGIN = ApplicationPlugin

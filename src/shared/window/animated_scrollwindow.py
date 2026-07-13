@@ -80,3 +80,7 @@ class AnimatedScrollable(ScrolledWindow):
         value = self.height_animator.value
         value = 0 if value < 0 else value
         return value, value
+
+    def destroy(self):
+        self.height_animator.stop()
+        super().destroy()

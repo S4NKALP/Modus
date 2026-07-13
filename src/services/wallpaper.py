@@ -11,38 +11,45 @@ from shared.data import (
     WALLPAPERS_THUMBNAILS_SIZE,
 )
 
-for path in (WALLPAPER_PATH, WALLPAPER_THUMBS_PATH):
-    os.makedirs(path, exist_ok=True)
+os.makedirs(WALLPAPER_PATH, exist_ok=True)
+os.makedirs(WALLPAPER_THUMBS_PATH, exist_ok=True)
 
 
 def get_thumbnail_filename(image_path: str) -> str:
     key = hashlib.sha256(image_path.encode()).hexdigest()
-    size = WALLPAPERS_THUMBNAILS_SIZE
-    return f"{key}_{size}x{size}.webp"
+    return f"{key}_{WALLPAPERS_THUMBNAILS_SIZE}x{WALLPAPERS_THUMBNAILS_SIZE}.webp"
 
 
 def create_thumbnail(
-    image_path: str, thumbnail_path: str, size: int = WALLPAPERS_THUMBNAILS_SIZE
+    image_path: str,
+    thumbnail_path: str,
+    size: int = WALLPAPERS_THUMBNAILS_SIZE,
 ) -> bool:
-    """Create WebP thumbnail with proper memory cleanup to prevent leaks."""
-    pixbuf = None
+    """Create a compressed WebP thumbnail."""
+
     try:
-        # Load image at scaled size to minimize memory usage
-        pixbuf = gdk_pixbuf.Pixbuf.new_from_file_at_scale(image_path, size, size, True)
-        # Save as WebP with quality 85 for better compression (60-80% smaller than PNG)
-        result = pixbuf.savev(thumbnail_path, "webp", ["quality"], ["85"])
-        return bool(result)
+        pixbuf = gdk_pixbuf.Pixbuf.new_from_file_at_scale(
+            image_path,
+            size,
+            size,
+            preserve_aspect_ratio=True,
+        )
+
+        return bool(
+            pixbuf.savev(
+                thumbnail_path,
+                "webp",
+                ["quality"],
+                ["85"],
+            )
+        )
+
     except Exception:
         return False
-    finally:
-        # Explicitly clear pixbuf reference to free memory
-        if pixbuf is not None:
-            del pixbuf
 
 
 def generate_colors_from_wallpaper(image_path: str) -> bool:
-    cmd = f'matugen image "{image_path}"'
-    return bool(exec_shell_command_async(cmd))
+    return bool(exec_shell_command_async(f'matugen image "{image_path}"'))
 
 
 class WallpaperService(Service):
@@ -57,55 +64,62 @@ class WallpaperService(Service):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._processed_count = 0
         self._file_cache: list[str] | None = None
 
     def get_all_wallpapers(self, use_cache: bool = True) -> list[str]:
         if use_cache and self._file_cache is not None:
             return self._file_cache
 
-        all_files = []
-        for file in os.listdir(WALLPAPER_PATH):
-            file_full = WALLPAPER_PATH + "/" + file
-            mt = mimetypes.guess_type(file_full)[0]
-            if mt and mt.startswith("image/"):
-                all_files.append(file_full)
+        wallpapers: list[str] = []
 
-        self._file_cache = all_files
-        return all_files
+        with os.scandir(WALLPAPER_PATH) as entries:
+            for entry in entries:
+                if not entry.is_file():
+                    continue
+
+                mime, _ = mimetypes.guess_type(entry.path)
+                if mime and mime.startswith("image/"):
+                    wallpapers.append(entry.path)
+
+        self._file_cache = wallpapers
+        return wallpapers
 
     def invalidate_cache(self) -> None:
         self._file_cache = None
 
     def get_thumbnail_path(self, image_path: str) -> str:
-        thumbnail_filename = get_thumbnail_filename(image_path)
-        return WALLPAPER_THUMBS_PATH + "/" + thumbnail_filename
+        return os.path.join(
+            WALLPAPER_THUMBS_PATH,
+            get_thumbnail_filename(image_path),
+        )
 
     def has_thumbnail(self, image_path: str) -> bool:
-        thumbnail_path = self.get_thumbnail_path(image_path)
-        return os.path.isfile(thumbnail_path)
+        return os.path.isfile(self.get_thumbnail_path(image_path))
 
-    def set_wallpaper(self, image_path: str):
+    def set_wallpaper(self, image_path: str) -> None:
         exec_shell_command_async(
-            f"awww img {image_path} --transition-type none --transition-duration 0 --transition-fps 60"
+            f'awww img "{image_path}" '
+            "--transition-type none "
+            "--transition-duration 0 "
+            "--transition-fps 60"
         )
+
         self.wallpaper_set(image_path)
 
-        target_path = os.path.abspath(image_path)
-        home_dir = os.path.expanduser("~")
-        link_path = os.path.join(home_dir, ".current.wall")
+        link_path = os.path.expanduser("~/.current.wall")
 
-        if os.path.islink(link_path) or os.path.exists(link_path):
+        if os.path.lexists(link_path):
             os.remove(link_path)
 
-        os.symlink(target_path, link_path)
+        os.symlink(os.path.abspath(image_path), link_path)
 
         exec_shell_command_async(f'matugen image "{image_path}" --source-color-index 0')
+
         self.colors_generated(image_path)
 
     def get_wallpaper_info(self, image_path: str) -> dict:
-        """Get information about a wallpaper"""
         stat = os.stat(image_path)
+
         return {
             "path": image_path,
             "filename": os.path.basename(image_path),

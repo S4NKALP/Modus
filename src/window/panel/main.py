@@ -69,12 +69,6 @@ class Panel(Window):
         self.tray.connect("add", self._update_tray_visibility)
         self.tray.connect("remove", self._update_tray_visibility)
 
-        self.indicators = Box(
-            name="indicators",
-            orientation="h",
-            spacing=4,
-        )
-
         self._spotlight_toggle_cb = None
         self.search = Button(
             name="panel-button",

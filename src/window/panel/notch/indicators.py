@@ -334,9 +334,24 @@ class MicrophoneIndicator(Box):
             self._connect_mic_signals()
 
     def _connect_mic_signals(self):
-        if self._audio.microphone:
-            self._audio.microphone.connect("changed", self._on_mic_stream_changed)
-            self._sync_state()
+        mic = self._audio.microphone
+        if mic is None:
+            return
+        # Disconnect from a previously-connected device if it changed, and
+        # avoid stacking duplicate handlers on the same device.
+        old = getattr(self, "_mic_device", None)
+        if old is not None and old is not mic:
+            try:
+                old.disconnect_by_func(self._on_mic_stream_changed)
+            except Exception:
+                pass
+        try:
+            mic.disconnect_by_func(self._on_mic_stream_changed)
+        except Exception:
+            pass
+        mic.connect("changed", self._on_mic_stream_changed)
+        self._mic_device = mic
+        self._sync_state()
 
     def _on_mic_device_changed(self, *_):
         self._connect_mic_signals()
@@ -371,8 +386,13 @@ class MicrophoneIndicator(Box):
             self._hide_timer_id = 0
         try:
             self._audio.disconnect_by_func(self._on_mic_device_changed)
-            if self._audio.microphone:
-                self._audio.microphone.disconnect_by_func(self._on_mic_stream_changed)
-        except Exception as e:
-            logger.warning(f"[NotchIndicators] mic disconnect: {e}")
+        except Exception:
+            pass
+        old = getattr(self, "_mic_device", None)
+        target = old if old is not None else self._audio.microphone
+        if target is not None:
+            try:
+                target.disconnect_by_func(self._on_mic_stream_changed)
+            except Exception as e:
+                logger.warning(f"[NotchIndicators] mic disconnect: {e}")
         super().destroy()

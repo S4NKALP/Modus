@@ -75,7 +75,7 @@ class SearchPipeline:
             self._current_token.cancel()
         with self._lock:
             for t in self._pending_threads:
-                t.join(timeout=0.5)
+                t.join(timeout=0.1)
             self._pending_threads.clear()
             for source_id in self._pending_idle_ids:
                 GLib.source_remove(source_id)
@@ -112,13 +112,33 @@ class SearchPipeline:
                 results = self._safe_search(instance, query, token)
                 self._stamp_results(results, entry)
                 if not token.is_cancelled:
-                    source_id = GLib.idle_add(lambda: callback(results))
+
+                    def _fire():
+                        with self._lock:
+                            try:
+                                self._pending_idle_ids.remove(source_id)
+                            except ValueError:
+                                pass
+                        callback(results)
+                        return False
+
+                    source_id = GLib.idle_add(_fire)
                     with self._lock:
                         self._pending_idle_ids.append(source_id)
             except Exception as e:
                 logger.error(f"[SearchPipeline] Error searching {entry.id}: {e}")
                 if not token.is_cancelled:
-                    source_id = GLib.idle_add(lambda: callback([]))
+
+                    def _fire_err():
+                        with self._lock:
+                            try:
+                                self._pending_idle_ids.remove(source_id)
+                            except ValueError:
+                                pass
+                        callback([])
+                        return False
+
+                    source_id = GLib.idle_add(_fire_err)
                     with self._lock:
                         self._pending_idle_ids.append(source_id)
 
@@ -143,6 +163,8 @@ class SearchPipeline:
         remaining = len(searchable)
 
         def _on_all_done():
+            if token.is_cancelled:
+                return
             merged = self._merge_results(collected)
             callback(merged)
 
@@ -151,7 +173,17 @@ class SearchPipeline:
             with results_lock:
                 remaining -= 1
                 if remaining <= 0:
-                    source_id = GLib.idle_add(_on_all_done)
+
+                    def _fire_all_done():
+                        with self._lock:
+                            try:
+                                self._pending_idle_ids.remove(source_id)
+                            except ValueError:
+                                pass
+                        _on_all_done()
+                        return False
+
+                    source_id = GLib.idle_add(_fire_all_done)
                     with self._lock:
                         self._pending_idle_ids.append(source_id)
 

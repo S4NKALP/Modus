@@ -56,6 +56,10 @@ from .layout import DockLayout
 
 _PIXBUF_CACHE_MAX = 64
 
+# Terminal/interpreter executables whose name alone should not force a match
+# against unrelated desktop apps during dock item resolution.
+_COMMON_EXECUTABLES = ("kitty", "bash", "sh", "zsh", "python", "python3")
+
 
 class DockCanvas(Gtk.DrawingArea):
     def __init__(self, parent_window):
@@ -135,9 +139,6 @@ class DockCanvas(Gtk.DrawingArea):
             except Exception:
                 self._desktop_apps = []
         return self._desktop_apps
-
-    def _refresh_desktop_apps(self) -> None:
-        self._desktop_apps = []
 
     def _canvas_height(self) -> int:
         size = self._base_icon_size()
@@ -921,7 +922,9 @@ class DockCanvas(Gtk.DrawingArea):
             if command_line:
                 launch_app(command_line)
             elif hasattr(app_info, "launch"):
-                app_info.launch()
+                from globalmenu.launch import launch_desktop_app
+
+                launch_desktop_app(app_info)
             else:
                 logger.error(
                     f"[DockCanvas] Cannot determine launch command: {app_info}"
@@ -976,8 +979,7 @@ class DockCanvas(Gtk.DrawingArea):
             if app.executable:
                 exe = os.path.basename(app.executable).lower()
                 if exe in expanded:
-                    common = ["kitty", "bash", "sh", "zsh", "python", "python3"]
-                    if exe in common:
+                    if exe in _COMMON_EXECUTABLES:
                         app_names = [
                             getattr(app, "name", ""),
                             getattr(app, "display_name", ""),

@@ -7,7 +7,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 
 from services.brightness import Brightness
-from services.modus import is_caffeine_active, toggle_caffeine
+from services.inhibit import get_inhibit_service
 from services.network import NetworkClient
 from shared.widgets.flat_scale import FlatScale
 from shared.window.applet_window import AppletWindow
@@ -133,11 +133,8 @@ class ModusControlCenter(AppletWindow):
             h_expand=True,
         )
 
-        # Only connect brightness controls if brightness service is available
-        if get_brightness_service().max_screen > 0:
-            pass
-        else:
-            # Disable brightness scale if no backlight device available
+        # Disable brightness scale if no backlight device is available
+        if get_brightness_service().max_screen <= 0:
             self.brightness_scale.set_sensitive(False)
 
         self._mpris_manager = get_shared_mpris_manager()
@@ -722,12 +719,8 @@ class ModusControlCenter(AppletWindow):
             self.per_app_volume_center_box.set_size_request(300, -1)
 
     def _check_initial_states(self):
-        self.caffeine_mode = is_caffeine_active()
+        self.caffeine_mode = get_inhibit_service().active
         self.flight_mode = False
-        GLib.timeout_add(100, self._update_initial_labels)
-
-    def _update_initial_labels(self):
-        return False
 
     def set_dont_disturb(self, *_):
         self.focus_mode = not self.focus_mode
@@ -770,7 +763,7 @@ class ModusControlCenter(AppletWindow):
 
     def toggle_caffeine(self, *_):
         try:
-            self.caffeine_mode = toggle_caffeine()
+            self.caffeine_mode = get_inhibit_service().toggle()
             self.caffeine_icon.dynamic_file(
                 "applets/caffeine-on.svg"
                 if self.caffeine_mode
@@ -1199,11 +1192,6 @@ class ModusControlCenter(AppletWindow):
             self._cleanup_widgets()
             self._cleanup_processes()
             self._disconnect_signals_when_hidden()
-
-            # Force garbage collection
-            import gc
-
-            gc.collect()
 
             logger.debug("Complete cleanup finished successfully")
 

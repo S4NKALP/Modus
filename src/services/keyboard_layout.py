@@ -41,6 +41,7 @@ class KeyboardLayout(Service):
         self._last_layout = None
         self.layouts = []
         self.current_index = 0
+        self._reload_pending = False
 
         self._init_layout_config()
         self._start_file_monitor()
@@ -106,9 +107,12 @@ class KeyboardLayout(Service):
             logger.error(f"[KeyboardLayout] Failed to start file monitor: {e}")
 
     def _on_file_changed(self, monitor, file, *args):
-        GLib.timeout_add(50, self._reload_layout)
+        if not self._reload_pending:
+            self._reload_pending = True
+            GLib.timeout_add(50, self._reload_layout)
 
     def _reload_layout(self):
+        self._reload_pending = False
         new_layout = self._read_layout()
         if new_layout != self._last_layout:
             self._last_layout = new_layout

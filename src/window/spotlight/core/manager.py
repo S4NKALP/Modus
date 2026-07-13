@@ -113,8 +113,6 @@ class PluginManager:
         if entry.module_name:
             self._loader.unload_module(entry.module_name)
 
-        from pathlib import Path
-
         fp = Path(entry.path) if entry.path else None
         if fp and fp.exists():
             source = entry.source

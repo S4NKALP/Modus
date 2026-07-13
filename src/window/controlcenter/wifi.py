@@ -631,6 +631,7 @@ class WifiConnections(Box):
 
     def start_network_monitoring(self):
         """Start periodic monitoring for network changes"""
+        self.stop_network_monitoring()
         self.refresh_timer = GLib.timeout_add_seconds(5, self.periodic_network_refresh)
 
     def stop_network_monitoring(self):

@@ -30,7 +30,6 @@ class CachedNotification(Service):
         # Store cache metadata for cleanup
         self.cache_metadata = data.get("cache_metadata", {})
         self.timestamp = data.get("timestamp", int(time.time()))
-        self._pixbuf_cache = {}
 
         return self
 
@@ -137,7 +136,7 @@ class CachedNotification(Service):
                             notification_image_cache_key = (
                                 get_notification_image_cache_key(self.id, image_pixbuf)
                             )
-                    except (AttributeError, OSError, Exception):
+                    except Exception:
                         # If temp file is gone or any other error, just mark as None
                         pass
             except Exception:
@@ -175,7 +174,6 @@ class CachedNotification(Service):
         self._cache_id = cache_id
         self.cache_metadata = {}
         self.timestamp = int(time.time())
-        self._pixbuf_cache: dict[str, GdkPixbuf.Pixbuf | None] = {}
 
 
 class CachedNotifications(Notifications):
@@ -497,7 +495,7 @@ class CachedNotifications(Notifications):
                         logger.debug(
                             f"Cached notification image for notification {cache_id}"
                         )
-                except (AttributeError, OSError, Exception) as e:
+                except Exception as e:
                     logger.warning(
                         f"Failed to cache notification image for notification {cache_id}: {e}"
                     )

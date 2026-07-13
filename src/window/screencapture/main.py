@@ -257,6 +257,19 @@ class ScreenCaptureWindow(Window):
 
         _handler_id[0] = screen_capture_service.connect("screenshot-taken", _on_taken)
 
+        def _safe_disconnect():
+            if _handler_id[0] is not None:
+                try:
+                    screen_capture_service.disconnect(_handler_id[0])
+                except Exception:
+                    pass
+                _handler_id[0] = None
+            return False
+
+        # Safety net: disconnect if the service never emits (e.g. capture failed
+        # silently), otherwise the one-shot handler would leak on every shot.
+        GLib.timeout_add_seconds(10, _safe_disconnect)
+
         ok = screen_capture_service.screenshot(
             target,
             output_dir=output_dir,

@@ -1,11 +1,12 @@
 import hashlib
 import mimetypes
+import threading
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 import gi
-from fabric.utils import GLib, logger
+from fabric.utils import GLib, exec_shell_command_async, logger
 
 gi.require_version("Playerctl", "2.0")
 from fabric import Fabricator  # noqa: E402
@@ -15,6 +16,45 @@ from gi.repository import Playerctl  # noqa: E402
 from shared.data import CACHE_DIR  # noqa: E402
 
 TEMP_DIR = CACHE_DIR
+
+# Native Linux media artwork cache (libmediaart). Optional: when the GI
+# namespace is unavailable we transparently fall back to our own cache dir,
+# so the service keeps working without adding a hard dependency.
+try:
+    gi.require_version("MediaArt", "2.0")
+    from gi.repository import MediaArt
+
+    _MEDIAART_AVAILABLE = True
+except (ValueError, ImportError):
+    MediaArt = None
+    _MEDIAART_AVAILABLE = False
+
+
+def _mediaart_cache_path(artist: str | None, album: str | None, title: str | None):
+    """Standard media-art cache path for a track, or None when unavailable.
+
+    Does NOT download; merely derives the canonical cache location so we can
+    both look artwork up and store new downloads following the same rules.
+    """
+    if not _MEDIAART_AVAILABLE:
+        return None
+    try:
+        result = MediaArt.get_path(
+            artist or None, album or None, title or None, MediaArt.Type.ALBUM
+        )
+    except Exception as e:
+        logger.debug(f"MediaArt.get_path failed: {e}")
+        return None
+    # PyGObject return shape varies by version: (found, path, uri) or (path, uri).
+    if isinstance(result, tuple):
+        if len(result) == 3:
+            found, path, _uri = result
+        elif len(result) == 2:
+            found, path = True, result[0]
+        else:
+            return None
+        return path if found else None
+    return result
 
 
 class PlayerService(Service):
@@ -95,19 +135,19 @@ class PlayerService(Service):
     def play_pause(self, *_):
         try:
             self._player.play_pause()
-        except Exception as e:
+        except GLib.Error as e:
             logger.warning(f"play_pause failed: {e}")
 
     def next(self, *_):
         try:
             self._player.next()
-        except Exception as e:
+        except GLib.Error as e:
             logger.warning(f"next failed: {e}")
 
     def previous(self, *_):
         try:
             self._player.previous()
-        except Exception as e:
+        except GLib.Error as e:
             logger.warning(f"previous failed: {e}")
 
     def __init__(self, player: Playerctl.Player, **kwargs):
@@ -117,6 +157,7 @@ class PlayerService(Service):
         self._current_artwork_path = ""
         self._is_cleaning_up = False
         self._signal_ids = []
+        self._last_emitted_status = ""
 
         self._signal_ids.append(
             self._player.connect("playback-status", self.on_playback_status)
@@ -124,7 +165,6 @@ class PlayerService(Service):
         self._signal_ids.append(self._player.connect("metadata", self.on_metadata))
         self._signal_ids.append(self._player.connect("seeked", self.on_seeked))
 
-        self.status = self._player.props.playback_status
         self._pos_polling = False  # guard: Fabricator.start() blindly creates a new
         # GLib timer every call — this flag prevents stacking
         self.pos_fabricator = Fabricator(
@@ -143,10 +183,47 @@ class PlayerService(Service):
         try:
             metadata = self._player.props.metadata
             if metadata:
-                self.meta_change(metadata, self._player)
+                # meta_change emission must not block artwork discovery.
+                try:
+                    self.meta_change(metadata, self._player)
+                except Exception as e:
+                    logger.debug(f"meta_change emit failed: {e}")
                 self._handle_artwork(metadata)
         except Exception as e:
             logger.warning(f"Failed to initialize metadata: {e}")
+
+        # Playerctl loads player properties asynchronously. For a player that
+        # was already playing before Modus started, the initial metadata read
+        # above can be empty, and the `metadata` signal only fires on *change*
+        # — so it would never re-fire and artwork would stay missing. Browser
+        # players (YouTube in Firefox/Chromium) in particular populate
+        # `mpris:artUrl` lazily, seconds after playback begins. Re-read metadata
+        # repeatedly for a short window so the artwork is eventually picked up.
+        GLib.timeout_add(500, self._refresh_initial_state, 0)
+
+    def _refresh_initial_state(self, attempt: int = 0):
+        if self._is_cleaning_up:
+            return False
+        try:
+            metadata = self._player.props.metadata
+        except Exception:
+            return False
+        if metadata:
+            # Push full metadata only once to avoid UI churn on every retry.
+            if attempt == 0:
+                try:
+                    self.meta_change(metadata, self._player)
+                except Exception as e:
+                    logger.debug(f"meta_change emit failed: {e}")
+            self._handle_artwork(metadata)
+            self.fabricating(metadata)
+            # Stop as soon as artwork was found/queued.
+            if self._current_artwork_hash:
+                return False
+        # Retry for ~10s (browser players can be very slow to expose artUrl).
+        if attempt < 12:
+            GLib.timeout_add(800, self._refresh_initial_state, attempt + 1)
+        return False
 
     def get_artwork(self) -> str:
         return self._current_artwork_path
@@ -181,14 +258,17 @@ class PlayerService(Service):
         current = self.get_position() / 1_000_000
         try:
             self._player.set_position(int(pos * 1_000_000))
-        except Exception:
+        except GLib.Error:
             try:
                 offset = pos - current
                 self._player.seek(int(offset * 1_000_000))
-            except Exception:
-                import os
-
-                os.system(f"playerctl -p {self.player_name} position {pos}")
+            except GLib.Error:
+                name = self.player_name
+                if name:
+                    # No shell: pass args as a list so player_name can't inject.
+                    exec_shell_command_async(
+                        ["playerctl", "-p", name, "position", str(pos)]
+                    )
         finally:
             if self.playback_status.lower() == "playing":
                 self._start_pos_fabricator()
@@ -232,6 +312,11 @@ class PlayerService(Service):
                 dur = metadata["mpris:length"] / 1_000_000
             except Exception:
                 dur = 0
+            # Browser players (YouTube in Firefox/Chromium) populate
+            # `mpris:artUrl` lazily and don't reliably emit the `metadata`
+            # signal. Since fabricating runs every 2s while playing, this also
+            # polls the artwork so it shows up even for an already-playing tab.
+            self._handle_artwork(metadata)
         self.track_position(pos, dur)
 
     def on_seeked(self, player, position):
@@ -240,97 +325,144 @@ class PlayerService(Service):
         if self.playback_status.lower() == "playing":
             self._start_pos_fabricator()
 
-    def on_playback_status(self, player, status):
-        """DBus signal handler - instant when it fires (e.g. Modus buttons)."""
+    def _notify_playback(self, status_str: str):
+        """Emit play/pause once per actual state change (dedupes the
+        Playerctl signal and the status Fabricator so listeners don't churn)."""
         if self._is_cleaning_up:
             return
-        self.status = status
-        self.poll_progress()
-        if self.playback_status.lower() == "playing":
+        status_str = (status_str or "").lower()
+        if status_str == self._last_emitted_status:
+            return
+        self._last_emitted_status = status_str
+        if status_str == "playing":
             self.play()
         else:
             self.pause()
 
-    def _on_polled_status_change(self, new_status: str):
-        """Fabricator-driven status change - fires reliably every second."""
+    def on_playback_status(self, player, status):
+        """DBus signal handler - instant when it fires (e.g. Modus buttons)."""
         if self._is_cleaning_up:
             return
         self.poll_progress()
-        if new_status.lower() == "playing":
-            self.play()
-        else:
-            self.pause()
+        self._notify_playback(self.playback_status)
+
+    def _on_polled_status_change(self, new_status: str):
+        """Fabricator-driven status change - fires reliably for browser players
+        that don't emit playback-status signals."""
+        if self._is_cleaning_up:
+            return
+        self.poll_progress()
+        self._notify_playback(new_status)
 
     def on_metadata(self, player, metadata):
         if self._is_cleaning_up:
             return
         self.meta_change(metadata, player)
-        self._handle_artwork(metadata)
         self.fabricating(metadata)
+
+    def _meta_str(self, metadata, key: str) -> str | None:
+        try:
+            value = metadata[key]
+        except (KeyError, TypeError, GLib.Error):
+            return None
+        if isinstance(value, (list, tuple)):
+            return " ".join(str(v) for v in value) if value else None
+        return str(value) if value else None
+
+    def _find_cached_artwork(self, metadata) -> str | None:
+        """Locate already-cached artwork for this track (native MediaArt cache)."""
+        if not _MEDIAART_AVAILABLE:
+            return None
+        artist = self._meta_str(metadata, "xesam:artist")
+        album = self._meta_str(metadata, "xesam:album")
+        title = self._meta_str(metadata, "xesam:title")
+        if not (artist or album or title):
+            return None
+        base = _mediaart_cache_path(artist, album, title)
+        if not base:
+            return None
+        base = Path(base)
+        if base.exists():
+            return str(base)
+        # MediaArt files usually carry an extension; look for any sibling.
+        matches = list(base.parent.glob(base.stem + ".*"))
+        return str(matches[0]) if matches else None
+
+    def _existing_local_artwork(self, artwork_hash: str, metadata) -> str | None:
+        cached = self._find_cached_artwork(metadata)
+        if cached:
+            return cached
+        cache_dir = TEMP_DIR / "player-art"
+        matches = list(cache_dir.glob(f"{artwork_hash}.*"))
+        return str(matches[0]) if matches else None
 
     def _handle_artwork(self, metadata):
         if self._is_cleaning_up:
             return
         try:
             art_url = metadata["mpris:artUrl"]
-        except Exception:
+        except (KeyError, TypeError):
+            return
+        if not art_url:
             return
         artwork_hash = hashlib.md5(art_url.encode()).hexdigest()
 
         if artwork_hash == self._current_artwork_hash:
             return
-
         self._current_artwork_hash = artwork_hash
-        parsed = urllib.parse.urlparse(art_url)
 
+        parsed = urllib.parse.urlparse(art_url)
         if parsed.scheme == "file":
-            self._set_artwork(urllib.parse.unquote(parsed.path))
-        elif parsed.scheme in ("http", "https"):
-            GLib.Thread.new(
-                "download-artwork",
-                self._download_artwork,
-                art_url,
-                artwork_hash,
-            )
+            local = urllib.parse.unquote(parsed.path)
+            if Path(local).exists():
+                self._set_artwork(local)
+            return
+
+        if parsed.scheme in ("http", "https"):
+            existing = self._existing_local_artwork(artwork_hash, metadata)
+            if existing and Path(existing).exists():
+                self._set_artwork(existing)
+                return
+            threading.Thread(
+                target=self._download_artwork,
+                args=(art_url, artwork_hash, metadata),
+                daemon=True,
+            ).start()
 
     def _set_artwork(self, path: str):
+        if self._is_cleaning_up:
+            return
         self._current_artwork_path = path
         self.artwork_change(path)
 
-    def _download_artwork(self, art_url: str, artwork_hash: str):
+    def _artwork_target_path(self, artwork_hash: str, metadata, suffix: str) -> Path:
+        """Where to store a freshly downloaded cover: the standard MediaArt
+        cache location when available, otherwise our own fallback cache."""
+        ma_base = self._find_cached_artwork(metadata)
+        if ma_base:
+            base = Path(ma_base)
+            return base.parent / (base.stem + suffix)
+        cache_dir = TEMP_DIR / "player-art"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        return cache_dir / f"{artwork_hash}{suffix}"
+
+    def _download_artwork(self, art_url: str, artwork_hash: str, metadata):
         if self._is_cleaning_up:
             return
         try:
-            cache_dir = TEMP_DIR / "player-art"
-            cache_dir.mkdir(parents=True, exist_ok=True)
+            with urllib.request.urlopen(art_url, timeout=5) as response:
+                data = response.read()
+                suffix = (
+                    mimetypes.guess_extension(response.info().get_content_type())
+                    or ".png"
+                )
+                target = self._artwork_target_path(artwork_hash, metadata, suffix)
+                tmp = target.with_suffix(target.suffix + ".tmp")
+                tmp.write_bytes(data)
+                tmp.replace(target)
 
-            filename_hash = hashlib.md5(art_url.encode()).hexdigest()
-            parsed = urllib.parse.urlparse(art_url)
-
-            local_arturl = None
-            url_suffix = Path(parsed.path).suffix
-            if url_suffix:
-                test_path = cache_dir / f"{filename_hash}{url_suffix}"
-                if test_path.exists():
-                    local_arturl = test_path
-            else:
-                existing = list(cache_dir.glob(f"{filename_hash}.*"))
-                if existing:
-                    local_arturl = existing[0]
-
-            if not local_arturl:
-                with urllib.request.urlopen(art_url, timeout=5) as response:
-                    data = response.read()
-                    suffix = (
-                        mimetypes.guess_extension(response.info().get_content_type())
-                        or ".png"
-                    )
-                    local_arturl = cache_dir / f"{filename_hash}{suffix}"
-                    tmp = local_arturl.with_suffix(".tmp")
-                    tmp.write_bytes(data)
-                    tmp.replace(local_arturl)
-
-            GLib.idle_add(self._set_artwork, str(local_arturl))
+            if not self._is_cleaning_up:
+                GLib.idle_add(self._set_artwork, str(target))
 
         except Exception as e:
             logger.error(f"Failed to download artwork: {e}")

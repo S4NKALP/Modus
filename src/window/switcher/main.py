@@ -612,13 +612,6 @@ class ApplicationSwitcher(Window):
             if addr in self._addr_to_idx:
                 self._capture.capture_by_handle(addr, 300, 168, False)
 
-    def _refill_and_pump(self):
-        # Called when the switcher becomes visible or windows change
-        if not self.get_visible():
-            return False
-        self._pump_capture_queue()
-        return False
-
     def grab_keyboard(self):
         try:
             display = Gdk.Display.get_default()

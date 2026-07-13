@@ -403,3 +403,14 @@ class BatteryControl(Box):
 
     def on_profile_changed(self, service, *args):
         self.update_energy_mode_buttons()
+
+    def destroy(self):
+        try:
+            self.battery_service.disconnect_by_func(self.on_battery_changed)
+        except Exception:
+            pass
+        try:
+            self.battery_service.disconnect_by_func(self.on_profile_changed)
+        except Exception:
+            pass
+        super().destroy()
