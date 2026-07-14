@@ -1,5 +1,5 @@
 #notif-close-button {
-  background-color: var(--surface);
+  background-color: @glass-surface-1;
   border-radius: apply(radius-lg);
   padding: 4px;
   transition: background-color apply(transition-fast);
@@ -7,15 +7,15 @@
 
 #notif-close-button:hover,
 #notif-close-button:focus {
-  background-color: var(--surface-bright);
+  background-color: @glass-active;
 }
 
 #notif-close-button:active {
-  background-color: var(--red-dim);
+  background-color: @glass-error;
 }
 
 #notif-close-label {
-  color: var(--red-dim);
+  color: @glass-error;
   font-size: 20px;
 }
 

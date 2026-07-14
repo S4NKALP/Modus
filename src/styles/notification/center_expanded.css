@@ -1,7 +1,7 @@
 /* Expanded notification group header */
 #notification-group-header {
-  background-color: @bg-a50;
-  border: 1px solid @bg-a90;
+  background-color: @glass-popup;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-md) apply(radius-md) 0 0;
   padding: 8px 12px;
   margin: 2px 0 0 0;
@@ -15,8 +15,8 @@
 
 #notification-show-less {
   background-color: transparent;
-  color: @fg-a70;
-  border: 1px solid @fg-a20;
+  color: @glass-text-secondary;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-xs);
   padding: 2px 8px;
   font-size: apply(font-xs);
@@ -24,14 +24,14 @@
 }
 
 #notification-show-less:hover {
-  background-color: alpha(@fg-a40, 0.7);
-  color: @fg-a90;
+  background-color: @glass-active;
+  color: @glass-text;
 }
 
 #notification-close-all {
   background-color: transparent;
-  color: @fg-a70;
-  border: 1px solid @fg-a20;
+  color: @glass-text-secondary;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-xs);
   padding: 2px 8px;
   font-size: apply(font-sm);
@@ -39,15 +39,15 @@
 }
 
 #notification-close-all:hover {
-  background-color: @error-a20;
-  color: @fg-a90;
-  border-color: @error-a40;
+  background-color: @glass-error;
+  color: @foreground;
+  border-color: @glass-error;
 }
 
 /* Expanded notification list */
 #notification-group-expanded {
-  border: 1px solid @bg-a90;
+  border: 1px solid @glass-border;
   border-top: none;
   border-radius: 0 0 apply(radius-md) apply(radius-md);
-  /* background-color: @shadow-a02; */
+  /* background-color: @glass-overlay-light; */
 }

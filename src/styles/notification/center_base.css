@@ -1,7 +1,7 @@
 #noti-center-box {
   background-color: transparent;
 
-  /* border: 1px solid @outline-a30; */
+  /* border: 1px solid @glass-border; */
   border-radius: apply(radius-xl);
   margin-right: 10px;
   /* padding: 20px; */
@@ -10,10 +10,10 @@
 
 #noti-clear-button {
   /* min-width: 10px; */
-  background-color: @bg-a50;
+  background-color: @glass-popup;
   min-height: 25px;
   min-width: 70px;
-  border: 1px solid @bg-a90;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-md);
   margin-top: 10px;
 }
@@ -23,5 +23,5 @@
 }
 
 #noti-clear-button:hover {
-  background-color: @fg-a10;
+  background-color: @glass-hover;
 }

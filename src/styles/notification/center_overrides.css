@@ -6,7 +6,7 @@
   font-weight: bold;
 }
 #notification-show-less {
-  background-color: @bg-a50;
+  background-color: @glass-popup;
   font-size: apply(font-sm);
   margin: 10px;
   border-radius: apply(radius-md);
@@ -30,10 +30,10 @@
   font-size: apply(font-md);
 }
 #notification-centre-notifs {
-  background-color: @bg-a50;
+  background-color: @glass-popup;
   min-height: 40px;
   padding: 10px;
-  border: 1px solid @bg-a90;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-md);
 }
 
@@ -51,7 +51,7 @@
   border-radius: apply(radius-full);
 }
 #notification-close:hover {
-  background-color: alpha(@bg-a80, 0.8);
+  background-color: @glass-active;
   min-width: 23px;
   min-height: 23px;
   border-radius: apply(radius-full);

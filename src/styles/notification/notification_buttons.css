@@ -1,20 +1,20 @@
 #notification-close-button {
-  background-color: alpha(@fg-a40, 0.3);
+  background-color: @glass-hover;
   border-radius: apply(radius-sm);
 }
 #notification-close-button:hover {
-  background-color: @primary-a90;
+  background-color: @glass-active;
 }
 
 #notification-action-buttons button {
-  background-color: alpha(@fg-a40, 0.3);
+  background-color: @glass-hover;
   padding: 4px;
   border-radius: apply(radius-sm);
   transition: background-color apply(transition-fast);
 }
 
 #notification-action-buttons button:hover {
-  background-color: @primary-a90;
+  background-color: @glass-active;
 }
 
 #notification-action-buttons button:active {
