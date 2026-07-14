@@ -11,7 +11,7 @@ from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.mpris import PlayerManager, PlayerService
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 from window.controlcenter.player import (
     PLAYER_FALLBACK_ART,
     apply_player_art,
@@ -416,7 +416,7 @@ class PlayerBox(Box):
 
         initial_status = str(self.player.playback_status).lower()
         icon_file = (
-            "player/play.svg" if initial_status == "paused" else "player/Pause.svg"
+            "player/play.svg" if initial_status == "paused" else "player/pause.svg"
         )
         self.play_pause_icon = svg_file(icon_file, size=22)
         self.play_pause_button = Button(
@@ -433,7 +433,7 @@ class PlayerBox(Box):
         )
         self.prev_button = Button(
             name="macos-control-button",
-            child=svg_file("player/Rewind.svg", size=22),
+            child=svg_file("player/rewind.svg", size=22),
             style_classes=["control-buttons"],
             on_clicked=self._on_player_prev,
         )
@@ -638,7 +638,7 @@ class PlayerBox(Box):
         try:
             status = str(self.player.playback_status).lower()
             self.play_pause_icon.dynamic_file(
-                "player/play.svg" if status == "paused" else "player/Pause.svg"
+                "player/play.svg" if status == "paused" else "player/pause.svg"
             )
         except Exception as e:
             logger.error(f"An error occurred: {e}")
@@ -651,7 +651,7 @@ class PlayerBox(Box):
             self._last_notified_status = current_status
 
             icon_file = (
-                "player/play.svg" if current_status == "paused" else "player/Pause.svg"
+                "player/play.svg" if current_status == "paused" else "player/pause.svg"
             )
             if hasattr(self, "play_pause_icon"):
                 self.play_pause_icon.dynamic_file(icon_file)
@@ -659,7 +659,7 @@ class PlayerBox(Box):
                 # Fallback if play_pause_icon isn't available
                 import os
 
-                from utils.utils import get_relative_path
+                from utils.gtk_utils import get_relative_path
 
                 self.play_pause_button.get_child().set_from_file(
                     os.path.join(get_relative_path("assets/icons/"), icon_file)

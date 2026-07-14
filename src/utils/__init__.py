@@ -1,4 +1,4 @@
 """
-Modus services package.
-Contains background services and utilities for the shell.
+Modus utilities package.
+Contains helper functions and utility modules for the shell.
 """

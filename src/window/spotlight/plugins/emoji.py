@@ -164,7 +164,7 @@ class EmojiPlugin(SpotlightPlugin):
 
             result = self._normalize_annotations(raw) or None
             if result:
-                logger.info(f"[Emoji] Normalized {len(result)} emojis")
+                logger.debug(f"[Emoji] Normalized {len(result)} emojis")
             else:
                 logger.error("[Emoji] Normalization returned empty")
             return result

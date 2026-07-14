@@ -9,8 +9,8 @@ from services.network import NetworkClient
 from shared.window.applet_window import AppletWindow
 from shared.window.battery_widget import BatteryControl
 from utils.functions import format_duration, get_wifi_icon_for_strength
+from utils.gtk_utils import setup_cursor_hover, svg_file
 from utils.roam import modus_service
-from utils.utils import setup_cursor_hover, svg_file
 from window.controlcenter.bluetooth import BluetoothConnections
 from window.controlcenter.wifi import WifiConnections
 
@@ -387,9 +387,6 @@ class BatteryIndicator(Box):
     def _get_time_to_full(self):
         return self.battery_service.time_to_full
 
-    def _format_time(self, seconds: int) -> str:
-        return format_duration(seconds)
-
     def _get_battery_icon_file(self, percentage: int, is_charging: bool) -> str:
         clamped = max(0, min(100, percentage))
         step = (clamped // 10) * 10
@@ -406,11 +403,11 @@ class BatteryIndicator(Box):
             battery_state = f"{state_str}:{percentage}%"
 
             if state_str == "discharging":
-                time_to_empty = self._format_time(self._get_time_to_empty())
+                time_to_empty = format_duration(self._get_time_to_empty())
                 if time_to_empty != "N/A":
                     battery_state += f":{time_to_empty}"
             elif state_str == "charging":
-                time_to_full = self._format_time(self._get_time_to_full())
+                time_to_full = format_duration(self._get_time_to_full())
                 if time_to_full != "N/A":
                     battery_state += f":{time_to_full}"
 
@@ -421,11 +418,11 @@ class BatteryIndicator(Box):
 
         if state == "CHARGING":
             tooltip += " (Charging)"
-            time_to_full = self._format_time(self._get_time_to_full())
+            time_to_full = format_duration(self._get_time_to_full())
             if time_to_full != "N/A":
                 tooltip += f" - {time_to_full} until full"
         elif state == "DISCHARGING":
-            time_to_empty = self._format_time(self._get_time_to_empty())
+            time_to_empty = format_duration(self._get_time_to_empty())
             if time_to_empty != "N/A":
                 tooltip += f" - {time_to_empty} remaining"
         elif state == "FULLY_CHARGED":

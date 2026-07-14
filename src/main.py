@@ -23,7 +23,7 @@ for log in [
     "services",
     "window",
     "utils",
-    "globalmenu",
+    "window.globalmenu",
 ]:
     logger.disable(log)
 
@@ -45,7 +45,7 @@ def main():
     # Generate colors.css if it doesn't exist
     colors_css_path = get_relative_path("styles/colors.css")
     if not os.path.exists(colors_css_path):
-        from utils.utils import generate_colors_from_wallpaper
+        from utils.gtk_utils import generate_colors_from_wallpaper
 
         default_wallpaper = get_relative_path("assets/wallpaper_example/example-1.png")
         if os.path.exists(default_wallpaper):

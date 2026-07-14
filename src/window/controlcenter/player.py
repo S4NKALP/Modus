@@ -9,7 +9,7 @@ from fabric.widgets.stack import Stack
 
 import shared.data as data
 from services.mpris import PlayerManager, PlayerService
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 PLAYER_FALLBACK_ART = get_relative_path("../../assets/icons/music.svg")
@@ -357,7 +357,7 @@ class PlayerBox(Box):
 
         initial_status = str(self.player.playback_status).lower()
         icon_file = (
-            "player/play.svg" if initial_status == "paused" else "player/Pause.svg"
+            "player/play.svg" if initial_status == "paused" else "player/pause.svg"
         )
         self.play_pause_icon = svg_file(icon_file, size=22)
         self.play_pause_button = Button(
@@ -538,7 +538,7 @@ class PlayerBox(Box):
         try:
             status = str(self.player.playback_status).lower()
             self.play_pause_icon.dynamic_file(
-                "player/play.svg" if status == "paused" else "player/Pause.svg"
+                "player/play.svg" if status == "paused" else "player/pause.svg"
             )
         except Exception as e:
             logger.error(f"An error occurred: {e}")
@@ -553,7 +553,7 @@ class PlayerBox(Box):
         self._last_notified_status = current_status
 
         self.play_pause_icon.dynamic_file(
-            "player/play.svg" if current_status == "paused" else "player/Pause.svg"
+            "player/play.svg" if current_status == "paused" else "player/pause.svg"
         )
         if self.player_stack:
             self.player_stack.on_player_playback_changed(self, current_status)

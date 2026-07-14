@@ -23,9 +23,9 @@ from services.modus import (
     launch_app,
     open_trash,
 )
-from utils.functions import is_special_workspace_id
+from utils.functions import clear_children, is_special_workspace_id
+from utils.gtk_utils import svg_file
 from utils.icon_resolver import IconResolver
-from utils.utils import svg_file
 
 from .animator import DockAnimator
 from .constants import (
@@ -779,9 +779,7 @@ class DockCanvas(Gtk.DrawingArea):
         client=None,
         instance_address: Optional[str] = None,
     ) -> None:
-        for child in self.menu.get_children():
-            self.menu.remove(child)
-            child.destroy()
+        clear_children(self.menu)
 
         if instance_address:
             close_item = Gtk.MenuItem(label="Close")
@@ -929,7 +927,7 @@ class DockCanvas(Gtk.DrawingArea):
             if command_line:
                 launch_app(command_line)
             elif hasattr(app_info, "launch"):
-                from globalmenu.launch import launch_desktop_app
+                from window.globalmenu.launch import launch_desktop_app
 
                 launch_desktop_app(app_info)
             else:

@@ -1,7 +1,6 @@
 import importlib
 import importlib.util
 import inspect
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -237,53 +236,34 @@ class PluginLoader:
 
     def _create_venv(self, venv_dir: Path) -> bool:
         """Create a virtualenv using uv."""
-        try:
-            result = subprocess.run(
-                ["uv", "venv", str(venv_dir)],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                logger.error(f"[PluginLoader] uv venv failed: {result.stderr[:300]}")
-            return result.returncode == 0
-        except FileNotFoundError:
-            logger.error("[PluginLoader] uv not found — install it first")
-            return False
-        except Exception as e:
-            logger.error(f"[PluginLoader] Failed to create venv: {e}")
-            return False
+        from utils.functions import run_command
+
+        result = run_command(["uv", "venv", str(venv_dir)], timeout=30)
+        if result.returncode != 0:
+            logger.error(f"[PluginLoader] uv venv failed: {result.stderr[:300]}")
+        return result.returncode == 0
 
     def _install_deps(self, venv_dir: Path, req_file: Path) -> bool:
         """Install dependencies from requirements.txt using uv."""
+        from utils.functions import run_command
+
         venv_python = venv_dir / "bin" / "python"
-        try:
-            result = subprocess.run(
-                [
-                    "uv",
-                    "pip",
-                    "install",
-                    "-r",
-                    str(req_file),
-                    "--python",
-                    str(venv_python),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=120,
-            )
-            if result.returncode != 0:
-                logger.error(
-                    f"[PluginLoader] uv pip install failed: {result.stderr[:500]}"
-                )
-                return False
-            return True
-        except FileNotFoundError:
-            logger.error("[PluginLoader] uv not found — install it first")
+        result = run_command(
+            [
+                "uv",
+                "pip",
+                "install",
+                "-r",
+                str(req_file),
+                "--python",
+                str(venv_python),
+            ],
+            timeout=120,
+        )
+        if result.returncode != 0:
+            logger.error(f"[PluginLoader] uv pip install failed: {result.stderr[:500]}")
             return False
-        except Exception as e:
-            logger.error(f"[PluginLoader] Failed to install deps: {e}")
-            return False
+        return True
 
     def _find_site_packages(self, venv_dir: Path) -> Path | None:
         """Find site-packages directory in a venv."""

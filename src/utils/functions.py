@@ -2,6 +2,7 @@ import ctypes
 import html
 import json
 import os
+import re
 import subprocess
 import threading
 from collections.abc import Callable
@@ -67,37 +68,54 @@ def set_process_name(name: str):
     libc.prctl(15, name.encode("utf-8"), 0, 0, 0)  # 15 = PR_SET_NAME
 
 
-def parse_timeout_string(timeout_str):
+_DURATION_RE = re.compile(
+    r"^\s*(\d+)\s*(s|sec|secs|m|min|mins|h|hr|hrs|hour|hours)?\s*$",
+    re.IGNORECASE,
+)
+_UNIT_SECS = {
+    "s": 1,
+    "sec": 1,
+    "secs": 1,
+    "m": 60,
+    "min": 60,
+    "mins": 60,
+    "h": 3600,
+    "hr": 3600,
+    "hrs": 3600,
+    "hour": 3600,
+    "hours": 3600,
+}
+
+
+def parse_timeout_string(timeout_str, in_seconds=False):
     """
-    Parse timeout string in format like '5s', '10m', '30s' etc.
-    Returns timeout in milliseconds.
+    Parse timeout string in format like '5s', '10m', '2hr', '1hour' etc.
+
+    Args:
+        timeout_str: String to parse (e.g., "5s", "10m", "2hr", "1hour")
+        in_seconds: If True, return seconds; if False, return milliseconds
+
+    Returns:
+        Parsed time value (milliseconds by default, seconds if in_seconds=True)
+        Returns 5000 (ms) or 5 (s) as default on parse failure.
     """
     if not timeout_str or not isinstance(timeout_str, str):
-        return 5000
+        return 5 if in_seconds else 5000
 
-    timeout_str = timeout_str.strip().lower()
+    m = _DURATION_RE.match(timeout_str.strip())
+    if not m:
+        logger.warning(f"[functions] Could not parse timeout string: {timeout_str}")
+        return 5 if in_seconds else 5000
 
-    if timeout_str.endswith("s"):
-        try:
-            seconds = int(timeout_str[:-1])
-            return seconds * 1000
-        except ValueError as e:
-            logger.warning(f"[functions] seconds = int(timeout_str[:-1]) failed: {e}")
-            return 5000
-    elif timeout_str.endswith("m"):
-        try:
-            minutes = int(timeout_str[:-1])
-            return minutes * 60 * 1000
-        except ValueError as e:
-            logger.warning(f"[functions] minutes = int(timeout_str[:-1]) failed: {e}")
-            return 5000
+    value = int(m.group(1))
+    unit = m.group(2)  # None means bare number (seconds)
+
+    if unit is None:
+        seconds = value
     else:
-        try:
-            seconds = int(timeout_str)
-            return seconds * 1000
-        except ValueError as e:
-            logger.warning(f"[functions] seconds = int(timeout_str) failed: {e}")
-            return 5000
+        seconds = value * _UNIT_SECS.get(unit.lower(), 1)
+
+    return seconds if in_seconds else seconds * 1000
 
 
 # Threading helper functions

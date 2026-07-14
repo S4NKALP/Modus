@@ -15,7 +15,7 @@ from tomlkit import dump as toml_dump
 from tomlkit import load as toml_load
 from tomlkit.items import Array, Bool, Integer, String
 
-from utils.utils import toml_file
+from utils.gtk_utils import toml_file
 
 
 class ConfigService:

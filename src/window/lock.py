@@ -14,7 +14,7 @@ from gi.repository import GtkSessionLock  # pyright: ignore[reportAttributeAcces
 
 from shared.widgets.circle_image import CircleImage as Image
 from utils.functions import set_process_name
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 from window.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,

@@ -9,7 +9,7 @@ from fabric.widgets.stack import Stack
 
 from services.config import config, on_config_change
 from shared.widgets.smooth_switch import SmoothSwitch
-from utils.utils import setup_cursor_hover, svg_file
+from utils.gtk_utils import setup_cursor_hover, svg_file
 
 
 class SettingsRow(CenterBox):

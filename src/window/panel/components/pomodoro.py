@@ -2,7 +2,7 @@ import os
 from enum import Enum
 from pathlib import Path
 
-from fabric.utils import GLib, Gtk
+from fabric.utils import GLib, Gtk, exec_shell_command_async
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
@@ -367,14 +367,14 @@ class Pomodoro(AppletWindow):
             if self.current_cycle >= self.max_cycles:
                 self.state = PomodoroState.LONG_BREAK
                 self.total_time = self.long_break_mins * 60
-                os.system(
-                    'notify-send "Pomodoro" "Focus session complete! Time for a long break." &'
+                exec_shell_command_async(
+                    'notify-send "Pomodoro" "Focus session complete! Time for a long break."'
                 )
             else:
                 self.state = PomodoroState.SHORT_BREAK
                 self.total_time = self.short_break_mins * 60
-                os.system(
-                    'notify-send "Pomodoro" "Focus session complete! Time for a short break." &'
+                exec_shell_command_async(
+                    'notify-send "Pomodoro" "Focus session complete! Time for a short break."'
                 )
         else:
             if self.state == PomodoroState.LONG_BREAK:
@@ -384,7 +384,9 @@ class Pomodoro(AppletWindow):
 
             self.state = PomodoroState.FOCUS
             self.total_time = self.focus_mins * 60
-            os.system('notify-send "Pomodoro" "Break over! Time to focus." &')
+            exec_shell_command_async(
+                'notify-send "Pomodoro" "Break over! Time to focus."'
+            )
 
         self.play_sound()
         self.time_left = self.total_time
@@ -415,7 +417,7 @@ class Pomodoro(AppletWindow):
 
         if os.path.exists(sound_file):
             vol = float(self.volume) / 100.0
-            os.system(f"pw-play --volume={vol} '{sound_file}' &")
+            exec_shell_command_async(f"pw-play --volume={vol} '{sound_file}'")
 
     def _update_display(self):
         mins = self.time_left // 60

@@ -186,7 +186,7 @@ class PluginManager:
         entry.instance = None
 
     def _config_path(self) -> Path:
-        from utils.utils import toml_file
+        from utils.gtk_utils import toml_file
 
         return Path(toml_file("config.toml")).parent / "plugins.json"
 
@@ -195,12 +195,12 @@ class PluginManager:
         if not path.exists():
             self._disabled_ids = set()
             return
-        try:
-            with open(path) as f:
-                data = json.load(f)
+        from utils.functions import read_json_file
+
+        data = read_json_file(str(path))
+        if data is not None:
             self._disabled_ids = set(data.get("disabled", []))
-        except Exception as e:
-            logger.error(f"[PluginManager] Failed to load disabled list: {e}")
+        else:
             self._disabled_ids = set()
 
     def _save_disabled_list(self) -> None:

@@ -75,7 +75,7 @@ class ApplicationPlugin(SpotlightPlugin):
 
     @staticmethod
     def _launch_app(app: DesktopApp) -> None:
-        from globalmenu.launch import launch_desktop_app
+        from window.globalmenu.launch import launch_desktop_app
 
         launch_desktop_app(app)
 

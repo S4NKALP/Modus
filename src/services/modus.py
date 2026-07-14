@@ -561,7 +561,7 @@ def close_window(address: str):
 
 
 def launch_app(command_line: str):
-    from globalmenu.launch import launch_command
+    from window.globalmenu.launch import launch_command
 
     launch_command(command_line)
 

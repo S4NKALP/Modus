@@ -17,9 +17,9 @@ from fabric.utils import (
     os,
 )
 
-from globalmenu.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
-from globalmenu.environment import setup_global_menu_environment
-from globalmenu.gtkmenu import ActionMenuClient, GtkMenuClient
+from window.globalmenu.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
+from window.globalmenu.environment import setup_global_menu_environment
+from window.globalmenu.gtkmenu import ActionMenuClient, GtkMenuClient
 
 _NODE_NAME_RE = re.compile(r'<node name="([^"]+)"')
 

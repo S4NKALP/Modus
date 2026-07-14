@@ -6,7 +6,7 @@ from services.modus import (
     is_night_light_active,
     toggle_night_light,
 )
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 
 def create_night_light_widget(control_center):

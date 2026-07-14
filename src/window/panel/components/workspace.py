@@ -4,7 +4,7 @@ from fabric.widgets.box import Box
 
 from services.config import get_config, on_config_change
 from utils.functions import is_special_workspace_id
-from utils.utils import setup_cursor_hover
+from utils.gtk_utils import setup_cursor_hover
 
 # TODO: Support multi-monitor setups
 

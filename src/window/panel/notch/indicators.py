@@ -8,7 +8,7 @@ from services.battery import Battery
 from services.capslock import CapsLock
 from services.keyboard_layout import KeyboardLayout
 from services.numlock import NumLock
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 DISPLAY_MS = 2000  # how long each indicator stays visible (ms)
 

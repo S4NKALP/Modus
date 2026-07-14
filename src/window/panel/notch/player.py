@@ -8,7 +8,7 @@ from fabric.widgets.centerbox import CenterBox
 
 from services.mpris import PlayerService
 from shared.widgets.custom_image import CustomImage
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 # tunables
 _BARS = 8  # number of bars

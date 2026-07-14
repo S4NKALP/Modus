@@ -47,10 +47,11 @@ class TodoService(Service):
 
     def _load_todos(self):
         """Load todos from JSON file"""
+        from utils.functions import read_json_file
+
         try:
             if self._file_path.exists():
-                with open(self._file_path, encoding="utf-8") as f:
-                    self._todos = json.load(f)
+                self._todos = read_json_file(str(self._file_path)) or []
             else:
                 self._todos = []
         except Exception as e:

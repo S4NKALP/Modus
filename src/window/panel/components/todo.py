@@ -9,7 +9,7 @@ from fabric.widgets.label import Label
 from services.todo import get_todo_service
 from shared.window.animated_scrollwindow import AnimatedScrollable
 from shared.window.applet_window import AppletWindow
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 
 class TodoItem(Box):
@@ -379,10 +379,10 @@ class TodoListWidget(AppletWindow):
 
     def _refresh_todos(self, *_):
         """Refresh the entire todo list"""
-        # Clear existing items
+        from utils.functions import clear_children
+
         self.todo_items.clear()
-        for child in self.todos_container.get_children():
-            self.todos_container.remove(child)
+        clear_children(self.todos_container)
 
         # Get all todos
         todos = get_todo_service().todos

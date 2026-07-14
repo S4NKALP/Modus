@@ -9,7 +9,7 @@ from fabric.widgets.separator import Separator
 from services.battery import Battery
 from services.gamemode import GameModeService
 from utils.functions import clear_children, format_duration
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 
 class EnergyModeButton(Box):
@@ -332,9 +332,6 @@ class BatteryControl(Box):
         self.game_mode_button = GameModeButton(parent=self)
         self.game_mode_container.add(self.game_mode_button)
 
-    def _format_time(self, seconds: int) -> str:
-        return format_duration(seconds)
-
     def update_battery_info(self):
         is_present = self.battery_service.available
         if not is_present:
@@ -360,7 +357,7 @@ class BatteryControl(Box):
         if state in ["CHARGING", "PENDING_CHARGE"]:
             self.power_source_label.set_label("Power Source: Power Adapter")
             seconds_to_full = self.battery_service.time_to_full
-            time_to_full = self._format_time(seconds_to_full)
+            time_to_full = format_duration(seconds_to_full)
             if time_to_full != "N/A" and time_to_full != "0m":
                 self.charging_time_label.set_label(
                     f"{time_to_full} until fully charged"
@@ -373,7 +370,7 @@ class BatteryControl(Box):
         elif state in ["DISCHARGING", "PENDING_DISCHARGE"]:
             self.power_source_label.set_label("Power Source: Battery")
             seconds_to_empty = self.battery_service.time_remaining
-            time_to_empty = self._format_time(seconds_to_empty)
+            time_to_empty = format_duration(seconds_to_empty)
             if time_to_empty != "N/A" and not time_to_empty.startswith(
                 "4553h"
             ):  # Filter out unrealistic times

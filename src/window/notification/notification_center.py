@@ -15,7 +15,7 @@ from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
 from shared.widgets.custom_image import CustomImage
 from shared.window.applet_window import AppletWindow
-from utils.functions import escape_markup_text
+from utils.functions import clear_children, escape_markup_text
 from window.notification.notification import (
     NotificationWidget,
     cache_notification_icon,
@@ -704,8 +704,7 @@ class NotificationCenter(AppletWindow):
         self.group_widgets.clear()
 
         # Clear notifications box
-        for child in self.notifications_box.get_children():
-            child.destroy()
+        clear_children(self.notifications_box)
 
         # Group notifications by app name and preload assets with debugging
         for cached_notification in notification_service.cached_notifications:
@@ -811,10 +810,7 @@ class NotificationCenter(AppletWindow):
     def _refresh_group_widget(self, group_widget):
         """Refresh a group widget's content"""
         try:
-            # Remove and destroy existing children
-            for child in group_widget.get_children():
-                group_widget.remove(child)
-                child.destroy()
+            clear_children(group_widget)
 
             # Recreate content (collapsed + expanded states)
             group_widget.create_collapsed_state()
@@ -870,8 +866,7 @@ class NotificationCenter(AppletWindow):
 
             # Clear all remaining cached notification images AND icons
             cleanup_all_notification_caches()
-            for child in self.notifications_box.get_children():
-                child.destroy()
+            clear_children(self.notifications_box)
         except Exception as e:
             logger.error(f"Error clearing notification groups: {e}")
 
@@ -892,8 +887,7 @@ class NotificationCenter(AppletWindow):
 
         # Clear all remaining cached notification images AND icons when clear all is clicked
         cleanup_all_notification_caches()  # Clear ALL caches (icons + images)
-        for child in self.notifications_box.get_children():
-            child.destroy()
+        clear_children(self.notifications_box)
         notification_service.clear_all_cached_notifications()
         self.hide()
 

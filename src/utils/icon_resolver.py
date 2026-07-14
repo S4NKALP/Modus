@@ -14,13 +14,10 @@ class IconResolver:
     def __init__(
         self, default_application_icon: str = "application-x-executable-symbolic"
     ):
+        from utils.functions import read_json_file
+
         if os.path.exists(ICON_CACHE_FILE):
-            with open(ICON_CACHE_FILE) as f:
-                try:
-                    self._icon_dict = json.load(f)
-                except json.JSONDecodeError:
-                    logger.info("[ICONS] Cache file does not exist or is corrupted")
-                    self._icon_dict = {}
+            self._icon_dict = read_json_file(ICON_CACHE_FILE) or {}
         else:
             self._icon_dict = {}
 

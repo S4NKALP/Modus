@@ -11,8 +11,8 @@ from services.inhibit import get_inhibit_service
 from services.network import NetworkClient
 from shared.widgets.flat_scale import FlatScale
 from shared.window.applet_window import AppletWindow
+from utils.gtk_utils import svg_file
 from utils.roam import audio_service, modus_service
-from utils.utils import svg_file
 from window.controlcenter.bluetooth import (
     BluetoothConnections,
     set_bluetooth_enabled_with_fallback,

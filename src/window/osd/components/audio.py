@@ -4,7 +4,7 @@ from fabric.audio import Audio
 from fabric.utils import logger
 from fabric.widgets.scale import ScaleMark
 
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer

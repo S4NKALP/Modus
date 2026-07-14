@@ -271,12 +271,9 @@ class CachedNotifications(Notifications):
 
     def load_cached_notifications(self) -> dict[int, CachedNotification]:
         """Load cached notifications from a JSON file (deserialization)."""
-        try:
-            with open(NOTIFICATION_CACHE_FILE) as file:
-                data = json.load(file)  # Load list of serialized notifications
-        except (FileNotFoundError, json.JSONDecodeError):
-            # If file doesn't exist or is corrupted, start with empty list
-            data = []
+        from utils.functions import read_json_file
+
+        data = read_json_file(NOTIFICATION_CACHE_FILE) or []
 
         max_cache_id = 0
         for notification in data:

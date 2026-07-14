@@ -21,8 +21,8 @@ import re
 
 from fabric.utils import exec_shell_command_async, logger
 
-from globalmenu.detection import executable_gtk_class
-from globalmenu.environment import get_compiled_shim
+from window.globalmenu.detection import executable_gtk_class
+from window.globalmenu.environment import get_compiled_shim
 
 _PERCENT_RE = re.compile(r"%\w+")
 

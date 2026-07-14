@@ -5,12 +5,12 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
-from globalmenu.service import get_global_menu_service
 from shared.dialogs.about import AboutApp, get_about_window
 from shared.window.dropdown import ModusDropdown, dropdown_divider, dropdowns
 from utils.app_name_resolver import format_window
+from utils.gtk_utils import setup_cursor_hover
 from utils.roam import modus_service
-from utils.utils import setup_cursor_hover
+from window.globalmenu.service import get_global_menu_service
 from window.settings.main import get_settings_window
 
 

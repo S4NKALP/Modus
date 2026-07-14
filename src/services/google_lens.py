@@ -31,11 +31,13 @@ class GoogleLens(Service):
         super().__init__(**kwargs)
 
     def capture_region(self, dest_path):
+        from utils.functions import find_binary
+
         # Check for dependencies
-        if run_command(["which", "grim"]).returncode != 0:
+        if not find_binary("grim"):
             raise RuntimeError("grim not found - please install it")
 
-        if run_command(["which", "slurp"]).returncode != 0:
+        if not find_binary("slurp"):
             raise RuntimeError("slurp not found - please install it")
 
         try:

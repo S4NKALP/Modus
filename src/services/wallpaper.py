@@ -51,10 +51,6 @@ def create_thumbnail(
         return False
 
 
-def generate_colors_from_wallpaper(image_path: str) -> bool:
-    return bool(exec_shell_command_async(f'matugen image "{image_path}"'))
-
-
 class WallpaperService(Service):
     @Signal
     def wallpaper_ready(self, image_path: str, thumbnail_path: str) -> None: ...

@@ -16,7 +16,7 @@ from fabric.widgets.overlay import Overlay
 from fabric.widgets.wayland import WaylandWindow as Window
 
 from shared.data import load_config
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 from window.desktop.constants import (
     CALENDAR_UPDATE_INTERVAL,
     LOCATION_APIS,
@@ -465,9 +465,9 @@ class Calendar(Box):
         return True
 
     def update_calendar(self):
-        for child in self.calendar_grid.get_children():
-            self.calendar_grid.remove(child)
-            child.destroy()
+        from utils.functions import clear_children
+
+        clear_children(self.calendar_grid)
         self.month_label.set_label(calendar.month_name[self.current_month])
         cal = calendar.monthcalendar(self.current_year, self.current_month)
         for week in cal:

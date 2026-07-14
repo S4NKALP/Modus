@@ -15,7 +15,7 @@ from utils.functions import (
     get_wifi_icon_for_strength,
     spawn_detached,
 )
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 
 class WifiNetworkSlot(Box):

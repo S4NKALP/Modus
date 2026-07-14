@@ -1,7 +1,7 @@
 from fabric.utils import GLib, get_relative_path, logger, os
 
 from utils.functions import parse_timeout_string
-from utils.utils import toml_file
+from utils.gtk_utils import toml_file
 
 HOME_DIR = GLib.get_home_dir()
 APP_NAME = "modus"

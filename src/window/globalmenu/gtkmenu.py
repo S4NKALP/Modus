@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from fabric.utils import Gio, GLib, logger
 
-from globalmenu.dbusmenu import DBusMenuItem, _get_bus
+from window.globalmenu.dbusmenu import DBusMenuItem, _get_bus
 
 
 def atspi_activate_menu_item(pid: int, label: str) -> bool:

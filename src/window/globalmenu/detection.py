@@ -179,13 +179,9 @@ def _transitive_needed(root: Path) -> set[str]:
 
 
 def _load_cache() -> dict:
-    try:
-        return json.loads(_CACHE_FILE.read_text())
-    except (OSError, json.JSONDecodeError) as e:
-        logger.warning(
-            f"[detection] return json.loads(_CACHE_FILE.read_text()) failed: {e}"
-        )
-        return {}
+    from utils.functions import read_json_file
+
+    return read_json_file(str(_CACHE_FILE)) or {}
 
 
 def _save_cache(cache: dict) -> None:

@@ -9,8 +9,8 @@ from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.config import get_config_all, on_config_change
 from services.modus import notification_service
+from utils.gtk_utils import setup_cursor_hover, svg_file
 from utils.roam import modus_service
-from utils.utils import setup_cursor_hover, svg_file
 from window.controlcenter.main import ModusControlCenter
 from window.notification.notification_center import NotificationCenter
 from window.panel.components.custom_mods import CustomMods

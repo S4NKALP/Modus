@@ -12,7 +12,7 @@ from services.bluetooth import BluetoothClient, BluetoothDevice
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.window.animated_scrollwindow import AnimatedScrollable
 from utils.functions import spawn_detached
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 
 def get_battery_icon_file(

@@ -1,10 +1,10 @@
 import os
-import re
 import signal
 import subprocess
 
 from fabric.utils import logger
 
+from utils.functions import format_duration, parse_timeout_string
 from window.spotlight.api import SearchResult, SpotlightPlugin
 
 _PID_FILE = os.path.join(
@@ -15,24 +15,6 @@ _INHIBIT_WHY = "Modus Caffeine"
 # Spotlight exits on dismiss, so we pin an effectively infinite sleep for
 # indefinite mode instead of relying on an in-process timer.
 _INDEFINITE_SECS = 100_000_000
-
-_DURATION_RE = re.compile(
-    r"^\s*(\d+)\s*(s|sec|secs|m|min|mins|h|hr|hrs|hour|hours)\s*$",
-    re.IGNORECASE,
-)
-_UNIT_SECS = {
-    "s": 1,
-    "sec": 1,
-    "secs": 1,
-    "m": 60,
-    "min": 60,
-    "mins": 60,
-    "h": 3600,
-    "hr": 3600,
-    "hrs": 3600,
-    "hour": 3600,
-    "hours": 3600,
-}
 
 
 class CaffeinePlugin(SpotlightPlugin):
@@ -89,18 +71,21 @@ class CaffeinePlugin(SpotlightPlugin):
 
     @staticmethod
     def _parse_duration(text: str) -> int | None:
-        m = _DURATION_RE.match(text)
-        if not m:
-            return None
-        return int(m.group(1)) * _UNIT_SECS[m.group(2).lower()]
+        seconds = parse_timeout_string(text, in_seconds=True)
+        return seconds if seconds != 5 else None  # 5 is the default on parse failure
 
     @staticmethod
     def _humanize(secs: int) -> str:
-        if secs >= 3600:
-            return f"{secs // 3600}h"
-        if secs >= 60:
-            return f"{secs // 60}m"
-        return f"{secs}s"
+        result = format_duration(secs)
+        # format_duration returns "N/A" for 0, but we want "0s"
+        if result == "N/A":
+            return "0s"
+        # format_duration returns "Xh Ym" or "Xm", we want shorter format
+        # For hours only: "1h" instead of "1h 0m"
+        if "h" in result and "m" in result:
+            hours = result.split("h")[0]
+            return f"{hours}h"
+        return result
 
     # --- inhibition ----------------------------------------------------
 

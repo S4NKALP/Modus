@@ -1,4 +1,4 @@
-from utils.utils import toml_file
+from utils.gtk_utils import toml_file
 
 PINNED_APPS_FILE = toml_file("dock.toml")
 

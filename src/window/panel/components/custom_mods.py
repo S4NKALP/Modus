@@ -7,8 +7,8 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 
 from shared.window.applet_window import AppletWindow
-from utils.functions import run_command, thread
-from utils.utils import setup_cursor_hover, svg_file, toml_file
+from utils.functions import clear_children, run_command, thread
+from utils.gtk_utils import setup_cursor_hover, svg_file, toml_file
 
 MODS_CONFIG_PATH = Path(toml_file("mods.toml"))
 RELOAD_DELAY_MS = 200
@@ -167,9 +167,7 @@ class CustomMods(Box):
         return True
 
     def _rebuild(self, mods):
-        for child in list(self.get_children()):
-            self.remove(child)
-            child.destroy()
+        clear_children(self)
 
         for popup in self._mod_popups.values():
             if popup:

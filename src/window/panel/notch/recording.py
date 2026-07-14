@@ -5,7 +5,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
 from services.screencapture import screen_capture_service
-from utils.utils import setup_cursor_hover, svg_file
+from utils.gtk_utils import setup_cursor_hover, svg_file
 
 
 class RecordingIndicator(Box):

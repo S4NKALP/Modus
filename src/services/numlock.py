@@ -3,7 +3,7 @@ from pathlib import Path
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import logger
 
-from utils.utils import EvdevLEDMonitor
+from utils.gtk_utils import EvdevLEDMonitor
 
 # Discover NumLock LED device
 numlock_leds = list(Path("/sys/class/leds").glob("input*::numlock"))

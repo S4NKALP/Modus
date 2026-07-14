@@ -1,10 +1,8 @@
-import subprocess
-
 from fabric.utils import GdkPixbuf, Gtk, get_relative_path, logger, os, re
 
-from utils.functions import escape_markup_text, find_binary
+from utils.functions import escape_markup_text, find_binary, run_command
+from utils.gtk_utils import setup_cursor_hover
 from utils.icon_resolver import IconResolver
-from utils.utils import setup_cursor_hover
 
 
 def read_dmi(field):
@@ -20,13 +18,14 @@ def read_dmi(field):
 
 def get_gpu_name():
     try:
-        output = (
-            subprocess.check_output(
-                "lspci -nn | grep -i 'VGA compatible controller'", shell=True, text=True
-            )
-            .strip()
-            .split("\n")
-        )
+        result = run_command(["lspci", "-nn"])
+        if result.returncode != 0:
+            return "Unknown"
+        output = [
+            line
+            for line in result.stdout.strip().split("\n")
+            if "VGA compatible controller" in line.lower()
+        ]
 
         def clean(line):
             matches = re.findall(r"\[(.*?)\]", line)
@@ -495,37 +494,38 @@ class About(Gtk.Window):
             return label
 
         # Info values
+        kernel_result = run_command(["uname", "-r"])
+        cpu_result = run_command(["lscpu"])
+        cpu_model = ""
+        if cpu_result.returncode == 0:
+            for line in cpu_result.stdout.split("\n"):
+                if "Model name:" in line:
+                    cpu_model = line.split(":", 1)[1].strip()
+                    break
+        mem_result = run_command(["free", "-h", "--giga"])
+        mem_value = ""
+        if mem_result.returncode == 0:
+            for line in mem_result.stdout.split("\n"):
+                if line.startswith("Mem:"):
+                    mem_value = line.split()[1]
+                    break
+        uptime_result = run_command(["uptime", "-p"])
+
         labels = [
             (
                 "Kernel",
-                subprocess.run(
-                    "uname -r", shell=True, capture_output=True, text=True
-                ).stdout.strip(),
+                kernel_result.stdout.strip()
+                if kernel_result.returncode == 0
+                else "Unknown",
             ),
-            (
-                "CPU",
-                subprocess.run(
-                    "lscpu | grep 'Model name:' | cut -d ':' -f2-",
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip(),
-            ),
-            (
-                "Memory",
-                subprocess.run(
-                    "free -h --giga | grep Mem | tr -s ' ' | cut -d ' ' -f 2",
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip(),
-            ),
+            ("CPU", cpu_model),
+            ("Memory", mem_value),
             ("GPU", get_gpu_name()),
             (
                 "Uptime",
-                subprocess.run(
-                    "uptime -p", shell=True, capture_output=True, text=True
-                ).stdout.strip(),
+                uptime_result.stdout.strip()
+                if uptime_result.returncode == 0
+                else "Unknown",
             ),
         ]
 

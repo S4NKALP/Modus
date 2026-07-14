@@ -1,6 +1,6 @@
 from fabric.widgets.button import Button
 
-from utils.utils import svg_file
+from utils.gtk_utils import svg_file
 
 
 class ToolButton(Button):
