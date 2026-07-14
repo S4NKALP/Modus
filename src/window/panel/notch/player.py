@@ -137,6 +137,7 @@ class NotchPlayer(Box):
         self._update_from_service()
         self._sigs.append(service.connect("play", self._on_play))
         self._sigs.append(service.connect("pause", self._on_pause))
+        self._sigs.append(service.connect("artwork-change", self._on_artwork_change))
 
         if service.playback_status == "Playing":
             self._start_timer()

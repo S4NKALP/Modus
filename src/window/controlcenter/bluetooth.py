@@ -338,7 +338,6 @@ class BluetoothConnections(Box):
         self.parent = parent
         self.show_hidden_devices = show_hidden_devices
         self.is_scanning = False  # Track scanning state
-        self.refresh_timer = None  # Timer for periodic device refresh
         self._update_in_progress = False  # Prevent concurrent updates
         self._destroyed = False  # Track if widget is destroyed
         self._client_signal_ids = []  # Track BluetoothClient signal IDs
@@ -470,7 +469,6 @@ class BluetoothConnections(Box):
 
         self.connect("destroy", self.on_destroy)
         self.connect("unmap", self.on_hide)
-        self.connect("map", lambda *_: self.start_device_monitoring())
 
         self.client.notify("scanning")
         self.client.notify("enabled")
@@ -489,7 +487,6 @@ class BluetoothConnections(Box):
 
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
-        self.stop_device_monitoring()
         self._cancel_pending_refresh()
         if self.other_devices.get_visible():
             self.other_devices.set_visible(False)
@@ -675,34 +672,6 @@ class BluetoothConnections(Box):
         finally:
             self._update_in_progress = False
 
-    def start_device_monitoring(self):
-        """Start periodic monitoring for device changes"""
-        self.stop_device_monitoring()
-        self.refresh_timer = GLib.timeout_add_seconds(5, self.periodic_device_refresh)
-
-    def stop_device_monitoring(self):
-        """Stop periodic monitoring"""
-        if self.refresh_timer:
-            GLib.source_remove(self.refresh_timer)
-            self.refresh_timer = None
-
-    def periodic_device_refresh(self):
-        """Periodically refresh device list to catch external connections"""
-        if self._destroyed:
-            self.refresh_timer = None
-            return False
-
-        # Skip if update in progress or client not available/enabled
-        if self._update_in_progress or not self.client or not self.client.enabled:
-            return True  # Continue monitoring
-
-        try:
-            self.update_devices()
-        except Exception as e:
-            logger.error(f"[Bluetooth] Error during periodic refresh: {e}")
-
-        return True
-
     def force_device_refresh(self):
         """Force an immediate refresh of the device list"""
         if self._update_in_progress or self._destroyed:
@@ -724,7 +693,6 @@ class BluetoothConnections(Box):
     def on_destroy(self, widget):
         """Cleanup when widget is destroyed"""
         self._destroyed = True
-        self.stop_device_monitoring()
         self._cancel_pending_refresh()
         for sig_id in self._client_signal_ids:
             try:

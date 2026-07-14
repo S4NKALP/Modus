@@ -1,6 +1,6 @@
 import weakref
 
-from fabric.utils import GLib, bulk_connect, logger
+from fabric.utils import bulk_connect, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -286,7 +286,6 @@ class PlayerBox(Box):
         self._signal_connections = []
         self._property_bindings = []
         self._seekbar_signal_ids = []
-        self._init_metadata_polled = False
         self._cached_duration = 0
 
         self.album_cover = Box(style_classes="album-image-c")
@@ -506,7 +505,6 @@ class PlayerBox(Box):
             self.cover_path = result
 
         self._load_initial_metadata()
-        GLib.timeout_add(500, self._poll_initial_metadata)
 
     def _load_initial_metadata(self):
         try:
@@ -532,16 +530,6 @@ class PlayerBox(Box):
             logger.warning(
                 f"[expanded_player] metadata = self.player._player.props.metadata failed: {e}"
             )
-
-    def _poll_initial_metadata(self):
-        if self.exit:
-            return False
-        if self._init_metadata_polled:
-            return False
-        self._init_metadata_polled = True
-        self._load_initial_metadata()
-        self.set_image()
-        return False
 
     def update_buttons(self, player_buttons, show_buttons):
         if show_buttons and len(player_buttons) > 1:

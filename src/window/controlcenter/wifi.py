@@ -272,7 +272,6 @@ class WifiConnections(Box):
         self.network_service = NetworkClient()
         self.wifi_service = None
         self.is_scanning = False  # Track scanning state
-        self.refresh_timer = None  # Timer for periodic network refresh
         self._update_in_progress = False  # Prevent concurrent updates
         self._destroyed = False  # Track if widget is destroyed
         self._signal_ids = []  # Track all service signal IDs for cleanup
@@ -387,11 +386,9 @@ class WifiConnections(Box):
 
         self.connect("destroy", self.on_destroy)
         self.connect("unmap", self.on_hide)
-        self.connect("map", lambda *_: self.start_network_monitoring())
 
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
-        self.stop_network_monitoring()
         self._cancel_pending_refresh()
         if self.other_networks.get_visible():
             self.other_networks.set_visible(False)
@@ -633,37 +630,6 @@ class WifiConnections(Box):
             if hasattr(child, "on_changed"):
                 child.on_changed()
 
-    def start_network_monitoring(self):
-        """Start periodic monitoring for network changes"""
-        self.stop_network_monitoring()
-        self.refresh_timer = GLib.timeout_add_seconds(5, self.periodic_network_refresh)
-
-    def stop_network_monitoring(self):
-        """Stop periodic monitoring"""
-        if self.refresh_timer:
-            GLib.source_remove(self.refresh_timer)
-            self.refresh_timer = None
-
-    def periodic_network_refresh(self):
-        """Periodically refresh network list to catch external connections"""
-        if self._destroyed:
-            self.refresh_timer = None
-            return False
-
-        if (
-            self._update_in_progress
-            or not self.wifi_service
-            or not self.wifi_service.enabled
-        ):
-            return True  # Continue monitoring
-
-        try:
-            self.update_networks()
-        except Exception as e:
-            logger.error(f"[WiFi] Error during periodic network refresh: {e}")
-
-        return True  # Continue monitoring
-
     def force_network_refresh(self):
         """Force an immediate refresh of the network list"""
         if self._update_in_progress or self._destroyed:
@@ -750,7 +716,6 @@ class WifiConnections(Box):
     def on_destroy(self, widget):
         """Cleanup when widget is destroyed"""
         self._destroyed = True
-        self.stop_network_monitoring()
         self._cancel_pending_refresh()
         for obj, sig_id in self._signal_ids:
             try:
