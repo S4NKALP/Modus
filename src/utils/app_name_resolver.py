@@ -33,7 +33,7 @@ class AppName:
     def format_app_name(self, title, wmclass, update=False):
         # Handle case when both title and wmclass are empty (no active window)
         if not title and not wmclass:
-            name = "Finder"
+            name = "Modus"
         else:
             name = wmclass
             if name == "":
