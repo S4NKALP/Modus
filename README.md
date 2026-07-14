@@ -64,9 +64,9 @@ meson compile -C builddir
 cd ../../../..
 
 # Compile Global Menu shim
-cd src/globalmenu
+cd src/window/globalmenu
 gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
-cd ../..
+cd ../../..
 
 uv run start
 ```
@@ -89,7 +89,7 @@ shim only for that process:
 ```bash
 #!/usr/bin/env bash
 # ~/.local/bin/modus-launch — GTK3-aware launcher for the global menu shim
-SHIM=~/.config/Modus/src/globalmenu/libmenu_button_shim.so
+SHIM=~/.config/Modus/src/window/globalmenu/libmenu_button_shim.so
 BIN="$(command -v "$1")"
 if [[ -n "$BIN" ]] && readelf -d "$BIN" 2>/dev/null | grep -q 'libgtk-3\.so\.0'; then
     LD_PRELOAD="$SHIM" "$@"

@@ -98,7 +98,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["services", "utils", "shared", "window", "globalmenu"]
+known-first-party = ["services", "utils", "shared", "window"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/main.py" = ["E402"]

@@ -314,8 +314,8 @@ fi
 progress "Building Global Menu shim"
 
 step "Compiling libmenu_button_shim.so..."
-SHIM_SRC="$INSTALL_DIR/src/globalmenu/libmenu_button_shim.c"
-SHIM_OUT="$INSTALL_DIR/src/globalmenu/libmenu_button_shim.so"
+SHIM_SRC="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.c"
+SHIM_OUT="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.so"
 if [ -f "$SHIM_SRC" ]; then
     if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" $(pkg-config --cflags --libs gtk+-3.0) -ldl 2>/dev/null; then
         success "libmenu_button_shim.so built successfully"

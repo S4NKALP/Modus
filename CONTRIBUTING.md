@@ -45,9 +45,9 @@ meson compile -C builddir
 cd ../../../..
 
 # Compile Global Menu shim
-cd src/globalmenu
+cd src/window/globalmenu
 gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
-cd ../..
+cd ../../..
 
 # Run
 uv run start
@@ -73,8 +73,8 @@ Modus/
 │   │   ├── screencapture/         # Screen capture/recording
 │   │   ├── desktop/               # Desktop widgets
 │   │   ├── settings/              # Settings window
+│   │   ├── globalmenu/            # macOS global menu bar
 │   │   └── lock.py                # Session lock screen
-│   ├── globalmenu/                # macOS global menu bar
 │   └── styles/                    # GTK CSS stylesheets
 ├── config/                        # User-facing config (TOML)
 │   ├── config.toml                # Main settings

@@ -1,9 +1,0 @@
-
-fabric @ git+https://github.com/Fabric-Development/fabric.git@b7b0f9975f0cf161ccf81c1adfb181230d553f79
-httpx==0.28.1
-pam==0.2.0
-psutil==7.2.2
-ruff==0.15.2
-six==1.17.0
-tomlkit==0.15.0
-pre-commit=4.6.0
