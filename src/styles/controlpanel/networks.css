@@ -7,9 +7,8 @@
 /* macOS-style WiFi interface */
 #wifi-connections,
 #bluetooth-connections {
-  background-color: @bg-a50;
-  box-shadow: inset 0 0 0 1px alpha(@fg-a40, 0.4);
-  border: 1px solid @outline-a40;
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-sm);
   padding: 10px;
 }
@@ -23,22 +22,22 @@
 
 #wifi-network-slot button:hover,
 #wifi-network-button:hover {
-  background-color: @fg-a18;
+  background-color: @glass-hover;
   border-radius: apply(radius-sm);
 }
 
 #wifi-network-slot button:hover .wifi-icon-box,
 #wifi-network-button:hover .wifi-icon-box {
-  background-color: @fg-a90;
+  background-color: @glass-text-secondary;
 }
 
 /* WiFi-specific device icon styles */
 #wifi-connections #device-icon {
-  background-color: @fg-a10;
+  background-color: @glass-hover;
 }
 
 #wifi-connections #device-icon.connected {
-  background-color: @primary;
+  background-color: @glass-accent;
   color: @foreground;
 }
 
@@ -49,7 +48,7 @@
 }
 
 #wifi-lock-icon {
-  color: @fg-a60;
+  color: @glass-text-secondary;
   margin-left: 8px;
 }
 
@@ -64,7 +63,7 @@
 }
 
 #wifi-other-button:hover {
-  background-color: @fg-a18;
+  background-color: @glass-hover;
 }
 
 #wifi-other-button:last-child {

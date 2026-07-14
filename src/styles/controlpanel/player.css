@@ -10,8 +10,8 @@
 }
 
 #player-stack-button:hover {
-  background-color: @bg-a80;
-  box-shadow: inset @fg-a50 0 0 10px;
+  background-color: @glass-hover;
+  box-shadow: inset @glass-highlight 0 0 10px;
 }
 
 #player-stack-button.active {
@@ -24,8 +24,8 @@
   min-width: 320px;
   border-radius: apply(radius-sm);
   margin: 0 6px;
-  background-color: alpha(@background, 0.3);
-  box-shadow: inset 0 0 0 1px alpha(@fg-a40, 0.4);
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border-soft;
 }
 
 #outer-player-box-c {
@@ -35,17 +35,16 @@
 }
 
 #outer-no-player-box-c {
-  background-color: alpha(@background, 0.3);
-  border: 1px solid @outline-a40;
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
   min-height: 55px;
   min-width: 345px;
   border-radius: apply(radius-sm);
 }
 
 #box-c {
-  background-color: alpha(@background, 0.3);
-  box-shadow: inset 0 0 0 0.5px alpha(@fg-a40, 0.4);
-  border: 1px solid @outline-a40;
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-md);
   margin-top: 0.5rem;
   margin-left: 4px;
@@ -57,7 +56,7 @@
 
 #player-box:disabled highlight,
 #player-box:disabled progress {
-  background-color: @primary-a60;
+  background-color: @glass-ring;
   background-image: none;
 }
 
@@ -88,7 +87,7 @@
 
 #player-artist-c {
   margin-top: -5px;
-  color: @fg-a40;
+  color: @glass-text-secondary;
   font-size: apply(font-sm);
 }
 #player-artist,
@@ -107,7 +106,7 @@
 }
 
 #player-box #player-controls #button-box .player-button:disabled {
-  color: @fg-a85;
+  color: @glass-text-disabled;
 }
 
 #player-button {

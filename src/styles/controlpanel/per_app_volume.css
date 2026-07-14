@@ -14,9 +14,9 @@
 .app-volume-item {
   margin: 8px 0;
   padding: 8px;
-  background-color: @fg-a05;
+  background-color: @glass-hover;
   border-radius: apply(radius-xs);
-  border: 1px solid @fg-a10;
+  border: 1px solid @glass-border-soft;
 }
 
 .app-name {
@@ -27,25 +27,23 @@
 }
 
 #per-app-volume-button {
-  background-color: @fg-a15;
-  border: 1px solid alpha(@fg-a40, 0.6);
+  background-color: @glass-hover;
+  border: 1px solid @glass-border;
   border-radius: apply(radius-full);
 }
 
 #per-app-volume-button:hover {
-  background-color: @fg-a25;
-  box-shadow: 0 4px 12px @shadow-a20;
+  background-color: @glass-active;
 }
 
 #per-app-volume-button:active {
-  background-color: @fg-a20;
-  box-shadow: 0 1px 3px @shadow-a30;
+  background-color: @glass-selected;
 }
 
 #per-app-volume-icon {
-  background-color: @fg-a15;
+  background-color: @glass-hover;
 
-  border: 2px solid alpha(@fg-a40, 0.6);
+  border: 2px solid @glass-border;
 
   border-radius: apply(radius-full);
 
@@ -57,7 +55,7 @@
 .compact-app-volume-item {
   padding-bottom: 5px;
   padding-right: 14px;
-  border-bottom: 1px solid @fg-a10;
+  border-bottom: 1px solid @glass-divider;
 }
 
 #app-icon {

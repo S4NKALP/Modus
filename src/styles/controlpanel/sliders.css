@@ -10,10 +10,10 @@
 
 #volume-widget-icon {
   margin-left: 10px;
-  color: @shadow-a40;
+  color: @glass-text-secondary;
 }
 
 #brightness-widget-icon {
   margin-left: 10px;
-  color: @shadow-a40;
+  color: @glass-text-secondary;
 }

@@ -22,14 +22,14 @@
   font-weight: 400;
   margin-top: -2px;
   font-size: apply(font-md);
-  color: alpha(@fg-a40, 0.8);
+  color: @glass-text-secondary;
 }
 
 #macos-player-album {
   font-weight: 400;
   margin-top: -4px;
   font-size: apply(font-md);
-  color: alpha(@fg-a40, 0.8);
+  color: @glass-text-secondary;
   margin-bottom: 8px;
 }
 
@@ -45,7 +45,7 @@
 
   min-height: 2px;
   border-radius: apply(radius-2xs);
-  background-color: @fg-a25;
+  background-color: @glass-border;
   border: none;
 }
 
@@ -62,7 +62,7 @@
   min-width: 1px;
   min-height: 8px;
   margin: -3px;
-  box-shadow: 0 1px 3px @shadow-a30;
+  box-shadow: 0 1px 3px @glass-overlay-light;
   transition: all apply(transition-xfast) ease;
 }
 
@@ -70,13 +70,13 @@
   min-width: 4px;
   min-height: 14px;
   margin: -5px;
-  box-shadow: 0 2px 6px @shadow-a40;
+  box-shadow: 0 2px 6px @glass-overlay;
 }
 
 #macos-position-label,
 #macos-length-label {
   font-size: apply(font-xs);
-  color: alpha(@fg-a40, 0.9);
+  color: @glass-text-secondary;
   font-weight: 400;
 }
 
@@ -123,7 +123,7 @@
 }
 
 .macos-switcher-dot {
-  background: @fg-a30;
+  background: @glass-border;
   border-radius: apply(radius-full);
   min-width: 12px;
   min-height: 12px;
@@ -131,12 +131,12 @@
 }
 
 .macos-switcher-dot:hover {
-  background: @fg-a50;
+  background: @glass-active;
 }
 
 .macos-switcher-dot.active {
   background: @foreground;
-  box-shadow: 0 0 0 1px @fg-a30;
+  box-shadow: 0 0 0 1px @glass-border;
 }
 
 #expanded-seek-bar {
@@ -150,7 +150,7 @@
 
   min-height: 2px;
   border-radius: apply(radius-2xs);
-  background-color: @fg-a25;
+  background-color: @glass-border;
   border: none;
 }
 
@@ -167,7 +167,7 @@
   min-width: 1px;
   min-height: 10px;
   margin: -3px;
-  box-shadow: 0 1px 3px @shadow-a30;
+  box-shadow: 0 1px 3px @glass-overlay-light;
   transition: all apply(transition-xfast) ease;
 }
 
@@ -175,5 +175,5 @@
   min-width: 4px;
   min-height: 14px;
   margin: -5px;
-  box-shadow: 0 2px 6px @shadow-a40;
+  box-shadow: 0 2px 6px @glass-overlay;
 }

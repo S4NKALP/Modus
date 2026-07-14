@@ -8,7 +8,7 @@
 
 * {
     all: unset;
-    color: @foreground;
+    color: @glass-text;
     font-size: unset;
     font-family: "SF Pro Rounded";
 }
