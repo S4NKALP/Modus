@@ -45,9 +45,9 @@ If you prefer to install dependencies and compile the extensions manually:
 
 4. **Compile the Global Menu Shim:**
    ```bash
-   cd src/globalmenu
+   cd src/window/globalmenu
    gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
-   cd ../..
+   cd ../../..
    ```
 
 5. **Start Modus:**

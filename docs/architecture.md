@@ -78,9 +78,9 @@ Python DBus polling is too slow, so Modus uses a C-extension at
 macOS-style menu bar in the top panel.
 
 - Apps export menus over `com.canonical.dbusmenu` DBus
-- Custom C shim (`src/globalmenu/libmenu_button_shim.c`) forces GTK apps to
+- Custom C shim (`src/window/globalmenu/libmenu_button_shim.c`) forces GTK apps to
   export menus even if they weren't designed to
-- Python daemon (`src/globalmenu/service.py`) listens for exported menus and
+- Python daemon (`src/window/globalmenu/service.py`) listens for exported menus and
   renders them as Fabric widgets in the panel
 
 ## 5. State Management & Services
