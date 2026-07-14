@@ -34,12 +34,8 @@ from .constants import (
     BADGE_FONT_SIZE,
     BADGE_PADDING,
     BADGE_RADIUS,
-    BG_ALPHA,
     BG_PADDING_H,
     BG_PADDING_V,
-    BG_RADIUS,
-    BORDER_ALPHA,
-    BORDER_WIDTH,
     CANVAS_TOP_PAD,
     ICON_GAP,
     INDICATOR_COLOR,
@@ -130,7 +126,7 @@ class DockCanvas(Gtk.DrawingArea):
         return int(config().get("dock_icon_size", 52))
 
     def _icon_cache_size(self) -> int:
-        return max(64, self._base_icon_size())
+        return int(self._base_icon_size() * MAX_SCALE)
 
     def _get_desktop_apps(self) -> list:
         if not self._desktop_apps:
@@ -522,49 +518,17 @@ class DockCanvas(Gtk.DrawingArea):
         w: float,
         h: float,
     ) -> None:
-        r = min(BG_RADIUS, h / 2, w / 2)
+        context = self.get_style_context()
+        context.save()
+        context.add_class("dock-background")
 
-        shadow_cx = x + w / 2
-        shadow_cy = y + h + 4
-        shadow_rx = w * 0.45
-        shadow_ry = 5
-        cr.save()
-        cr.translate(shadow_cx, shadow_cy)
-        cr.scale(shadow_rx, shadow_ry)
-        pat = cairo.RadialGradient(0, 0, 0, 0, 0, 1)
-        pat.add_color_stop_rgba(0.0, 0, 0, 0, 0.30)
-        pat.add_color_stop_rgba(1.0, 0, 0, 0, 0.0)
-        cr.set_source(pat)
-        cr.arc(0, 0, 1, 0, 2 * math.pi)
-        cr.fill()
-        cr.restore()
+        # Render the CSS background (includes background-color, background-image/gradients, box-shadow)
+        Gtk.render_background(context, cr, x, y, w, h)
 
-        cr.save()
-        self._rounded_rect(cr, x, y, w, h, r)
-        cr.set_source_rgba(0.10, 0.10, 0.14, BG_ALPHA)
-        cr.fill()
-        cr.restore()
+        # Render the CSS border (includes border-color, border-width, border-style)
+        Gtk.render_frame(context, cr, x, y, w, h)
 
-        cr.save()
-        self._rounded_rect(cr, x, y, w, h, r)
-        cr.clip()
-        spec = cairo.LinearGradient(x, y, x, y + h * 0.55)
-        spec.add_color_stop_rgba(0.00, 1.0, 1.0, 1.0, 0.22)
-        spec.add_color_stop_rgba(0.30, 1.0, 1.0, 1.0, 0.08)
-        spec.add_color_stop_rgba(1.00, 0.0, 0.0, 0.0, 0.08)
-        cr.set_source(spec)
-        cr.paint()
-        cr.restore()
-
-        cr.save()
-        self._rounded_rect(cr, x + 0.5, y + 0.5, w - 1, h - 1, r)
-        border_grad = cairo.LinearGradient(x, y, x, y + h)
-        border_grad.add_color_stop_rgba(0.0, 1.0, 1.0, 1.0, BORDER_ALPHA)
-        border_grad.add_color_stop_rgba(1.0, 1.0, 1.0, 1.0, BORDER_ALPHA * 0.4)
-        cr.set_source(border_grad)
-        cr.set_line_width(BORDER_WIDTH)
-        cr.stroke()
-        cr.restore()
+        context.restore()
 
     def _draw_separator(
         self,
