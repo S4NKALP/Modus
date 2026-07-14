@@ -32,7 +32,7 @@ core:
     changed-files:
       - any-glob-to-any-file:
           - "src/window/switcher/app-capture/**"
-          - "src/globalmenu/**.c"
+          - "src/window/globalmenu/**.c"
 
   - label: "styling"
     changed-files:
