@@ -4,7 +4,8 @@
   min-height: 170px;
   border-radius: apply(radius-lg);
   transition: all apply(transition-slow);
-  background: @surface;
+  background: @glass-widget;
+  border: 1px solid @glass-border-soft;
 }
 
 /* Base Weather Layout */
@@ -13,7 +14,7 @@
 }
 
 #city {
-  color: @fg-a85;
+  color: @glass-text;
   font-weight: 600;
   font-size: 18px;
 }
@@ -39,7 +40,7 @@
 #feels-like {
   font-weight: 500;
   font-size: 15px;
-  color: @fg-a80;
+  color: @glass-text;
 }
 
 /* Weather Condition Gradients */
@@ -56,7 +57,7 @@
 }
 
 .weather-overcast {
-  background: linear-gradient(135deg, @bg-a80 0%, @bg-a80 100%);
+  background: linear-gradient(135deg, @glass-surface-4 0%, @glass-surface-4 100%);
 }
 
 .weather-fog {
@@ -64,15 +65,15 @@
 }
 
 .weather-light-rain {
-  background: linear-gradient(135deg, @on-primary 0%, @bg-a90 100%);
+  background: linear-gradient(135deg, @on-primary 0%, @glass-dialog 100%);
 }
 
 .weather-rain {
-  background: linear-gradient(135deg, @bg-a70 0%, @on-tertiary 100%);
+  background: linear-gradient(135deg, @glass-surface-3 0%, @on-tertiary 100%);
 }
 
 .weather-heavy-rain {
-  background: linear-gradient(135deg, @surface 0%, @bg-a90 100%);
+  background: linear-gradient(135deg, @surface 0%, @glass-dialog 100%);
 }
 
 .weather-snow,
@@ -86,11 +87,12 @@
 
 /* Calendar Widget */
 #calendar-box-widget {
-  background: linear-gradient(to bottom, @surface, @background);
+  background: @glass-widget;
   margin: 5px 20px 20px 10px;
   min-width: 170px;
   min-height: 170px;
   border-radius: apply(radius-lg);
+  border: 1px solid @glass-border-soft;
 }
 
 #calendar-widget {
@@ -119,7 +121,7 @@
 #calendar-day-header-weekend {
   font-size: apply(font-sm);
   font-weight: 600;
-  color: @fg-a50;
+  color: @glass-text-secondary;
   min-width: 18px;
   min-height: 10px;
 }
@@ -136,7 +138,7 @@
 #calendar-day-weekend {
   font-size: apply(font-sm);
   font-weight: 500;
-  color: @fg-a50;
+  color: @glass-text-secondary;
   min-width: 18px;
   min-height: 16px;
 }
@@ -172,12 +174,12 @@
   padding: 5px;
   margin-top: 10px;
   font-size: 30px;
-  color: @fg-a90;
+  color: @glass-text;
   font-weight: 600;
 }
 
 #date label {
-  color: @fg-a90;
+  color: @glass-text;
 
   margin-top: -10px;
   font-size: 90px;
@@ -189,20 +191,22 @@
 }
 
 #date-container {
-  background: linear-gradient(to bottom, @surface, @background);
+  background: @glass-widget;
   margin: 5px 10px 20px 5px;
   min-width: 170px;
   min-height: 170px;
   border-radius: apply(radius-lg);
+  border: 1px solid @glass-border-soft;
 }
 
 /* System Info Widget CSS  */
 #info-box-widget {
-  background: linear-gradient(to bottom, @surface, @background);
+  background: @glass-widget;
   margin: 5px 5px 5px 5px;
   min-width: 170px;
   min-height: 170px;
   border-radius: apply(radius-lg);
+  border: 1px solid @glass-border-soft;
 }
 
 #progress-label {
@@ -220,7 +224,7 @@
 #info-text {
   font-size: apply(font-md);
   font-weight: 500;
-  color: @fg-a60;
+  color: @glass-text-secondary;
   min-width: 32px;
 }
 

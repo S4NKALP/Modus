@@ -1,11 +1,10 @@
 
 #pomodoro-popup {
-    background-color: @bg-a50;
+    background-color: @glass-card;
     border-radius: apply(radius-md);
-    box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
     padding: 15px;
     margin-right: 20px;
-    border: 1px solid @border-strong;
+    border: 1px solid @glass-border;
 }
 
 #pomodoro-container {
@@ -23,7 +22,7 @@
 #pomodoro-cycle {
     font-size: 13px;
     font-weight: 500;
-    color: @fg-a60;
+    color: @glass-text-secondary;
     font-family: "SF Pro Rounded";
 }
 
@@ -56,7 +55,7 @@
 }
 
 #pomodoro-phase-btn {
-    background-color: @fg-a18;
+    background-color: @glass-highlight-strong;
     color: alpha(@theme_fg_color, 0.7);
     border-radius: apply(radius-sm);
     padding: 5px 14px;
@@ -65,7 +64,7 @@
 }
 
 #pomodoro-phase-btn:hover {
-    background-color: @fg-a25;
+    background-color: @glass-active;
     color: @theme_fg_color;
 }
 
@@ -88,7 +87,7 @@
 }
 
 #pomodoro-reset-btn, #pomodoro-secondary-btn {
-    background-color: @fg-a18;
+    background-color: @glass-highlight-strong;
     color: @theme_fg_color;
     border-radius: apply(radius-sm);
     padding: 6px 15px;
@@ -97,11 +96,11 @@
 }
 
 #pomodoro-reset-btn:hover, #pomodoro-secondary-btn:hover {
-    background-color: @fg-a25;
+    background-color: @glass-active;
 }
 
 #pomodoro-spin-box {
-    background-color: @fg-a18;
+    background-color: @glass-highlight-strong;
     border-radius: apply(radius-sm);
     padding: 2px;
 }
@@ -118,5 +117,5 @@
 }
 
 #pomodoro-spin-btn:hover {
-    background-color: @fg-a25;
+    background-color: @glass-active;
 }

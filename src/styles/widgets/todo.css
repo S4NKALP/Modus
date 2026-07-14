@@ -1,12 +1,11 @@
 
 /* === Main Todo List === */
 #todo-list-menu {
-    background-color: @bg-a50;
+    background-color: @glass-card;
     border-radius: apply(radius-md);
-    box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
     padding: 15px;
     margin-right: 20px;
-    border: 1px solid @border-strong;
+    border: 1px solid @glass-border;
 }
 
 #todo-main-container {
@@ -28,13 +27,13 @@
 
 #todo-stats {
     font-size: 12px;
-    color: @fg-a60;
+    color: @glass-text-secondary;
     font-family: "SF Pro Rounded";
 }
 
 /* === Add Task Section === */
 #todo-add-section {
-    background-color: @fg-a18;
+    background-color: @glass-hover;
     border-radius: apply(radius-sm);
     padding: 8px 10px;
 }
@@ -49,11 +48,11 @@
 }
 
 #new-todo-entry placeholder {
-    color: @fg-a40;
+    color: @glass-text-disabled;
 }
 
 #add-todo-button {
-    background-color: @primary;
+    background-color: @glass-accent;
     border-radius: apply(radius-full);
     padding: 6px;
     min-width: 24px;
@@ -61,7 +60,7 @@
 }
 
 #add-todo-button:hover {
-    background-color: alpha(@primary, 0.8);
+    background-color: alpha(@glass-accent, 0.8);
 }
 
 /* === Todo Items === */
@@ -77,12 +76,12 @@
 }
 
 #todo-item:hover {
-    background-color: alpha(@fg-a10, 0.3);
+    background-color: @glass-hover;
 }
 
 #todo-divider {
     min-height: 1px;
-    background-color: alpha(@fg-a20, 0.5);
+    background-color: @glass-highlight-soft;
     margin: 0 4px;
 }
 
@@ -104,7 +103,7 @@
 }
 
 #todo-checkbox:hover {
-    background-color: alpha(@fg-a18, 0.5);
+    background-color: @glass-hover;
     border-radius: apply(radius-sm);
 }
 
@@ -125,7 +124,7 @@
     min-width: 24px;
     min-height: 24px;
     font-size: 16px;
-    color: @fg-a40;
+    color: @glass-text-secondary;
     opacity: 0;
     transition: opacity 0.2s ease;
 }
@@ -136,7 +135,7 @@
 
 #todo-options-btn:hover {
     color: @foreground;
-    background-color: alpha(@fg-a18, 0.5);
+    background-color: @glass-hover;
     border-radius: apply(radius-sm);
 }
 
@@ -145,7 +144,7 @@
     background: transparent;
     border: none;
     font-size: 12px;
-    color: @fg-a40;
+    color: @glass-text-disabled;
     padding: 4px;
 }
 
@@ -155,19 +154,18 @@
 
 #todo-footer {
     font-size: 11px;
-    color: @fg-a40;
+    color: @glass-text-secondary;
     font-family: "SF Pro Rounded";
     margin-top: 4px;
 }
 
 /* === Options Popover === */
 #todo-options-popover {
-    background-color: @bg-a50;
+    background-color: @glass-card;
     border-radius: apply(radius-md);
-    box-shadow: inset 0 0 0 1px alpha(@text-dim, 0.4);
     padding: 10px;
     margin-right: 20px;
-    border: 1px solid @border-strong;
+    border: 1px solid @glass-border;
     min-width: 340px;
 }
 
@@ -184,13 +182,13 @@
 
 #todo-opt-subtitle {
     font-size: 11px;
-    color: @fg-a60;
+    color: @glass-text-secondary;
     font-family: "SF Pro Rounded";
 }
 
 /* === Color Swatches === */
 #todo-color-swatch {
-    background-color: @fg-a18;
+    background-color: @glass-hover;
     border-radius: apply(radius-full);
     padding: 0;
     min-width: 28px;
@@ -200,7 +198,7 @@
 }
 
 #todo-color-swatch:hover {
-    border-color: alpha(@foreground, 0.3);
+    border-color: @glass-border;
 }
 
 #todo-color-swatch.selected {
@@ -210,7 +208,7 @@
 
 /* === Deadline Pill === */
 #todo-deadline-pill {
-    background-color: @fg-a18;
+    background-color: @glass-hover;
     border-radius: apply(radius-full);
     padding: 6px 12px;
 }
@@ -224,7 +222,7 @@
 
 /* === Stepper (reuse pomodoro style) === */
 #todo-spin-box {
-    background-color: @fg-a10;
+    background-color: @glass-hover;
     border-radius: apply(radius-sm);
     padding: 2px;
 }
@@ -241,7 +239,7 @@
 }
 
 #todo-spin-btn:hover {
-    background-color: @fg-a25;
+    background-color: @glass-active;
 }
 
 #todo-spin-value {
@@ -252,7 +250,7 @@
 
 /* === Preset Buttons === */
 #todo-preset-btn {
-    background-color: @fg-a18;
+    background-color: @glass-hover;
     border-radius: apply(radius-full);
     padding: 6px 12px;
     font-size: 11px;
@@ -261,5 +259,5 @@
 }
 
 #todo-preset-btn:hover {
-    background-color: @fg-a25;
+    background-color: @glass-active;
 }

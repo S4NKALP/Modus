@@ -12,14 +12,14 @@
 
 
 .flat-scale trough {
-    background-color: alpha(@bg-a80, 0.5);
+    background-color: @glass-surface-1;
     min-height: 25px;
     border-radius: apply(radius-full);
-    border: 1px solid alpha(@bg-a75, 0.3);
+    border: 1px solid @glass-border-soft;
 }
 
 .flat-scale highlight {
-    background-color: @fg-a80;
+    background-color: @glass-text-secondary;
     min-height: 25px;
     border-radius: apply(radius-full);
 }
