@@ -11,33 +11,31 @@
 
 /* Bottom shadow layer (deepest) - offset to show stacking from below */
 #stack-shadow-bottom {
-  background-color: @glass-surface-1;
-  border-top: 1px solid @glass-divider;
+  background-color: @glass-popup;
+  border: 1.2px solid @glass-border;
   border-radius: apply(radius-md);
-  opacity: 1;
-  min-height: 16px;
-  margin-left: 20px;
-  margin-right: -4px;
+  opacity: 0.9;
+  min-height: 20px;
+  margin-left: 16px;
+  margin-right: 16px;
   margin-bottom: -10px;
 }
 
 /* Middle shadow layer */
 #stack-shadow-middle {
-  background-color: @glass-surface-2;
-
-  border-top: 1px solid @glass-divider;
+  background-color: @glass-popup;
+  border: 1.2px solid @glass-border;
   border-radius: apply(radius-md);
-  opacity: 1;
+  opacity: 0.95;
   min-height: 20px;
-  margin-left: 10px;
-  margin-right: -2px;
-  margin-bottom: -14px;
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-bottom: -10px;
 }
 
 /* Main notification content (top layer) */
 #stack-main-notification {
   background-color: @glass-popup;
-
   border: 1.2px solid @glass-border;
   border-radius: apply(radius-md);
   padding: 12px;

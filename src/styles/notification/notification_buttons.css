@@ -40,3 +40,75 @@
 #notification-action-buttons button:active #button-label {
   color: var(--shadow);
 }
+
+.mac-options-button {
+  background-color: @glass-panel;
+  border-radius: apply(radius-md);
+  padding: 4px 8px;
+  margin-top: 4px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  color: @text-secondary;
+  font-weight: 500;
+  transition: background-color apply(transition-fast), color apply(transition-fast);
+}
+
+.mac-options-button:hover {
+  background-color: @glass-surface-4;
+  color: @text-primary;
+}
+
+.mac-options-button:active {
+  background-color: @glass-surface-5;
+}
+
+menu.mac-context-menu {
+  background-color: @glass-panel;
+  border-radius: apply(radius-md);
+  padding: 4px;
+  border: 1px solid @glass-surface-2;
+}
+
+.mac-context-menu menuitem {
+  padding: 4px 12px;
+  border-radius: apply(radius-sm);
+  color: @text-primary;
+  transition: background-color apply(transition-fast);
+}
+
+.mac-context-menu menuitem:hover {
+  background-color: var(--primary);
+  color: var(--shadow);
+}
+
+.mac-header-pill {
+  background-color: @glass-surface-4;
+  border-radius: apply(radius-md);
+  padding: 2px 8px;
+  color: @text-secondary;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 4px;
+  transition: background-color apply(transition-fast), color apply(transition-fast);
+}
+
+.mac-header-pill:hover {
+  background-color: @glass-surface-5;
+  color: @text-primary;
+}
+
+.mac-header-circle {
+  background-color: @glass-surface-4;
+  border-radius: 999px;
+  padding: 3px;
+  margin: 0;
+  min-width: 18px;
+  min-height: 18px;
+  color: @text-secondary;
+  transition: background-color apply(transition-fast);
+}
+
+.mac-header-circle:hover {
+  background-color: @glass-surface-5;
+  color: @text-primary;
+}
