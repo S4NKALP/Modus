@@ -512,19 +512,17 @@ class NotificationCenterWidget(NotificationWidget):
         # Create our custom close button for notification center
 
         self.close_button = Button(
-            name="notif-close-button",
+            name="notification-close-button",
             image=CustomImage(
                 icon_name="close-symbolic", name="notification-close", icon_size=18
             ),
-            visible=True,  # Always visible in notification center
             on_clicked=self._on_close_clicked,
         )
-        self.close_button.connect(
-            "enter-notify-event", lambda *_: self.hover_button(self.close_button)
-        )
-        self.close_button.connect(
-            "leave-notify-event", lambda *_: self.unhover_button(self.close_button)
-        )
+        self.close_button.get_style_context().add_class("mac-close-button")
+
+        from utils.gtk_utils import setup_cursor_hover
+
+        setup_cursor_hover(self.close_button)
 
         # Create the content box manually with our custom close button
         return Box(
@@ -583,10 +581,6 @@ class NotificationCenterWidget(NotificationWidget):
                 ),
             ],
         )
-
-    # Override to disable the action buttons
-    def create_action_buttons(self, notification):
-        return Box(name="notification-action-buttons")
 
     def _on_close_clicked(self, *args):
         try:

@@ -13,6 +13,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
 import shared.data as data
@@ -21,6 +22,7 @@ from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
 from shared.widgets.custom_image import CustomImage
 from shared.widgets.customrevealer import SlideRevealer
+from utils.gtk_utils import setup_cursor_hover
 from utils.functions import escape_markup_text
 from utils.roam import modus_service
 from utils.icon_resolver import IconResolver
@@ -448,27 +450,36 @@ class NotificationWidget(Box):
         )  # Track app icon source for cleanup
         self._should_cleanup_cache = False  # Only cleanup cache on manual dismissal
 
-        super().__init__(
-            size=(NOTIFICATION_WIDTH, -1),
-            name=name,
+        content_box = Box(
+            name=f"{name}-inner-content",
             orientation="v",
-            h_align="fill",
-            h_expand=True,
             children=[
                 self.create_content(notification),
                 self.create_action_buttons(notification),
             ],
         )
 
+        self.hover_event_box = EventBox(
+            events=["enter-notify-event", "leave-notify-event"], child=content_box
+        )
+        self.hover_event_box.connect("enter-notify-event", self._on_enter_notify)
+        self.hover_event_box.connect("leave-notify-event", self._on_leave_notify)
+
+        super().__init__(
+            size=(NOTIFICATION_WIDTH, -1),
+            name=name,
+            orientation="v",
+            h_align="fill",
+            h_expand=True,
+            children=[self.hover_event_box],
+        )
+
         self.notification = notification
         self.timeout_ms = timeout_ms
         self._timeout_id = None
 
-        # Add hover events to the main notification widget
-        self.connect("enter-notify-event", self._on_enter_notify)
-        self.connect("leave-notify-event", self._on_leave_notify)
-
         self.start_timeout()
+        self.show_all()
 
     def create_header(self, notification):
         """Create notification header with optimized cached app icon - SINGLE CACHE SIZE"""
@@ -522,12 +533,21 @@ class NotificationWidget(Box):
                     ],
                 )
             ],
-            end_children=[
-                self.create_close_button() if self.show_close_button else Box()
-            ],
+            end_children=[Box()],
         )
 
     def create_content(self, notification):
+        if self.show_close_button:
+            self.close_button = Button(
+                name="notification-close-button",
+                image=CustomImage(icon_name="close-symbolic", icon_size=18),
+                on_clicked=lambda *_: self._manual_close(),
+            )
+            self.close_button.get_style_context().add_class("mac-close-button")
+            setup_cursor_hover(self.close_button)
+        else:
+            self.close_button = None
+
         return Box(
             name="notification-content",
             spacing=8,
@@ -554,12 +574,6 @@ class NotificationWidget(Box):
                                     max_chars_width=40,
                                     ellipsization="end",
                                 ),
-                                # Label(
-                                #     name="notification-app-name",
-                                #     markup=" | " + notification.app_name,
-                                #     h_align="start",
-                                #     ellipsization="end",
-                                # ),
                             ],
                         ),
                         (
@@ -584,29 +598,28 @@ class NotificationWidget(Box):
                 Box(
                     orientation="v",
                     children=[
-                        Button(
-                            name="notification-close-button",
-                            image=CustomImage(icon_name="close-symbolic", icon_size=18),
-                            visible=True,  # Initially hidden
-                            on_clicked=lambda *_: self._manual_close(),
-                        ),
+                        self.close_button,
                         Box(v_expand=True),
                     ],
-                ),
+                )
+                if self.show_close_button
+                else Box(h_expand=True),
             ],
         )
 
     def _on_enter_notify(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+
         self._is_hovered = True
-        if self.close_button:
-            self.close_button.set_visible(True)
         self.pause_timeout()
         return False
 
     def _on_leave_notify(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+
         self._is_hovered = False
-        if self.close_button:
-            self.close_button.set_visible(False)
         self.resume_timeout()
         return False
 
@@ -712,7 +725,10 @@ class NotificationWidget(Box):
             return pixbuf
 
     def create_action_buttons(self, notification):
-        return Box(
+        if not notification.actions:
+            return Box(name="notification-action-buttons", visible=False)
+
+        action_box = Box(
             name="notification-action-buttons",
             spacing=4,
             h_expand=True,
@@ -721,6 +737,35 @@ class NotificationWidget(Box):
                 for i, action in enumerate(notification.actions)
             ],
         )
+
+        revealer = Revealer(
+            transition_type="slide-up",
+            transition_duration=250,
+            child=action_box,
+            reveal_child=False,
+        )
+
+        # Wrap in EventBox to catch hover events specifically for the bottom area
+        event_box = EventBox(
+            name="notification-action-buttons-container",
+            events=["enter-notify-event", "leave-notify-event"],
+            child=revealer,
+        )
+        # Give it a tiny minimum height so there's an invisible hit-zone to trigger the reveal
+        event_box.set_size_request(-1, 12)
+
+        def _on_enter(*_):
+            revealer.set_reveal_child(True)
+            return False
+
+        def _on_leave(*_):
+            revealer.set_reveal_child(False)
+            return False
+
+        event_box.connect("enter-notify-event", _on_enter)
+        event_box.connect("leave-notify-event", _on_leave)
+
+        return event_box
 
     def start_timeout(self):
         self.stop_timeout()
@@ -799,7 +844,7 @@ class NotificationRevealer(SlideRevealer):
         parent_window=None,
         **kwargs,
     ):
-        self.notif_box = NotificationWidget(notification, show_close_button=False)
+        self.notif_box = NotificationWidget(notification, show_close_button=True)
         self.notification = notification
         self.on_transition_end = on_transition_end
         # Reference to NotificationCenter window for queue clearing
