@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from fabric.utils import GdkPixbuf, GLib, logger
+from fabric.utils import Gdk, GdkPixbuf, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -264,19 +264,27 @@ class ExpandableNotificationGroup(Box):
                     label="Show less",
                     on_clicked=self.collapse,
                     h_align="end",
+                    v_align="center",
+                ).build(
+                    lambda btn: btn.get_style_context().add_class("mac-header-pill")
                 ),
                 Button(
                     name="notification-close-summery",
                     h_expand=False,
                     v_expand=False,
+                    h_align="end",
+                    v_align="center",
                     on_clicked=self.close_all,
-                    image=CustomImage(
+                    child=CustomImage(
                         icon_name="close-symbolic",
                         name="notification-close-header",
-                        icon_size=18,
-                        h_align="end",
+                        icon_size=12,
+                        h_align="center",
+                        v_align="center",
                     ),
                     visible=True,
+                ).build(
+                    lambda btn: btn.get_style_context().add_class("mac-header-circle")
                 ),
             ],
         )
@@ -581,6 +589,59 @@ class NotificationCenterWidget(NotificationWidget):
                 ),
             ],
         )
+
+    def create_action_buttons(self, notification):
+        # Create an options button to hold the context menu
+        options_button = Button(
+            name="notification-options-button",
+            label="Options ⌄",
+            h_align="end",
+            v_align="center",
+        )
+        options_button.get_style_context().add_class("mac-options-button")
+
+        # Build context menu
+        menu = Gtk.Menu()
+        menu.get_style_context().add_class("mac-context-menu")
+
+        if notification.actions:
+            for action in notification.actions:
+                item = Gtk.MenuItem(label=action.label)
+
+                # Connect action invocation
+                def on_activate(_widget, a=action):
+                    self._should_cleanup_cache = True
+                    a.invoke()
+                    a.parent.close("dismissed-by-user")
+
+                item.connect("activate", on_activate)
+                menu.append(item)
+
+            menu.append(Gtk.SeparatorMenuItem())
+
+        close_item = Gtk.MenuItem(label="Close")
+        close_item.connect("activate", self._on_close_clicked)
+        menu.append(close_item)
+
+        menu.show_all()
+
+        def show_menu(btn):
+            # Show the menu under the button
+            menu.popup_at_widget(
+                btn, Gdk.Gravity.SOUTH_EAST, Gdk.Gravity.NORTH_EAST, None
+            )
+
+        options_button.connect("clicked", show_menu)
+
+        # Add to a box that takes up the bottom space
+        action_box = Box(
+            h_expand=True,
+            children=[
+                Box(h_expand=True),  # Push to right
+                options_button,
+            ],
+        )
+        return action_box
 
     def _on_close_clicked(self, *args):
         try:
