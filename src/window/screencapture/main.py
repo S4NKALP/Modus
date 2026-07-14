@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib
+from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
@@ -252,8 +252,8 @@ class ScreenCaptureWindow(Window):
             if _handler_id[0] is not None:
                 try:
                     svc.disconnect(_handler_id[0])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"[main] svc.disconnect(_handler_id[0]) failed: {e}")
                 _handler_id[0] = None
             # Re-show only on cancel (path is None)
             if not path:
@@ -265,8 +265,10 @@ class ScreenCaptureWindow(Window):
             if _handler_id[0] is not None:
                 try:
                     screen_capture_service.disconnect(_handler_id[0])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[main] screen_capture_service.disconnect(_handler_id[0]) failed: {e}"
+                    )
                 _handler_id[0] = None
             return False
 
@@ -284,8 +286,10 @@ class ScreenCaptureWindow(Window):
             if _handler_id[0] is not None:
                 try:
                     screen_capture_service.disconnect(_handler_id[0])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[main] screen_capture_service.disconnect(_handler_id[0]) failed: {e}"
+                    )
                 _handler_id[0] = None
             GLib.timeout_add(120, self.show)
 

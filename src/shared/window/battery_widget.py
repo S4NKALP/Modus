@@ -1,4 +1,4 @@
-from fabric.utils import GLib
+from fabric.utils import GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -245,8 +245,11 @@ class BatteryControl(Box):
                 self.battery_service.connect(
                     "power_profile_changed", self.on_profile_changed
                 )
-            except TypeError:
-                pass  # signal does not exist
+            except TypeError as e:
+                logger.warning(
+                    f"[battery_widget] self.battery_service.connect( 'power_profile_changed', se... failed: {e}"
+                )
+                # signal does not exist
 
         # Initialize display
         self.update_battery_info()
@@ -393,10 +396,14 @@ class BatteryControl(Box):
     def destroy(self):
         try:
             self.battery_service.disconnect_by_func(self.on_battery_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[battery_widget] self.battery_service.disconnect_by_func(self.on_battery_c... failed: {e}"
+            )
         try:
             self.battery_service.disconnect_by_func(self.on_profile_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[battery_widget] self.battery_service.disconnect_by_func(self.on_profile_c... failed: {e}"
+            )
         super().destroy()

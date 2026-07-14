@@ -35,8 +35,32 @@ def run_lock():
     lock_main()
 
 
+def run_spotlight(argv):
+    from window.spotlight.app import main as spotlight_main
+
+    command = ""
+    text = ""
+    external = False
+
+    positional = []
+    for arg in argv:
+        if arg == "--external":
+            external = True
+        else:
+            positional.append(arg)
+
+    if positional:
+        command = positional[0]
+    if len(positional) > 1:
+        text = " ".join(positional[1:])
+
+    spotlight_main(command=command, text=text, external=external)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "lock":
         run_lock()
+    elif len(sys.argv) > 1 and sys.argv[1] == "spotlight":
+        run_spotlight(sys.argv[2:])
     else:
         run_app()

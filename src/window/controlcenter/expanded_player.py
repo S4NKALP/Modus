@@ -528,8 +528,10 @@ class PlayerBox(Box):
                 self.position_label.set_label(
                     self.length_str(self.player.position or 0)
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[expanded_player] metadata = self.player._player.props.metadata failed: {e}"
+            )
 
     def _poll_initial_metadata(self):
         if self.exit:
@@ -724,8 +726,10 @@ class PlayerBox(Box):
         if self.player and not self.exit:
             try:
                 self.player.seek_position(value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[expanded_player] self.player.seek_position(value) failed: {e}"
+                )
         if hasattr(self, "_seek_timeout") and self._seek_timeout:
             from fabric.utils import GLib
 
@@ -763,8 +767,10 @@ class PlayerBox(Box):
                 self.seek_bar.set_range(0, duration / 1_000_000)
                 self.length_label.set_label(self.length_str(duration))
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[expanded_player] duration = self._cached_duration or self.player.length or 0 failed: {e}"
+            )
         return False
 
     def _on_seek_bar_realized(self, widget):

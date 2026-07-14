@@ -116,7 +116,10 @@ class DBusMenuClient:
                 3000,
                 None,
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[dbusmenu] return _get_bus().call_sync( self.service_name, self.obje... failed: {e}"
+            )
             return None
 
     def get_layout(self, force_refresh=False):
@@ -231,11 +234,15 @@ class DBusMenuClient:
             if item.has_submenu and not item.children:
                 try:
                     self.about_to_show(item.id)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[dbusmenu] self.about_to_show(item.id) failed: {e}"
+                    )
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[dbusmenu] if node.n_children() != 3: return item failed: {e}"
+            )
 
         return item
 
@@ -247,7 +254,10 @@ class DBusMenuClient:
                 GLib.VariantType("(b)"),
             )
             return res.get_child_value(0).get_boolean() if res else False
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[dbusmenu] res = self._call( 'AboutToShow', GLib.Variant('(i)', (ite... failed: {e}"
+            )
             return False
 
     def click_item(self, item_id, pid=0):
@@ -257,8 +267,10 @@ class DBusMenuClient:
                 GLib.Variant("(isvu)", (item_id, "clicked", GLib.Variant("s", ""), 0)),
             )
             self.invalidate()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[dbusmenu] self._call( 'Event', GLib.Variant('(isvu)', (item_id, 'cl... failed: {e}"
+            )
 
     def invalidate(self):
         self._cache_valid = False
@@ -339,8 +351,8 @@ class DBusMenuClient:
         for sid in self._signal_ids:
             try:
                 bus.signal_unsubscribe(sid)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[dbusmenu] bus.signal_unsubscribe(sid) failed: {e}")
         self._signal_ids.clear()
 
     def update_layout(

@@ -86,7 +86,10 @@ class AppServiceInfo:
 def _resolve_executable(pid: int) -> str:
     try:
         return os.path.realpath(f"/proc/{pid}/exe")
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[service] return os.path.realpath(f'/proc/(pid)/exe') failed: {e}"
+        )
         return ""
 
 
@@ -106,7 +109,10 @@ def _dbus_introspect(bus, service: str, path: str, timeout: int) -> str:
             None,
         )
         return res.get_child_value(0).get_string() if res else ""
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[service] res = bus.call_sync( service, path, 'org.freedesktop.DBus... failed: {e}"
+        )
         return ""
 
 
@@ -124,7 +130,10 @@ def _dbus_get_pid(bus, service: str, timeout: int) -> int:
             None,
         )
         return res.get_child_value(0).get_uint32() if res else 0
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[service] res = bus.call_sync( 'org.freedesktop.DBus', '/org/freede... failed: {e}"
+        )
         return 0
 
 
@@ -222,7 +231,10 @@ class GlobalMenuService(Service):
     ):
         try:
             name, old_owner, new_owner = parameters.unpack()
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[service] name, old_owner, new_owner = parameters.unpack() failed: {e}"
+            )
             return
 
         if not name or name.startswith(":") or name == "org.freedesktop.DBus":
@@ -265,8 +277,10 @@ class GlobalMenuService(Service):
             if isinstance(entry.importer, DBusMenuClient):
                 try:
                     entry.importer.disconnect_signals()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[service] entry.importer.disconnect_signals() failed: {e}"
+                    )
 
         self._introspection_cache.invalidate(service_name)
 
@@ -385,8 +399,10 @@ class GlobalMenuService(Service):
             if out:
                 data = json.loads(out)
                 target_pid = data.get("pid", 0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[service] out = exec_shell_command('hyprctl activewindow -j') failed: {e}"
+            )
 
         with self._state_lock:
             same_class = wm_class == self._current_wm_class
@@ -672,7 +688,10 @@ class GlobalMenuService(Service):
             if not res:
                 return None
             names = res.get_child_value(0).unpack()
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[service] res = bus.call_sync( 'org.freedesktop.DBus', '/org/freede... failed: {e}"
+            )
             return None
 
         services = [
@@ -745,8 +764,10 @@ class GlobalMenuService(Service):
                                 gsvc, gpath, pid, wm_class, test_client
                             )
                             return test_client
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(
+                            f"[service] test_client = GtkMenuClient(gsvc, gpath) failed: {e}"
+                        )
 
                 action_candidates = self._build_action_candidates(
                     svc, _safe_cls, _safe_cap
@@ -773,7 +794,10 @@ class GlobalMenuService(Service):
                 logger.info(
                     f"[GlobalMenuService] No menu found for {svc} wm={wm_class}"
                 )
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    f"[service] pid = _dbus_get_pid(bus, svc, _DBUS_TIMEOUT_PID) failed: {e}"
+                )
                 continue
         return None
 
@@ -942,8 +966,10 @@ class GlobalMenuService(Service):
                         _node_count,
                     )
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[service] xml = self._introspection_cache.get( service, path, _get_... failed: {e}"
+            )
         return results
 
     def _is_same_app(self, pid1: int, pid2: int) -> bool:
@@ -961,21 +987,28 @@ class GlobalMenuService(Service):
                     comm2 = f.read().strip()
                 if comm1 and comm2 and comm1 == comm2:
                     return True
-            except OSError:
-                pass
+            except OSError as e:
+                logger.warning(
+                    f"[service] with open(f'/proc/(pid1)/comm') as f: comm1 = f.read().st... failed: {e}"
+                )
 
             def _ppid(p: int) -> int:
                 try:
                     with open(f"/proc/{p}/stat") as f:
                         parts = f.read().split()
                         return int(parts[3]) if len(parts) > 4 else 0
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[service] with open(f'/proc/(p)/stat') as f: parts = f.read().split... failed: {e}"
+                    )
                     return 0
 
             if _ppid(pid1) == pid2 or _ppid(pid2) == pid1:
                 return True
-        except (OSError, PermissionError, FileNotFoundError):
-            pass
+        except (OSError, PermissionError, FileNotFoundError) as e:
+            logger.warning(
+                f"[service] exe1 = os.path.realpath(f'/proc/(pid1)/exe') failed: {e}"
+            )
         return False
 
     def _extract_menu(

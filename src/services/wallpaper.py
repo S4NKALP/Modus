@@ -3,7 +3,7 @@ import mimetypes
 
 from fabric.core import Service, Signal
 from fabric.utils import GdkPixbuf as gdk_pixbuf
-from fabric.utils import exec_shell_command_async, os
+from fabric.utils import exec_shell_command_async, logger, os
 
 from shared.data import (
     WALLPAPER_PATH,
@@ -44,7 +44,10 @@ def create_thumbnail(
             )
         )
 
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[wallpaper] pixbuf = gdk_pixbuf.Pixbuf.new_from_file_at_scale( image_... failed: {e}"
+        )
         return False
 
 

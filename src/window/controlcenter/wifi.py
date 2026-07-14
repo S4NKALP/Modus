@@ -417,8 +417,10 @@ class WifiConnections(Box):
                 self.other_networks_scrolled.height_animator.disconnect(
                     self._anim_finished_handler
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[wifi] self.other_networks_scrolled.height_animator.disconnect( ... failed: {e}"
+                )
             self._anim_finished_handler = None
 
     def _refresh_after_animation(self):
@@ -477,8 +479,10 @@ class WifiConnections(Box):
             spawn_detached(["nm-connection-editor"])
             if self.parent and hasattr(self.parent, "hide_controlcenter"):
                 self.parent.hide_controlcenter()
-        except FileNotFoundError:
-            pass
+        except FileNotFoundError as e:
+            logger.warning(
+                f"[wifi] spawn_detached(['nm-connection-editor']) failed: {e}"
+            )
         except Exception as e:
             logger.error(f"[WiFi] Failed to open network settings: {e}")
 

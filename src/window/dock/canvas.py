@@ -412,7 +412,8 @@ class DockCanvas(Gtk.DrawingArea):
     def _on_modus_workspace_changed(self, service, value) -> None:
         try:
             clients = self._get_clients()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[canvas] clients = self._get_clients() failed: {e}")
             return
         client_map = {c.get("address"): c for c in clients if c.get("address")}
         for item in self.model.items:
@@ -450,8 +451,8 @@ class DockCanvas(Gtk.DrawingArea):
                             f"{app_class}: {title}" if title != app_class else app_class
                         )
                     break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[canvas] address = signal.data[0] failed: {e}")
         self._needs_redraw = True
         self.queue_draw()
 
@@ -811,7 +812,10 @@ class DockCanvas(Gtk.DrawingArea):
         try:
             trash_path = os.path.expanduser("~/.local/share/Trash/files")
             return os.path.exists(trash_path) and len(os.listdir(trash_path)) > 0
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[canvas] trash_path = os.path.expanduser('~/.local/share/Trash/fil... failed: {e}"
+            )
             return False
 
     def _handle_trash_click(self) -> None:
@@ -860,7 +864,10 @@ class DockCanvas(Gtk.DrawingArea):
                 "command_line": app.command_line if app else app_class,
             }
             self.pinned_apps.append(app_data)
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[canvas] app = self._find_desktop_app(app_class, self._get_desktop... failed: {e}"
+            )
             self.pinned_apps.append(app_class)
         self._write_pinned_apps()
         self._rebuild_model()
@@ -1040,7 +1047,8 @@ class DockCanvas(Gtk.DrawingArea):
         elif isinstance(ws, (int, str)):
             try:
                 return int(ws)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
+                logger.warning(f"[canvas] return int(ws) failed: {e}")
                 return None
         return None
 
@@ -1060,15 +1068,19 @@ class DockCanvas(Gtk.DrawingArea):
         for handler_id in self._hyprland_event_handlers:
             try:
                 self._hyprland_connection.disconnect(handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[canvas] self._hyprland_connection.disconnect(handler_id) failed: {e}"
+                )
         self._hyprland_event_handlers.clear()
 
         if self._modus_ws_handler is not None:
             try:
                 get_modus_service().disconnect(self._modus_ws_handler)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[canvas] get_modus_service().disconnect(self._modus_ws_handler) failed: {e}"
+                )
             self._modus_ws_handler = None
 
         if self.menu:

@@ -248,6 +248,7 @@ class HyprlandCaptureBackend(CaptureBackend):
             try:
                 proc.wait_finish(task)
             except Exception as error:
+                logger.warning(f"[capture] proc.wait_finish(task) failed: {error}")
                 on_result(CaptureResult.failure(str(error)))
                 return
             if expected.exists():
@@ -338,7 +339,10 @@ class HyprlandCaptureBackend(CaptureBackend):
         def on_done(proc: Gio.Subprocess, task: Gio.Task) -> None:
             try:
                 _, stdout, _ = proc.communicate_utf8_finish(task)
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    f"[capture] _, stdout, _ = proc.communicate_utf8_finish(task) failed: {e}"
+                )
                 on_geometry(None)
                 return
             on_geometry(stdout.strip() if stdout else None)
@@ -372,7 +376,10 @@ class HyprlandCaptureBackend(CaptureBackend):
         def on_done(proc: Gio.Subprocess, task: Gio.Task) -> None:
             try:
                 _, stdout, _ = proc.communicate_utf8_finish(task)
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    f"[capture] _, stdout, _ = proc.communicate_utf8_finish(task) failed: {e}"
+                )
                 on_geometry(None)
                 return
             on_geometry(stdout.strip() if stdout else None)

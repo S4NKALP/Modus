@@ -94,10 +94,14 @@ class CachedNotification(Service):
                         self.image_file
                     )
                     return self._cached_image_pixbuf
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as e:
+                    logger.warning(
+                        f"[custom_notification] self._cached_image_pixbuf = GdkPixbuf.Pixbuf.new_from_fil... failed: {e}"
+                    )
+        except Exception as e:
+            logger.warning(
+                f"[custom_notification] if self.image_pixmap: self._cached_image_pixbuf = self.im... failed: {e}"
+            )
         self._cached_image_pixbuf = None
         return None
 
@@ -136,12 +140,16 @@ class CachedNotification(Service):
                             notification_image_cache_key = (
                                 get_notification_image_cache_key(self.id, image_pixbuf)
                             )
-                    except Exception:
+                    except Exception as e:
                         # If temp file is gone or any other error, just mark as None
-                        pass
-            except Exception:
+                        logger.warning(
+                            f"[custom_notification] image_pixbuf = getattr(self._notification, 'image_pixbuf'... failed: {e}"
+                        )
+            except Exception as e:
                 # If any error occurs during cache key generation, skip it
-                pass
+                logger.warning(
+                    f"[custom_notification] if hasattr(self, 'cache_metadata') and self.cache_metadat... failed: {e}"
+                )
 
         return {
             "cached-id": self.cache_id,

@@ -1,7 +1,7 @@
 import time
 from typing import Any
 
-from fabric.utils import DesktopApp, get_desktop_applications
+from fabric.utils import DesktopApp, get_desktop_applications, logger
 
 from utils.functions import fuzzy_score
 from window.spotlight.api import SearchResult, SpotlightPlugin
@@ -38,8 +38,10 @@ class ApplicationPlugin(SpotlightPlugin):
             try:
                 self._desktop_apps = get_desktop_applications()
                 self._apps_loaded_at = now
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[application] self._desktop_apps = get_desktop_applications() failed: {e}"
+                )
 
         results: list[SearchResult] = []
         for app in self._desktop_apps:

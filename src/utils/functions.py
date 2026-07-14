@@ -81,19 +81,22 @@ def parse_timeout_string(timeout_str):
         try:
             seconds = int(timeout_str[:-1])
             return seconds * 1000
-        except ValueError:
+        except ValueError as e:
+            logger.warning(f"[functions] seconds = int(timeout_str[:-1]) failed: {e}")
             return 5000
     elif timeout_str.endswith("m"):
         try:
             minutes = int(timeout_str[:-1])
             return minutes * 60 * 1000
-        except ValueError:
+        except ValueError as e:
+            logger.warning(f"[functions] minutes = int(timeout_str[:-1]) failed: {e}")
             return 5000
     else:
         try:
             seconds = int(timeout_str)
             return seconds * 1000
-        except ValueError:
+        except ValueError as e:
+            logger.warning(f"[functions] seconds = int(timeout_str) failed: {e}")
             return 5000
 
 
@@ -114,7 +117,10 @@ def copy_text(text: str) -> bool:
         clipboard.set_text(text, -1)
         clipboard.store()
         return True
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[functions] clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD) failed: {e}"
+        )
         return False
 
 
@@ -125,7 +131,10 @@ def copy_image(image_path: str) -> bool:
         clipboard.set_image(image)
         clipboard.store()
         return True
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[functions] clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD) failed: {e}"
+        )
         return False
 
 
@@ -150,8 +159,10 @@ def trigger_paste_shortcut():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    except FileNotFoundError:
-        pass
+    except FileNotFoundError as e:
+        logger.warning(
+            f"[functions] subprocess.Popen( ['sh', '-c', 'wl-paste | wtype -'], std... failed: {e}"
+        )
 
 
 def get_wifi_icon_for_strength(strength: int) -> str:
@@ -199,8 +210,9 @@ def is_special_workspace_id(ws_id) -> bool:
         workspace_id = int(ws_id)
         # Special workspaces have negative IDs
         return workspace_id < 0
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as e:
         # If it's a string, check if it starts with "special:"
+        logger.warning(f"[functions] workspace_id = int(ws_id) failed: {e}")
         return bool(isinstance(ws_id, str) and ws_id.startswith("special:"))
 
 
@@ -264,7 +276,10 @@ def is_process_running(process_name: str) -> bool:
     try:
         result = subprocess.run(["pidof", process_name], capture_output=True, text=True)
         return bool(result.stdout.strip())
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[functions] result = subprocess.run(['pidof', process_name], capture_... failed: {e}"
+        )
         return False
 
 
@@ -281,7 +296,10 @@ def find_process_pid(process_name: str, timeout: float | None = None) -> list[st
             timeout=timeout,
         )
         return [pid for pid in result.stdout.strip().split() if pid]
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[functions] result = subprocess.run( ['pgrep', '-f', process_name], c... failed: {e}"
+        )
         return []
 
 
@@ -290,7 +308,10 @@ def find_binary(name: str) -> str | None:
     try:
         result = subprocess.run(["which", name], capture_output=True, text=True)
         return result.stdout.strip() or None
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[functions] result = subprocess.run(['which', name], capture_output=T... failed: {e}"
+        )
         return None
 
 
@@ -307,7 +328,8 @@ def format_duration(seconds: int) -> str:
     """
     try:
         total = int(seconds)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as e:
+        logger.warning(f"[functions] total = int(seconds) failed: {e}")
         return "N/A"
 
     if total <= 0:
@@ -358,14 +380,23 @@ def run_command(
         )
         return CommandResult(result.returncode, result.stdout, result.stderr)
     except subprocess.TimeoutExpired as e:
+        logger.warning(
+            f"[functions] result = subprocess.run( args, capture_output=True, text=... failed: {e}"
+        )
         return CommandResult(
             -1,
             (e.stdout or b"" if not text else e.stdout or ""),
             (e.stderr or (b"timeout" if not text else "timeout")),
         )
     except FileNotFoundError as e:
+        logger.warning(
+            f"[functions] result = subprocess.run( args, capture_output=True, text=... failed: {e}"
+        )
         return CommandResult(127, "", str(e))
     except Exception as e:
+        logger.warning(
+            f"[functions] result = subprocess.run( args, capture_output=True, text=... failed: {e}"
+        )
         return CommandResult(1, "", str(e))
 
 

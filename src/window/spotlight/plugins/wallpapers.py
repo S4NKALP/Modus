@@ -2,6 +2,8 @@ import os
 import random
 from typing import Any
 
+from fabric.utils import logger
+
 from services.wallpaper import WallpaperService, create_thumbnail
 from shared.data import WALLPAPERS_THUMBNAILS_SIZE
 from utils.functions import fuzzy_filter
@@ -71,7 +73,10 @@ class WallpaperPlugin(SpotlightPlugin):
                         image_path, thumbnail_path, WALLPAPERS_THUMBNAILS_SIZE
                     )
                     thumbs_created += 1
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[wallpapers] create_thumbnail( image_path, thumbnail_path, WALLPAPERS_... failed: {e}"
+                    )
                     continue
 
             filename = os.path.basename(image_path)

@@ -11,7 +11,10 @@ def read_dmi(field):
     try:
         with open(f"/sys/class/dmi/id/{field}") as f:
             return f.read().strip()
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[about] with open(f'/sys/class/dmi/id/(field)') as f: return f.re... failed: {e}"
+        )
         return "Unknown"
 
 
@@ -40,7 +43,10 @@ def get_gpu_name():
             return clean(output[0])
 
         return "Unknown GPU"
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[about] output = ( subprocess.check_output( 'lspci -nn | grep -i ... failed: {e}"
+        )
         return "Unknown GPU"
 
 
@@ -146,7 +152,10 @@ def get_app_info(wmclass):
                         ):
                             desktop_file = full_path
                             break
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[about] full_path = os.path.join(path, f) failed: {e}"
+                    )
                     continue
 
         if desktop_file:
@@ -199,7 +208,10 @@ def get_app_info(wmclass):
                     "categories": categories,
                     "desktop_file": desktop_file,
                 }
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    f"[about] with open(desktop_file, encoding='utf-8') as f: content =... failed: {e}"
+                )
                 continue
 
     # Fallback: try to find executable in PATH

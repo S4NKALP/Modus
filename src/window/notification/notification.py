@@ -201,8 +201,11 @@ def get_notification_image_cache_key(notification_id, image_pixbuf):
 
         # Fallback to timestamp for invalid pixbufs
         return str(int(time.time()))[:8]
-    except Exception:
+    except Exception as e:
         # Ultimate fallback
+        logger.warning(
+            f"[notification] if image_pixbuf and hasattr(image_pixbuf, 'get_pixels'): ... failed: {e}"
+        )
         return str(int(time.time()))[:8]
 
 
@@ -644,8 +647,10 @@ class NotificationWidget(Box):
         if notif_key:
             try:
                 pixbuf = get_cached_notification_image(notif_key)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[notification] pixbuf = get_cached_notification_image(notif_key) failed: {e}"
+                )
 
         # 2. Try notification image via image_pixbuf (only if no cached)
         if not pixbuf:
@@ -659,8 +664,10 @@ class NotificationWidget(Box):
                         pixbuf = cached
                     else:
                         pixbuf = img
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[notification] img = getattr(notification, 'image_pixbuf', None) failed: {e}"
+                )
 
         # 3. App icon via cache_metadata
         if not pixbuf:
@@ -670,8 +677,10 @@ class NotificationWidget(Box):
                     from window.notification.unified_cache import get_from_cache
 
                     pixbuf = get_from_cache(app_key, (64, 64))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[notification] from window.notification.unified_cache import get_from_cache failed: {e}"
+                    )
 
         # 4. Direct app icon caching
         if not pixbuf:
@@ -681,8 +690,10 @@ class NotificationWidget(Box):
             if app_icon:
                 try:
                     pixbuf = cache_notification_icon(app_icon, (64, 64))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[notification] pixbuf = cache_notification_icon(app_icon, (64, 64)) failed: {e}"
+                    )
 
         # 5. Fallback
         if not pixbuf:
@@ -694,7 +705,10 @@ class NotificationWidget(Box):
                 NOTIFICATION_IMAGE_SIZE,
                 GdkPixbuf.InterpType.BILINEAR,
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[notification] return pixbuf.scale_simple( NOTIFICATION_IMAGE_SIZE, NOTI... failed: {e}"
+            )
             return pixbuf
 
     def create_action_buttons(self, notification):

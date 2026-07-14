@@ -301,7 +301,10 @@ class PluginLoader:
         """Check if requirements.txt changed since last install."""
         try:
             return req_file.read_text() != marker_file.read_text()
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[loader] return req_file.read_text() != marker_file.read_text() failed: {e}"
+            )
             return True
 
     # ------------------------------------------------------------------

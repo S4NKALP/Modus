@@ -106,8 +106,10 @@ class EvdevLEDMonitor:
             for child in device_path.iterdir():
                 if child.name.startswith("event"):
                     return Path("/dev/input") / child.name
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[utils] device_path = self.led_path / 'device' failed: {e}"
+            )
         return None
 
     def start(self):
@@ -137,7 +139,10 @@ class EvdevLEDMonitor:
             while True:
                 try:
                     data = os.read(fd, event_size)
-                except BlockingIOError:
+                except BlockingIOError as e:
+                    logger.warning(
+                        f"[utils] data = os.read(fd, event_size) failed: {e}"
+                    )
                     break
 
                 if len(data) == event_size:
@@ -160,6 +165,6 @@ class EvdevLEDMonitor:
         if self._fd is not None:
             try:
                 os.close(self._fd)
-            except OSError:
-                pass
+            except OSError as e:
+                logger.warning(f"[utils] os.close(self._fd) failed: {e}")
             self._fd = None

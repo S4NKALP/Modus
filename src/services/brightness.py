@@ -140,8 +140,10 @@ class Brightness(Service):
                 self._brightness_path = base_path / "brightness"
                 self._max_brightness_path = base_path / "max_brightness"
                 return self._screen_device
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[brightness] devices = os.listdir('/sys/class/backlight') failed: {e}"
+            )
         return ""
 
     def _detect_ddcutil_bus(self):
@@ -152,7 +154,10 @@ class Brightness(Service):
                 match = re.search(r"I2C bus:\s*/dev/i2c-(\d+)", process.stdout)
                 return int(match.group(1)) if match else -1
             return -1
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[brightness] process = run_command(['ddcutil', 'detect'], timeout=2) failed: {e}"
+            )
             return -1
 
     def _read_max_brightness(self):
@@ -185,7 +190,10 @@ class Brightness(Service):
                 try:
                     if self._max_brightness_path and self._max_brightness_path.exists():
                         return int(self._max_brightness_path.read_text().strip())
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[brightness] if self._max_brightness_path and self._max_brightness_pat... failed: {e}"
+                    )
                     return None
         return None
 

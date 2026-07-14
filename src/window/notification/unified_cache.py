@@ -20,8 +20,10 @@ def _get_icon_theme_name():
         settings = Gtk.Settings.get_default()
         if settings:
             return getattr(settings, "gtk_icon_theme_name", "") or ""
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            f"[unified_cache] settings = Gtk.Settings.get_default() failed: {e}"
+        )
     # Fallback: read from settings.ini
     try:
         settings_path = os.path.expanduser("~/.config/gtk-3.0/settings.ini")
@@ -31,8 +33,10 @@ def _get_icon_theme_name():
                     line = line.strip()
                     if line.startswith("gtk-icon-theme-name="):
                         return line.split("=", 1)[1].strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            f"[unified_cache] settings_path = os.path.expanduser('~/.config/gtk-3.0/set... failed: {e}"
+        )
     return ""
 
 
@@ -50,8 +54,11 @@ def get_unified_cache_key(source_data, size=None, app_name=None):
                 pixel_data = source_data.get_pixels()
                 image_hash = hashlib.md5(pixel_data).hexdigest()[:8]
                 return image_hash
-            except Exception:
+            except Exception as e:
                 # Fallback to random UUID if pixel data fails
+                logger.warning(
+                    f"[unified_cache] pixel_data = source_data.get_pixels() failed: {e}"
+                )
                 return str(uuid.uuid4())[:8]
         elif isinstance(source_data, str):
             # For file paths - create hash-based name
@@ -71,8 +78,11 @@ def get_unified_cache_key(source_data, size=None, app_name=None):
         else:
             # Fallback to random UUID
             return str(uuid.uuid4())[:8]
-    except Exception:
+    except Exception as e:
         # Ultimate fallback
+        logger.warning(
+            f"[unified_cache] if hasattr(source_data, 'get_pixels'): # For pixbuf data ... failed: {e}"
+        )
         return str(uuid.uuid4())[:8]
 
 
@@ -216,7 +226,10 @@ def get_fallback_icon(size=(48, 48)):
             return GdkPixbuf.Pixbuf.new(
                 GdkPixbuf.Colorspace.RGB, True, 8, size[0], size[1]
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[unified_cache] return GdkPixbuf.Pixbuf.new( GdkPixbuf.Colorspace.RGB, Tr... failed: {e}"
+            )
             return None
 
 
@@ -230,8 +243,10 @@ def _get_stored_theme():
         if os.path.exists(_CURRENT_THEME_FILE):
             with open(_CURRENT_THEME_FILE) as f:
                 return f.read().strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            f"[unified_cache] if os.path.exists(_CURRENT_THEME_FILE): with open(_CURREN... failed: {e}"
+        )
     return ""
 
 
@@ -241,8 +256,10 @@ def _store_theme(name):
         os.makedirs(os.path.dirname(_CURRENT_THEME_FILE), exist_ok=True)
         with open(_CURRENT_THEME_FILE, "w") as f:
             f.write(name)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            f"[unified_cache] os.makedirs(os.path.dirname(_CURRENT_THEME_FILE), exist_o... failed: {e}"
+        )
 
 
 def cleanup_theme_changed_caches():
@@ -262,8 +279,10 @@ def cleanup_theme_changed_caches():
             if os.path.exists(ICON_CACHE_FILE):
                 os.unlink(ICON_CACHE_FILE)
                 logger.info("[Cache] Cleared icon resolver cache")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[unified_cache] from utils.icon_resolver import ICON_CACHE_FILE failed: {e}"
+            )
 
     # Store current theme for next run
     if current_theme:

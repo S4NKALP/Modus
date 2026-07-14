@@ -1,4 +1,4 @@
-from fabric.utils import GLib, time
+from fabric.utils import GLib, logger, time
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -73,8 +73,10 @@ class RecordingIndicator(Box):
         try:
             screen_capture_service.stop_recording()
             self.stop_timer()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[recording] screen_capture_service.stop_recording() failed: {e}"
+            )
 
     def destroy(self):
         self.stop_timer()

@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib
+from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
@@ -273,7 +273,10 @@ class WiFiPasswordDialog(Window):
             self.password_entry.grab_focus()
             self.password_entry.select_region(0, -1)
             return False
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[wifi_password_dialog] self.password_entry.grab_focus() failed: {e}"
+            )
             return False
 
     def destroy_dialog(self):

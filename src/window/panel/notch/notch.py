@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib, Gtk
+from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.shapes import Corner
@@ -192,8 +192,10 @@ class Notch(Box):
                 svc = self._mpris.get_player_service(name)
                 if svc is not None:
                     svc.disconnect_by_func(self._on_any_artwork)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[notch] svc = self._mpris.get_player_service(name) failed: {e}"
+                )
             self._apply_stack_state()
 
     # ── Scroll ────────────────────────────────────────────────────────────────

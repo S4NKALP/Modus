@@ -343,12 +343,16 @@ class MicrophoneIndicator(Box):
         if old is not None and old is not mic:
             try:
                 old.disconnect_by_func(self._on_mic_stream_changed)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[indicators] old.disconnect_by_func(self._on_mic_stream_changed) failed: {e}"
+                )
         try:
             mic.disconnect_by_func(self._on_mic_stream_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[indicators] mic.disconnect_by_func(self._on_mic_stream_changed) failed: {e}"
+            )
         mic.connect("changed", self._on_mic_stream_changed)
         self._mic_device = mic
         self._sync_state()
@@ -386,8 +390,10 @@ class MicrophoneIndicator(Box):
             self._hide_timer_id = 0
         try:
             self._audio.disconnect_by_func(self._on_mic_device_changed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[indicators] self._audio.disconnect_by_func(self._on_mic_device_changed) failed: {e}"
+            )
         old = getattr(self, "_mic_device", None)
         target = old if old is not None else self._audio.microphone
         if target is not None:

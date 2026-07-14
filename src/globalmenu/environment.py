@@ -65,8 +65,8 @@ def _remove_global_ld_preload():
                 out.append(ln)
             rc.write_text("".join(out))
             logger.info(f"[GlobalMenu] Removed stale LD_PRELOAD block from {rc}")
-        except OSError:
-            pass
+        except OSError as e:
+            logger.warning(f"[environment] if not rc.is_file(): continue failed: {e}")
 
     # Strip the LD_PRELOAD line from environment.d/appmenu.conf.
     env_path = home / ".config" / "environment.d" / "appmenu.conf"
@@ -78,8 +78,10 @@ def _remove_global_ld_preload():
                 if not ln.strip().startswith("LD_PRELOAD=")
             ]
             env_path.write_text("".join(kept))
-    except OSError:
-        pass
+    except OSError as e:
+        logger.warning(
+            f"[environment] if env_path.is_file(): kept = [ ln for ln in env_path.rea... failed: {e}"
+        )
 
     # Clear it from the activation environment for future launches.
     exec_shell_command("dbus-update-activation-environment --systemd LD_PRELOAD=")
@@ -151,8 +153,10 @@ def setup_global_menu_environment():
             with open(env_path, "w") as f:
                 for k, v in ENV_VARS.items():
                     f.write(f"{k}={v}\n")
-        except OSError:
-            pass
+        except OSError as e:
+            logger.warning(
+                f"[environment] env_dir.mkdir(parents=True, exist_ok=True) failed: {e}"
+            )
 
         settings_path = Path.home() / ".config" / "gtk-3.0" / "settings.ini"
         try:
@@ -165,8 +169,10 @@ def setup_global_menu_environment():
                     if content and not content.endswith("\n"):
                         f.write("\n")
                     f.write("gtk-shell-shows-menubar=1\n")
-        except OSError:
-            pass
+        except OSError as e:
+            logger.warning(
+                f"[environment] settings_path.parent.mkdir(parents=True, exist_ok=True) failed: {e}"
+            )
 
         pam_path = Path.home() / ".pam_environment"
         try:
@@ -179,8 +185,8 @@ def setup_global_menu_environment():
                 if not any(ln.startswith(f"{k} ") for ln in lines):
                     with open(pam_path, "a") as f:
                         f.write(line)
-        except OSError:
-            pass
+        except OSError as e:
+            logger.warning(f"[environment] existing = '' failed: {e}")
 
         logger.info("[GlobalMenu] GTK environment injected")
     except Exception as e:

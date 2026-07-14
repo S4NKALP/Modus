@@ -99,12 +99,16 @@ class PopupWindow(WaylandWindow):
         if self._pointing_widget:
             try:
                 self._pointing_widget.disconnect_by_func(self.do_handle_size_allocate)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[popup_win] self._pointing_widget.disconnect_by_func(self.do_handle_s... failed: {e}"
+                )
         try:
             self.disconnect_by_func(self.do_handle_size_allocate)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[popup_win] self.disconnect_by_func(self.do_handle_size_allocate) failed: {e}"
+            )
         super().destroy()
 
     def do_calculate_edges(self):

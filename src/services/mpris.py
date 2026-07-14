@@ -81,28 +81,38 @@ class PlayerService(Service):
     def player_name(self) -> str:
         try:
             return self._player.props.player_name or ""
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] return self._player.props.player_name or '' failed: {e}"
+            )
             return ""
 
     @Property(str, "readable", default_value="")
     def title(self) -> str:
         try:
             return self._player.get_title() or ""
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[mpris] return self._player.get_title() or '' failed: {e}")
             return ""
 
     @Property(object, "readable")
     def artist(self) -> list:
         try:
             return list(self._player.props.metadata["xesam:artist"]) or []
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] return list(self._player.props.metadata['xesam:artist']) ... failed: {e}"
+            )
             return []
 
     @Property(str, "readable", default_value="")
     def album(self) -> str:
         try:
             return self._player.props.metadata["xesam:album"] or ""
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] return self._player.props.metadata['xesam:album'] or '' failed: {e}"
+            )
             return ""
 
     @Property(str, "readable", default_value="Stopped")
@@ -115,21 +125,30 @@ class PlayerService(Service):
                 return "Paused"
             else:
                 return "Stopped"
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] val = int(self._player.props.playback_status) failed: {e}"
+            )
             return "Stopped"
 
     @Property(int, "readable", default_value=0)
     def length(self) -> int:
         try:
             return int(self._player.props.metadata["mpris:length"])
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] return int(self._player.props.metadata['mpris:length']) failed: {e}"
+            )
             return 0
 
     @Property(int, "readable", default_value=0)
     def position(self) -> int:
         try:
             return int(self._player.get_position())
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] return int(self._player.get_position()) failed: {e}"
+            )
             return 0
 
     def play_pause(self, *_):
@@ -206,7 +225,10 @@ class PlayerService(Service):
             return False
         try:
             metadata = self._player.props.metadata
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[mpris] metadata = self._player.props.metadata failed: {e}"
+            )
             return False
         if metadata:
             # Push full metadata only once to avoid UI churn on every retry.
@@ -363,7 +385,8 @@ class PlayerService(Service):
     def _meta_str(self, metadata, key: str) -> str | None:
         try:
             value = metadata[key]
-        except (KeyError, TypeError, GLib.Error):
+        except (KeyError, TypeError, GLib.Error) as e:
+            logger.warning(f"[mpris] value = metadata[key] failed: {e}")
             return None
         if isinstance(value, (list, tuple)):
             return " ".join(str(v) for v in value) if value else None
@@ -401,7 +424,8 @@ class PlayerService(Service):
             return
         try:
             art_url = metadata["mpris:artUrl"]
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as e:
+            logger.warning(f"[mpris] art_url = metadata['mpris:artUrl'] failed: {e}")
             return
         if not art_url:
             return

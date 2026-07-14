@@ -135,9 +135,11 @@ class BluetoothDevice(Service):
 
         try:
             self._battery_proxy = _make_proxy(bus, object_path, BLUEZ_BATTERY_IFACE)
-        except Exception:
+        except Exception as e:
             # Battery1 is optional — not all devices expose it
-            pass
+            logger.warning(
+                f"[bluetooth] self._battery_proxy = _make_proxy(bus, object_path, BLUEZ... failed: {e}"
+            )
 
         # Subscribe to Device1 PropertiesChanged
         self._prop_sub_id = bus.signal_subscribe(
@@ -190,7 +192,10 @@ class BluetoothDevice(Service):
         try:
             v = self._battery_proxy.get_cached_property(name)
             return v.unpack() if v else None
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[bluetooth] v = self._battery_proxy.get_cached_property(name) failed: {e}"
+            )
             return None
 
     def _on_properties_changed(
@@ -466,8 +471,8 @@ class BluetoothAdapter(Service):
         if handler_id is not None:
             try:
                 device.disconnect(handler_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[bluetooth] device.disconnect(handler_id) failed: {e}")
 
         self.emit("device-removed", addr)
         if device.connected:

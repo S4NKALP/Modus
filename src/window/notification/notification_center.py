@@ -234,7 +234,10 @@ class ExpandableNotificationGroup(Box):
         # Always scale to 64x64 so screenshot thumbnails match app icon size
         try:
             return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[notification_center] return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.B... failed: {e}"
+            )
             return pixbuf
 
     def create_expanded_state(self):
@@ -499,7 +502,10 @@ class NotificationCenterWidget(NotificationWidget):
         # Always scale to 64x64 so screenshot thumbnails match app icon size
         try:
             return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[notification_center] return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.B... failed: {e}"
+            )
             return pixbuf
 
     def create_content(self, notification):

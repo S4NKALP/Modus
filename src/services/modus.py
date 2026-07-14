@@ -438,7 +438,10 @@ def is_night_light_active() -> bool:
     try:
         _night_light_active = bool(find_process_pid("hyprsunset"))
         return _night_light_active
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            f"[modus] _night_light_active = bool(find_process_pid('hyprsunset')) failed: {e}"
+        )
         return False
 
 
@@ -572,7 +575,10 @@ def open_trash():
             if find_binary(fm):
                 spawn_detached([fm, trash_path])
                 return
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[modus] if find_binary(fm): spawn_detached([fm, trash_path]) return failed: {e}"
+            )
             continue
 
 

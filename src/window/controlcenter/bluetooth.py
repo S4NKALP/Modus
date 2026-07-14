@@ -535,8 +535,10 @@ class BluetoothConnections(Box):
                 self.other_devices_scrolled.height_animator.disconnect(
                     self._anim_finished_handler
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[bluetooth] self.other_devices_scrolled.height_animator.disconnect( s... failed: {e}"
+                )
             self._anim_finished_handler = None
 
     def _refresh_after_animation(self):
@@ -558,8 +560,10 @@ class BluetoothConnections(Box):
             spawn_detached(["blueman-manager"])
             if self.parent and hasattr(self.parent, "hide_controlcenter"):
                 self.parent.hide_controlcenter()
-        except FileNotFoundError:
-            pass
+        except FileNotFoundError as e:
+            logger.warning(
+                f"[bluetooth] spawn_detached(['blueman-manager']) failed: {e}"
+            )
         except Exception as e:
             logger.error(f"[Bluetooth] Failed to open bluetooth settings: {e}")
 

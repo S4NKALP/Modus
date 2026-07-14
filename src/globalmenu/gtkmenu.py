@@ -17,7 +17,8 @@ def atspi_activate_menu_item(pid: int, label: str) -> bool:
 
         gi.require_version("Atspi", "2.0")
         from gi.repository import Atspi
-    except (ImportError, ValueError):
+    except (ImportError, ValueError) as e:
+        logger.warning(f"[gtkmenu] import gi failed: {e}")
         return False
 
     try:
@@ -28,7 +29,8 @@ def atspi_activate_menu_item(pid: int, label: str) -> bool:
                 continue
             try:
                 app_pid = app.get_process_id()
-            except Exception:
+            except Exception as e:
+                logger.warning(f"[gtkmenu] app_pid = app.get_process_id() failed: {e}")
                 continue
             if app_pid != pid:
                 continue
@@ -43,8 +45,10 @@ def atspi_activate_menu_item(pid: int, label: str) -> bool:
                         result = _find_menubar(obj.get_child_at_index(j), depth + 1)
                         if result:
                             return result
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[gtkmenu] if obj.get_role_name() == 'menu bar': return obj failed: {e}"
+                    )
                 return None
 
             def _find_frame(obj, depth=0):
@@ -57,8 +61,10 @@ def atspi_activate_menu_item(pid: int, label: str) -> bool:
                         result = _find_frame(obj.get_child_at_index(j), depth + 1)
                         if result:
                             return result
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[gtkmenu] if obj.get_role_name() == 'frame': return obj failed: {e}"
+                    )
                 return None
 
             frame = _find_frame(app)
@@ -75,7 +81,10 @@ def atspi_activate_menu_item(pid: int, label: str) -> bool:
                     continue
                 try:
                     item_name = (item.get_name() or "").lower().strip()
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[gtkmenu] item_name = (item.get_name() or '').lower().strip() failed: {e}"
+                    )
                     continue
                 if item_name == label_lower or label_lower in item_name:
                     try:
@@ -384,7 +393,10 @@ class GtkMenuClient:
                         if pid and item_label:
                             atspi_activate_menu_item(pid, item_label)
                         return
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[gtkmenu] if ( use_change_state and action_info and action_info.sta... failed: {e}"
+                    )
                     continue
         except Exception as e:
             logger.error(f"[GtkMenuClient] click failed: {e}")
@@ -398,8 +410,10 @@ class GtkMenuClient:
         if action_target is not None:
             try:
                 return GLib.Variant("av", [action_target])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[gtkmenu] return GLib.Variant('av', [action_target]) failed: {e}"
+                )
         if action_info and action_info.parameter_type:
             param_type_str = action_info.parameter_type
             if param_type_str and param_type_str != "()":
@@ -407,8 +421,10 @@ class GtkMenuClient:
                     param_type = GLib.VariantType(param_type_str)
                     default_val = GLib.Variant.new_tuple(GLib.Variant(param_type, None))
                     return GLib.Variant("av", [default_val])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[gtkmenu] param_type = GLib.VariantType(param_type_str) failed: {e}"
+                    )
         return GLib.Variant("av", [])
 
 
@@ -443,7 +459,10 @@ class ActionMenuClient:
                 3000,
                 None,
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[gtkmenu] return _get_bus().call_sync( self.service_name, path or s... failed: {e}"
+            )
             return None
 
     def _refresh_action_cache(self):
@@ -723,8 +742,10 @@ class ActionMenuClient:
         if action_target is not None:
             try:
                 return GLib.Variant("av", [action_target])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[gtkmenu] return GLib.Variant('av', [action_target]) failed: {e}"
+                )
         if action_info and action_info.parameter_type:
             param_type_str = action_info.parameter_type
             if param_type_str and param_type_str != "()":
@@ -732,6 +753,8 @@ class ActionMenuClient:
                     param_type = GLib.VariantType(param_type_str)
                     default_val = GLib.Variant.new_tuple(GLib.Variant(param_type, None))
                     return GLib.Variant("av", [default_val])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[gtkmenu] param_type = GLib.VariantType(param_type_str) failed: {e}"
+                    )
         return GLib.Variant("av", [])

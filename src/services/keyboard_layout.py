@@ -1,17 +1,19 @@
-from pathlib import Path
+import json
 
-import tomlkit
 from fabric.core.service import Property, Service, Signal
+from fabric.hyprland.service import Hyprland
 from fabric.utils import Gio, GLib, logger
 
-import shared.data as data
-from services.config import on_config_change
+from services.config import get_config, on_config_change
 
 HYPRCTL_BIN = "hyprctl"
+DEFAULT_LAYOUTS = ["us", "np"]
 
 
 class KeyboardLayout(Service):
-    """Service to manage keyboard layout switching and monitoring via Hyprland."""
+    """In-memory service that treats Hyprland as the source of truth for the
+    active keyboard layout. All runtime state lives in memory; Hyprland is
+    queried/synced via hyprctl and kept in sync through its event socket."""
 
     _instance = None
 
@@ -28,7 +30,7 @@ class KeyboardLayout(Service):
 
     @Signal
     def layout_changed(self, layout: str) -> None:
-        """Signal emitted when keyboard layout changes."""
+        """Signal emitted when the active keyboard layout changes."""
 
     def __init__(self, **kwargs):
         if getattr(self, "_initialized", False):
@@ -36,143 +38,198 @@ class KeyboardLayout(Service):
         super().__init__(**kwargs)
         self._initialized = True
 
-        self.layout_state_file = Path(data.CACHE_DIR) / "kb_layout.toml"
-        self.layout_file = Path(data.CACHE_DIR) / "kb_layout_current.txt"
-        self._last_layout = None
-        self.layouts = []
-        self.current_index = 0
-        self._reload_pending = False
+        self._layouts: list[str] = []
+        self._current_index: int = 0
+        self._current_layout: str | None = None
+        self._sync_pending: bool = False
 
         self._init_layout_config()
-        self._start_file_monitor()
-
+        self._connect_hyprland_events()
         on_config_change(self._on_config_change)
 
-    def _init_layout_config(self):
-        config_layouts = data.load_config().get("keyboard_layouts", ["us", "np"])
-        state = self._read_state()
+    # ── hyprctl wrapper ────────────────────────────────────────────────────────
 
-        if state:
-            self.layouts = state.get("layouts", config_layouts)
-            self.current_index = state.get("current_index", 0)
-        else:
-            self.layouts = config_layouts
-            self.current_index = 0
-            self._save_state()
+    def _hyprctl(self, *args, on_reply=None):
+        """Execute a hyprctl command via Gio.Subprocess.
+
+        Every hyprctl invocation goes through here. The call is asynchronous and
+        never blocks the UI. ``on_reply`` (optional) receives the stripped stdout
+        string, or ``None`` on failure.
+        """
+        argv = [HYPRCTL_BIN, *[str(arg) for arg in args]]
+        try:
+            proc = Gio.Subprocess.new(
+                argv,
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
+            )
+        except GLib.Error as error:
+            logger.error(f"[KeyboardLayout] Failed to run {argv}: {error}")
+            if on_reply is not None:
+                on_reply(None)
+            return
+
+        def on_done(process: Gio.Subprocess, task: Gio.Task):
+            try:
+                _, stdout, _ = process.communicate_utf8_finish(task)
+            except GLib.Error:
+                stdout = None
+            if on_reply is not None:
+                on_reply(stdout.strip() if stdout else None)
+
+        proc.communicate_utf8_async(None, None, on_done)
+
+    # ── initialization ─────────────────────────────────────────────────────────
+
+    def _init_layout_config(self):
+        self._layouts = self._load_layouts_from_config()
+
+        if not self._layouts:
+            logger.warning("[KeyboardLayout] No keyboard layouts configured.")
+            return
 
         self._apply_layouts_to_hyprland()
-        self._apply_current_layout_index()
+        self._sync_from_hyprland()
 
-    def _read_state(self):
-        if not self.layout_state_file.exists():
-            return None
-        try:
-            with open(self.layout_state_file) as f:
-                data = tomlkit.load(f)
-            return dict(data) if data else None
-        except Exception as e:
-            logger.error(f"[KeyboardLayout] Failed to read state: {e}")
-            return None
+        if self._current_layout is None:
+            self._set_current(0, emit=False)
 
-    def _save_state(self):
-        try:
-            self.layout_state_file.parent.mkdir(parents=True, exist_ok=True)
-            doc = tomlkit.document()
-            arr = tomlkit.array()
-            for layout in self.layouts:
-                arr.append(layout)
-            doc["layouts"] = arr
-            doc["current_index"] = self.current_index
-            with open(self.layout_state_file, "w") as f:
-                tomlkit.dump(doc, f)
-        except Exception as e:
-            logger.error(f"[KeyboardLayout] Failed to save state: {e}")
+    def _load_layouts_from_config(self) -> list[str]:
+        layouts = get_config("keyboard_layouts", DEFAULT_LAYOUTS)
+        if not isinstance(layouts, list) or not layouts:
+            return list(DEFAULT_LAYOUTS)
+        return [str(layout).strip() for layout in layouts if str(layout).strip()]
 
-    def _on_config_change(self, new_config, old_config):
-        new_layouts = new_config.get("keyboard_layouts")
-        if new_layouts and new_layouts != self.layouts:
-            self.layouts = new_layouts
-            self._save_state()
-            self._apply_layouts_to_hyprland()
-            logger.info(f"[KeyboardLayout] Layouts updated from config: {self.layouts}")
+    # ── Hyprland synchronization ───────────────────────────────────────────────
 
-    def _start_file_monitor(self):
-        if not self.layout_state_file.exists():
+    def _sync_from_hyprland(self):
+        """Query Hyprland for the current layout and update in-memory state.
+
+        Prefers the ``active_layout_index`` reported by ``hyprctl -j devices``,
+        falling back to index 0 when the information is unavailable.
+        """
+        if self._sync_pending:
             return
+        self._sync_pending = True
+
+        def on_reply(stdout: str | None):
+            self._sync_pending = False
+            if not stdout:
+                return
+            try:
+                devices = json.loads(stdout)
+            except json.JSONDecodeError as error:
+                logger.error(f"[KeyboardLayout] Failed to parse devices: {error}")
+                return
+
+            keyboard = self._pick_keyboard(devices.get("keyboards", []))
+            if keyboard is None:
+                return
+
+            index = keyboard.get("active_layout_index", 0)
+            self._set_current(index, emit=True)
+
+        self._hyprctl("-j", "devices", on_reply=on_reply)
+
+    @staticmethod
+    def _pick_keyboard(keyboards: list[dict]) -> dict | None:
+        if not keyboards:
+            return None
+        for kb in keyboards:
+            if kb.get("main"):
+                return kb
+        return keyboards[0]
+
+    def _connect_hyprland_events(self):
         try:
-            gio_file = Gio.File.new_for_path(str(self.layout_state_file))
-            self._file_monitor = gio_file.monitor_file(Gio.FileMonitorFlags.NONE, None)
-            self._file_monitor.connect("changed", self._on_file_changed)
-        except Exception as e:
-            logger.error(f"[KeyboardLayout] Failed to start file monitor: {e}")
+            Hyprland().connect("event::activelayout", self._on_hyprland_layout_event)
+        except Exception as error:
+            logger.warning(
+                f"[KeyboardLayout] Could not subscribe to Hyprland layout "
+                f"events (external changes won't be tracked): {error}"
+            )
 
-    def _on_file_changed(self, monitor, file, *args):
-        if not self._reload_pending:
-            self._reload_pending = True
-            GLib.timeout_add(50, self._reload_layout)
+    def _on_hyprland_layout_event(self, _hyprland, _event):
+        self._sync_from_hyprland()
 
-    def _reload_layout(self):
-        self._reload_pending = False
-        new_layout = self._read_layout()
-        if new_layout != self._last_layout:
-            self._last_layout = new_layout
-            self.emit("layout_changed", new_layout)
-        return False
+    # ── state management ───────────────────────────────────────────────────────
 
-    def _read_layout(self):
-        state = self._read_state()
-        if state:
-            layouts = state.get("layouts", [])
-            current_index = state.get("current_index", 0)
-            if layouts and 0 <= current_index < len(layouts):
-                return layouts[current_index]
-        return "us"
+    def _set_current(self, index: int, emit: bool) -> bool:
+        if not self._layouts:
+            return False
 
-    def _write_layout(self, layout: str):
-        try:
-            self.layout_file.parent.mkdir(parents=True, exist_ok=True)
-            self.layout_file.write_text(layout, encoding="utf-8")
-        except Exception as e:
-            logger.error(f"[KeyboardLayout] Failed writing layout state file: {e}")
+        index = max(0, min(index, len(self._layouts) - 1))
+        layout = self._layouts[index]
+
+        if index == self._current_index and layout == self._current_layout:
+            return False
+
+        self._current_index = index
+        self._current_layout = layout
+        self.notify("current_layout", "current_index", "layouts")
+
+        if emit:
+            self.emit("layout_changed", layout)
+        return True
+
+    # ── Hyprland writes ────────────────────────────────────────────────────────
 
     def _apply_layouts_to_hyprland(self):
-        if not self.layouts:
+        if not self._layouts:
             return
-        layouts_str = ",".join(self.layouts)
+        layouts_str = ",".join(self._layouts)
         lua_eval_cmd = f"hl.config({{ input = {{ kb_layout = '{layouts_str}' }} }})"
-        Gio.Subprocess.new(
-            [HYPRCTL_BIN, "eval", lua_eval_cmd],
-            Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
-        )
+        self._hyprctl("eval", lua_eval_cmd)
 
-    def _apply_current_layout_index(self):
-        Gio.Subprocess.new(
-            [HYPRCTL_BIN, "switchxkblayout", "all", str(self.current_index)],
-            Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
-        )
+    # ── public API ─────────────────────────────────────────────────────────────
 
-    def switch_to_next(self):
-        if not self.layouts:
+    def switch_to_next(self) -> bool:
+        if not self._layouts:
             logger.warning("[KeyboardLayout] No layouts configured, cannot cycle.")
             return False
 
-        self.current_index = (self.current_index + 1) % len(self.layouts)
-        new_layout = self.layouts[self.current_index]
-
-        self._apply_current_layout_index()
-        self._save_state()
-        self._write_layout(new_layout)
-
-        logger.info(
-            f"[KeyboardLayout] Switched layout successfully to '{new_layout}' "
-            f"(index {self.current_index})"
-        )
+        next_index = (self._current_index + 1) % len(self._layouts)
+        self._hyprctl("switchxkblayout", "all", str(next_index))
+        self._set_current(next_index, emit=True)
         return True
 
     @staticmethod
     def switch_keyboard_layout():
         KeyboardLayout.get_initial().switch_to_next()
 
-    @Property(str, "readable")
-    def current_layout(self):
-        return self._read_layout()
+    # ── config changes ─────────────────────────────────────────────────────────
+
+    def _on_config_change(self, new_config, old_config):
+        new_layouts = new_config.get("keyboard_layouts")
+        if not isinstance(new_layouts, list) or not new_layouts:
+            return
+        new_layouts = [str(item).strip() for item in new_layouts if str(item).strip()]
+        if new_layouts == self._layouts:
+            return
+
+        previous_layout = self._current_layout
+        self._layouts = new_layouts
+        self._apply_layouts_to_hyprland()
+
+        preserved_index = (
+            self._layouts.index(previous_layout)
+            if previous_layout in self._layouts
+            else 0
+        )
+        self._hyprctl("switchxkblayout", "all", str(preserved_index))
+        self._set_current(preserved_index, emit=True)
+
+        logger.info(f"[KeyboardLayout] Layouts updated from config: {self._layouts}")
+
+    # ── properties ─────────────────────────────────────────────────────────────
+
+    @Property(str, "readable", default_value="")
+    def current_layout(self) -> str:
+        return self._current_layout or ""
+
+    @Property(list, "readable")
+    def layouts(self) -> list[str]:
+        return self._layouts
+
+    @Property(int, "readable", default_value=0)
+    def current_index(self) -> int:
+        return self._current_index

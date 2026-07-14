@@ -2,7 +2,7 @@ import math
 import os
 import time
 
-from fabric.utils import GdkPixbuf, GLib, Gtk
+from fabric.utils import GdkPixbuf, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 
@@ -146,8 +146,10 @@ class NotchPlayer(Box):
             for sid in self._sigs:
                 try:
                     self._service.disconnect(sid)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"[player] self._service.disconnect(sid) failed: {e}"
+                    )
         self._sigs.clear()
 
     def _on_play(self, *_) -> None:
@@ -185,7 +187,10 @@ class NotchPlayer(Box):
             self.artwork_image.set_from_pixbuf(pixbuf)
             self.fallback_icon.set_visible(False)
             self.artwork_image.set_visible(True)
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"[player] pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale( path, 1... failed: {e}"
+            )
             self._show_fallback()
 
     def _update_from_service(self) -> None:

@@ -117,8 +117,10 @@ class SearchPipeline:
                         with self._lock:
                             try:
                                 self._pending_idle_ids.remove(source_id)
-                            except ValueError:
-                                pass
+                            except ValueError as e:
+                                logger.warning(
+                                    f"[search] self._pending_idle_ids.remove(source_id) failed: {e}"
+                                )
                         callback(results)
                         return False
 
@@ -133,8 +135,10 @@ class SearchPipeline:
                         with self._lock:
                             try:
                                 self._pending_idle_ids.remove(source_id)
-                            except ValueError:
-                                pass
+                            except ValueError as e:
+                                logger.warning(
+                                    f"[search] self._pending_idle_ids.remove(source_id) failed: {e}"
+                                )
                         callback([])
                         return False
 
@@ -178,8 +182,10 @@ class SearchPipeline:
                         with self._lock:
                             try:
                                 self._pending_idle_ids.remove(source_id)
-                            except ValueError:
-                                pass
+                            except ValueError as e:
+                                logger.warning(
+                                    f"[search] self._pending_idle_ids.remove(source_id) failed: {e}"
+                                )
                         _on_all_done()
                         return False
 

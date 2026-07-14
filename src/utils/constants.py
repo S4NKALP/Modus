@@ -20,6 +20,7 @@ DEFAULT = {
     "workspace_indicator": True,
     "bluetooth": True,
     "date_time": True,
+    "night_light_temperature": 4500,
     "custom_mods": True,
     "keyboard_layouts": ["us", "np"],
     "window_switcher": True,

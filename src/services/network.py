@@ -45,18 +45,22 @@ class Wifi(Service):
         """Disconnect all signal handlers so the service can be garbage collected."""
         try:
             self._client.disconnect(self._client_handler)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[network] self._client.disconnect(self._client_handler) failed: {e}"
+            )
         for hid in getattr(self, "_device_handlers", ()):
             try:
                 self._device.disconnect(hid)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[network] self._device.disconnect(hid) failed: {e}")
         if getattr(self, "_ap", None) and getattr(self, "_ap_signal", None):
             try:
                 self._ap.disconnect(self._ap_signal)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[network] self._ap.disconnect(self._ap_signal) failed: {e}"
+                )
 
     def ap_update(self):
         self.emit("changed")
@@ -287,8 +291,8 @@ class Ethernet(Service):
         for hid in getattr(self, "_handlers", ()):
             try:
                 self._device.disconnect(hid)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[network] self._device.disconnect(hid) failed: {e}")
 
 
 class NetworkClient(Service):

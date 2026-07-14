@@ -21,20 +21,32 @@ end)
 -- Reload Modus
 hl.bind("ALT + SHIFT + R", hl.dsp.exec_cmd("killall modus; cd " .. modus .. " && uwsm app -- uv run start"))
 
--- Fabric Spotlight Binds
+-- Fabric Binds
 for key, method in pairs({
-	["SUPER + D"] = "spotlight.toggle()", -- Spotlight
-	["SUPER + E"] = "spotlight.toggle('em')", -- Emoji
-	["SUPER + V"] = "spotlight.toggle('clip')", -- Clipboard
-	["SUPER + W"] = "spotlight.toggle('wall')", -- Wallpaper
 	["SUPER + SHIFT + Y"] = "app.set_css()", -- Reload CSS
 	["ALT + TAB"] = "switcher.show_switcher()", -- Application Switcher
 	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
 	["SUPER + S"] = "screencapture.toggle(ss='region')", -- Screenshot Region
 	["ALT + SPACE"] = "switch_keyboard_layout()", -- KB_Layout Switcher
-	["ALT + SHIFT + W"] = "spotlight.toggle('wr', external=True)", -- Random Wallpaper
 }) do
 	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. ' "' .. method .. '"'))
+end
+
+-- Spotlight Binds (spawns the process; it exits when closed to free memory.
+-- A second press while open forwards a toggle to the running instance.)
+local spotlightCmd = "cd " .. modus .. " && uv run python start.py spotlight"
+for key, args in pairs({
+	["SUPER + D"] = "", -- Spotlight
+	["SUPER + E"] = "em", -- Emoji
+	["SUPER + V"] = "clip", -- Clipboard
+	["SUPER + W"] = "wall", -- Wallpaper
+	["ALT + SHIFT + W"] = "--external wr", -- Random Wallpaper
+}) do
+	local cmd = spotlightCmd
+	if args ~= "" then
+		cmd = cmd .. " " .. args
+	end
+	hl.bind(key, hl.dsp.exec_cmd(cmd))
 end
 
 -- Layer Rules

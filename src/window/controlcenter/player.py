@@ -471,8 +471,10 @@ class PlayerBox(Box):
                     if "xesam:artist" in keys and metadata["xesam:artist"]
                     else "No Artist"
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[player] metadata = self.player._player.props.metadata failed: {e}"
+            )
 
     def update_buttons(self, player_buttons, show_buttons):
         if show_buttons and len(player_buttons) > 1:

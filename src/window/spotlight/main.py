@@ -1,7 +1,7 @@
 import os
 
 from fabric.core import Signal
-from fabric.utils import Gdk, GLib
+from fabric.utils import Gdk, GLib, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
@@ -265,8 +265,10 @@ class Spotlight(Box):
             return
         try:
             widget.disconnect_by_func(self.on_slot_enter)
-        except (TypeError, ValueError):
-            pass
+        except (TypeError, ValueError) as e:
+            logger.warning(
+                f"[main] widget.disconnect_by_func(self.on_slot_enter) failed: {e}"
+            )
         self.viewport.remove(widget)
         widget.destroy()
 
@@ -544,8 +546,10 @@ class Spotlight(Box):
         for child in list(self.viewport.children):
             try:
                 child.disconnect_by_func(self.on_slot_enter)
-            except (TypeError, ValueError):
-                pass
+            except (TypeError, ValueError) as e:
+                logger.warning(
+                    f"[main] child.disconnect_by_func(self.on_slot_enter) failed: {e}"
+                )
             self.viewport.remove(child)
             child.destroy()
         self._result_widgets.clear()

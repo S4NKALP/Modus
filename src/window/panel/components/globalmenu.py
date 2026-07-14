@@ -253,8 +253,10 @@ class GlobalMenuDropdowns:
             self.global_title_menu_quit.get_child().get_start_children()[0].set_label(
                 f"Quit {value}"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[globalmenu] self.global_title_menu_about.get_child().get_start_childr... failed: {e}"
+            )
 
         # Notify the global menu service about the active window change
         if self._global_menu_svc:
@@ -284,15 +286,17 @@ class GlobalMenuDropdowns:
                         if btn.get_parent():
                             btn.get_parent().remove(btn)
                         btn.destroy()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(
+                            f"[globalmenu] if btn.get_parent(): btn.get_parent().remove(btn) failed: {e}"
+                        )
 
         # Clean up any previous dynamic dropdowns
         for dd in self._dynamic_dropdowns:
             try:
                 dd.destroy()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[globalmenu] dd.destroy() failed: {e}")
         self._dynamic_dropdowns.clear()
 
         # Filter to visible top-level menu items only
@@ -413,8 +417,10 @@ class GlobalMenuDropdowns:
         if self._global_menu_svc:
             try:
                 self._global_menu_svc.disconnect_by_func(self._on_menu_changed)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"[globalmenu] self._global_menu_svc.disconnect_by_func(self._on_menu_ch... failed: {e}"
+                )
 
         # Destroy dynamic dropdowns
         for dd in self._dynamic_dropdowns:

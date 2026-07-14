@@ -94,8 +94,8 @@ def main():
         for m in css_monitors:
             try:
                 m.cancel()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[main] m.cancel() failed: {e}")
 
     atexit.register(cleanup_css_monitors)
 

@@ -146,7 +146,10 @@ class WeatherService(Service):
         if isinstance(data, list) and data:
             try:
                 coords = (float(data[0]["lat"]), float(data[0]["lon"]))
-            except (ValueError, KeyError):
+            except (ValueError, KeyError) as e:
+                logger.warning(
+                    f"[widget] coords = (float(data[0]['lat']), float(data[0]['lon'])) failed: {e}"
+                )
                 return None
             self._coords = coords
             self._coords_location = city
@@ -325,8 +328,10 @@ class Weather(Box):
         """Disconnect from the weather service (the service is app-lifetime)."""
         try:
             self._service.disconnect_by_func(self._on_service_update)
-        except ValueError:
-            pass
+        except ValueError as e:
+            logger.warning(
+                f"[widget] self._service.disconnect_by_func(self._on_service_update) failed: {e}"
+            )
         super().destroy()
 
 

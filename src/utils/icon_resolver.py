@@ -142,7 +142,10 @@ class IconResolver:
                                 name = line[5:].strip().lower()
                                 if any(sid == name for sid in search_ids):
                                     return path
-                except Exception:
+                except Exception as e:
+                    logger.warning(
+                        f"[icon_resolver] with open(path, errors='ignore') as file: for line in fil... failed: {e}"
+                    )
                     continue
 
         return None

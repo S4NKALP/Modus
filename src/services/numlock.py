@@ -64,7 +64,10 @@ class NumLock(Service):
         if brightness_path.exists():
             try:
                 return bool(int(brightness_path.read_text().strip()))
-            except (ValueError, OSError):
+            except (ValueError, OSError) as e:
+                logger.warning(
+                    f"[numlock] return bool(int(brightness_path.read_text().strip())) failed: {e}"
+                )
                 return False
         return False
 

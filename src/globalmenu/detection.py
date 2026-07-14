@@ -57,7 +57,10 @@ def _parse_dynamic(path: Path) -> tuple[set[str], list[Path]]:
             return set(), []
         is_64 = ident[4] == 2
         data = path.read_bytes()
-    except OSError:
+    except OSError as e:
+        logger.warning(
+            f"[detection] with open(path, 'rb') as f: ident = f.read(20) failed: {e}"
+        )
         return set(), []
 
     try:
@@ -69,7 +72,10 @@ def _parse_dynamic(path: Path) -> tuple[set[str], list[Path]]:
             e_phoff = int.from_bytes(data[0x1C:0x20], "little")
             e_phentsize = int.from_bytes(data[0x2A:0x2C], "little")
             e_phnum = int.from_bytes(data[0x2C:0x2E], "little")
-    except (IndexError, ValueError):
+    except (IndexError, ValueError) as e:
+        logger.warning(
+            f"[detection] if is_64: e_phoff = int.from_bytes(data[0x20:0x28], 'litt... failed: {e}"
+        )
         return set(), []
 
     PT_DYNAMIC = 2
@@ -175,7 +181,10 @@ def _transitive_needed(root: Path) -> set[str]:
 def _load_cache() -> dict:
     try:
         return json.loads(_CACHE_FILE.read_text())
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning(
+            f"[detection] return json.loads(_CACHE_FILE.read_text()) failed: {e}"
+        )
         return {}
 
 
@@ -211,7 +220,8 @@ def executable_gtk_class(executable: str | None) -> str | None:
 
     try:
         mtime = path.stat().st_mtime_ns
-    except OSError:
+    except OSError as e:
+        logger.warning(f"[detection] mtime = path.stat().st_mtime_ns failed: {e}")
         return None
 
     cache = _load_cache()
