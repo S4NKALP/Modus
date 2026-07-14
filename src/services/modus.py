@@ -301,7 +301,7 @@ class ModusService(Service):
         self._bluetooth = ""
         self._dock_apps = ""
         self._dont_disturb = False
-        self._current_active_app_name = "Finder"
+        self._current_active_app_name = "Modus"
         self._current_active_wm_class = ""
         self._current_workspace = "1"
         self._music = ""
@@ -370,13 +370,13 @@ def _update_active_window():
             return
         window_data = _hyprland_connection.send_command("j/activewindow").reply
         if not window_data:
-            service.current_active_app_name = "Finder"
+            service.current_active_app_name = "Modus"
             return
         window_info = json.loads(window_data.decode("utf-8"))
         wmclass = window_info.get("class", "")
         title = window_info.get("title", "")
         if not title and not wmclass:
-            service.current_active_app_name = "Finder"
+            service.current_active_app_name = "Modus"
             return
 
         name = app_name_resolver.format_app_name(title, wmclass)
@@ -384,7 +384,7 @@ def _update_active_window():
         service.current_active_app_name = name
     except Exception as e:
         logger.error(f"[ModusService] Error updating active window: {e}")
-        service.current_active_app_name = "Finder"
+        service.current_active_app_name = "Modus"
 
 
 def _on_workspace_changed(obj, signal):
