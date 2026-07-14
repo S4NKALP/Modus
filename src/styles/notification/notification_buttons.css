@@ -1,10 +1,26 @@
 #notification-close-button {
-  background-color: @glass-hover;
-  border-radius: apply(radius-sm);
+  background-color: @glass-panel;
+  border-radius: 999px;
+  padding: 4px;
+  margin-top: 8px;
+  margin-right: 8px;
+  margin-left: -32px;
+  min-width: 24px;
+  min-height: 24px;
+  opacity: 0;
+  transition: background-color apply(transition-fast), opacity apply(transition-fast);
 }
+
+#notification-close-button.hover,
 #notification-close-button:hover {
-  background-color: @glass-active;
+  opacity: 1;
 }
+
+#notification-close-button:hover {
+  background-color: @glass-surface-4;
+}
+
+
 
 #notification-action-buttons button {
   background-color: @glass-hover;
