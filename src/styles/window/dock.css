@@ -5,6 +5,14 @@
     margin: 0;
 }
 
+.dock-background {
+    background-color: @glass-dock;
+    background-image: linear-gradient(to bottom, @glass-highlight-strong 0%, @glass-highlight-soft 30%, transparent 100%);
+    border: 1px solid @glass-border;
+    border-radius: 20px;
+    /* You can add a box-shadow here if desired, e.g.:
+       box-shadow: 0 4px 6px @desktop-shadow; */
+}
 
 #dock-outer-box {
     background: transparent;
