@@ -17,7 +17,7 @@ from window.settings.main import get_settings_window
 def has_active_window():
     return (
         modus_service.current_active_app_name
-        and modus_service.current_active_app_name != "Finder"
+        and modus_service.current_active_app_name != "Modus"
     )
 
 
