@@ -6,21 +6,21 @@
   font-size: apply(font-lg);
   font-weight: bold;
 
-  color: @fg-a95;
+  color: @glass-text;
   margin: 6px 10px;
 }
 
 .battery-power-source {
   font-size: 0.9em;
   font-weight: 500;
-  color: @fg-a80;
+  color: @glass-text-secondary;
   margin: 0px 12px;
 }
 
 .battery-section-title {
   font-size: 0.9em;
   font-weight: 500;
-  color: @fg-a90;
+  color: @glass-text;
   margin: 8px 12px 4px 12px;
 }
 
@@ -32,7 +32,7 @@
   font-size: apply(font-lg);
   margin-right: 8px;
   font-weight: 500;
-  color: @fg-a95;
+  color: @glass-text;
 }
 
 #energy-mode-button-clickable {
@@ -44,11 +44,11 @@
 }
 
 #energy-mode-button-clickable:hover {
-  background: @fg-a10;
+  background: @glass-hover;
 }
 
 #energy-mode-button-clickable:hover #energy-mode-icon {
-  background-color: @fg-a25;
+  background-color: @glass-active;
 }
 
 #energy-mode-icon {
@@ -58,18 +58,18 @@
   margin-bottom: -2px;
   margin-right: 6px;
   margin-left: -6px;
-  background-color: @fg-a10;
-  color: @fg-a70;
+  background-color: @glass-hover;
+  color: @glass-text-secondary;
 }
 
 .battery-power-source {
   font-size: apply(font-sm);
   margin-bottom: -4px;
-  color: @fg-a50;
+  color: @glass-text-secondary;
 }
 .battery-section-title {
   font-size: apply(font-base);
-  color: @fg-a70;
+  color: @glass-text-secondary;
   margin: 2px 0 0 8px;
 }
 .battery-power-mode {
@@ -78,7 +78,7 @@
 
 .battery-settings-button:hover {
   margin-top: -5px;
-  background: @fg-a10;
+  background: @glass-hover;
   min-height: 30px;
   border-radius: apply(radius-sm);
 }
@@ -97,12 +97,12 @@
 #energy-mode-button {
   margin-top: -8px;
   margin-bottom: 4px;
-  color: @fg-a85;
+  color: @glass-text-secondary;
 }
 .gamemode-button {
   font-size: apply(font-sm);
   margin-left: -6px;
-  color: @fg-a85;
+  color: @glass-text-secondary;
 }
 
 #game-mode-button {
@@ -121,27 +121,27 @@
 }
 
 #game-mode-button-clickable:hover {
-  background: @fg-a10;
+  background: @glass-hover;
 }
 
 #game-mode-button-clickable:hover #game-mode-icon {
-  background-color: @fg-a25;
+  background-color: @glass-active;
 }
 
 #game-mode-icon {
   border-radius: apply(radius-full);
   padding: 4px;
   margin-right: 8px;
-  background-color: @fg-a10;
-  color: @fg-a70;
+  background-color: @glass-hover;
+  color: @glass-text-secondary;
 }
 
 #energy-mode-icon.connected {
-  background-color: @primary;
+  background-color: @glass-accent;
   color: @on-primary;
 }
 
 #game-mode-icon.connected {
-  background-color: @primary;
+  background-color: @glass-accent;
   color: @on-primary;
 }

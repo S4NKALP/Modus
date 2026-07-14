@@ -2,8 +2,8 @@
     margin: 8px;
     padding: 5px;
     border-radius: apply(radius-lg);
-    background-color: @bg-a80;
-    border: 1px solid @outline-a40;
+    background-color: @glass-popup;
+    border: 1px solid @glass-border;
 }
 
 .spotlight-scroll-clip {
@@ -18,7 +18,7 @@
     padding: 8px;
     border: solid 1px transparent;
     border-radius: apply(radius-md);
-    background-color: @fg-a12;
+    background-color: @glass-hover;
     transition: background-color apply(transition-medium) ease-in-out;
 }
 
@@ -26,20 +26,20 @@
     padding: 8px;
     border: solid 1px transparent;
     border-radius: apply(radius-md);
-    background-color: @fg-a12;
+    background-color: @glass-hover;
     transition: border apply(transition-fast) ease-in-out,
                 background-color apply(transition-medium) ease-in-out;
 }
 
 .app-slot:hover {
-    border-color: @outline-a40;
-    background-color: @fg-a18;
+    border-color: @glass-border;
+    background-color: @glass-active;
 }
 
 .app-slot:focus,
 .app-slot.selected {
-    border-color: @primary-a40;
-    background-color: @primary-a20;
+    border-color: @glass-ring;
+    background-color: @glass-selected;
 }
 
 .app-title {
@@ -49,12 +49,12 @@
 }
 
 .app-description {
-    color: @text-dim;
+    color: @glass-text-secondary;
     font-size: apply(font-sm);
 }
 
 .calc-expression {
-    color: @text-dim;
+    color: @glass-text-secondary;
     font-size: apply(font-base);
 }
 
@@ -71,7 +71,7 @@
 }
 
 .power-menu-description {
-    color: @text-muted;
+    color: @glass-text-secondary;
     font-size: apply(font-sm);
 }
 

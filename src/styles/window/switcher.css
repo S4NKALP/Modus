@@ -1,7 +1,8 @@
 #app-switcher-container {
-    background-color: @bg-a50;
+    background-color: @glass-popup;
     border-radius: apply(radius-xl);
     padding: 16px 24px;
+    border: 1px solid @glass-border;
 }
 
 #app-switcher-view {
@@ -16,11 +17,11 @@
 }
 
 #app-switcher-button.hovered {
-    background-color: @fg-a10;
+    background-color: @glass-hover;
 }
 
 #app-switcher-button.selected {
-    background-color: @primary-a30;
+    background-color: @glass-selected;
 }
 
 #app-switcher-icon-box {

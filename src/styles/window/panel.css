@@ -1,5 +1,5 @@
 #panel {
-    background-color: @bg-a50;
+    background-color: @glass-panel;
     margin: -4px 0;
     transition: all 120ms ease-in-out;
 }
@@ -15,7 +15,7 @@
 #global-menu:hover,
 #global-menu.active,
 #workspaces>button:hover {
-    background-color: @primary;
+    background-color: @glass-accent;
     color: @on-primary;
 }
 
@@ -52,7 +52,7 @@
 }
 
 #workspaces>button.active {
-    background-color: alpha(@foreground, 0.4);
+    background-color: @glass-active;
 }
 
 #workspaces>button.active label {
@@ -60,7 +60,7 @@
 }
 
 #workspaces>button.active:hover {
-    background-color: @primary;
+    background-color: @glass-accent;
 }
 
 #workspaces>button.active:hover label {
@@ -68,7 +68,7 @@
 }
 
 #workspaces>button.urgent {
-    background-color: alpha(@error, 0.7);
+    background-color: @glass-error;
 }
 
 
@@ -92,7 +92,7 @@
 }
 
 #panel-notch-stack {
-    background-color: #000000;
+    background-color: @shadow;
     border-radius: 0 0 apply(radius-lg) apply(radius-lg);
     min-width: 200px;
     min-height: 34px;
@@ -100,7 +100,7 @@
 
 
 #panel-notch-corner {
-    background-color: #000000;
+    background-color: @shadow;
     border-radius: 0;
     min-width: 20px;
     min-height: 20px;
@@ -150,14 +150,14 @@
 #notch-indicator-icon {
     min-width: 16px;
     min-height: 16px;
-    color: @on-surface-variant;
+    color: @glass-text-secondary;
     margin-left: 2px;
 }
 
 #notch-indicator-label {
     font-size: apply(font-xs);
     font-weight: 600;
-    color: @on-surface-variant;
+    color: @glass-text-secondary;
     letter-spacing: 0.5px;
     margin-right: 2px;
 }
