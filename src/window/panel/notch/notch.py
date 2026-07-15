@@ -4,7 +4,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.shapes import Corner
 from fabric.widgets.stack import Stack
 
-from services.screencapture import screen_capture_service
+from services.modus import screen_recorder_service
 from window.controlcenter.player import get_shared_mpris_manager
 from window.panel.notch.indicators import (
     CapsLockIndicator,
@@ -77,8 +77,8 @@ class Notch(Box):
         self._mpris.connect("new-player", self._on_new_player)
         self._mpris.connect("player-vanish", self._on_player_vanish)
 
-        screen_capture_service.connect("recording-started", self._on_recording_started)
-        screen_capture_service.connect("recording-stopped", self._on_recording_stopped)
+        screen_recorder_service.connect("started", self._on_recording_started)
+        screen_recorder_service.connect("stopped", self._on_recording_stopped)
 
         self.notch_stack = Stack(
             name="panel-notch-stack",
@@ -156,7 +156,7 @@ class Notch(Box):
     # ── Init / MPRIS / recording ──────────────────────────────────────────────
 
     def _init_state(self):
-        self._is_active_recording = screen_capture_service.is_recording
+        self._is_active_recording = screen_recorder_service.recording
         if self._is_active_recording:
             self.recording_indicator.start_timer()
 
@@ -241,7 +241,7 @@ class Notch(Box):
         now = GLib.get_monotonic_time()
         if now - self._last_recording_check > 3_000_000:
             self._last_recording_check = now
-            if self._is_active_recording and not screen_capture_service.is_recording:
+            if self._is_active_recording and not screen_recorder_service.recording:
                 self._is_active_recording = False
                 is_recording = False
                 self.recording_indicator.stop_timer()

@@ -418,6 +418,19 @@ def run_command(
         return CommandResult(1, "", str(e))
 
 
+def resolve_monitor(target: str) -> str | None:
+    """Resolve the ``"active"`` capture target to a concrete monitor name.
+
+    Returns ``None`` for non-active targets (the capture backend handles
+    region/window/output directly).
+    """
+    if target != "active":
+        return None
+    from services.modus import get_active_monitor_name
+
+    return get_active_monitor_name()
+
+
 def fuzzy_score(query: str, text: str) -> int:
     """
     Fuzzy match scoring. Returns score > 0 if all query chars found in order.

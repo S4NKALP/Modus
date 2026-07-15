@@ -19,7 +19,7 @@ from shared.capture import (
     HyprlandCaptureBackend,
     ScreenshotRequest,
 )
-from utils.functions import find_binary
+from utils.functions import find_binary, resolve_monitor
 
 
 class Screenshot(Service):
@@ -117,21 +117,13 @@ class Screenshot(Service):
     ) -> ScreenshotRequest:
         save_dir = Path(output_dir).expanduser() if output_dir else self.screenshots_dir
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        monitor = self._resolve_monitor(target)
+        monitor = resolve_monitor(target)
         return ScreenshotRequest(
             target=target,
             save_path=save_dir / f"{timestamp}.png",
             show_cursor=show_cursor,
             monitor=monitor,
         )
-
-    @staticmethod
-    def _resolve_monitor(target: str) -> str | None:
-        if target != "active":
-            return None
-        from services.modus import get_active_monitor_name
-
-        return get_active_monitor_name()
 
     def _on_result(self, result: CaptureResult) -> None:
         self._set_busy(False)

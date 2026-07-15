@@ -37,12 +37,6 @@ def __getattr__(name):
             _inst = None
         setattr(mod, name, _inst)
         return _inst
-    if name == "screen_capture_service":
-        from services.screencapture import ScreenCapture
-
-        _inst = ScreenCapture()
-        setattr(mod, name, _inst)
-        return _inst
     if name == "screenshot_service":
         from services.screenshot import Screenshot
 

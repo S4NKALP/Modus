@@ -4,7 +4,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.wayland import WaylandWindow as Window
 
-from services.screencapture import screen_capture_service
+from services.modus import screen_recorder_service, screenshot_service
 from window.screencapture.options_menu import OptionsMenu
 from window.screencapture.tool_button import ToolButton, ToolGroup
 
@@ -25,7 +25,7 @@ class ScreenCaptureWindow(Window):
             title="modus-screencapture",
             anchor="bottom",
             layer="top",
-            keyboard_mode="on-demand",
+            keyboard_mode="exclusive",
             margin="0px 0px 120px 0px",
             visible=False,
             **kwargs,
@@ -101,8 +101,8 @@ class ScreenCaptureWindow(Window):
         self._tool_group.select_id("screenshot-screen")
         self._tool_group.on_change(self._on_tool_changed)
 
-        screen_capture_service.connect("recording-started", self._on_recording_started)
-        screen_capture_service.connect("recording-stopped", self._on_recording_stopped)
+        screen_recorder_service.connect("started", self._on_recording_started)
+        screen_recorder_service.connect("stopped", self._on_recording_stopped)
 
         self.connect("key-press-event", self._on_key_press)
 
@@ -167,7 +167,7 @@ class ScreenCaptureWindow(Window):
 
     def _on_tool_changed(self, tool_id: str):
         is_recording_tool = tool_id.startswith("record-")
-        is_active = screen_capture_service.is_recording
+        is_active = screen_recorder_service.recording
 
         ctx = self._action_btn.get_style_context()
         if is_active:
@@ -182,8 +182,8 @@ class ScreenCaptureWindow(Window):
 
     def _on_action(self, *_):
         # Stop an active recording
-        if screen_capture_service.is_recording:
-            screen_capture_service.stop_recording()
+        if screen_recorder_service.recording:
+            screen_recorder_service.stop()
             return
 
         delay = 0
@@ -216,15 +216,15 @@ class ScreenCaptureWindow(Window):
         elif tool == "screenshot-region":
             self._do_screenshot("region")
         elif tool == "record-screen":
-            screen_capture_service.record(
+            screen_recorder_service.start(
                 "active", use_audio=use_audio, show_cursor=show_cursor
             )
         elif tool == "record-window":
-            screen_capture_service.record(
+            screen_recorder_service.start(
                 "window", use_audio=use_audio, show_cursor=show_cursor
             )
         elif tool == "record-region":
-            screen_capture_service.record(
+            screen_recorder_service.start(
                 "selection", use_audio=use_audio, show_cursor=show_cursor
             )
 
@@ -233,10 +233,10 @@ class ScreenCaptureWindow(Window):
     def _do_screenshot(self, target: str):
         """
         Take a screenshot.
-        - On success: service emits screenshot_taken(path)  → we stay hidden.
-        - On cancel:  service emits screenshot_taken(None)  → we re-show.
-        - If screenshot() itself fails immediately           → we re-show.
-        The handler is always disconnected after one fire to avoid leaks.
+        - On success: service emits captured(path)  → we stay hidden.
+        - On cancel:  service emits failed(reason)  → we re-show.
+        - If screenshot() itself fails immediately   → we re-show.
+        The handlers are always disconnected after one fire to avoid leaks.
         """
         # Gather options
         output_dir = None
@@ -245,52 +245,58 @@ class ScreenCaptureWindow(Window):
             output_dir = self._options_menu.get_save_dir()
             show_cursor = self._options_menu.get_show_cursor()
 
-        _handler_id = [None]
+        _handler_ids = [None, None]
 
-        def _on_taken(svc, path, *_):
-            # Disconnect immediately — one-shot
-            if _handler_id[0] is not None:
-                try:
-                    svc.disconnect(_handler_id[0])
-                except Exception as e:
-                    logger.warning(f"[main] svc.disconnect(_handler_id[0]) failed: {e}")
-                _handler_id[0] = None
-            # Re-show only on cancel (path is None)
-            if not path:
-                GLib.timeout_add(120, self.show)
+        def _on_done(svc, *_args):
+            for hid in _handler_ids:
+                if hid is not None:
+                    try:
+                        svc.disconnect(hid)
+                    except Exception as e:
+                        logger.warning(f"[main] disconnect failed: {e}")
+            _handler_ids[0] = _handler_ids[1] = None
 
-        _handler_id[0] = screen_capture_service.connect("screenshot-taken", _on_taken)
+        def _on_captured(svc, path, *_):
+            _on_done(svc)
+            # success — stay hidden
+
+        def _on_failed(svc, _reason, *_):
+            _on_done(svc)
+            GLib.timeout_add(120, self.show)
+
+        _handler_ids[0] = screenshot_service.connect("captured", _on_captured)
+        _handler_ids[1] = screenshot_service.connect("failed", _on_failed)
 
         def _safe_disconnect():
-            if _handler_id[0] is not None:
-                try:
-                    screen_capture_service.disconnect(_handler_id[0])
-                except Exception as e:
-                    logger.warning(
-                        f"[main] screen_capture_service.disconnect(_handler_id[0]) failed: {e}"
-                    )
-                _handler_id[0] = None
+            if any(hid is not None for hid in _handler_ids):
+                for hid in _handler_ids:
+                    if hid is not None:
+                        try:
+                            screenshot_service.disconnect(hid)
+                        except Exception as e:
+                            logger.warning(f"[main] safe disconnect failed: {e}")
+                _handler_ids[0] = _handler_ids[1] = None
             return False
 
         # Safety net: disconnect if the service never emits (e.g. capture failed
         # silently), otherwise the one-shot handler would leak on every shot.
         GLib.timeout_add_seconds(10, _safe_disconnect)
 
-        ok = screen_capture_service.screenshot(
+        ok = screenshot_service.screenshot(
             target,
             output_dir=output_dir,
             show_cursor=show_cursor,
         )
         if not ok:
             # screenshot() returned False — clean up and re-show immediately
-            if _handler_id[0] is not None:
-                try:
-                    screen_capture_service.disconnect(_handler_id[0])
-                except Exception as e:
-                    logger.warning(
-                        f"[main] screen_capture_service.disconnect(_handler_id[0]) failed: {e}"
-                    )
-                _handler_id[0] = None
+            if any(hid is not None for hid in _handler_ids):
+                for hid in _handler_ids:
+                    if hid is not None:
+                        try:
+                            screenshot_service.disconnect(hid)
+                        except Exception as e:
+                            logger.warning(f"[main] disconnect failed: {e}")
+                _handler_ids[0] = _handler_ids[1] = None
             GLib.timeout_add(120, self.show)
 
     def _on_recording_started(self, *_):
@@ -320,12 +326,12 @@ class ScreenCaptureWindow(Window):
             }
             self.hide()
             target = target_map.get(ss, ss)
-            screen_capture_service.screenshot(target)
+            screenshot_service.screenshot(target)
             return
 
         if sr:
-            if screen_capture_service.is_recording:
-                screen_capture_service.stop_recording()
+            if screen_recorder_service.recording:
+                screen_recorder_service.stop()
                 return
 
             target_map = {
@@ -339,7 +345,7 @@ class ScreenCaptureWindow(Window):
             show_cursor = (
                 self._options_menu.get_show_cursor() if self._options_menu else False
             )
-            screen_capture_service.record(
+            screen_recorder_service.start(
                 target_map.get(sr, sr),
                 use_audio=use_audio,
                 show_cursor=show_cursor,

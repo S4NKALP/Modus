@@ -13,7 +13,6 @@ def __getattr__(name):
         "modus_service",
         "notification_service",
         "audio_service",
-        "screen_capture_service",
         "screenshot_service",
         "screen_recorder_service",
     ):

@@ -19,7 +19,7 @@ from shared.capture import (
     HyprlandCaptureBackend,
     RecordingRequest,
 )
-from utils.functions import is_app_running
+from utils.functions import is_app_running, resolve_monitor
 
 _RECORDER_PROCESSES = ("wf-recorder", "gpu-screen-recorder")
 
@@ -201,16 +201,8 @@ class ScreenRecorder(Service):
             output_file=self.recordings_dir / f"{timestamp}.mkv",
             use_audio=use_audio,
             show_cursor=show_cursor,
-            monitor=self._resolve_monitor(target),
+            monitor=resolve_monitor(target),
         )
-
-    @staticmethod
-    def _resolve_monitor(target: str) -> str | None:
-        if target != "active":
-            return None
-        from services.modus import get_active_monitor_name
-
-        return get_active_monitor_name()
 
     def _on_start_result(self, result: CaptureResult) -> None:
         if result.success and result.path:

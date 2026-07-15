@@ -4,7 +4,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
-from services.screencapture import screen_capture_service
+from services.modus import screen_recorder_service
 from utils.gtk_utils import setup_cursor_hover, svg_file
 
 
@@ -71,12 +71,10 @@ class RecordingIndicator(Box):
 
     def on_stop_recording(self, *args):
         try:
-            screen_capture_service.stop_recording()
+            screen_recorder_service.stop()
             self.stop_timer()
         except Exception as e:
-            logger.warning(
-                f"[recording] screen_capture_service.stop_recording() failed: {e}"
-            )
+            logger.warning(f"[recording] screen_recorder_service.stop() failed: {e}")
 
     def destroy(self):
         self.stop_timer()
