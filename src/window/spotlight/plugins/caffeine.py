@@ -4,6 +4,7 @@ import subprocess
 
 from fabric.utils import logger
 
+from shared.capture import CaptureNotifier
 from utils.functions import format_duration, parse_timeout_string
 from window.spotlight.api import SearchResult, SpotlightPlugin
 
@@ -12,9 +13,10 @@ _PID_FILE = os.path.join(
 )
 _INHIBIT_WHAT = "idle:sleep"
 _INHIBIT_WHY = "Modus Caffeine"
-# Spotlight exits on dismiss, so we pin an effectively infinite sleep for
-# indefinite mode instead of relying on an in-process timer.
 _INDEFINITE_SECS = 100_000_000
+
+
+_notifier = CaptureNotifier(app_name="Modus Caffeine")
 
 
 class CaffeinePlugin(SpotlightPlugin):
@@ -67,6 +69,21 @@ class CaffeinePlugin(SpotlightPlugin):
         except OSError:
             pass
 
+    @staticmethod
+    def is_active() -> bool:
+        """Check if caffeine inhibition is currently active."""
+        try:
+            with open(_PID_FILE) as f:
+                pid = int(f.read().strip())
+        except (OSError, ValueError):
+            return False
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                data = f.read().decode(errors="ignore")
+            return "systemd-inhibit" in data and _INHIBIT_WHY in data
+        except OSError:
+            return False
+
     # --- duration parsing ----------------------------------------------
 
     @staticmethod
@@ -77,11 +94,8 @@ class CaffeinePlugin(SpotlightPlugin):
     @staticmethod
     def _humanize(secs: int) -> str:
         result = format_duration(secs)
-        # format_duration returns "N/A" for 0, but we want "0s"
         if result == "N/A":
             return "0s"
-        # format_duration returns "Xh Ym" or "Xm", we want shorter format
-        # For hours only: "1h" instead of "1h 0m"
         if "h" in result and "m" in result:
             hours = result.split("h")[0]
             return f"{hours}h"
@@ -111,15 +125,34 @@ class CaffeinePlugin(SpotlightPlugin):
 
     def _apply(self, arg: str) -> None:
         arg = (arg or "").strip().lower()
+        was_active = self.is_active()
         if arg in ("", "on"):
             self._spawn(_INDEFINITE_SECS)
+            if not was_active:
+                _notifier.notify(
+                    "Caffeine Enabled",
+                    "Stay awake until turned off",
+                    icon="user-available-symbolic",
+                )
             return
         if arg == "off":
             self._kill_existing()
+            if was_active:
+                _notifier.notify(
+                    "Caffeine Disabled",
+                    "Idle and sleep allowed again",
+                    icon="user-away-symbolic",
+                )
             return
         secs = self._parse_duration(arg)
         if secs is not None:
             self._spawn(secs)
+            if not was_active:
+                _notifier.notify(
+                    "Caffeine Enabled",
+                    f"Stay awake for {self._humanize(secs)}",
+                    icon="user-available-symbolic",
+                )
             return
         logger.warning(f"[Caffeine] unknown argument: {arg!r}")
 
@@ -184,7 +217,7 @@ class CaffeinePlugin(SpotlightPlugin):
                 q = q[len(kw) :].strip()
                 break
 
-        active = self._read_pid() is not None
+        active = self.is_active()
 
         if not q or q in ("caffeine", "caff"):
             return self._menu(active)
