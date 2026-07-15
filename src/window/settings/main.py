@@ -407,16 +407,6 @@ class SettingsWindow(Gtk.Window):
                 "Show application menu in the panel",
             ),
             SettingsRow(
-                "Menu Method",
-                SettingsEntry("global_menu_method"),
-                "Detection method: auto, hyprland, or dbus",
-            ),
-            SettingsRow(
-                "Menu Cache",
-                SettingsSwitch("global_menu_cache_enabled"),
-                "Cache GTK class detection results",
-            ),
-            SettingsRow(
                 "iMac Button",
                 SettingsSwitch("imac_button"),
             ),
