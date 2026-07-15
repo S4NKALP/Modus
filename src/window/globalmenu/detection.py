@@ -223,14 +223,9 @@ def executable_gtk_class(executable: str | None) -> str | None:
     cache = _load_cache()
     key = f"{path}"
 
-    from services.config import get_config
-
-    use_cache = get_config("global_menu_cache_enabled", True)
-
-    if use_cache:
-        cached = cache.get(key)
-        if cached and cached.get("mtime") == mtime:
-            return cached.get("class")
+    cached = cache.get(key)
+    if cached and cached.get("mtime") == mtime:
+        return cached.get("class")
 
     needed = _transitive_needed(path)
     if GTK4_SONAME in needed:
@@ -240,7 +235,6 @@ def executable_gtk_class(executable: str | None) -> str | None:
     else:
         klass = None
 
-    if use_cache:
-        cache[key] = {"mtime": mtime, "class": klass}
-        _save_cache(cache)
+    cache[key] = {"mtime": mtime, "class": klass}
+    _save_cache(cache)
     return klass
