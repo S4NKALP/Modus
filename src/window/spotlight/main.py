@@ -638,10 +638,16 @@ class Spotlight(Box):
             return
 
         if self._active_plugin_entry:
-            inst = self._active_plugin_entry.instance
-            if inst:
-                inst.on_submit(entry.get_text())
+            text = entry.get_text()
             entry.set_text("")
+
+            def _on_immediate_results(results):
+                if results:
+                    self._activate_result(results[0])
+
+            self.plugin_service.pipeline.search_single(
+                self._active_plugin_entry, text, _on_immediate_results
+            )
             return
 
     # External commands
