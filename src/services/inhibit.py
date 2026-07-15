@@ -27,6 +27,7 @@ class InhibitService(Service):
         super().__init__(**kwargs)
         self._cookie: int | None = None
         self._proxy: Gio.DBusProxy | None = None
+        self._timer_source: int | None = None
 
     @Property(bool, "readable", default_value=False)
     def active(self) -> bool:
@@ -69,16 +70,35 @@ class InhibitService(Service):
             )
             if result is not None:
                 self._cookie = result.unpack()[0]
-                self.emit("inhibit_changed", True)
+                self.emit("inhibit-changed", True)
                 return True
             return False
         except Exception as e:
             logger.error(f"[InhibitService] Failed to inhibit: {e}")
             return False
 
+    def enable_timed(self, seconds: int) -> bool:
+        """Enable inhibition for *seconds*, then auto-disable."""
+        self._cancel_timer()
+        if not self.enable():
+            return False
+        self._timer_source = GLib.timeout_add_seconds(seconds, self._on_timer_done)
+        return True
+
+    def _on_timer_done(self) -> bool:
+        self._timer_source = None
+        self.disable()
+        return False  # remove the source
+
+    def _cancel_timer(self) -> None:
+        if self._timer_source is not None:
+            GLib.source_remove(self._timer_source)
+            self._timer_source = None
+
     def disable(self) -> bool:
         if not self.active:
             return True
+        self._cancel_timer()
         proxy = self._get_proxy()
         if proxy is None or self._cookie is None:
             return False
@@ -91,7 +111,7 @@ class InhibitService(Service):
                 None,
             )
             self._cookie = None
-            self.emit("inhibit_changed", False)
+            self.emit("inhibit-changed", False)
             return True
         except Exception as e:
             logger.error(f"[InhibitService] Failed to uninhibit: {e}")
