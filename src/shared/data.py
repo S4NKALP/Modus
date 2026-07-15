@@ -11,7 +11,21 @@ CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
 CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
 
 SYSTEM_CACHE_DIR = GLib.get_user_cache_dir()
-WALLPAPER_PATH = f"{HOME_DIR}/Pictures/Wallpapers"
+
+
+def _get_wallpaper_path() -> str:
+    try:
+        from services.config import get_config
+
+        custom = get_config("wallpapers_dir")
+        if custom:
+            return os.path.expanduser(str(custom))
+    except Exception:
+        pass
+    return f"{HOME_DIR}/Pictures/Wallpapers"
+
+
+WALLPAPER_PATH = _get_wallpaper_path()
 WALLPAPER_THUMBS_PATH = f"{WALLPAPER_PATH}/.thumbnails"
 WALLPAPERS_THUMBNAILS_SIZE = 200
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")

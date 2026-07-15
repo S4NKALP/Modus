@@ -619,11 +619,20 @@ class GlobalMenuService(Service):
             if target_pid <= 0:
                 return None
 
-            strategies = [
-                self._find_registry,
-                self._find_registrar,
-                self._find_fallback_scan,
-            ]
+            from services.config import get_config
+
+            method = get_config("global_menu_method", "hyprland")
+
+            strategies = []
+            if method in ("hyprland", "auto"):
+                strategies.extend(
+                    [
+                        self._find_registry,
+                        self._find_registrar,
+                    ]
+                )
+            if method in ("dbus", "auto"):
+                strategies.append(self._find_fallback_scan)
 
             for strategy in strategies:
                 result = strategy(wm_class, target_pid)

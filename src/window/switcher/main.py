@@ -133,6 +133,8 @@ class ApplicationSwitcher(Window):
                 self._rebuild()
 
     def show_switcher(self) -> None:
+        if not config().get("window_switcher", True):
+            return
         self._rebuild()
         if not self.windows:
             return

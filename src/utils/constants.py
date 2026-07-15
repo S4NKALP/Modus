@@ -1,5 +1,4 @@
 DEFAULT = {
-    "wallpapers_dir": "~/Pictures/Wallpapers/",
     "dock_enabled": True,
     "dock_auto_hide": True,
     "dock_always_occluded": False,
@@ -14,6 +13,8 @@ DEFAULT = {
     "control_center": True,
     "search": True,
     "global_menu": True,
+    "global_menu_method": "hyprland",
+    "global_menu_cache_enabled": True,
     "network": True,
     "battery": True,
     "notification_center": True,
@@ -23,9 +24,10 @@ DEFAULT = {
     "night_light_temperature": 4500,
     "custom_mods": True,
     "keyboard_layouts": ["us", "np"],
-    "window_switcher": True,
     "switcher_live_preview": True,
     "switcher_live_preview_delay_ms": 200,
-    "osd": True,
     "systray_ignore": ["blueman", "network"],
+    "wallpapers_dir": "~/Pictures/Wallpapers",
+    "osd": True,
+    "window_switcher": True,
 }

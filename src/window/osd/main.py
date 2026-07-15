@@ -38,9 +38,17 @@ class OSD(Box):
         self.revealer.set_reveal_child(True)
 
     def show_audio_osd(self):
+        from services.config import get_config
+
+        if not get_config("osd", True):
+            return
         self.show_container(self.containers.get("audio"))
 
     def show_brightness_osd(self):
+        from services.config import get_config
+
+        if not get_config("osd", True):
+            return
         self.show_container(self.containers.get("brightness"))
 
 

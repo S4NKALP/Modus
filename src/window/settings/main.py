@@ -224,9 +224,8 @@ class SettingsPage(ScrolledWindow):
             h_expand=True,
             v_expand=True,
             propagate_width=True,
-            propagate_height=True,
+            propagate_height=False,
             min_content_width=600,
-            min_content_height=500,
             **kwargs,
         )
         self.add(container)
@@ -336,11 +335,6 @@ class SettingsWindow(Gtk.Window):
             "General Settings",
             [
                 SettingsRow(
-                    "Wallpapers Directory",
-                    SettingsEntry("wallpapers_dir"),
-                    "Path to your wallpaper collection",
-                ),
-                SettingsRow(
                     "Weather Location",
                     SettingsEntry("weather_location"),
                     "City name for weather updates",
@@ -351,24 +345,24 @@ class SettingsWindow(Gtk.Window):
                     "Manage active keyboard input languages",
                 ),
                 SettingsRow(
-                    "Window Switcher",
-                    SettingsSwitch("window_switcher"),
-                    "Enable the Alt-Tab window switcher",
-                ),
-                SettingsRow(
-                    "Items Per Row",
-                    SettingsEntry("window_switcher_items_per_row"),
-                    "Maximum items in window switcher row",
-                ),
-                SettingsRow(
                     "Hide Special Workspace",
                     SettingsSwitch("hide_special_workspace"),
                     "Don't show special workspace in indicators",
                 ),
                 SettingsRow(
-                    "OSD",
-                    SettingsSwitch("osd"),
-                    "On-screen display for volume/brightness",
+                    "Night Light Temperature",
+                    SettingsEntry("night_light_temperature"),
+                    "Color temperature in Kelvin (e.g. 4500)",
+                ),
+                SettingsRow(
+                    "Live Preview",
+                    SettingsSwitch("switcher_live_preview"),
+                    "Show live window previews in switcher",
+                ),
+                SettingsRow(
+                    "Preview Delay (ms)",
+                    SettingsEntry("switcher_live_preview_delay_ms"),
+                    "Delay before live preview appears",
                 ),
             ],
         )
@@ -406,31 +400,88 @@ class SettingsWindow(Gtk.Window):
         )
 
     def _create_panel_page(self):
-        # panel visibility settings
-        rows = []
-        panel_settings = [
-            ("iMac Button", "imac_button"),
-            ("Global Menu", "global_menu"),
-            ("Systray", "systray"),
-            ("Control Center", "control_center"),
-            ("Search", "search"),
-            ("Network", "network"),
-            ("Battery", "battery"),
-            ("Bluetooth", "bluetooth"),
-            ("Date & Time", "date_time"),
-            ("Workspace Indicator", "workspace_indicator"),
-            ("Notification Center", "notification_center"),
-        ]
-        for label, key in panel_settings:
-            rows.append(SettingsRow(label, SettingsSwitch(key)))
-
-        rows.append(
+        rows = [
+            SettingsRow(
+                "Global Menu",
+                SettingsSwitch("global_menu"),
+                "Show application menu in the panel",
+            ),
+            SettingsRow(
+                "Menu Method",
+                SettingsEntry("global_menu_method"),
+                "Detection method: auto, hyprland, or dbus",
+            ),
+            SettingsRow(
+                "Menu Cache",
+                SettingsSwitch("global_menu_cache_enabled"),
+                "Cache GTK class detection results",
+            ),
+            SettingsRow(
+                "iMac Button",
+                SettingsSwitch("imac_button"),
+            ),
+            SettingsRow(
+                "Systray",
+                SettingsSwitch("systray"),
+            ),
+            SettingsRow(
+                "Control Center",
+                SettingsSwitch("control_center"),
+            ),
+            SettingsRow(
+                "Search",
+                SettingsSwitch("search"),
+            ),
+            SettingsRow(
+                "Network",
+                SettingsSwitch("network"),
+            ),
+            SettingsRow(
+                "Battery",
+                SettingsSwitch("battery"),
+            ),
+            SettingsRow(
+                "Bluetooth",
+                SettingsSwitch("bluetooth"),
+            ),
+            SettingsRow(
+                "Date & Time",
+                SettingsSwitch("date_time"),
+            ),
+            SettingsRow(
+                "Workspace Indicator",
+                SettingsSwitch("workspace_indicator"),
+            ),
+            SettingsRow(
+                "Notification Center",
+                SettingsSwitch("notification_center"),
+            ),
+            SettingsRow(
+                "Custom Mods",
+                SettingsSwitch("custom_mods"),
+                "Enable custom Hyprland mods in panel",
+            ),
+            SettingsRow(
+                "Window Switcher",
+                SettingsSwitch("window_switcher"),
+                "Enable Alt+Tab window switcher",
+            ),
+            SettingsRow(
+                "OSD",
+                SettingsSwitch("osd"),
+                "Enable on-screen display for volume/brightness",
+            ),
+            SettingsRow(
+                "Wallpapers Directory",
+                SettingsEntry("wallpapers_dir"),
+                "Path to wallpapers folder",
+            ),
             SettingsRow(
                 "Systray Ignore",
                 SettingsList("systray_ignore"),
                 "Icons to hide from the system tray",
-            )
-        )
+            ),
+        ]
 
         return SettingsPage("Panel Settings", rows)
 
