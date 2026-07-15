@@ -633,15 +633,16 @@ class Spotlight(Box):
                 widget.clicked()
                 return
 
+        if self._current_results:
+            self._activate_result(self._current_results[0])
+            return
+
         if self._active_plugin_entry:
             inst = self._active_plugin_entry.instance
             if inst:
                 inst.on_submit(entry.get_text())
             entry.set_text("")
             return
-
-        if self._current_results:
-            self._activate_result(self._current_results[0])
 
     # External commands
     def handle_external(self, command: str, text: str = "") -> bool:
