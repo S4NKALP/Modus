@@ -205,7 +205,7 @@ class ClipboardPlugin(SpotlightPlugin):
                 if not decoded:
                     return
                 copy_text(decoded.decode())
-            GLib.timeout_add(5, lambda: (trigger_paste_shortcut(), False)[1])
+            GLib.timeout_add(50, lambda: (trigger_paste_shortcut(0), False)[1])
 
         return _action
 
