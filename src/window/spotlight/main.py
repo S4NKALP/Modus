@@ -530,8 +530,11 @@ class Spotlight(Box):
         )
 
     def _activate_result(self, result: SearchResult):
-        if result.action:
-            result.action()
+        try:
+            if result.action:
+                result.action()
+        except Exception as e:
+            logger.warning(f"[spotlight] result.action() failed: {e}")
         self.launched()
 
     def _activate_result_by_id(self, result_id: str):
