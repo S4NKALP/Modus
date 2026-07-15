@@ -13,8 +13,6 @@ DEFAULT = {
     "control_center": True,
     "search": True,
     "global_menu": True,
-    "global_menu_method": "hyprland",
-    "global_menu_cache_enabled": True,
     "network": True,
     "battery": True,
     "notification_center": True,
