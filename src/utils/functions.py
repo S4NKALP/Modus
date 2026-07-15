@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import threading
+import time
 from collections.abc import Callable
 from functools import reduce
 from typing import Dict, NamedTuple, Optional, TypeVar, cast
@@ -131,28 +132,52 @@ def thread(target, *args, **kwargs) -> threading.Thread:
 
 def copy_text(text: str) -> bool:
     try:
-        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-        clipboard.set_text(text, -1)
-        clipboard.store()
-        return True
-    except Exception as e:
-        logger.warning(
-            f"[functions] clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD) failed: {e}"
+        result = subprocess.run(
+            ["wl-copy"],
+            input=text.encode(),
+            timeout=5,
         )
+        return result.returncode == 0
+    except FileNotFoundError:
+        try:
+            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            clipboard.set_text(text, -1)
+            clipboard.store()
+            return True
+        except Exception as e:
+            logger.warning(
+                f"[functions] clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD) failed: {e}"
+            )
+            return False
+    except Exception as e:
+        logger.warning(f"[functions] wl-copy failed: {e}")
         return False
 
 
 def copy_image(image_path: str) -> bool:
     try:
-        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-        image = GdkPixbuf.Pixbuf.new_from_file(image_path)
-        clipboard.set_image(image)
-        clipboard.store()
-        return True
-    except Exception as e:
-        logger.warning(
-            f"[functions] clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD) failed: {e}"
+        with open(image_path, "rb") as f:
+            image_data = f.read()
+        result = subprocess.run(
+            ["wl-copy", "--type", "image/png"],
+            input=image_data,
+            timeout=5,
         )
+        return result.returncode == 0
+    except FileNotFoundError:
+        try:
+            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            image = GdkPixbuf.Pixbuf.new_from_file(image_path)
+            clipboard.set_image(image)
+            clipboard.store()
+            return True
+        except Exception as e:
+            logger.warning(
+                f"[functions] clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD) failed: {e}"
+            )
+            return False
+    except Exception as e:
+        logger.warning(f"[functions] wl-copy (image) failed: {e}")
         return False
 
 
@@ -169,18 +194,10 @@ def read_json_file(file_path: str) -> dict | None:
             return None
 
 
-def trigger_paste_shortcut():
-    try:
-        subprocess.Popen(
-            ["sh", "-c", "wl-paste | wtype -"],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except FileNotFoundError as e:
-        logger.warning(
-            f"[functions] subprocess.Popen( ['sh', '-c', 'wl-paste | wtype -'], std... failed: {e}"
-        )
+def trigger_paste_shortcut(delay_ms: int = 50) -> bool:
+    time.sleep(delay_ms / 1000)
+    result = run_command(["wtype", "-M", "ctrl", "v", "-m", "ctrl"], timeout=1)
+    return result.returncode == 0
 
 
 def get_wifi_icon_for_strength(strength: int) -> str:
