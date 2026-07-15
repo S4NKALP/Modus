@@ -1,3 +1,7 @@
+import os
+import signal
+import subprocess
+
 from fabric.utils import Gdk, GLib, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -7,7 +11,6 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 
 from services.brightness import Brightness
-from services.inhibit import get_inhibit_service
 from services.network import NetworkClient
 from shared.widgets.flat_scale import FlatScale
 from shared.window.applet_window import AppletWindow
@@ -31,6 +34,26 @@ def get_brightness_service() -> "Brightness":
     if _brightness_instance is None:
         _brightness_instance = Brightness()
     return _brightness_instance
+
+
+_CAFFEINE_PID_FILE = os.path.join(
+    os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "modus-caffeine.pid"
+)
+_CAFFEINE_INHIBIT_WHY = "Modus Caffeine"
+
+
+def _caffeine_is_active() -> bool:
+    try:
+        with open(_CAFFEINE_PID_FILE) as f:
+            pid = int(f.read().strip())
+    except (OSError, ValueError):
+        return False
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            data = f.read().decode(errors="ignore")
+        return "systemd-inhibit" in data and _CAFFEINE_INHIBIT_WHY in data
+    except OSError:
+        return False
 
 
 class ModusControlCenter(AppletWindow):
@@ -719,7 +742,13 @@ class ModusControlCenter(AppletWindow):
             self.per_app_volume_center_box.set_size_request(300, -1)
 
     def _check_initial_states(self):
-        self.caffeine_mode = get_inhibit_service().active
+        self.caffeine_mode = _caffeine_is_active()
+        self.caffeine_icon.dynamic_file(
+            "applets/caffeine-on.svg"
+            if self.caffeine_mode
+            else "applets/caffeine-off.svg"
+        )
+        self.caffeine_status_label.set_label("On" if self.caffeine_mode else "Off")
         self.flight_mode = False
 
     def set_dont_disturb(self, *_):
@@ -763,7 +792,37 @@ class ModusControlCenter(AppletWindow):
 
     def toggle_caffeine(self, *_):
         try:
-            self.caffeine_mode = get_inhibit_service().toggle()
+            if _caffeine_is_active():
+                try:
+                    with open(_CAFFEINE_PID_FILE) as f:
+                        pid = int(f.read().strip())
+                    with open(f"/proc/{pid}/cmdline", "rb") as f:
+                        data = f.read().decode(errors="ignore")
+                    if "systemd-inhibit" in data and _CAFFEINE_INHIBIT_WHY in data:
+                        os.kill(pid, signal.SIGTERM)
+                except (OSError, ValueError):
+                    pass
+                try:
+                    os.unlink(_CAFFEINE_PID_FILE)
+                except OSError:
+                    pass
+                self.caffeine_mode = False
+            else:
+                cmd = [
+                    "systemd-inhibit",
+                    "--what=idle:sleep",
+                    f"--why={_CAFFEINE_INHIBIT_WHY}",
+                    "--mode=block",
+                    "sleep",
+                    str(100_000_000),
+                ]
+                proc = subprocess.Popen(cmd)
+                try:
+                    with open(_CAFFEINE_PID_FILE, "w") as f:
+                        f.write(str(proc.pid))
+                except OSError:
+                    pass
+                self.caffeine_mode = True
             self.caffeine_icon.dynamic_file(
                 "applets/caffeine-on.svg"
                 if self.caffeine_mode
