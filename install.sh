@@ -65,6 +65,7 @@ PACKAGES=(
     meson
     ninja
     wayland-protocols
+    libmediaart
 )
 
 # Colors and formatting
