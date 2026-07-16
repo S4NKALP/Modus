@@ -1,12 +1,16 @@
 import contextlib
 from pathlib import Path
 from typing import Any
-from urllib.request import Request, urlopen
 
 from fabric.utils import GLib, logger
 
 import shared.data as data
-from utils.functions import copy_text, read_json_file, trigger_paste_shortcut
+from utils.functions import (
+    copy_text,
+    read_json_file,
+    run_command,
+    trigger_paste_shortcut,
+)
 from window.spotlight.api import PluginContext, SearchResult, SpotlightPlugin
 
 
@@ -178,14 +182,26 @@ class EmojiPlugin(SpotlightPlugin):
         return cache_dir / f"annotations_full_{lang}.json"
 
     def _download_annotations(self, url: str, dest: Path) -> bool:
-        headers = {"User-Agent": "Mozilla/5.0"}
         try:
-            req = Request(url, headers=headers)
-            with urlopen(req, timeout=10) as response:
-                if response.status == 200:
-                    dest.write_bytes(response.read())
-                    return True
-            return False
+            result = run_command(
+                [
+                    "curl",
+                    "-sS",
+                    "-L",
+                    "--max-time",
+                    "10",
+                    "-H",
+                    "User-Agent: Mozilla/5.0",
+                    "-o",
+                    str(dest),
+                    url,
+                ],
+                timeout=15,
+            )
+            if result.returncode != 0:
+                logger.error(f"[Emoji] Download failed: {result.stderr}")
+                return False
+            return dest.stat().st_size > 0
         except Exception as e:
             logger.error(f"[Emoji] Download error: {e}")
             return False
