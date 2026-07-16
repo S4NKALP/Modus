@@ -10,7 +10,7 @@ hl.on("hyprland.start", function()
 		"wl-paste --type text --watch cliphist store",
 		"wl-paste --type image --watch cliphist store",
 		"pgrep -x hypridle >/dev/null || uwsm app -- hypridle",
-		"cd " .. modus .. " && uwsm app -- uv run start",
+		"cd " .. modus .. " && uwsm app -- uv run python start.py",
 	}
 	for i = 1, #cmds do
 		local cmd = cmds[i]
@@ -19,7 +19,7 @@ hl.on("hyprland.start", function()
 end)
 
 -- Reload Modus
-hl.bind("ALT + SHIFT + R", hl.dsp.exec_cmd("killall modus; cd " .. modus .. " && uwsm app -- uv run start"))
+hl.bind("ALT + SHIFT + R", hl.dsp.exec_cmd("killall modus; cd " .. modus .. " && uwsm app -- uv run python start.py"))
 
 -- Fabric Binds
 for key, method in pairs({
@@ -28,6 +28,7 @@ for key, method in pairs({
 	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
 	["SUPER + S"] = "screencapture.toggle(ss='region')", -- Screenshot Region
 	["ALT + SPACE"] = "switch_keyboard_layout()", -- KB_Layout Switcher
+	["CTRL + L"] = "lock_screen.lock()", -- Lockscren
 }) do
 	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. ' "' .. method .. '"'))
 end
