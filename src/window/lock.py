@@ -2,7 +2,14 @@ import getpass
 
 import pam
 from fabric import Application
-from fabric.utils import Gdk, GLib, get_relative_path, logger, os
+from fabric.utils import (
+    Gdk,
+    GLib,
+    exec_shell_command_async,
+    get_relative_path,
+    logger,
+    os,
+)
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
@@ -243,7 +250,16 @@ class LockScreen(Window):
             return
         self.lock.unlock_and_destroy()
         self.destroy()
-        GLib.idle_add(app.quit)  # schedules quit after unlock
+        _app = globals().get("app")
+        if _app is not None:
+            GLib.idle_add(_app.quit)
+
+
+class LockScreenWrapper:
+    """Thin wrapper exposing lock.screen() for fabric-cli exec."""
+
+    def lock(self):
+        exec_shell_command_async(f"python3 {get_relative_path('../../start.py')} lock")
 
 
 def initialize():

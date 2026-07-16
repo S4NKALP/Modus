@@ -6,6 +6,7 @@ into a concrete request, hands it to a :class:`CaptureBackend`, then raises
 notifications and signals based on the result.
 """
 
+import shlex
 from datetime import datetime
 from pathlib import Path
 
@@ -157,11 +158,13 @@ class Screenshot(Service):
     def _handle_action(self, action: str, path: str) -> None:
         match action:
             case "files":
-                exec_shell_command_async(f"xdg-open {self.screenshots_dir}")
+                exec_shell_command_async(
+                    f"xdg-open {shlex.quote(str(self.screenshots_dir))}"
+                )
             case "view":
-                exec_shell_command_async(f"xdg-open {path}")
+                exec_shell_command_async(f"xdg-open {shlex.quote(path)}")
             case "edit":
-                exec_shell_command_async(f"satty -f {path}")
+                exec_shell_command_async(f"satty -f {shlex.quote(path)}")
 
     def _notify_cancelled(self) -> None:
         self._notifier.notify(

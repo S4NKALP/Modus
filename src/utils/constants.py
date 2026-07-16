@@ -1,4 +1,5 @@
 DEFAULT = {
+    "debug": False,
     "dock_enabled": True,
     "dock_auto_hide": True,
     "dock_always_occluded": False,

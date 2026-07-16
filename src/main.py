@@ -32,6 +32,7 @@ from shared.data import APP_NAME, load_config
 from utils.functions import set_process_name
 from window.desktop.widget import Deskwidgets
 from window.dock import Dock
+from window.lock import LockScreenWrapper
 from window.notification.notification import ModusNoti
 from window.osd.main import OSDWindow
 from window.panel.main import Panel
@@ -54,6 +55,20 @@ def main():
     set_process_name(APP_NAME)
 
     load_config()
+
+    from services.config import config
+
+    _debug = config().get("debug", False)
+
+    if not _debug:
+        logger.disable("modus_plugin_builtin_emoji")
+    else:
+        logger.enable("fabric")
+        logger.enable("services")
+        logger.enable("window")
+        logger.enable("utils")
+        logger.enable("window.globalmenu")
+
     switcher = ApplicationSwitcher()
     panel = Panel()
     modusnoti = ModusNoti()
@@ -113,6 +128,7 @@ def main():
     __main__.dock = dock
     __main__.osd = osd
     __main__.screencapture = screencapture
+    __main__.lock_screen = LockScreenWrapper()
     __main__.switch_keyboard_layout = KeyboardLayout.switch_keyboard_layout
 
     app.run()

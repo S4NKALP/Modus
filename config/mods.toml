@@ -23,5 +23,5 @@ on-clicked = "python3 -m utils.google_lens_cli"
 #
 # [[Mods.terminal.options]]
 # label = "Terminal but scary"
-# on-clicked = "ghostty"
+# on-clicked = "zen-browser"
 # divider = true

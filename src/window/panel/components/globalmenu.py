@@ -153,7 +153,11 @@ class SystemDropdown(ModusDropdown):
                 dropdown_option("Restart", "", "systemctl reboot"),
                 dropdown_option("Shut Down", "", "shutdown now"),
                 dropdown_divider("---------------------"),
-                dropdown_option("Lock Screen", "󰘳     L", "hyprlock"),
+                dropdown_option(
+                    "Lock Screen",
+                    "󰘳     L",
+                    'fabric-cli exec modus "lock_screen.lock()"',
+                ),
             ],
             **kwargs,
         )

@@ -15,6 +15,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.wayland import WaylandWindow as Window
 
+from services.config import on_config_change
 from shared.data import load_config
 from utils.gtk_utils import svg_file
 from window.desktop.constants import (
@@ -92,6 +93,16 @@ class WeatherService(Service):
         # Periodic refresh only; widgets request the first fetch after
         # connecting (see Weather.__init__) to avoid a race with subscription.
         GLib.timeout_add_seconds(WEATHER_UPDATE_INTERVAL, self._refresh)
+
+        on_config_change(self._on_config_change)
+
+    def _on_config_change(self, new_config, old_config):
+        if new_config.get("weather_location") != old_config.get("weather_location"):
+            self._weather = None
+            self._location = None
+            self._coords = None
+            self._coords_location = None
+            self._executor.submit(self._fetch)
 
     # -- scheduling -------------------------------------------------------
 

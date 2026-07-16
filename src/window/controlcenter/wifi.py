@@ -275,6 +275,7 @@ class WifiConnections(Box):
         self._update_in_progress = False  # Prevent concurrent updates
         self._destroyed = False  # Track if widget is destroyed
         self._signal_ids = []  # Track all service signal IDs for cleanup
+        self._network_ready_fired = False  # Guard against duplicate device-ready
 
         self._signal_ids.append(
             (
@@ -437,6 +438,9 @@ class WifiConnections(Box):
 
     def on_network_ready(self, *_):
         """Called when network service is ready"""
+        if self._network_ready_fired:
+            return
+        self._network_ready_fired = True
         self.wifi_service = self.network_service.wifi_device
         if self.wifi_service:
             self.toggle_button.set_active(self.wifi_service.enabled)

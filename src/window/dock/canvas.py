@@ -132,7 +132,8 @@ class DockCanvas(Gtk.DrawingArea):
         if not self._desktop_apps:
             try:
                 self._desktop_apps = get_desktop_applications(include_hidden=False)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"[dock] Failed to load desktop applications: {e}")
                 self._desktop_apps = []
         return self._desktop_apps
 

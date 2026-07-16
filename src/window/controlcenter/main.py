@@ -93,6 +93,7 @@ class ModusControlCenter(AppletWindow):
         # Initialize network service for WiFi toggle - lazy load
         self.network_service = None
         self.wifi_service = None
+        self._network_ready_fired = False
 
         # Initialize flight mode and caffeine states - lazy load
         self.caffeine_mode = False
@@ -905,9 +906,19 @@ class ModusControlCenter(AppletWindow):
             logger.warning(f"Failed to toggle bluetooth: {e}")
 
     def on_network_ready(self, *_):
+        if self._network_ready_fired:
+            return
+        self._network_ready_fired = True
         self.wifi_service = self.network_service.wifi_device
         if self.wifi_service:
-            self.wifi_service.connect("notify::wireless-enabled", self.update_wifi_icon)
+            self._signal_connections.append(
+                (
+                    self.wifi_service,
+                    self.wifi_service.connect(
+                        "notify::wireless-enabled", self.update_wifi_icon
+                    ),
+                )
+            )
 
     def update_wifi_icon(self, *_):
         try:

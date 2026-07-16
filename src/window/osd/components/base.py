@@ -16,6 +16,7 @@ class BaseOSDContainer(Box):
         self.osd = None
         self.show_timestamp: float = 0.0
         self.watchdog_handler: int = 0
+        self._hide_timer_id: int | None = None
         self._update_in_progress = False
         self._is_hovered = False
         self._last_trigger_time: float = 0.0
@@ -31,6 +32,7 @@ class BaseOSDContainer(Box):
         return False
 
     def destroy(self):
+        self._cancel_hide_timer()
         self.cleanup_all_handlers()
         super().destroy()
 
@@ -67,12 +69,26 @@ class BaseOSDContainer(Box):
         self.show_timestamp = 0.0
         self._update_in_progress = False
 
+    def _cancel_hide_timer(self):
+        if self._hide_timer_id is not None:
+            try:
+                GLib.source_remove(self._hide_timer_id)
+            except Exception:
+                pass
+            self._hide_timer_id = None
+
     def hide_window(self):
+        self._cancel_hide_timer()
         if self.osd and hasattr(self.osd, "revealer"):
             self.osd.revealer.set_reveal_child(False)
-            GLib.timeout_add(150, lambda: self.window.hide() or False)
+            self._hide_timer_id = GLib.timeout_add(150, self._on_hide_timer_done)
         else:
             self.window.hide()
+
+    def _on_hide_timer_done(self):
+        self._hide_timer_id = None
+        self.window.hide()
+        return False
 
     def watchdog_force_hide(self, *_):
         if not self.window.get_visible():

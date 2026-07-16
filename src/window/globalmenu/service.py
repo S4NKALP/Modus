@@ -372,9 +372,26 @@ class GlobalMenuService(Service):
         """Return the registry entry and PID for the currently active window."""
         with self._state_lock:
             pid = self._current_pid
+        if pid == 0:
+            logger.warning(
+                "[GlobalMenuService] _resolve_current_entry: _current_pid is 0"
+            )
+            return None, 0
         with self._registry_lock:
             svc = self._pid_to_service.get(pid)
             entry = self._service_registry.get(svc) if svc else None
+        if not svc:
+            logger.warning(
+                f"[GlobalMenuService] _resolve_current_entry: no service for pid {pid}"
+            )
+        elif not entry:
+            logger.warning(
+                f"[GlobalMenuService] _resolve_current_entry: no entry for service '{svc}' (pid {pid})"
+            )
+        elif not entry.importer:
+            logger.warning(
+                f"[GlobalMenuService] _resolve_current_entry: importer is None for '{svc}' (pid {pid})"
+            )
         return entry, pid
 
     def _register_new_service(
@@ -510,7 +527,7 @@ class GlobalMenuService(Service):
             entry = self._service_registry.get(svc_name)
             if not entry or not entry.importer:
                 return
-        entry.revision = revision
+            entry.revision = revision
         subtree = entry.importer.update_layout(parent_id, revision)
         if subtree is None:
             return
@@ -1066,8 +1083,15 @@ class GlobalMenuService(Service):
     def click_item(self, item_id: int) -> bool:
         entry, pid = self._resolve_current_entry()
         if entry and entry.importer:
+            logger.debug(
+                f"[GlobalMenuService] click_item: item_id={item_id}, "
+                f"service={entry.service_name}, importer={type(entry.importer).__name__}"
+            )
             entry.importer.click_item(item_id, pid=pid)
             return True
+        logger.warning(
+            f"[GlobalMenuService] click_item FAILED: item_id={item_id}, entry={entry}, pid={pid}"
+        )
         return False
 
     def about_to_show(self, item_id: int) -> bool:

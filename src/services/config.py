@@ -59,6 +59,15 @@ class ConfigService:
         """Set a config value (local state only)."""
         self._config[key] = value
 
+    def save(self) -> None:
+        """Persist current in-memory config to disk."""
+        try:
+            doc = self._dict_to_toml(self._config)
+            with open(self._config_file, "w") as f:
+                toml_dump(doc, f)
+        except Exception as e:
+            logger.error(f"[ConfigService] Failed to save config: {e}")
+
     def register_reload_callback(
         self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
     ) -> None:

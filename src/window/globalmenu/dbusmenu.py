@@ -123,10 +123,9 @@ class DBusMenuClient:
             return None
 
     def get_layout(self, force_refresh=False):
-        if self._cache and self._cache_valid and not force_refresh:
-            return self._cache
-
         with self._lock:
+            if self._cache and self._cache_valid and not force_refresh:
+                return self._cache
             if self._fetching:
                 return self._cache or []
             self._fetching = True
@@ -261,6 +260,10 @@ class DBusMenuClient:
             return False
 
     def click_item(self, item_id, pid=0):
+        logger.debug(
+            f"[dbusmenu] click_item: item_id={item_id}, "
+            f"service={self.service_name}, path={self.object_path}"
+        )
         try:
             self._call(
                 "Event",
@@ -269,7 +272,7 @@ class DBusMenuClient:
             self.invalidate()
         except Exception as e:
             logger.warning(
-                f"[dbusmenu] self._call( 'Event', GLib.Variant('(isvu)', (item_id, 'cl... failed: {e}"
+                f"[dbusmenu] click_item: Event call failed for item_id={item_id}: {e}"
             )
 
     def invalidate(self):
@@ -369,9 +372,10 @@ class DBusMenuClient:
                 layout = layout.get_variant()
             parsed = self._parse_dbusmenu(layout).children
             if parent_id == 0:
-                self._hash_cache = self._hash(parsed)
-                self._cache = parsed
-                self._cache_valid = True
+                with self._lock:
+                    self._hash_cache = self._hash(parsed)
+                    self._cache = parsed
+                    self._cache_valid = True
             return parsed
         except Exception as e:
             logger.error(f"[Menu] update_layout error: {e}")
@@ -403,5 +407,6 @@ class DBusMenuClient:
                 result.append(item)
             return result
 
-        self._cache = walk(self._cache)
-        self._hash_cache = None
+        with self._lock:
+            self._cache = walk(self._cache)
+            self._hash_cache = None

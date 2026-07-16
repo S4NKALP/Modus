@@ -53,7 +53,7 @@ class PowerMenuPlugin(SpotlightPlugin):
             "id": "lock",
             "name": "Lock Screen",
             "icon": "system-lock-screen",
-            "command": "hyprlock",
+            "command": 'fabric-cli exec modus "lock_screen.lock()"',
             "description": "Lock the screen",
         },
     ]

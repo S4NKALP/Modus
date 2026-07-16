@@ -20,13 +20,11 @@ def _get_wallpaper_path() -> str:
         custom = get_config("wallpapers_dir")
         if custom:
             return os.path.expanduser(str(custom))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[data] Failed to load wallpapers_dir from config: {e}")
     return f"{HOME_DIR}/Pictures/Wallpapers"
 
 
-WALLPAPER_PATH = _get_wallpaper_path()
-WALLPAPER_THUMBS_PATH = f"{WALLPAPER_PATH}/.thumbnails"
 WALLPAPERS_THUMBNAILS_SIZE = 200
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example/")
 

@@ -226,8 +226,12 @@ class WiFiPasswordDialog(Window):
     def _connection_timeout(self):
         if self.is_connecting:
             self.is_connecting = False
-            self.join_button.set_sensitive(True)
-            self.show_error("Connection timeout. Please try again.")
+            self.connection_timeout_id = None
+            try:
+                self.join_button.set_sensitive(True)
+                self.show_error("Connection timeout. Please try again.")
+            except Exception:
+                pass
         return False
 
     def show_dialog(self):

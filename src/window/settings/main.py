@@ -335,6 +335,11 @@ class SettingsWindow(Gtk.Window):
             "General Settings",
             [
                 SettingsRow(
+                    "Debug Mode",
+                    SettingsSwitch("debug"),
+                    "Enable verbose logging for development",
+                ),
+                SettingsRow(
                     "Weather Location",
                     SettingsEntry("weather_location"),
                     "City name for weather updates",

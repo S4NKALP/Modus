@@ -78,7 +78,10 @@ class SearchPipeline:
                 t.join(timeout=0.1)
             self._pending_threads.clear()
             for source_id in self._pending_idle_ids:
-                GLib.source_remove(source_id)
+                try:
+                    GLib.source_remove(source_id)
+                except Exception:
+                    pass
             self._pending_idle_ids.clear()
 
     def _route(self, query: str) -> tuple[PluginEntry | None, str, str]:

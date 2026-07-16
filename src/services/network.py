@@ -1,3 +1,4 @@
+import shlex
 from types import SimpleNamespace
 from typing import List, Literal
 
@@ -105,7 +106,8 @@ class Wifi(Service):
 
         try:
             self._device.request_scan_async(None, _on_scan_finish)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[network] request_scan_async failed: {e}")
             self._scanning = False
 
     def notifier(self, name: str, *args):
@@ -401,26 +403,33 @@ class NetworkClient(Service):
                 callback(False, "No wifi device")
             return
 
+        if not bssid:
+            if callback:
+                callback(False, "No bssid")
+            return
+
         device = self.wifi_device._device
         handler_id: list[int] = []
+        _fired = [False]
 
         def _on_state_changed(_dev, new_state, _old_state, reason):
-            if not callback:
+            if _fired[0]:
                 return
             state = NM.DeviceState(new_state)
             if state == NM.DeviceState.ACTIVATED:
+                _fired[0] = True
                 _cleanup()
-                callback(True, "Connected")
-            elif state in (NM.DeviceState.FAILED, NM.DeviceState.DISCONNECTED):
+                if callback:
+                    callback(True, "Connected")
+            elif state == NM.DeviceState.FAILED:
+                _fired[0] = True
                 _cleanup()
                 reason_str = NM.DeviceStateReason(reason).value_nick
-                if "secret" in reason_str or "auth" in reason_str:
-                    callback(False, "Wrong password")
-                else:
-                    callback(False, f"Failed ({reason_str})")
-            elif state == NM.DeviceState.NEED_AUTH:
-                _cleanup()
-                callback(False, "Wrong password")
+                if callback:
+                    if "secret" in reason_str or "auth" in reason_str:
+                        callback(False, "Wrong password")
+                    else:
+                        callback(False, f"Failed ({reason_str})")
 
         def _cleanup():
             if handler_id:
@@ -433,7 +442,7 @@ class NetworkClient(Service):
             handler_id.append(device.connect("state-changed", _on_state_changed))
 
         exec_shell_command_async(
-            f"nmcli device wifi connect {bssid}",
+            f"nmcli device wifi connect {shlex.quote(bssid)}",
             lambda *args: logger.debug(f"connect result: {args}"),
         )
 
@@ -442,15 +451,24 @@ class NetworkClient(Service):
             callback(False, "No wifi device")
             return
 
+        if not bssid:
+            callback(False, "No bssid")
+            return
+
         device = self.wifi_device._device
         handler_id: list[int] = []
+        _fired = [False]
 
         def _on_state_changed(_dev, new_state, _old_state, reason):
+            if _fired[0]:
+                return
             state = NM.DeviceState(new_state)
             if state == NM.DeviceState.ACTIVATED:
+                _fired[0] = True
                 _cleanup()
                 callback(True, "Connected")
             elif state in (NM.DeviceState.FAILED, NM.DeviceState.DISCONNECTED):
+                _fired[0] = True
                 _cleanup()
                 reason_str = NM.DeviceStateReason(reason).value_nick
                 if "secret" in reason_str or "auth" in reason_str:
@@ -458,6 +476,7 @@ class NetworkClient(Service):
                 else:
                     callback(False, f"Failed ({reason_str})")
             elif state == NM.DeviceState.NEED_AUTH:
+                _fired[0] = True
                 _cleanup()
                 callback(False, "Wrong password")
 
@@ -471,6 +490,6 @@ class NetworkClient(Service):
         handler_id.append(device.connect("state-changed", _on_state_changed))
 
         exec_shell_command_async(
-            f"nmcli device wifi connect {bssid} password {password!r}",
+            f"nmcli device wifi connect {shlex.quote(bssid)} password {shlex.quote(password)}",
             lambda *args: logger.debug(f"connect_with_password result: {args}"),
         )

@@ -5,6 +5,7 @@ Recording state is held entirely in memory as Fabric properties -- no
 temporary files are used.
 """
 
+import shlex
 import time
 from datetime import datetime
 from pathlib import Path
@@ -261,9 +262,11 @@ class ScreenRecorder(Service):
     def _handle_action(self, action: str, path: str) -> None:
         match action:
             case "files":
-                exec_shell_command_async(f"xdg-open {self.recordings_dir}")
+                exec_shell_command_async(
+                    f"xdg-open {shlex.quote(str(self.recordings_dir))}"
+                )
             case "view":
-                exec_shell_command_async(f"xdg-open {path}")
+                exec_shell_command_async(f"xdg-open {shlex.quote(path)}")
 
     def _notify_cancelled(self) -> None:
         self._notifier.notify(

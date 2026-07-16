@@ -102,4 +102,5 @@ class AppletWindow(PopupWindow):
             self.dismiss_layer.destroy()
         if self._hide_timeout_id is not None:
             GLib.source_remove(self._hide_timeout_id)
+            self._hide_timeout_id = None
         super().destroy()

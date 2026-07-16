@@ -574,9 +574,7 @@ class PlayerBox(Box):
             current_status = str(self.player.playback_status).lower()
             self._last_notified_status = current_status
             self.play_pause_icon.dynamic_file(
-                "player/play.svg"
-                if current_status == "paused"
-                else "player/pause.svg"
+                "player/play.svg" if current_status == "paused" else "player/pause.svg"
             )
             self._on_metadata(self.player, self.player._player.props.metadata)
             self.set_image()

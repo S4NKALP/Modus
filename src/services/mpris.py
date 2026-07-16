@@ -327,12 +327,14 @@ class PlayerService(Service):
         if metadata is None:
             try:
                 metadata = self._player.props.metadata
-            except Exception:
+            except Exception as e:
+                logger.debug(f"[mpris] Failed to read metadata: {e}")
                 metadata = None
         if metadata is not None:
             try:
                 dur = metadata["mpris:length"] / 1_000_000
-            except Exception:
+            except Exception as e:
+                logger.debug(f"[mpris] Failed to read duration: {e}")
                 dur = 0
             # Browser players (YouTube in Firefox/Chromium) populate
             # `mpris:artUrl` lazily and don't reliably emit the `metadata`

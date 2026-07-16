@@ -93,7 +93,8 @@ class Brightness(Service):
             return True
         except Exception as e:
             logger.error(f"Error checking brightness file: {e}")
-            return True
+            self._poll_timer_id = None
+            return False
 
     def _detect_backend(self, backend):
         """Detect appropriate backend for brightness control."""
