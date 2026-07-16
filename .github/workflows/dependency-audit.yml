@@ -28,9 +28,9 @@ jobs:
       - name: Export requirements from uv
         run: uv export --no-hashes -o requirements-audit.txt
 
-      - uses: pypa/gh-action-pip-audit@release/v1
+      - uses: pypa/gh-action-pip-audit@v1.1.0
         with:
-          input: requirements-audit.txt
+          inputs: requirements-audit.txt
 
       - name: Cleanup
         if: always()
