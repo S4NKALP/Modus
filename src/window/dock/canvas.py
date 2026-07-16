@@ -435,18 +435,21 @@ class DockCanvas(Gtk.DrawingArea):
             address = signal.data[0]
             if not address:
                 return
+            # Fetch client data BEFORE iterating so the expensive IPC call
+            # doesn't hold a stale reference to model items across rebuilds.
+            clients = self._get_clients()
+            client = next((c for c in clients if c.get("address") == address), None)
+            if not client:
+                return
+            title = client.get("title", "")
+            # Re-verify the item still exists in the CURRENT model — a
+            # debounced rebuild may have replaced the list since the signal.
             for item in self.model.items:
                 if item.instance_address == address:
-                    clients = self._get_clients()
-                    client = next(
-                        (c for c in clients if c.get("address") == address), None
+                    app_class = item.app_class or ""
+                    item.tooltip = (
+                        f"{app_class}: {title}" if title != app_class else app_class
                     )
-                    if client:
-                        title = client.get("title", "")
-                        app_class = item.app_class or ""
-                        item.tooltip = (
-                            f"{app_class}: {title}" if title != app_class else app_class
-                        )
                     break
         except Exception as e:
             logger.warning(f"[canvas] address = signal.data[0] failed: {e}")
