@@ -28,7 +28,7 @@ for key, method in pairs({
 	["SUPER + Z"] = "screencapture.toggle()", -- ScreenCapture
 	["SUPER + S"] = "screencapture.toggle(ss='region')", -- Screenshot Region
 	["ALT + SPACE"] = "switch_keyboard_layout()", -- KB_Layout Switcher
-	["CTRL + L"] = "lock_screen.lock()", -- Lockscren
+	["SUPER + L"] = "lock_screen.lock()", -- Lockscren
 }) do
 	hl.bind(key, hl.dsp.exec_cmd(fabricSend .. ' "' .. method .. '"'))
 end
