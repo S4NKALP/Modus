@@ -175,6 +175,7 @@ class PlayerService(Service):
         self._current_artwork_hash = ""
         self._current_artwork_path = ""
         self._is_cleaning_up = False
+        self._artwork_generation = 0
         self._signal_ids = []
         self._last_emitted_status = ""
 
@@ -449,9 +450,12 @@ class PlayerService(Service):
             if existing and Path(existing).exists():
                 self._set_artwork(existing)
                 return
+            # Capture generation so the thread can bail out if cleanup runs
+            # while the download is in-flight.
+            gen = self._artwork_generation
             threading.Thread(
                 target=self._download_artwork,
-                args=(art_url, artwork_hash, metadata),
+                args=(art_url, artwork_hash, metadata, gen),
                 daemon=True,
             ).start()
 
@@ -472,9 +476,7 @@ class PlayerService(Service):
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir / f"{artwork_hash}{suffix}"
 
-    def _download_artwork(self, art_url: str, artwork_hash: str, metadata):
-        if self._is_cleaning_up:
-            return
+    def _download_artwork(self, art_url: str, artwork_hash: str, metadata, gen: int):
         try:
             with urllib.request.urlopen(art_url, timeout=5) as response:
                 data = response.read()
@@ -487,7 +489,9 @@ class PlayerService(Service):
                 tmp.write_bytes(data)
                 tmp.replace(target)
 
-            if not self._is_cleaning_up:
+            # Bail out if cleanup ran while we were downloading — the idle
+            # callback would reference a stale service.
+            if not self._is_cleaning_up and gen == self._artwork_generation:
                 GLib.idle_add(self._set_artwork, str(target))
 
         except Exception as e:
@@ -497,6 +501,9 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return
         self._is_cleaning_up = True
+        # Invalidate any in-flight artwork download threads so they won't
+        # call _set_artwork on a stale service.
+        self._artwork_generation += 1
 
         try:
             if hasattr(self, "pos_fabricator"):

@@ -134,6 +134,10 @@ class NightLightService(Service):
         self._process.wait_async(None, self._on_daemon_exit)
 
     def _on_daemon_exit(self, process: Gio.Subprocess, task: Gio.Task):
+        # Ignore exit from a stale subprocess — a new daemon may have been
+        # started since this one was spawned.
+        if self._process is not process:
+            return
         self._process = None
         self._daemon_running = False
         self._set_active(False)
