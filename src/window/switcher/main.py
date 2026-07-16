@@ -250,7 +250,7 @@ class ApplicationSwitcher(Window):
                 spacing=2,
                 children=[icon_box, name_label],
             )
-            item_box.set_size_request(300, 210)
+            item_box.set_size_request(100, -1)
             app_icon_ref = image
             preview_image_ref = None
             name_label_ref = name_label
