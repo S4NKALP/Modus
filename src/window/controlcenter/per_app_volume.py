@@ -193,6 +193,9 @@ class PerAppVolumeControl(Box):
 
     def _populate_apps(self):
         """Populate the widget with current audio applications"""
+        if self._destroyed:
+            return False
+
         from utils.functions import clear_children
 
         clear_children(self.apps_container)
@@ -202,7 +205,7 @@ class PerAppVolumeControl(Box):
         # Use fabric audio service for applications
         if not audio_service:
             self._show_no_apps_message()
-            return
+            return None
 
         applications = getattr(audio_service, "applications", [])
 
@@ -229,6 +232,8 @@ class PerAppVolumeControl(Box):
                     self._app_widgets[app.name] = (app_widget, app)
         else:
             self._show_no_apps_message()
+
+        return False
 
     def _show_no_apps_message(self):
         """Show message when no apps are playing audio"""
