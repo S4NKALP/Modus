@@ -66,76 +66,28 @@ class GoogleLens(Service):
             raise RuntimeError(f"Failed to capture region: {e}") from e
 
     def upload_file(self, uploader_url, file_path):
-        url_resp = None
+        cmd = [
+            "curl",
+            "-sS",
+            "--max-time",
+            "15",
+            "-F",
+            "reqtype=fileupload",
+            "-F",
+            "time=1h",
+            "-F",
+            f"fileToUpload=@{file_path}",
+            uploader_url,
+        ]
+        result = run_command(cmd, timeout=20)
+        if result.returncode != 0:
+            raise RuntimeError(f"Upload failed: {result.stderr}")
 
-        try:
-            import mimetypes
-            import uuid
-            from urllib.request import Request, urlopen
-
-            boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
-            headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
-
-            data = []
-            fields = {
-                "reqtype": "fileupload",
-                "time": "1h",
-            }
-
-            for name, value in fields.items():
-                data.append(f"--{boundary}".encode())
-                data.append(f'Content-Disposition: form-data; name="{name}"'.encode())
-                data.append(b"")
-                data.append(value.encode())
-
-            filename = os.path.basename(file_path)
-            mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-
-            data.append(f"--{boundary}".encode())
-            data.append(
-                f'Content-Disposition: form-data; name="fileToUpload"; filename="{filename}"'.encode()
-            )
-            data.append(f"Content-Type: {mime_type}".encode())
-            data.append(b"")
-            with open(file_path, "rb") as f:
-                data.append(f.read())
-
-            data.append(f"--{boundary}--".encode())
-            data.append(b"")
-
-            body = b"\r\n".join(data)
-            req = Request(uploader_url, data=body, headers=headers)
-
-            with urlopen(req, timeout=60) as response:
-                url_resp = response.read().decode("utf-8").strip()
-        except Exception as e:
-            logger.error(f"Upload with urllib failed: {e}")
-
-        # Fallback to curl
-        if url_resp is None:
-            if run_command(["which", "curl"]).returncode != 0:
-                raise RuntimeError("Neither requests module nor curl available")
-
-            cmd = [
-                "curl",
-                "-sS",
-                "-F",
-                "reqtype=fileupload",
-                "-F",
-                "time=1h",
-                "-F",
-                f"fileToUpload=@{file_path}",
-                uploader_url,
-            ]
-            result = run_command(cmd)
-            if result.returncode != 0:
-                raise RuntimeError(f"Upload failed: {result.stderr}")
-
-            url_resp = (
-                result.stdout.strip()
-                if isinstance(result.stdout, str)
-                else result.stdout.decode("utf-8").strip()
-            )
+        url_resp = (
+            result.stdout.strip()
+            if isinstance(result.stdout, str)
+            else result.stdout.decode("utf-8").strip()
+        )
 
         # catbox.moe returns the URL directly
         if (
