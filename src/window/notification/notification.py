@@ -1234,6 +1234,11 @@ class ModusNoti(Window):
         self.notifications.queue_resize()
 
         def start_animation():
+            # Stop polling if the revealer is already closing/destroyed —
+            # _on_notification_finished may have fired between the idle_add
+            # and this callback executing.
+            if new_box._is_closing:
+                return False
             if new_box.get_parent() and new_box.get_realized():
                 new_box.reveal()
                 return False
