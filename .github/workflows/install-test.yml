@@ -1,0 +1,72 @@
+name: Install Script Test
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "install.sh"
+      - "src/window/globalmenu/**"
+      - "src/window/switcher/app-capture/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "install.sh"
+      - "src/window/globalmenu/**"
+      - "src/window/switcher/app-capture/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check install.sh syntax
+        run: bash -n install.sh
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint install.sh
+        run: shellcheck install.sh
+
+  c-build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm gcc make pkgconf gtk3 meson ninja
+
+      - name: Compile globalmenu shim
+        run: |
+          gcc -shared -fPIC -O2 -o /tmp/libmenu_button_shim.so \
+            src/window/globalmenu/libmenu_button_shim.c \
+            $(pkg-config --cflags --libs gtk+-3.0) -ldl
+
+      - name: Compile app-capture
+        run: |
+          cd src/window/switcher/app-capture
+          meson setup builddir --wipe
+          meson compile -C builddir
+
+  python-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compile all Python source
+        run: python3 -m compileall -q src
