@@ -284,6 +284,7 @@ class Brightness(Service):
                 abs(new_percent - current_percent) < self.MIN_CHANGE_THRESHOLD
                 and self._last_raw != -1
             ):
+                self.emit("screen", new_percent)
                 return
 
             self._pending_raw = value

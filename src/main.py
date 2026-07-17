@@ -127,6 +127,8 @@ def main():
     __main__.deskwidget = deskwidget
     __main__.dock = dock
     __main__.osd = osd
+    __main__.osd_show_audio = osd.osd_show_audio
+    __main__.osd_show_brightness = osd.osd_show_brightness
     __main__.screencapture = screencapture
     __main__.lock_screen = LockScreenWrapper()
     __main__.switch_keyboard_layout = KeyboardLayout.switch_keyboard_layout

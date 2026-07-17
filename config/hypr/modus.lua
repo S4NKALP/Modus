@@ -50,6 +50,30 @@ for key, args in pairs({
 	hl.bind(key, hl.dsp.exec_cmd(cmd))
 end
 
+for key, cmd in pairs({
+	AudioRaiseVolume = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+	AudioLowerVolume = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+	AudioMute = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+	AudioMicMute = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+}) do
+	hl.bind(
+		"XF86" .. key,
+		hl.dsp.exec_cmd(cmd .. " ; " .. fabricSend .. ' "osd_show_audio()"'),
+		{ locked = true, repeating = true }
+	)
+end
+
+for key, cmd in pairs({
+	MonBrightnessUp = "brightnessctl -e4 -n2 set 5%+",
+	MonBrightnessDown = "brightnessctl -e4 -n2 set 5%-",
+}) do
+	hl.bind(
+		"XF86" .. key,
+		hl.dsp.exec_cmd(cmd .. " ; " .. fabricSend .. ' "osd_show_brightness()"'),
+		{ locked = true, repeating = true }
+	)
+end
+
 -- Layer Rules
 hl.layer_rule({
 	match = {

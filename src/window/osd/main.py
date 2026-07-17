@@ -68,10 +68,16 @@ class OSDWindow(Window):
         self.osd = OSD(window=self)
         self.add(self.osd)
 
+    def osd_show_audio(self):
+        from services.config import get_config
 
-if __name__ == "__main__":
-    from fabric import Application
+        if not get_config("osd", True):
+            return
+        self.osd.containers["audio"].update()
 
-    osd_window = OSDWindow()
-    app = Application("modus-osd", osd_window)
-    app.run()
+    def osd_show_brightness(self):
+        from services.config import get_config
+
+        if not get_config("osd", True):
+            return
+        self.osd.containers["brightness"].update()
