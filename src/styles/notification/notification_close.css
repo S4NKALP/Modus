@@ -20,5 +20,5 @@
 }
 
 #notif-close-button:active #notif-close-label {
-  color: var(--shadow);
+  color: @glass-overlay-dark;
 }

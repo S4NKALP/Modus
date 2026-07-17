@@ -7,7 +7,7 @@
 }
 
 .icon {
-  background-color: @primary;
+  background-color: @glass-accent;
   font-size: 15px;
   padding: 20px 20px;
 }
@@ -44,7 +44,7 @@
 }
 
 #toggle-button slider {
-  background-color: @foreground;
+  background-color: @glass-text;
   border-radius: apply(radius-full);
   min-width: 16px;
   min-height: 16px;

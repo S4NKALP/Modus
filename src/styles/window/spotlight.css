@@ -11,7 +11,7 @@
 }
 
 .app-search-entry {
-    color: @foreground;
+    color: @glass-text;
 }
 
 .app-search-header {
@@ -43,7 +43,7 @@
 }
 
 .app-title {
-    color: @foreground;
+    color: @glass-text;
     font-size: apply(font-base);
     font-weight: 600;
 }
@@ -59,13 +59,13 @@
 }
 
 .calc-result-text {
-    color: @foreground;
+    color: @glass-text;
     font-size: apply(font-lg);
     font-weight: bold;
 }
 
 .power-menu-name {
-    color: @foreground;
+    color: @glass-text;
     font-size: apply(font-lg);
     font-weight: 600;
 }
@@ -96,7 +96,7 @@
 }
 
 .emoji-name {
-    color: var(--foreground);
+    color: @glass-text;
     font-size: 14px;
     font-weight: normal;
 }
@@ -106,7 +106,7 @@
 }
 
 .emoji-no-results-text {
-    color: darker(var(--foreground));
+    color: @glass-text-secondary;
     font-size: 14px;
     font-style: italic;
 }
@@ -116,7 +116,7 @@
 }
 
 .clipboard-no-results-text {
-    color: darker(var(--foreground));
+    color: @glass-text-secondary;
     font-size: 14px;
     font-style: italic;
 }
@@ -142,7 +142,7 @@
 }
 
 .clipboard-content {
-    color: var(--foreground);
+    color: @glass-text;
     font-size: 14px;
     font-weight: normal;
     margin-left: 1rem;

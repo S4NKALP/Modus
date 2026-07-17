@@ -16,7 +16,7 @@
 
 #player-stack-button.active {
   border-radius: apply(radius-xs);
-  background-color: @foreground;
+  background-color: @glass-text;
 }
 
 #outer-player-box {

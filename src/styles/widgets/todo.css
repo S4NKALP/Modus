@@ -21,7 +21,7 @@
 #todo-title {
     font-size: 16px;
     font-weight: 700;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 
@@ -41,7 +41,7 @@
 #new-todo-entry {
     background: transparent;
     border: none;
-    color: @foreground;
+    color: @glass-text;
     font-size: 13px;
     font-family: "SF Pro Rounded";
     min-height: 24px;
@@ -88,8 +88,8 @@
 /* === Progress Ring === */
 #todo-progress-ring {
     background-color: transparent;
-    color: alpha(@foreground, 0.15);
-    border-color: @foreground;
+    color: alpha(@glass-text, 0.15);
+    border-color: @glass-text;
 }
 
 /* === Checkbox === */
@@ -111,7 +111,7 @@
 #todo-text {
     font-size: 14px;
     font-weight: 500;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 
@@ -134,7 +134,7 @@
 }
 
 #todo-options-btn:hover {
-    color: @foreground;
+    color: @glass-text;
     background-color: @glass-hover;
     border-radius: apply(radius-sm);
 }
@@ -149,7 +149,7 @@
 }
 
 #clear-completed-button:hover {
-    color: @foreground;
+    color: @glass-text;
 }
 
 #todo-footer {
@@ -176,7 +176,7 @@
 #todo-opt-title {
     font-size: 14px;
     font-weight: 700;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 
@@ -202,8 +202,8 @@
 }
 
 #todo-color-swatch.selected {
-    border-color: @foreground;
-    box-shadow: 0 0 0 2px alpha(@foreground, 0.2);
+    border-color: @glass-text;
+    box-shadow: 0 0 0 2px alpha(@glass-text, 0.2);
 }
 
 /* === Deadline Pill === */
@@ -215,7 +215,7 @@
 
 #todo-deadline-value {
     font-size: 12px;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
     min-width: 70px;
 }
@@ -244,7 +244,7 @@
 
 #todo-spin-value {
     font-size: 12px;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 
@@ -254,7 +254,7 @@
     border-radius: apply(radius-full);
     padding: 6px 12px;
     font-size: 11px;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 

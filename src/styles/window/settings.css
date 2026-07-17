@@ -54,7 +54,7 @@
     font-size: 24px;
     font-weight: 700;
     margin-bottom: 20px;
-    color: @foreground;
+    color: @glass-text;
 }
 
 #settings-row {
@@ -98,7 +98,7 @@
     border-radius: apply(radius-xs);
     border: 1px solid @glass-border;
     min-width: 200px;
-    color: @foreground;
+    color: @glass-text;
 }
 
 #settings-entry:focus {
@@ -111,7 +111,7 @@
     border-radius: apply(radius-xs);
     border: 1px solid @glass-border;
     min-width: 150px;
-    color: @foreground;
+    color: @glass-text;
 }
 
 #settings-combo:hover {

@@ -38,11 +38,11 @@
 
 #wifi-connections #device-icon.connected {
   background-color: @glass-accent;
-  color: @foreground;
+  color: @glass-text;
 }
 
 #wifi-network-name {
-  color: @foreground;
+  color: @glass-text;
   font-size: apply(font-base);
   font-weight: 500;
 }

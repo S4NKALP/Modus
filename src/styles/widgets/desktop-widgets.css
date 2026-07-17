@@ -45,15 +45,15 @@
 
 /* Weather Condition Gradients */
 .weather-clear {
-  background: linear-gradient(135deg, @primary 0%, @cyan 100%);
+  background: linear-gradient(135deg, @glass-accent 0%, @cyan 100%);
 }
 
 .weather-mostly-clear {
-  background: linear-gradient(135deg, @primary 0%, @primary 100%);
+  background: linear-gradient(135deg, @glass-accent 0%, @glass-accent 100%);
 }
 
 .weather-partly-cloudy {
-  background: linear-gradient(135deg, @outline 0%, #bac8e0 100%);
+  background: linear-gradient(135deg, @glass-border 0%, #bac8e0 100%);
 }
 
 .weather-overcast {
@@ -61,7 +61,7 @@
 }
 
 .weather-fog {
-  background: linear-gradient(135deg, @outline 0%, @foreground 100%);
+  background: linear-gradient(135deg, @glass-border 0%, @glass-text 100%);
 }
 
 .weather-light-rain {
@@ -78,11 +78,11 @@
 
 .weather-snow,
 .weather-heavy-snow {
-  background: linear-gradient(135deg, @secondary 0%, @cyan 100%);
+  background: linear-gradient(135deg, @glass-success 0%, @cyan 100%);
 }
 
 .weather-storm {
-  background: linear-gradient(135deg, @background 0%, @surface-bright 50%, @outline 100%);
+  background: linear-gradient(135deg, @background 0%, @surface-bright 50%, @glass-border 100%);
 }
 
 /* Calendar Widget */
@@ -102,7 +102,7 @@
 #calendar-month {
   font-size: apply(font-lg);
   font-weight: 600;
-  color: @primary;
+  color: @glass-accent;
   margin-bottom: 6px;
 }
 
@@ -113,7 +113,7 @@
 #calendar-day-header {
   font-size: apply(font-sm);
   font-weight: 600;
-  color: @foreground;
+  color: @glass-text;
   min-width: 18px;
   min-height: 10px;
 }
@@ -130,7 +130,7 @@
   font-size: apply(font-sm);
   margin: 1.4px 0px 1.4px 0px;
   font-weight: 500;
-  color: @foreground;
+  color: @glass-text;
   min-width: 18px;
   min-height: 10px;
 }
@@ -147,7 +147,7 @@
   font-size: apply(font-sm);
   font-weight: 700;
   color: @on-primary;
-  background-color: @primary;
+  background-color: @glass-accent;
   border-radius: apply(radius-full);
   min-width: 18px;
   min-height: 16px;
@@ -170,7 +170,7 @@
 
 #day label,
 #month label {
-  color: var(--foreground);
+  color: @glass-text;
   padding: 5px;
   margin-top: 10px;
   font-size: 30px;
@@ -187,7 +187,7 @@
 }
 
 #day label {
-  color: alpha(@primary, 0.9);
+  color: alpha(@glass-accent, 0.9);
 }
 
 #date-container {
@@ -216,7 +216,7 @@
 
 #progress {
   background-color: transparent;
-  border: solid 8px @primary;
+  border: solid 8px @glass-accent;
 }
 
 
@@ -231,7 +231,7 @@
 #info-value {
   font-size: apply(font-sm);
   font-weight: 600;
-  color: @foreground;
+  color: @glass-text;
 }
 
 #info-container {

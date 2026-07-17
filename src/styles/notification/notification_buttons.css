@@ -34,11 +34,11 @@
 }
 
 #notification-action-buttons button:active {
-  background-color: var(--primary);
+  background-color: @glass-accent;
 }
 
 #notification-action-buttons button:active #button-label {
-  color: var(--shadow);
+  color: @glass-overlay-dark;
 }
 
 .mac-options-button {
@@ -77,8 +77,8 @@ menu.mac-context-menu {
 }
 
 .mac-context-menu menuitem:hover {
-  background-color: var(--primary);
-  color: var(--shadow);
+  background-color: @glass-accent;
+  color: @glass-overlay-dark;
 }
 
 .mac-header-pill {

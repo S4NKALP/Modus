@@ -72,7 +72,7 @@
 #sc-options-label {
     font-size: apply(font-sm);
     font-weight: 500;
-    color: @foreground;
+    color: @glass-text;
 }
 
 #sc-options-arrow {

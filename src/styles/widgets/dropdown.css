@@ -33,7 +33,7 @@
 #dropdown-option-label {
   font-size: apply(font-md);
   margin: 0px;
-  color: @foreground;
+  color: @glass-text;
   font-weight: 400;
 }
 

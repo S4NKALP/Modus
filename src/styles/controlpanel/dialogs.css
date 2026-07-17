@@ -17,18 +17,18 @@
 }
 
 #wifi-dialog-icon {
-  color: @primary;
+  color: @glass-accent;
   margin-right: 4px;
 }
 
 #wifi-dialog-title {
-  color: @foreground;
+  color: @glass-text;
   font-size: apply(font-base);
   font-weight: 500;
 }
 
 #wifi-dialog-error {
-  color: @error;
+  color: @glass-error;
   font-size: apply(font-sm);
   font-weight: 500;
   /* margin-bottom: 8px; */
@@ -39,7 +39,7 @@
 }
 
 #wifi-dialog-password-label {
-  color: @foreground;
+  color: @glass-text;
   font-size: apply(font-md);
   font-weight: 500;
   margin-bottom: 4px;
@@ -50,7 +50,7 @@
   border: 1px solid @glass-border;
   border-radius: apply(radius-xs);
   padding: 8px 12px;
-  color: @foreground;
+  color: @glass-text;
   font-size: apply(font-md);
 }
 
@@ -78,11 +78,11 @@
 }
 
 #wifi-dialog-show-password-button image {
-  color: @foreground;
+  color: @glass-text;
 }
 
 #wifi-dialog-show-password-label {
-  color: @foreground;
+  color: @glass-text;
   font-size: apply(font-sm);
 }
 
@@ -102,7 +102,7 @@
 #wifi-dialog-cancel-button {
   background-color: @glass-hover;
   border: 1px solid @glass-border;
-  color: @foreground;
+  color: @glass-text;
 }
 
 #wifi-dialog-cancel-button:hover {
@@ -112,7 +112,7 @@
 #wifi-dialog-join-button {
   background-color: @glass-accent;
   border: 1px solid @glass-accent;
-  color: @foreground;
+  color: @glass-text;
 }
 
 #wifi-dialog-join-button:hover {

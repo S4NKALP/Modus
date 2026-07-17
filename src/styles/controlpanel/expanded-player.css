@@ -14,7 +14,7 @@
 #macos-player-title {
   font-weight: 600;
   font-size: apply(font-lg);
-  color: @foreground;
+  color: @glass-text;
   margin-bottom: 2px;
 }
 
@@ -50,13 +50,13 @@
 }
 
 #macos-seek-bar highlight {
-  background: @foreground;
+  background: @glass-text;
   border-radius: apply(radius-2xs);
   border: none;
 }
 
 #macos-seek-bar slider {
-  background: @foreground;
+  background: @glass-text;
   border: none;
   border-radius: 20%;
   min-width: 1px;
@@ -93,7 +93,7 @@
   opacity: 0.7;
   min-height: 28px;
   padding: 5px;
-  color: @foreground;
+  color: @glass-text;
   transition: all apply(transition-fast) ease;
 }
 
@@ -109,7 +109,7 @@
   opacity: 0.7;
   min-height: 36px;
   padding: 7px;
-  color: @foreground;
+  color: @glass-text;
   transition: all apply(transition-fast) ease;
 }
 
@@ -135,7 +135,7 @@
 }
 
 .macos-switcher-dot.active {
-  background: @foreground;
+  background: @glass-text;
   box-shadow: 0 0 0 1px @glass-border;
 }
 
@@ -155,13 +155,13 @@
 }
 
 #expanded-seek-bar highlight {
-  background: @foreground;
+  background: @glass-text;
   border-radius: apply(radius-2xs);
   border: none;
 }
 
 #expanded-seek-bar slider {
-  background: @foreground;
+  background: @glass-text;
   border: none;
   border-radius: 20%;
   min-width: 1px;

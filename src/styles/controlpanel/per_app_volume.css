@@ -22,7 +22,7 @@
 .app-name {
   font-size: apply(font-md);
   font-weight: 500;
-  color: @foreground;
+  color: @glass-text;
   margin-bottom: 5px;
 }
 
@@ -73,5 +73,5 @@
   padding-left: 5px;
   margin-top: -2px;
   font-weight: bold;
-  color: @foreground;
+  color: @glass-text;
 }

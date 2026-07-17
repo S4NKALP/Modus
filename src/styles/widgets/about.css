@@ -31,5 +31,5 @@
   font-size: apply(font-sm);
   margin: 0px;
   font-weight: 400;
-  color: @foreground;
+  color: @glass-text;
 }

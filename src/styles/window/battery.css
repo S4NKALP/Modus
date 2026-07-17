@@ -89,7 +89,7 @@
 }
 .battery-settings-button label {
   font-weight: 500;
-  color: @foreground;
+  color: @glass-text;
 }
 #energy-mode-button:first-child {
   margin-top: 0;

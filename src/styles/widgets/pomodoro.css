@@ -15,7 +15,7 @@
 #pomodoro-time {
     font-size: 38px;
     font-weight: 800;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 
@@ -29,15 +29,15 @@
 #pomodoro-title {
     font-size: 14px;
     font-weight: 700;
-    color: @foreground;
+    color: @glass-text;
     font-family: "SF Pro Rounded";
 }
 
 /* Base progress bar color */
 #pomodoro-progress {
     background-color: transparent;
-    color: alpha(@primary, 0.3);
-    border-color: @primary;
+    color: alpha(@glass-accent, 0.3);
+    border-color: @glass-accent;
 }
 
 /* Short break color */
@@ -50,8 +50,8 @@
 /* Long break color */
 #pomodoro-progress-long {
     background-color: transparent;
-    color: alpha(@error, 0.3);
-    border-color: @error;
+    color: alpha(@glass-error, 0.3);
+    border-color: @glass-error;
 }
 
 #pomodoro-phase-btn {
@@ -69,12 +69,12 @@
 }
 
 #pomodoro-phase-btn.active {
-    background-color: @primary;
+    background-color: @glass-accent;
     color: white;
 }
 
 #pomodoro-start-btn {
-    background-color: @primary;
+    background-color: @glass-accent;
     color: white;
     border-radius: apply(radius-sm);
     padding: 6px 20px;
@@ -83,7 +83,7 @@
 }
 
 #pomodoro-start-btn:hover {
-    background-color: alpha(@primary, 0.8);
+    background-color: alpha(@glass-accent, 0.8);
 }
 
 #pomodoro-reset-btn, #pomodoro-secondary-btn {

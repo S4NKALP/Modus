@@ -8,7 +8,7 @@
 }
 
 #notification-group-title {
-  color: @foreground;
+  color: @glass-text;
   font-weight: bold;
   font-size: apply(font-base);
 }
@@ -40,7 +40,7 @@
 
 #notification-close-all:hover {
   background-color: @glass-error;
-  color: @foreground;
+  color: @glass-text;
   border-color: @glass-error;
 }
 

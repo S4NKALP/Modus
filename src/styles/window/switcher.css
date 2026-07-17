@@ -30,7 +30,7 @@
 }
 
 #app-switcher-item-label {
-    color: @foreground;
+    color: @glass-text;
     font-size: 15px;
     font-weight: 600;
     margin-top: -2px;

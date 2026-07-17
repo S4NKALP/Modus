@@ -18,7 +18,7 @@
 }
 
 #notification-app-name {
-  color: var(--outline);
+  color: @glass-border;
   font-weight: bold;
 }
 
