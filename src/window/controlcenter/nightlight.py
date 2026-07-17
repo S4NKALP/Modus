@@ -33,8 +33,9 @@ def create_night_light_widget(control_center):
     )
 
     def toggle_ui(*_):
+        nonlocal is_active
         if toggle_night_light():
-            is_active = is_night_light_active()
+            is_active = not is_active
             night_light_icon.dynamic_file(
                 "applets/redshift-status-on.svg"
                 if is_active

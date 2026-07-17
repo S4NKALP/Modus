@@ -107,8 +107,14 @@ class ModusControlCenter(AppletWindow):
         wlan = modus_service.wlan if modus_service.wlan else "No Connection"
         bluetooth = modus_service.bluetooth if modus_service.bluetooth else "Off"
 
+        if wlan.startswith("connected:"):
+            parts = wlan.split(":")
+            wlan_display = parts[1] if len(parts) >= 2 else "Connected"
+        else:
+            wlan_display = wlan
+
         self.wlan_label = Label(
-            label=wlan,
+            label=wlan_display,
             name="wifi-widget-label",
             max_chars_width=15,
             h_align="start",
@@ -487,8 +493,10 @@ class ModusControlCenter(AppletWindow):
             ],
         )
 
-        # Initialize managers directly like working version
-        self.wifi_man = WifiConnections(self)
+        # Initialize network service upfront so WifiConnections can use it
+        self.network_service = NetworkClient()
+        self.network_service.connect("device-ready", self.on_network_ready)
+        self.wifi_man = WifiConnections(self, network_service=self.network_service)
         self.bluetooth_man = BluetoothConnections(self)
 
         self.has_bluetooth_open = False
@@ -565,11 +573,8 @@ class ModusControlCenter(AppletWindow):
         try:
             logger.debug("Initializing control center resources...")
 
-            # Initialize network service lazily
-            if self.network_service is None:
-                self.network_service = NetworkClient()
-                # Connect network signal
-                self.network_service.connect("device-ready", self.on_network_ready)
+            # Connect network signal (service created earlier in __init__)
+            self.network_service.connect("device-ready", self.on_network_ready)
 
             # Check initial states lazily (only when needed)
             self._check_initial_states()
@@ -896,29 +901,35 @@ class ModusControlCenter(AppletWindow):
             return
         try:
             if hasattr(self, "bluetooth_man") and hasattr(self.bluetooth_man, "client"):
-                current_state = self.bluetooth_man.client.enabled
-                set_bluetooth_enabled_with_fallback(
-                    self.bluetooth_man.client, not current_state
+                client = self.bluetooth_man.client
+                target = not client.enabled
+                set_bluetooth_enabled_with_fallback(client, target)
+                client.notify("enabled")
+                self.bluetooth_svg.dynamic_file(
+                    "applets/bluetooth.svg" if target else "applets/bluetooth-off.svg"
                 )
+                self.bluetooth_label.set_label("On" if target else "Off")
             else:
                 logger.warning("Bluetooth client not available for toggling")
         except Exception as e:
             logger.warning(f"Failed to toggle bluetooth: {e}")
 
     def on_network_ready(self, *_):
-        if self._network_ready_fired:
+        if self._network_ready_fired and self.wifi_service:
+            return
+        wifi = self.network_service.wifi_device
+        if not wifi:
             return
         self._network_ready_fired = True
-        self.wifi_service = self.network_service.wifi_device
-        if self.wifi_service:
-            self._signal_connections.append(
-                (
-                    self.wifi_service,
-                    self.wifi_service.connect(
-                        "notify::wireless-enabled", self.update_wifi_icon
-                    ),
-                )
+        self.wifi_service = wifi
+        self._signal_connections.append(
+            (
+                self.wifi_service,
+                self.wifi_service.connect(
+                    "notify::wireless-enabled", self.update_wifi_icon
+                ),
             )
+        )
 
     def update_wifi_icon(self, *_):
         try:
@@ -935,8 +946,8 @@ class ModusControlCenter(AppletWindow):
             return
         try:
             if self.wifi_service:
-                self.wifi_service.toggle_wifi()
-                GLib.timeout_add(100, self.update_wifi_icon)
+                target = not self.wifi_service.enabled
+                self.wifi_service.enabled = target
             else:
                 logger.warning("WiFi device not available for toggling")
         except Exception as e:

@@ -1,6 +1,6 @@
 from enum import Enum, auto
 
-from fabric.utils import Gdk, GLib, Gtk, exec_shell_command, logger
+from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -46,17 +46,6 @@ def get_battery_theme_icon(percentage: float, charging: bool = False) -> str:
 
 
 def set_bluetooth_enabled_with_fallback(client, enabled: bool):
-    if enabled:
-        command = "rfkill unblock bluetooth"
-    else:
-        command = "rfkill block bluetooth"
-
-    result = exec_shell_command(command)
-    if result is False:
-        logger.error(f"rfkill fallback failed: command '{command}' returned False")
-    elif isinstance(result, str) and result.strip():
-        logger.warning(f"rfkill command output: {result.strip()}")
-
     try:
         if hasattr(client, "set_enabled"):
             client.set_enabled(enabled)
@@ -481,6 +470,7 @@ class BluetoothConnections(Box):
     def handle_user_toggle(self, active: bool):
         self._switch_lock = True
         set_bluetooth_enabled_with_fallback(self.client, active)
+        self.toggle_button.set_active(active)
         GLib.timeout_add(1500, self._unlock_switch)
 
     def _unlock_switch(self):

@@ -260,7 +260,7 @@ class WifiNetworkSlot(Box):
 
 
 class WifiConnections(Box):
-    def __init__(self, parent, show_back_button=True, **kwargs):
+    def __init__(self, parent, show_back_button=True, network_service=None, **kwargs):
         super().__init__(
             spacing=8,
             orientation="vertical",
@@ -269,20 +269,24 @@ class WifiConnections(Box):
         )
 
         self.parent = parent
-        self.network_service = NetworkClient()
+        self.network_service = network_service or NetworkClient()
         self.wifi_service = None
         self.is_scanning = False  # Track scanning state
         self._update_in_progress = False  # Prevent concurrent updates
         self._destroyed = False  # Track if widget is destroyed
         self._signal_ids = []  # Track all service signal IDs for cleanup
         self._network_ready_fired = False  # Guard against duplicate device-ready
+        self._pending_toggle = None  # Force toggle to target after stale revert
 
-        self._signal_ids.append(
-            (
-                self.network_service,
-                self.network_service.connect("device-ready", self.on_network_ready),
+        if network_service and network_service.wifi_device:
+            self.on_network_ready()
+        else:
+            self._signal_ids.append(
+                (
+                    self.network_service,
+                    self.network_service.connect("device-ready", self.on_network_ready),
+                )
             )
-        )
 
         # Create pull-to-refresh indicator
         self.refresh_indicator = Label(
@@ -438,41 +442,49 @@ class WifiConnections(Box):
 
     def on_network_ready(self, *_):
         """Called when network service is ready"""
-        if self._network_ready_fired:
+        if self._network_ready_fired and self.wifi_service:
+            return
+        wifi = self.network_service.wifi_device
+        if not wifi:
             return
         self._network_ready_fired = True
-        self.wifi_service = self.network_service.wifi_device
-        if self.wifi_service:
-            self.toggle_button.set_active(self.wifi_service.enabled)
+        self.wifi_service = wifi
+        self.toggle_button.set_active(self.wifi_service.enabled)
 
-            self._signal_ids.append(
-                (
-                    self.wifi_service,
-                    self.wifi_service.connect(
-                        "notify::enabled", self.on_wifi_enabled_changed
-                    ),
-                )
+        self._signal_ids.append(
+            (
+                self.wifi_service,
+                self.wifi_service.connect(
+                    "notify::enabled", self.on_wifi_enabled_changed
+                ),
             )
-            self._signal_ids.append(
-                (
-                    self.wifi_service,
-                    self.wifi_service.connect("changed", self.update_networks),
-                )
+        )
+        self._signal_ids.append(
+            (
+                self.wifi_service,
+                self.wifi_service.connect("changed", self.update_networks),
             )
+        )
 
-            # Initial network update
-            self.update_networks()
+        # Initial network update
+        self.update_networks()
 
     def on_toggle_changed(self, toggle_button, *_):
         """Handle WiFi toggle button changes"""
         if self.wifi_service:
-            new_state = toggle_button.get_active()
-            self.wifi_service.enabled = new_state
+            target = toggle_button.get_active()
+            self._pending_toggle = target
+            self.wifi_service.enabled = target
+            self.toggle_button.set_active(target)
 
     def on_wifi_enabled_changed(self, *_):
         """Handle WiFi enabled state changes"""
         if self.wifi_service:
-            self.toggle_button.set_active(self.wifi_service.enabled)
+            if self._pending_toggle is not None:
+                self.toggle_button.set_active(self._pending_toggle)
+                self._pending_toggle = None
+            else:
+                self.toggle_button.set_active(self.wifi_service.enabled)
 
     def open_network_settings(self, *_):
         """Open NetworkManager connection editor"""
