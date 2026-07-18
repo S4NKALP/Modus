@@ -23,7 +23,7 @@ dependencies = [
     "pam>=0.2.0",
     "psutil>=7.2.2",
     "six>=1.17.0",
-    "tomlkit>=0.15.0",
+    "tomlkit>=0.15.1",
 ]
 
 [project.urls]
