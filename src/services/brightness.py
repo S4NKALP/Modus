@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import GLib, exec_shell_command_async, logger, os, re
+from fabric.utils import Gio, GLib, exec_shell_command_async, logger, os, re
 
 from utils.functions import find_binary, run_command
 
@@ -40,7 +40,7 @@ class Brightness(Service):
         super().__init__(**kwargs)
         self._pending_raw = None
         self._timer_id = None
-        self._poll_timer_id = None
+        self._file_monitor = None
         self._lock = GLib.Mutex()
         self._last_percent = -1
         self._last_raw = -1
@@ -60,7 +60,7 @@ class Brightness(Service):
                 self._setup_polling()
 
     def _setup_polling(self):
-        """Setup periodic polling of brightness file."""
+        """Setup file monitor for brightness changes."""
         try:
             if self._brightness_path and self._brightness_path.exists():
                 self._last_raw = int(self._brightness_path.read_text().strip())
@@ -70,14 +70,22 @@ class Brightness(Service):
                     else 0
                 )
 
-                self._poll_timer_id = GLib.timeout_add(
-                    self.POLL_INTERVAL, self._check_brightness_file
+                brightness_file = Gio.File.new_for_path(str(self._brightness_path))
+                self._file_monitor = brightness_file.monitor_file(
+                    Gio.FileMonitorFlags.NONE, None
                 )
+                self._file_monitor.connect("changed", self._on_brightness_file_changed)
         except Exception as e:
-            logger.error(f"Error setting up brightness polling: {e}")
+            logger.error(f"Error setting up brightness file monitor: {e}")
+
+    def _on_brightness_file_changed(self, monitor, file, other_file, event_type):
+        """Handle brightness file change event."""
+        if event_type != Gio.FileMonitorEvent.CHANGED:
+            return
+        self._check_brightness_file()
 
     def _check_brightness_file(self):
-        """Periodically check brightness file for changes."""
+        """Check brightness file for changes."""
         try:
             if self._brightness_path and self._brightness_path.exists():
                 raw = int(self._brightness_path.read_text().strip())
@@ -90,11 +98,8 @@ class Brightness(Service):
                     if abs(percent - self._last_percent) >= self.MIN_CHANGE_THRESHOLD:
                         self._last_percent = percent
                         self.emit("screen", percent)
-            return True
         except Exception as e:
             logger.error(f"Error checking brightness file: {e}")
-            self._poll_timer_id = None
-            return False
 
     def _detect_backend(self, backend):
         """Detect appropriate backend for brightness control."""
@@ -339,6 +344,6 @@ class Brightness(Service):
             GLib.source_remove(self._timer_id)
             self._timer_id = None
 
-        if self._poll_timer_id:
-            GLib.source_remove(self._poll_timer_id)
-            self._poll_timer_id = None
+        if self._file_monitor:
+            self._file_monitor.cancel()
+            self._file_monitor = None
