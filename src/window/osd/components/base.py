@@ -73,8 +73,8 @@ class BaseOSDContainer(Box):
         if self._hide_timer_id is not None:
             try:
                 GLib.source_remove(self._hide_timer_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[osd_base] Failed to remove hide timer {self._hide_timer_id}: {e}")
             self._hide_timer_id = None
 
     def hide_window(self):
