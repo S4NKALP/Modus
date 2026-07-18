@@ -111,7 +111,6 @@ CHECK="✔"
 CROSS="✖"
 INFO="ℹ"
 WARN="⚠"
-BULLET="•"
 
 # Helpers
 header() {
@@ -439,7 +438,7 @@ MATUGEN_CONFIG="$HOME/.config/matugen/config.toml"
 
 MODUS_BLOCK='[templates.modus]
 input_path = "~/.config/Modus/config/matugen/templates/modus.css"
-output_path = "~/.config/Modus/src/shared/styles/colors.css"
+output_path = "~/.config/Modus/src/styles/colors.css"
 post_hook = "fabric-cli exec modus '\''app.set_css()'\'' &"'
 
 HYPR_BLOCK='[templates.hyprland]
