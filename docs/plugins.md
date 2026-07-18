@@ -14,8 +14,6 @@ Open spotlight and type `hi` or `hello`. The plugin shows a greeting result.
 
 ## How It Works
 
-## How It Works
-
 1. On startup, Modus scans `config/plugins/` for `.py` files and package directories.
 2. Each file is imported. The `PLUGIN` module-level variable is extracted (must be a `SpotlightPlugin` subclass).
 3. Plugins are instantiated, initialized, and registered.
@@ -68,6 +66,7 @@ SearchResult(
     title="Display Title",    # Main text
     subtitle="Description",   # Secondary text
     icon_name="",             # GTK icon name (optional)
+    icon_data=None,           # Raw image bytes for custom icons (optional)
     score=80.0,               # 0-100, higher = better match
     render_type="default",    # Controls rendering (see below)
     action=lambda: ...,       # Called when user selects this result
