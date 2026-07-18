@@ -826,7 +826,9 @@ class ModusControlCenter(AppletWindow):
                     with open(_CAFFEINE_PID_FILE, "w") as f:
                         f.write(str(proc.pid))
                 except OSError as e:
-                    logger.warning(f"[controlcenter] Failed to write caffeine PID file: {e}")
+                    logger.warning(
+                        f"[controlcenter] Failed to write caffeine PID file: {e}"
+                    )
                 self.caffeine_mode = True
             self.caffeine_icon.dynamic_file(
                 "applets/caffeine-on.svg"
