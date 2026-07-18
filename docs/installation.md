@@ -25,7 +25,7 @@ If you prefer to install dependencies and compile the extensions manually:
 
 1. **Install Dependencies:**
    ```bash
-   paru -S uv fabric-cli-git cliphist gnome-bluetooth-3.0 slurp ffmpeg hypridle hyprsunset hyprpicker hyprshot grim libnotify matugen-bin playerctl gtk-session-lock awww apple-fonts swappy wl-clipboard webp-pixbuf-loader wf-recorder acpi brightnessctl power-profiles-daemon uwsm cinnamon-desktop ddcutil at-spi2-core gcc make pkgconf appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 meson ninja wayland-protocols --needed
+   paru -S uv fabric-cli-git uwsm cliphist slurp grim swappy wl-clipboard wtype libnotify playerctl matugen-bin hypridle hyprsunset hyprpicker hyprshot gtk-session-lock awww apple-fonts webp-pixbuf-loader cinnamon-desktop libmediaart acpi brightnessctl power-profiles-daemon ddcutil at-spi2-core networkmanager network-manager-applet blueman pipewire libpulse gcc make pkgconf meson ninja wayland-protocols gobject-introspection gtk-layer-shell librsvg libqalculate appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 pciutils wf-recorder ffmpeg --needed
    ```
 
 2. **Clone and Sync:**
@@ -59,4 +59,4 @@ If you prefer to install dependencies and compile the extensions manually:
 > ### Post-Installation Recommendations
 > - Install the recommended icon theme: [MacTahoe-icon-theme](https://github.com/vinceliuice/MacTahoe-icon-theme)
 > - Install the recommended GTK theme: [MacTahoe-gtk-theme](https://github.com/vinceliuice/MacTahoe-gtk-theme)
-> - Edit your Hyprland configuration file to source `~/.config/Modus/config/hypr/modus.conf` for the best compatibility.
+> - Edit your Hyprland configuration file to source `~/.config/Modus/config/hypr/modus.lua` for the best compatibility.
