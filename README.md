@@ -36,9 +36,7 @@
 ## Quick Start
 
 ```bash
-git clone https://github.com/S4NKALP/Modus ~/.config/Modus
-cd ~/.config/Modus
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/S4NKALP/Modus/macos/install.sh -o install.sh && bash install.sh
 ```
 
 > [!TIP]
