@@ -1005,6 +1005,7 @@ class NotificationRevealer(SlideRevealer):
         # Clean up any ongoing animations
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
+            self._spring_timer_id = None
 
         # Use different slide directions based on dismiss reason
         if reason == "expired":
