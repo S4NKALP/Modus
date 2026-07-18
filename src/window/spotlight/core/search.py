@@ -80,8 +80,8 @@ class SearchPipeline:
             for source_id in self._pending_idle_ids:
                 try:
                     GLib.source_remove(source_id)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[search] Failed to remove source {source_id}: {e}")
             self._pending_idle_ids.clear()
 
     def _route(self, query: str) -> tuple[PluginEntry | None, str, str]:
