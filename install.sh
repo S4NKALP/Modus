@@ -519,7 +519,7 @@ else
 fi
 
 step "Starting Modus..."
-
+hyprctl reload
 uv run python "$INSTALL_DIR/start.py" &
 MODUS_PID=$!
 
