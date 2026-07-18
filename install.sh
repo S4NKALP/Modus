@@ -64,8 +64,21 @@ PACKAGES=(
     libdbusmenu-qt5
     meson
     ninja
+    wayland
     wayland-protocols
     libmediaart
+    networkmanager
+    network-manager-applet
+    blueman
+    qalculate-gtk
+    wtype
+    pipewire
+    libpulse
+    pciutils
+    gtk-layer-shell
+    librsvg
+    flatpak
+    gobject-introspection
 )
 
 # Colors and formatting
