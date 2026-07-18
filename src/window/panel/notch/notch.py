@@ -140,7 +140,7 @@ class Notch(Box):
 
         self.notch_stack.connect("scroll-event", self._on_scroll)
 
-    # ── Transient indicator show / hide ──────────────────────────────────────
+    # Transient indicator show / hide
 
     def _show_transient(self, widget):
         """Make a transient indicator the visible notch page."""
@@ -153,7 +153,7 @@ class Notch(Box):
         self._transient_active = False
         self._apply_stack_state()
 
-    # ── Init / MPRIS / recording ──────────────────────────────────────────────
+    # Init / MPRIS / recording
 
     def _init_state(self):
         self._is_active_recording = screen_recorder_service.recording
@@ -198,7 +198,7 @@ class Notch(Box):
                 )
             self._apply_stack_state()
 
-    # ── Scroll ────────────────────────────────────────────────────────────────
+    # Scroll
 
     def _on_scroll(self, widget, event):
         now = GLib.get_monotonic_time()
@@ -229,7 +229,7 @@ class Notch(Box):
         self._apply_stack_state()
         return True
 
-    # ── Stack state ───────────────────────────────────────────────────────────
+    # Stack state
 
     def _apply_stack_state(self):
         # Don't override a transient indicator that is still counting down

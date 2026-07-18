@@ -47,7 +47,7 @@ class KeyboardLayout(Service):
         self._connect_hyprland_events()
         on_config_change(self._on_config_change)
 
-    # ── hyprctl wrapper ────────────────────────────────────────────────────────
+    # hyprctl wrapper
 
     def _hyprctl(self, *args, on_reply=None):
         """Execute a hyprctl command via Gio.Subprocess.
@@ -78,7 +78,7 @@ class KeyboardLayout(Service):
 
         proc.communicate_utf8_async(None, None, on_done)
 
-    # ── initialization ─────────────────────────────────────────────────────────
+    # initialization
 
     def _init_layout_config(self):
         self._layouts = self._load_layouts_from_config()
@@ -99,7 +99,7 @@ class KeyboardLayout(Service):
             return list(DEFAULT_LAYOUTS)
         return [str(layout).strip() for layout in layouts if str(layout).strip()]
 
-    # ── Hyprland synchronization ───────────────────────────────────────────────
+    # Hyprland synchronization
 
     def _sync_from_hyprland(self):
         """Query Hyprland for the current layout and update in-memory state.
@@ -151,7 +151,7 @@ class KeyboardLayout(Service):
     def _on_hyprland_layout_event(self, _hyprland, _event):
         self._sync_from_hyprland()
 
-    # ── state management ───────────────────────────────────────────────────────
+    # state management
 
     def _set_current(self, index: int, emit: bool) -> bool:
         if not self._layouts:
@@ -171,7 +171,7 @@ class KeyboardLayout(Service):
             self.emit("layout_changed", layout)
         return True
 
-    # ── Hyprland writes ────────────────────────────────────────────────────────
+    # Hyprland writes
 
     def _apply_layouts_to_hyprland(self):
         if not self._layouts:
@@ -180,7 +180,7 @@ class KeyboardLayout(Service):
         lua_eval_cmd = f"hl.config({{ input = {{ kb_layout = '{layouts_str}' }} }})"
         self._hyprctl("eval", lua_eval_cmd)
 
-    # ── public API ─────────────────────────────────────────────────────────────
+    # public API
 
     def switch_to_next(self) -> bool:
         if not self._layouts:
@@ -196,7 +196,7 @@ class KeyboardLayout(Service):
     def switch_keyboard_layout():
         KeyboardLayout.get_initial().switch_to_next()
 
-    # ── config changes ─────────────────────────────────────────────────────────
+    # config changes
 
     def _on_config_change(self, new_config, old_config):
         new_layouts = new_config.get("keyboard_layouts")
@@ -220,7 +220,7 @@ class KeyboardLayout(Service):
 
         logger.info(f"[KeyboardLayout] Layouts updated from config: {self._layouts}")
 
-    # ── properties ─────────────────────────────────────────────────────────────
+    # properties
 
     @Property(str, "readable", default_value="")
     def current_layout(self) -> str:
