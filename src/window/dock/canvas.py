@@ -356,8 +356,8 @@ class DockCanvas(Gtk.DrawingArea):
                 self._trash_pixbuf = Gdk.pixbuf_get_from_surface(
                     surface, 0, 0, size, size
                 )
-                del svg_w
-            except Exception:
+            except Exception as e:
+                logger.warning(f"[canvas] Failed to render trash SVG: {e}")
                 self._trash_pixbuf = self._get_pixbuf("user-trash", size)
 
         existing = self.model.get_by_id("trash")
