@@ -70,7 +70,7 @@ PACKAGES=(
     networkmanager
     network-manager-applet
     blueman
-    qalculate-gtk
+    libqalculate
     wtype
     pipewire
     libpulse
