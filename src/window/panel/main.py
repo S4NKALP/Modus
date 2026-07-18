@@ -370,10 +370,9 @@ class Panel(Window):
         try:
             modus_service.disconnect_by_func(self.on_dnd_changed)
             notification_service.disconnect_by_func(self.on_notification_count_changed)
-            from services.config import _config_handlers
+            from services.config import off_config_change
 
-            if self._on_config_changed in _config_handlers:
-                _config_handlers.remove(self._on_config_changed)
+            off_config_change(self._on_config_changed)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
