@@ -495,7 +495,6 @@ class ModusControlCenter(AppletWindow):
 
         # Initialize network service upfront so WifiConnections can use it
         self.network_service = NetworkClient()
-        self.network_service.connect("device-ready", self.on_network_ready)
         self.wifi_man = WifiConnections(self, network_service=self.network_service)
         self.bluetooth_man = BluetoothConnections(self)
 
@@ -826,8 +825,8 @@ class ModusControlCenter(AppletWindow):
                 try:
                     with open(_CAFFEINE_PID_FILE, "w") as f:
                         f.write(str(proc.pid))
-                except OSError:
-                    pass
+                except OSError as e:
+                    logger.warning(f"[controlcenter] Failed to write caffeine PID file: {e}")
                 self.caffeine_mode = True
             self.caffeine_icon.dynamic_file(
                 "applets/caffeine-on.svg"
