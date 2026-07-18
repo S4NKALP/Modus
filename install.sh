@@ -125,8 +125,8 @@ spinner() {
     local spin=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
     local i=0
 
-    while kill -0 $pid 2>/dev/null; do
-        printf "\r  ${CYAN}${spin[i]}${RESET} $message"
+    while kill -0 "$pid" 2>/dev/null; do
+        printf "\r  %b%s%b %s" "$CYAN" "${spin[i]}" "$RESET" "$message"
         i=$(((i + 1) % 10))
         sleep 0.1
     done
@@ -284,7 +284,7 @@ for pkg in "${PACKAGES[@]}"; do
         failed=$((failed + 1))
         warn "Failed to install: $pkg"
     fi
-    printf "\r  ${CYAN}${ARROW}${RESET} Progress: ${installed}/${#PACKAGES[@]} packages"
+    printf "\r  %b%s%b Progress: %s/%s packages" "$CYAN" "$ARROW" "$RESET" "$installed" "${#PACKAGES[@]}"
 done
 echo ""
 
@@ -318,7 +318,7 @@ step "Compiling libmenu_button_shim.so..."
 SHIM_SRC="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.c"
 SHIM_OUT="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.so"
 if [ -f "$SHIM_SRC" ]; then
-    if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" $(pkg-config --cflags --libs gtk+-3.0) -ldl 2>/dev/null; then
+    if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" "$(pkg-config --cflags --libs gtk+-3.0)" -ldl 2>/dev/null; then
         success "libmenu_button_shim.so built successfully"
     else
         warn "Failed to compile libmenu_button_shim.so - global menu may not work"
