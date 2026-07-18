@@ -20,9 +20,33 @@ The `config.toml` file controls which widgets and services are enabled. Most cha
 - `wallpapers_dir`: Path to the directory where your wallpapers are stored.
 - `dock_enabled`: Toggle the dock widget (`true`/`false`).
 - `dock_auto_hide`: Whether the dock hides automatically when windows overlap it.
+- `dock_always_occluded`: Whether the dock remains visible even when windows overlap it.
+- `dock_icon_size`: Size of dock icons in pixels (default: `52`).
+- `debug`: Enable debug logging (`true`/`false`).
+- `hide_special_workspace`: Whether to hide the special workspace from the workspace indicator.
+- `dock_hide_special_workspace_apps`: Hide apps from the special workspace in the dock.
 - `notification_timeout`: Duration before a notification automatically dismisses (e.g., `"5s"`).
 - `notification_ignored_apps`: Array of app names whose notifications should be suppressed.
+- `notification_limited_apps_history`: Array of app names whose notification history is limited.
 - `weather_location`: Set your city for the weather widget (e.g., `"Patan, Nepal"`).
+
+**Panel Module Toggles:**
+- `imac_button`: Enable the Apple logo button in the panel.
+- `systray`: Enable the system tray.
+- `control_center`: Enable the control center widget.
+- `search`: Enable the search/spotlight widget.
+- `global_menu`: Enable the global menu (app menus appear in the panel).
+- `network`: Enable the network indicator in the panel.
+- `battery`: Enable the battery indicator in the panel.
+- `notification_center`: Enable the notification center.
+- `workspace_indicator`: Enable the workspace indicator.
+- `bluetooth`: Enable the bluetooth indicator.
+- `date_time`: Enable the date/time indicator.
+- `osd`: Enable on-screen displays for volume and brightness changes.
+- `custom_mods`: Enable custom panel buttons from `mods.toml`.
+- `night_light_temperature`: Night light color temperature in Kelvin (e.g., `4500`).
+- `keyboard_layouts`: Array of keyboard layout codes (e.g., `["us", "np"]`).
+- `systray_ignore`: Array of app names to hide from the system tray.
 
 **App Switcher & Screencapture:**
 - `window_switcher`: Enables the custom Alt-Tab window switcher.
@@ -63,6 +87,12 @@ icon-size = 22
 order = 0
 on-left = "hyprpicker -a -n -f hex | wl-copy"
 on-right = "hyprpicker -n -f hsv | wl-copy"
+
+[Mods.power-menu]
+icon = "power.svg"
+icon-size = 18
+order = 2
+on-left = "wlogout"
 ```
 
 **Properties:**
@@ -70,6 +100,7 @@ on-right = "hyprpicker -n -f hsv | wl-copy"
 - `icon-size`: Defaults to 16.
 - `order`: Determines left-to-right position (lower numbers appear first).
 - `on-clicked`, `on-left`, `on-right`, `on-middle`: Shell commands executed via `sh -c`. Supports complex piping `|` and `&&`.
+- `on-scroll-up`, `on-scroll-down`: Commands executed on scroll events.
 
 ---
 
