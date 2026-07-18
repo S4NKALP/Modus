@@ -23,6 +23,7 @@ class AnimatedScrollable(ScrolledWindow):
             duration=duration,
             min_value=min_height,
             max_value=max_height,
+            tick_widget=self,
         )
         self.height_animator.connect("notify::value", self.on_animator_change)
         self.set_overlay_scrolling(True)
