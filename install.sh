@@ -178,16 +178,15 @@ spinner() {
         i=$(((i + 1) % 10))
         sleep 0.1
     done
-    printf "\r  %b%s%b %s\n" "$GREEN" "${CHECK}" "$RESET" "$message"
-}
-
-print_packages() {
-    local -n pkgs=$1
-    local count=${#pkgs[@]}
-    echo -e "  ${DIM}${BULLET}${RESET} ${BOLD}$2${RESET} ${DIM}(${count} packages)${RESET}"
-    for pkg in "${pkgs[@]}"; do
-        echo -e "    ${DIM}${BULLET}${RESET} ${pkg}"
-    done
+    wait "$pid" 2>/dev/null
+    local rc=$?
+    printf "\r"
+    if [ $rc -eq 0 ]; then
+        echo -e "  ${GREEN}${CHECK}${RESET} ${GREEN}${message}${RESET}"
+    else
+        echo -e "  ${RED}${CROSS}${RESET} ${RED}${message}${RESET}"
+    fi
+    return $rc
 }
 
 # ── Cleanup ────────────────────────────────────────────────────────
@@ -482,17 +481,13 @@ else
 fi
 
 step "Starting Modus..."
-if uwsm app -- uv run --project "$INSTALL_DIR" start >/dev/null 2>&1 & then
-    disown
-    sleep 2
-    if pgrep -x "modus" >/dev/null; then
-        success "Modus is running"
-    else
-        warn "Modus may not have started — check logs"
-    fi
+uwsm app -- uv run --project "$INSTALL_DIR" start >/dev/null 2>&1 &
+disown
+sleep 2
+if pgrep -x "modus" >/dev/null; then
+    success "Modus is running"
 else
-    error "Failed to start Modus"
-    exit 1
+    warn "Modus may not have started — check logs"
 fi
 
 # ── Summary ────────────────────────────────────────────────────────
