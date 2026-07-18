@@ -9,7 +9,6 @@ import gi
 from fabric.utils import GLib, exec_shell_command_async, logger
 
 gi.require_version("Playerctl", "2.0")
-from fabric import Fabricator  # noqa: E402
 from fabric.core.service import Property, Service, Signal  # noqa: E402
 from gi.repository import Playerctl  # noqa: E402
 
@@ -185,19 +184,10 @@ class PlayerService(Service):
         self._signal_ids.append(self._player.connect("metadata", self.on_metadata))
         self._signal_ids.append(self._player.connect("seeked", self.on_seeked))
 
-        self._pos_polling = False  # guard: Fabricator.start() blindly creates a new
-        # GLib timer every call — this flag prevents stacking
-        self.pos_fabricator = Fabricator(
-            interval=2000,
-            poll_from=lambda f, *_: self.get_position(),
-            on_changed=lambda f, *_: self.fabricating(),
-        )
-        self.status_fabricator = Fabricator(
-            interval=5000,
-            poll_from=lambda f, *_: self.playback_status,
-            on_changed=lambda f, value: self._on_polled_status_change(value),
-        )
-        self.status_fabricator.start()
+        self._pos_source_id = 0
+        self._status_source_id = 0
+        self._last_polled_status = ""
+        self._start_status_polling()
         self.poll_progress()
 
         try:
@@ -262,17 +252,46 @@ class PlayerService(Service):
 
     def _start_pos_fabricator(self):
         """Start position polling only if not already running."""
-        if self._pos_polling:
+        if self._pos_source_id:
             return
-        self._pos_polling = True
-        self.pos_fabricator.start()
+        self._pos_source_id = GLib.timeout_add(2000, self._on_pos_poll)
 
     def _stop_pos_fabricator(self):
-        """Stop position polling and clear the guard flag."""
-        if not self._pos_polling:
+        """Stop position polling."""
+        if not self._pos_source_id:
             return
-        self._pos_polling = False
-        self.pos_fabricator.stop()
+        GLib.source_remove(self._pos_source_id)
+        self._pos_source_id = 0
+
+    def _on_pos_poll(self):
+        if self._is_cleaning_up:
+            return False
+        self.fabricating()
+        return True  # keep polling while playing
+
+    def _start_status_polling(self):
+        """Start status polling for browser players that don't emit signals."""
+        if self._status_source_id:
+            return
+        self._last_polled_status = self.playback_status
+        self._status_source_id = GLib.timeout_add(5000, self._on_status_poll)
+
+    def _stop_status_polling(self):
+        """Stop status polling."""
+        if not self._status_source_id:
+            return
+        GLib.source_remove(self._status_source_id)
+        self._status_source_id = 0
+
+    def _on_status_poll(self):
+        if self._is_cleaning_up:
+            return False
+        status = self.playback_status
+        if status != self._last_polled_status:
+            self._last_polled_status = status
+            self.poll_progress()
+            self._notify_playback(status)
+        return True  # keep polling
 
     def seek_position(self, pos: float):
         if self._is_cleaning_up:
@@ -339,8 +358,8 @@ class PlayerService(Service):
                 dur = 0
             # Browser players (YouTube in Firefox/Chromium) populate
             # `mpris:artUrl` lazily and don't reliably emit the `metadata`
-            # signal. Since fabricating runs every 2s while playing, this also
-            # polls the artwork so it shows up even for an already-playing tab.
+            # signal. Since the position poll runs every 2s while playing, this
+            # also polls the artwork so it shows up even for an already-playing tab.
             self._handle_artwork(metadata)
         self.track_position(pos, dur)
 
@@ -352,7 +371,7 @@ class PlayerService(Service):
 
     def _notify_playback(self, status_str: str):
         """Emit play/pause once per actual state change (dedupes the
-        Playerctl signal and the status Fabricator so listeners don't churn)."""
+        Playerctl signal and the status poller so listeners don't churn)."""
         if self._is_cleaning_up:
             return
         status_str = (status_str or "").lower()
@@ -372,7 +391,7 @@ class PlayerService(Service):
         self._notify_playback(self.playback_status)
 
     def _on_polled_status_change(self, new_status: str):
-        """Fabricator-driven status change - fires reliably for browser players
+        """Status poll change - fires reliably for browser players
         that don't emit playback-status signals."""
         if self._is_cleaning_up:
             return
@@ -505,17 +524,8 @@ class PlayerService(Service):
         # call _set_artwork on a stale service.
         self._artwork_generation += 1
 
-        try:
-            if hasattr(self, "pos_fabricator"):
-                self._stop_pos_fabricator()
-        except Exception as e:
-            logger.error(f"Error stopping fabricator: {e}")
-
-        try:
-            if hasattr(self, "status_fabricator"):
-                self.status_fabricator.stop()
-        except Exception as e:
-            logger.error(f"Error stopping status fabricator: {e}")
+        self._stop_pos_fabricator()
+        self._stop_status_polling()
 
         for signal_id in self._signal_ids:
             try:
