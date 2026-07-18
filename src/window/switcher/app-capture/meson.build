@@ -8,7 +8,7 @@ wayland_client      = dependency('wayland-client')
 wayland_scanner_dep = dependency('wayland-scanner', native: true)
 gobject             = dependency('gobject-2.0')
 gtk3                = dependency('gtk+-3.0')
-gir                 = dependency('gobject-introspection-1.0', required: true)
+gir                 = dependency('gobject-introspection-1.0', required: false)
 cairo_dep           = dependency('cairo')
 
 wayland_scanner = find_program('wayland-scanner')
@@ -94,19 +94,22 @@ lib = shared_library('appcapture',
   install: true,
 )
 
-# GObject Introspection
-gir_file = files('AppCapture-1.0.gir')
+# GObject Introspection (optional — skipped if g-i not installed)
+if gir.found()
+    gir_file = files('AppCapture-1.0.gir')
 
-install_data(gir_file,
-  install_dir: get_option('datadir') / 'gir-1.0',
-)
+    install_data(gir_file,
+      install_dir: get_option('datadir') / 'gir-1.0',
+    )
 
-gir_compiler = find_program('g-ir-compiler')
-
-custom_target('appcapture-typelib',
-  input:   gir_file,
-  output:  'AppCapture-1.0.typelib',
-  command: [gir_compiler, '--output=@OUTPUT@', '@INPUT@'],
-  install: true,
-  install_dir: get_option('libdir') / 'girepository-1.0',
-)
+    gir_compiler = find_program('g-ir-compiler', required: false)
+    if gir_compiler.found()
+        custom_target('appcapture-typelib',
+          input:   gir_file,
+          output:  'AppCapture-1.0.typelib',
+          command: [gir_compiler, '--output=@OUTPUT@', '@INPUT@'],
+          install: true,
+          install_dir: get_option('libdir') / 'girepository-1.0',
+        )
+    endif
+endif
