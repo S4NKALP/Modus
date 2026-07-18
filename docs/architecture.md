@@ -15,6 +15,9 @@ Entry point is `start.py`, delegates to `src/main.py`. `main.py` instantiates
 - **App Switcher**: Alt-Tab window switcher (`src/window/switcher/`)
 - **Lock Screen**: Session lock (`src/window/lock.py`)
 - **Spotlight Search**: Super+D search overlay (`src/window/spotlight/`)
+- **Notification Center**: Notification popups and history (`src/window/notification/`)
+- **OSD**: Volume/brightness overlays (`src/window/osd/`)
+- **Wallpaper Picker**: Wallpaper browser and management (`src/window/wallpaper/`)
 
 ## 2. Spotlight Search Engine
 
@@ -94,6 +97,18 @@ signals:
 | `bluetooth.py` | BlueZ over DBus | Bluetooth devices |
 | `brightness.py` | `brightnessctl` / `ddcutil` | Screen brightness |
 | `network.py` | NetworkManager over DBus | WiFi, ethernet state |
+| `keyboard_layout.py` | evdev / Hyprland | Keyboard layout changes |
+| `nightlight.py` | Hyprland Night Light | Blue light filter state |
+| `mpris.py` | MPRIS DBus | Media player state, metadata |
+| `screenshot.py` | Screencapture API | Screenshot/screen recording |
+| `screenrecorder.py` | `wf-recorder` | Screen recording state |
+| `wallpaper.py` | Matugen / `swww` | Wallpaper changes, color generation |
+| `inhibit.py` | `gtk-session-lock` | Inhibit screen lock |
+| `numlock.py` | evdev | Num lock state |
+| `capslock.py` | evdev | Caps lock state |
+| `gamemode.py` | `gamemoded` | Game mode status |
+| `todo.py` | Local JSON | Todo list items |
+| `config.py` | TOML files | Config hot-reload and callbacks |
 
 Uses signals (`connect("changed", update_ui)`) for reactive UI — virtually 0%
 CPU while idle.
