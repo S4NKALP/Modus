@@ -77,7 +77,6 @@ PACKAGES=(
     pciutils
     gtk-layer-shell
     librsvg
-    flatpak
     gobject-introspection
 )
 
