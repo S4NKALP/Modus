@@ -46,13 +46,13 @@ cd ~/.config/Modus
 > ## Post Installation
 >
 > - Install recommended [Icon theme](https://github.com/vinceliuice/MacTahoe-icon-theme) , [GTK theme](https://github.com/vinceliuice/MacTahoe-gtk-theme) and [Cursor Theme](https://github.com/vinceliuice/MacTahoe-icon-theme/tree/main/cursors) <br>
-> - Check `config/hypr/modus.conf` edit it according to your device and copy it to your hyprland config
+> - Check `config/hypr/modus.lua` edit it according to your device and copy it to your hyprland config
 > - For Lock Screen Bind keys to `uv run lock`
 
 ## Manual Installation
 
 ```bash
-paru -S uv fabric-cli-git cliphist gnome-bluetooth-3.0 slurp ffmpeg hypridle hyprsunset hyprpicker hyprshot grim libnotify matugen-bin playerctl gtk-session-lock awww apple-fonts swappy wl-clipboard webp-pixbuf-loader wf-recorder acpi brightnessctl power-profiles-daemon uwsm cinnamon-desktop ddcutil at-spi2-core gcc make pkgconf appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 meson ninja wayland-protocols --needed
+paru -S uv fabric-cli-git uwsm cliphist slurp grim swappy wl-clipboard wtype libnotify playerctl matugen-bin hypridle hyprsunset hyprpicker hyprshot gtk-session-lock awww apple-fonts webp-pixbuf-loader cinnamon-desktop libmediaart acpi brightnessctl power-profiles-daemon ddcutil at-spi2-core networkmanager network-manager-applet blueman pipewire libpulse gcc make pkgconf meson ninja wayland-protocols gobject-introspection gtk-layer-shell librsvg libqalculate appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 pciutils wf-recorder ffmpeg --needed
 git clone https://github.com/S4NKALP/Modus ~/.config/Modus
 cd ~/.config/Modus
 uv sync
