@@ -1,0 +1,27 @@
+#noti-center-box {
+  background-color: transparent;
+
+  /* border: 1px solid @glass-border; */
+  border-radius: apply(radius-xl);
+  margin-right: 10px;
+  /* padding: 20px; */
+  /* margin: 6px; */
+}
+
+#noti-clear-button {
+  /* min-width: 10px; */
+  background-color: @glass-popup;
+  min-height: 25px;
+  min-width: 70px;
+  border: 1px solid @glass-border;
+  border-radius: apply(radius-md);
+  margin-top: 10px;
+}
+
+#notif-clear-button label {
+  font-size: 15px;
+}
+
+#noti-clear-button:hover {
+  background-color: @glass-hover;
+}

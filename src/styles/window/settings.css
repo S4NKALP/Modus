@@ -1,0 +1,157 @@
+#settings-window {
+    background-color: @glass-card;
+    border-radius: apply(radius-md);
+    border: 1px solid @glass-border;
+    min-width: 850px;
+    min-height: 600px;
+}
+
+#settings-main-box {
+    padding: 0;
+}
+
+#settings-sidebar {
+    background-color: @glass-surface-2;
+    padding: 20px 10px;
+    min-width: 200px;
+    border-right: 1px solid @glass-divider;
+}
+
+#settings-sidebar-button {
+    padding: 10px 15px;
+    border-radius: apply(radius-sm);
+    margin-bottom: 2px;
+}
+
+#settings-sidebar-button:hover {
+    background-color: @glass-hover;
+    color: @glass-text;
+}
+
+#settings-sidebar-button Label {
+    font-size: apply(font-base);
+    font-weight: 500;
+}
+
+#settings-sidebar-button.active {
+    background-color: @glass-hover;
+}
+
+#settings-sidebar-button.active Label {
+    color: @glass-text;
+}
+
+#settings-sidebar-button:hover *,
+#settings-sidebar-button.active * {
+    color: @glass-text;
+}
+
+#settings-content-wrapper {
+    padding: 30px;
+}
+
+#settings-page-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: @glass-text;
+}
+
+#settings-row {
+    padding: 12px 15px;
+    border-radius: apply(radius-sm);
+    background-color: @glass-hover;
+    margin-bottom: 2px;
+}
+
+#settings-row:hover {
+    background-color: @glass-active;
+}
+
+#settings-row-label {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+#settings-row-description {
+    font-size: apply(font-sm);
+    color: @glass-text-secondary;
+}
+
+#settings-switch {
+    min-width: 40px;
+    min-height: 22px;
+    background-color: @glass-border;
+    border-radius: apply(radius-full);
+    padding: 3px;
+    transition: background-color apply(transition-slow) ease;
+}
+
+#settings-switch.active {
+    background-color: @glass-accent;
+    color: @on-primary;
+}
+
+#settings-entry {
+    background-color: @glass-surface-1;
+    padding: 8px 12px;
+    border-radius: apply(radius-xs);
+    border: 1px solid @glass-border;
+    min-width: 200px;
+    color: @glass-text;
+}
+
+#settings-entry:focus {
+    border-color: @glass-ring;
+}
+
+#settings-combo {
+    background-color: @glass-surface-1;
+    padding: 4px 8px;
+    border-radius: apply(radius-xs);
+    border: 1px solid @glass-border;
+    min-width: 150px;
+    color: @glass-text;
+}
+
+#settings-combo:hover {
+    background-color: @glass-active;
+}
+
+#settings-list-tags {
+    margin-bottom: 5px;
+}
+
+#settings-list-tag {
+    background-color: @glass-hover;
+    border-radius: apply(radius-md);
+    padding: 4px 10px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+#settings-list-tag:hover {
+    background-color: @glass-active;
+}
+
+#settings-list-tag Label {
+    font-size: apply(font-md);
+}
+
+#settings-list-tag-close {
+    color: @glass-text-secondary;
+    font-size: apply(font-2xs);
+    margin-left: 3px;
+}
+
+#settings-list-tag-close:hover {
+    color: @glass-accent;
+}
+
+#settings-list-entry {
+    background-color: @glass-hover;
+    border: 1px dashed @glass-border;
+    padding: 6px 12px;
+    border-radius: apply(radius-xs);
+    font-size: apply(font-md);
+}

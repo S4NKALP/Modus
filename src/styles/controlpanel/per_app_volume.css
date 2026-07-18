@@ -1,0 +1,77 @@
+/* Per-app volume control styles */
+#per-app-volume-control {
+  min-height: 140px;
+  min-width: 328px;
+  border-radius: apply(radius-sm);
+  padding: 1rem;
+}
+
+#apps-scrolled-container {
+  min-height: 120px;
+  min-width: 120px;
+}
+
+.app-volume-item {
+  margin: 8px 0;
+  padding: 8px;
+  background-color: @glass-hover;
+  border-radius: apply(radius-xs);
+  border: 1px solid @glass-border-soft;
+}
+
+.app-name {
+  font-size: apply(font-md);
+  font-weight: 500;
+  color: @glass-text;
+  margin-bottom: 5px;
+}
+
+#per-app-volume-button {
+  background-color: @glass-hover;
+  border: 1px solid @glass-border;
+  border-radius: apply(radius-full);
+}
+
+#per-app-volume-button:hover {
+  background-color: @glass-active;
+}
+
+#per-app-volume-button:active {
+  background-color: @glass-selected;
+}
+
+#per-app-volume-icon {
+  background-color: @glass-hover;
+
+  border: 2px solid @glass-border;
+
+  border-radius: apply(radius-full);
+
+  min-width: 30px;
+}
+
+/* Per app-volume-item */
+
+.compact-app-volume-item {
+  padding-bottom: 5px;
+  padding-right: 14px;
+  border-bottom: 1px solid @glass-divider;
+}
+
+#app-icon {
+  margin-top: 8px;
+}
+
+.app-name-compact {
+  font-size: apply(font-base);
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+#app-volume-header {
+  font-size: apply(font-lg);
+  padding-left: 5px;
+  margin-top: -2px;
+  font-weight: bold;
+  color: @glass-text;
+}

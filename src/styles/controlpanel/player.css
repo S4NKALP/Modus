@@ -1,0 +1,136 @@
+#player-stack-button {
+  border-radius: apply(radius-xs);
+  min-width: 7px;
+  min-height: 7px;
+  margin: 10px 3px;
+}
+
+#button-box-c {
+  padding-right: 15px;
+}
+
+#player-stack-button:hover {
+  background-color: @glass-hover;
+  box-shadow: inset @glass-highlight 0 0 10px;
+}
+
+#player-stack-button.active {
+  border-radius: apply(radius-xs);
+  background-color: @glass-text;
+}
+
+#outer-player-box {
+  min-height: 110px;
+  min-width: 320px;
+  border-radius: apply(radius-sm);
+  margin: 0 6px;
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border-soft;
+}
+
+#outer-player-box-c {
+  min-height: 55px;
+  min-width: 245px;
+  border-radius: apply(radius-sm);
+}
+
+#outer-no-player-box-c {
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
+  min-height: 55px;
+  min-width: 345px;
+  border-radius: apply(radius-sm);
+}
+
+#box-c {
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
+  border-radius: apply(radius-md);
+  margin-top: 0.5rem;
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-bottom: 0.5rem;
+  min-height: 50px;
+  min-width: 330px;
+}
+
+#player-box:disabled highlight,
+#player-box:disabled progress {
+  background-color: @glass-ring;
+  background-image: none;
+}
+
+#player-info-box-c {
+  margin-left: 10px;
+}
+#player-info-box {
+  margin-left: 10px;
+}
+
+#player-title-c {
+  font-weight: bold;
+  font-size: apply(font-base);
+}
+#player-title {
+  margin-top: 18px;
+  font-weight: 700;
+  font-size: apply(font-lg);
+}
+#player-title-no {
+  font-weight: 700;
+  margin-left: 120px;
+  font-size: apply(font-lg);
+}
+#player-app-icon {
+  margin-bottom: 10px;
+}
+
+#player-artist-c {
+  margin-top: -5px;
+  color: @glass-text-secondary;
+  font-size: apply(font-sm);
+}
+#player-artist,
+#player-album {
+  font-weight: 500;
+  font-size: apply(font-sm);
+}
+
+#player-controls {
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+
+.player-button {
+  padding: 1px;
+}
+
+#player-box #player-controls #button-box .player-button:disabled {
+  color: @glass-text-disabled;
+}
+
+#player-button {
+  opacity: 0.5;
+}
+#player-button:hover {
+  opacity: 0.9;
+}
+
+.album-image-c {
+  min-width: 50px;
+  min-height: 50px;
+  background-position: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  background-size: cover;
+  margin-left: 10px;
+  border-radius: apply(radius-xs);
+}
+.album-image {
+  min-width: 70px;
+  min-height: 70px;
+  background-position: center;
+  background-size: cover;
+  margin-left: 12px;
+  border-radius: 9px;
+}

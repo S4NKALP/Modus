@@ -1,0 +1,50 @@
+tooltip {
+  border: 1px solid @glass-border;
+  border-radius: 0.75rem;
+  background-color: @glass-tooltip;
+}
+
+@keyframes tooltipShow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+tooltip > * {
+  padding: 3px 10px;
+  border-radius: 0.75rem;
+}
+
+menu {
+  border: 1px solid @glass-border;
+  border-radius: 0.75rem;
+  transition: all apply(transition-xfast) ease-in-out;
+  background-color: @glass-menu;
+}
+
+menu > menuitem {
+  padding: 5px 10px;
+  margin: 1px 2px;
+  font-size: apply(font-md);
+  border-bottom: 1px solid @glass-divider;
+}
+
+menu > menuitem:last-child {
+  border-bottom: none;
+}
+menu > menuitem:hover {
+  transition: all 20ms ease-in-out;
+  font-size: apply(font-md);
+  border-radius: apply(radius-xs);
+  color: @glass-text;
+  background-color: @glass-hover;
+}
+
+menu > menuitem:hover > label {
+  color: @glass-text;
+  font-weight: 400;
+}

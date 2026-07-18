@@ -1,0 +1,163 @@
+#panel {
+    background-color: @glass-panel;
+    margin: -4px 0;
+    transition: all 120ms ease-in-out;
+}
+
+#panel-button:hover,
+#panel-button.active,
+#battery-button:hover,
+#battery-button.active,
+#network-button:hover,
+#network-button.active,
+#bt-button:hover,
+#bt-button.active,
+#global-menu:hover,
+#global-menu.active,
+#workspaces>button:hover {
+    background-color: @glass-hover;
+    color: @glass-text;
+}
+
+#panel-button,
+#battery-button,
+#network-button,
+#bt-button {
+    margin: 5px 0;
+    padding: 0 2px;
+    border-radius: apply(radius-sm);
+}
+
+#battery-label,
+#date-time {
+    font-weight: 500;
+}
+
+#global-menu {
+    margin: 5px 2px;
+    padding: 0 5px;
+    border-radius: apply(radius-xs);
+}
+
+#date-time {
+    margin: 0 4px;
+}
+
+#workspaces>button {
+    margin: 6px 0;
+    padding: 0 16px;
+    border-radius: apply(radius-sm);
+    min-width: 12px;
+    border: 1px solid @glass-border;
+}
+
+#workspaces>button.active {
+    background-color: @glass-active;
+}
+
+#workspaces>button.active label {
+    color: @glass-text;
+}
+
+#workspaces>button.active:hover {
+    background-color: @glass-hover;
+}
+
+#workspaces>button.active:hover label {
+    color: @glass-text;
+}
+
+#workspaces>button.urgent {
+    background-color: @glass-error;
+}
+
+
+#panel-button:hover *,
+#panel-button.active *,
+#battery-button:hover *,
+#battery-button.active *,
+#network-button:hover *,
+#network-button.active *,
+#bt-button:hover *,
+#bt-button.active *,
+#global-menu:hover *,
+#global-menu.active *,
+#workspaces>button:hover * {
+    color: @glass-text;
+
+}
+
+#panel-notch {
+    margin: 0 20px;
+}
+
+#panel-notch-stack {
+    background-color: @glass-overlay-dark;
+    border-radius: 0 0 apply(radius-lg) apply(radius-lg);
+    min-width: 200px;
+    min-height: 34px;
+}
+
+
+#panel-notch-corner {
+    background-color: #000000;
+    border-radius: 0;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+#panel-notch-stack #panel-button {
+    margin: 0;
+    padding: 0 4px;
+    margin-left: 8px;
+    background: none;
+    border: none;
+    border-radius: 0;
+}
+
+#panel-notch-stack #panel-button:hover {
+    background: none;
+}
+
+#panel-notch-stack #panel-button:hover * {
+    color: inherit;
+}
+
+#notch-recording-time {
+    font-size: apply(font-xs);
+    font-weight: 500;
+    padding: 0 8px 0 4px;
+}
+
+#panel-notch-stack #notch-player-art {
+    min-width: 18px;
+    min-height: 18px;
+    background-size: cover;
+    background-position: center;
+    border-radius: apply(radius-sm);
+    margin-left: 6px;
+}
+
+/* ── Notch transient indicators (kbd layout + capslock + numlock + charging) ── */
+#notch-kbd-layout,
+#notch-capslock,
+#notch-numlock,
+#notch-charging,
+#notch-mic {
+    padding: 0 8px;
+}
+
+#notch-indicator-icon {
+    min-width: 16px;
+    min-height: 16px;
+    color: @glass-text-secondary;
+    margin-left: 2px;
+}
+
+#notch-indicator-label {
+    font-size: apply(font-xs);
+    font-weight: 600;
+    color: @glass-text-secondary;
+    letter-spacing: 0.5px;
+    margin-right: 2px;
+}

@@ -1,0 +1,27 @@
+[Mods.color-picker]
+icon = "misc/color-picker.svg"
+icon-size = 18
+order = 0
+on-left = "hyprpicker -a -n -f hex && sleep 0.1 && c=$(wl-paste)"
+on-middle = "hyprpicker -a -n -f rgb && sleep 0.1 && c=$(wl-paste)"
+on-right = "hyprpicker -n -f hsv | wl-copy -n && sleep 0.1 && c=$(wl-paste)"
+
+[Mods.google-lens]
+icon = "google-lens.svg"
+icon-size = 16
+order = 1
+on-clicked = "python3 -m utils.google_lens_cli"
+
+
+# [Mods.terminal]
+# icon = "terminal.svg"
+# icon-size = 18
+#
+# [[Mods.terminal.options]]
+# label = "Terminal"
+# on-clicked = "kitty"
+#
+# [[Mods.terminal.options]]
+# label = "Terminal but scary"
+# on-clicked = "zen-browser"
+# divider = true

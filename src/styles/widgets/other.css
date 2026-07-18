@@ -1,0 +1,25 @@
+/* FlatScale styling */
+.flat-scale {
+    margin: 4px 0px;
+}
+
+.flat-scale slider {
+    background-color: white;
+    min-height: 24px;
+    min-width: 24px;
+    border-radius: apply(radius-full);
+}
+
+
+.flat-scale trough {
+    background-color: @glass-surface-1;
+    min-height: 25px;
+    border-radius: apply(radius-full);
+    border: 1px solid @glass-border-soft;
+}
+
+.flat-scale highlight {
+    background-color: @glass-text-secondary;
+    min-height: 25px;
+    border-radius: apply(radius-full);
+}

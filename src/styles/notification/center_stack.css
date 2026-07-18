@@ -1,0 +1,67 @@
+/* Expandable notification group styles */
+#notification-group {
+  margin: 4px 0;
+}
+
+/* Stacked notification container */
+#notification-stack-container {
+  background-color: transparent;
+  margin: 8px 0;
+}
+
+/* Bottom shadow layer (deepest) - offset to show stacking from below */
+#stack-shadow-bottom {
+  background-color: @glass-popup;
+  border: 1.2px solid @glass-border;
+  border-radius: apply(radius-md);
+  opacity: 0.9;
+  min-height: 20px;
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-bottom: -10px;
+}
+
+/* Middle shadow layer */
+#stack-shadow-middle {
+  background-color: @glass-popup;
+  border: 1.2px solid @glass-border;
+  border-radius: apply(radius-md);
+  opacity: 0.95;
+  min-height: 20px;
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-bottom: -10px;
+}
+
+/* Main notification content (top layer) */
+#stack-main-notification {
+  background-color: @glass-popup;
+  border: 1.2px solid @glass-border;
+  border-radius: apply(radius-md);
+  padding: 12px;
+  transition: all apply(transition-medium) ease;
+}
+
+/* Hover effects for stacked notifications */
+#notification-stack-container:hover #stack-main-notification {
+  background-color: @glass-active;
+}
+
+#notification-stack-container:hover #stack-shadow-middle {
+  opacity: 0.7;
+}
+
+#notification-stack-container:hover #stack-shadow-bottom {
+  opacity: 0.5;
+}
+
+/* Notification count badge */
+#notification-count-label {
+  background-color: @glass-selected;
+  color: @glass-text-secondary;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: apply(font-2xs);
+  font-weight: 500;
+  min-width: 16px;
+}

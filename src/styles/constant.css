@@ -1,0 +1,94 @@
+@define radius-xs 4px;
+@define radius-sm 8px;
+@define radius-md 12px;
+@define radius-lg 16px;
+@define radius-xl 20px;
+@define radius-full 999px;
+@define radius-2xs 2px;
+@define transition-xfast 0.1s;
+@define transition-fast 0.15s;
+@define transition-medium 0.2s;
+@define transition-slower 0.25s;
+@define transition-slow 0.3s;
+@define font-2xs 10px;
+@define font-xs 11px;
+@define font-sm 12px;
+@define font-md 13px;
+@define font-base 14px;
+@define font-lg 16px;
+
+
+/* Glass Surface Tiers */
+
+@define-color glass-surface-1 alpha(@background, 0.30);
+@define-color glass-surface-2 alpha(@background, 0.45);
+@define-color glass-surface-3 alpha(@background, 0.60);
+@define-color glass-surface-4 alpha(@background, 0.75);
+
+/* Glass Panels */
+
+@define-color glass-panel alpha(@background, 0.50);
+@define-color glass-dock alpha(@background, 0.35);
+@define-color glass-popup alpha(@background, 0.60);
+@define-color glass-card alpha(@background, 0.50);
+@define-color glass-widget alpha(@background, 0.55);
+@define-color glass-dialog alpha(@background, 0.65);
+@define-color glass-tooltip alpha(@background, 0.80);
+@define-color glass-menu alpha(@background, 0.65);
+
+/* Interactive States */
+
+@define-color glass-hover alpha(white, 0.10);
+@define-color glass-active alpha(white, 0.50);
+@define-color glass-selected alpha(@primary, 0.18);
+@define-color glass-focus alpha(@primary, 0.25);
+
+/* Borders */
+
+@define-color glass-border alpha(@outline, 0.18);
+@define-color glass-border-soft alpha(@outline, 0.10);
+@define-color glass-border-strong alpha(@outline, 0.30);
+
+/* Highlights */
+
+@define-color glass-highlight alpha(@foreground, 0.08);
+@define-color glass-highlight-soft alpha(@foreground, 0.04);
+@define-color glass-highlight-strong alpha(@foreground, 0.14);
+
+/* Accent */
+
+@define-color glass-accent @primary;
+@define-color glass-accent-soft alpha(@primary, 0.15);
+@define-color glass-accent-container alpha(@primary, 0.10);
+
+/* Text */
+
+@define-color glass-text @foreground;
+@define-color glass-text-secondary alpha(@foreground, 0.60);
+@define-color glass-text-disabled alpha(@foreground, 0.30);
+
+/* Semantic Status Colors */
+
+@define-color glass-success @secondary;
+@define-color glass-warning @tertiary;
+@define-color glass-error @error;
+@define-color glass-info @primary;
+
+/* Overlay Layers */
+
+@define-color glass-overlay alpha(@shadow, 0.35);
+@define-color glass-overlay-dark alpha(@shadow, 0.60);
+@define-color glass-overlay-light alpha(@shadow, 0.15);
+
+/* Desktop / Wallpaper Integration */
+
+@define-color desktop-selection alpha(@primary, 0.20);
+@define-color desktop-grid alpha(@foreground, 0.06);
+@define-color desktop-shadow alpha(@shadow, 0.30);
+
+/* Utility Components */
+
+@define-color glass-ring alpha(@primary, 0.50);
+@define-color glass-divider alpha(@outline, 0.12);
+@define-color glass-icon alpha(@foreground, 0.70);
+@define-color glass-scrollbar alpha(@foreground, 0.15);

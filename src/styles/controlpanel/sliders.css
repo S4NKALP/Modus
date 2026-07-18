@@ -1,0 +1,19 @@
+#vol-slider-box {
+  /* margin-bottom: 2px; */
+  margin-top: -10px;
+  /* border: 1px solid @foreground; */
+}
+
+#volume-widget-slider {
+  /* margin-bottom: 2px; */
+}
+
+#volume-widget-icon {
+  margin-left: 10px;
+  color: @glass-text-secondary;
+}
+
+#brightness-widget-icon {
+  margin-left: 10px;
+  color: @glass-text-secondary;
+}

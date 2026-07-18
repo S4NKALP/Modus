@@ -1,0 +1,28 @@
+.title {
+  font-size: apply(font-lg);
+  font-family: "SF Pro Rounded";
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#separator {
+  min-height: 0.09rem;
+  margin: 3px 0;
+  background-color: @glass-divider;
+  border-radius: apply(radius-sm);
+}
+
+
+#control-center-menu {
+  background-color: @glass-popup;
+  border-radius: apply(radius-md);
+  margin: 0;
+}
+
+
+#control-center-widgets {
+  background-color: @glass-card;
+  border: 1px solid @glass-border;
+  border-radius: apply(radius-md);
+  padding: 0.5rem;
+}

@@ -1,0 +1,149 @@
+#spotlight {
+    margin: 8px;
+    padding: 5px;
+    border-radius: apply(radius-lg);
+    background-color: @glass-popup;
+    border: 1px solid @glass-border;
+}
+
+.spotlight-scroll-clip {
+    border-radius: apply(radius-md);
+}
+
+.app-search-entry {
+    color: @glass-text;
+}
+
+.app-search-header {
+    padding: 8px;
+    border: solid 1px transparent;
+    border-radius: apply(radius-md);
+    background-color: @glass-hover;
+    transition: background-color apply(transition-medium) ease-in-out;
+}
+
+.app-slot {
+    padding: 8px;
+    border: solid 1px transparent;
+    border-radius: apply(radius-md);
+    background-color: @glass-hover;
+    transition: border apply(transition-fast) ease-in-out,
+                background-color apply(transition-medium) ease-in-out;
+}
+
+.app-slot:hover {
+    border-color: @glass-border;
+    background-color: @glass-active;
+}
+
+.app-slot:focus,
+.app-slot.selected {
+    border-color: @glass-ring;
+    background-color: @glass-selected;
+}
+
+.app-title {
+    color: @glass-text;
+    font-size: apply(font-base);
+    font-weight: 600;
+}
+
+.app-description {
+    color: @glass-text-secondary;
+    font-size: apply(font-sm);
+}
+
+.calc-expression {
+    color: @glass-text-secondary;
+    font-size: apply(font-base);
+}
+
+.calc-result-text {
+    color: @glass-text;
+    font-size: apply(font-lg);
+    font-weight: bold;
+}
+
+.power-menu-name {
+    color: @glass-text;
+    font-size: apply(font-lg);
+    font-weight: 600;
+}
+
+.power-menu-description {
+    color: @glass-text-secondary;
+    font-size: apply(font-sm);
+}
+
+.app-slot.wallpaper>box {
+    min-height: 4rem;
+    transition: all 0.2s cubic-bezier(0.2, 1, 0.8, 1);
+    background-size: cover;
+}
+
+.app-slot.wallpaper:focus > box,
+.app-slot.wallpaper.selected > box {
+    min-height: 12rem;
+}
+
+.emoji-slot {
+    min-height: 3rem;
+}
+
+.emoji-char {
+    font-size: 24px;
+    min-width: 2rem;
+}
+
+.emoji-name {
+    color: @glass-text;
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.emoji-no-results {
+    min-height: 3rem;
+}
+
+.emoji-no-results-text {
+    color: @glass-text-secondary;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.clipboard-no-results {
+    min-height: 3rem;
+}
+
+.clipboard-no-results-text {
+    color: @glass-text-secondary;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.clipboard-image {
+    min-height: 4rem;
+    transition: all 0.2s cubic-bezier(0.2, 1, 0.8, 1);
+    background-size: cover;
+}
+
+.clipboard-image:focus,
+.clipboard-image.selected {
+    min-height: 12rem;
+}
+
+.clipboard-text {
+    min-height: 3rem;
+}
+
+.clipboard-icon {
+    font-size: 20px;
+    min-width: 2rem;
+}
+
+.clipboard-content {
+    color: @glass-text;
+    font-size: 14px;
+    font-weight: normal;
+    margin-left: 1rem;
+}

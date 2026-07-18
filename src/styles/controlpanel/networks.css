@@ -1,0 +1,81 @@
+#bluetooth-title,
+#wifi-title {
+  font-size: apply(font-lg);
+  font-weight: bold;
+}
+
+/* macOS-style WiFi interface */
+#wifi-connections,
+#bluetooth-connections {
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
+  border-radius: apply(radius-sm);
+  padding: 10px;
+}
+
+/* WiFi network slots - macOS style */
+#wifi-network-slot button {
+  border-radius: apply(radius-sm);
+  padding: 4px 4px;
+  margin: 2px 0;
+}
+
+#wifi-network-slot button:hover,
+#wifi-network-button:hover {
+  background-color: @glass-hover;
+  border-radius: apply(radius-sm);
+}
+
+#wifi-network-slot button:hover .wifi-icon-box,
+#wifi-network-button:hover .wifi-icon-box {
+  background-color: @glass-text-secondary;
+}
+
+/* WiFi-specific device icon styles */
+#wifi-connections #device-icon {
+  background-color: @glass-hover;
+}
+
+#wifi-connections #device-icon.connected {
+  background-color: @glass-active;
+  color: @glass-text;
+}
+
+/* Bluetooth-specific device icon styles */
+#bluetooth-connections #device-icon {
+  background-color: @glass-hover;
+}
+
+#bluetooth-connections #device-icon.connected {
+  background-color: @glass-active;
+  color: @glass-text;
+}
+
+#wifi-network-name {
+  color: @glass-text;
+  font-size: apply(font-base);
+  font-weight: 500;
+}
+
+#wifi-lock-icon {
+  color: @glass-text-secondary;
+  margin-left: 8px;
+}
+
+/* Other Networks and Settings buttons */
+#wifi-other-button {
+  background-color: transparent;
+  border: none;
+  padding: 8px 6px;
+  margin-bottom: -12px;
+  margin-top: -6px;
+  border-radius: apply(radius-sm);
+}
+
+#wifi-other-button:hover {
+  background-color: @glass-hover;
+}
+
+#wifi-other-button:last-child {
+  margin-bottom: 3px;
+}

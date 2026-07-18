@@ -1,0 +1,109 @@
+[project]
+name = "modus"
+version = "2.0.0"
+description = "A hackable shell for Hyprland, built with Fabric"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.13"
+authors = [
+    { name = "SANKALP", email = "sankalp@modus.dev" },
+]
+keywords = ["hyprland", "wayland", "shell", "fabric", "desktop"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
+]
+dependencies = [
+    "fabric",
+    "httpx>=0.28.1",
+    "pam>=0.2.0",
+    "psutil>=7.2.2",
+    "six>=1.17.0",
+    "tomlkit>=0.15.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/S4NKALP/Modus"
+Documentation = "https://github.com/S4NKALP/Modus/tree/main/docs"
+Repository = "https://github.com/S4NKALP/Modus"
+Issues = "https://github.com/S4NKALP/Modus/issues"
+Discord = "https://discord.gg/tRFxkbQ3Zq"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.0",
+    "ruff>=0.15.2",
+]
+
+[project.scripts]
+start = "main:main"
+lock = "window.lock:main"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "C4",   # flake8-comprehensions
+    "RET",  # flake8-return
+    "RUF",  # ruff-specific rules
+    "PIE",  # flake8-pie
+    "T20",  # flake8-print
+    "PT",   # flake8-pytest-style
+    "TCH",  # flake8-type-checking
+    "FLY",  # flynt (f-string conversion)
+]
+ignore = [
+    "T201",   # allow print() (used for CLI output)
+    "RET504", # allow unnecessary assignment before return
+    "SIM108", # allow ternary operator (readability)
+    "B008",   # allow function calls in default args (common in GTK)
+    "UP007",  # allow X | Y union syntax (keep Optional for compatibility)
+    "UP045",  # allow Optional[X] annotation style
+    "UP006",  # allow typing.List etc (keep for readability)
+    "UP035",  # allow deprecated typing imports
+    "RUF012", # allow mutable class attributes (common in GTK widgets)
+    "TC001",  # allow runtime imports that happen to be type-only
+    "E501",   # line length handled by formatter
+    "RET505", # allow superfluous else after return
+    "B027",   # allow empty method bodies (common in ABCs)
+    "B007",   # allow unused loop variables
+    "SIM102", # allow collapsible if
+    "SIM105", # allow suppressible exception (contextlib.suppress)
+    "B023",   # allow function uses loop variable (closures)
+    "RUF002", # allow ambiguous unicode in docstrings
+    "RUF003", # allow ambiguous unicode in comments
+    "SIM115", # allow open without context handler
+    "SIM116", # allow if-else instead of dict lookup
+    "B018",   # allow useless expression (standalone identifiers)
+    "TC004",  # allow imports in TYPE_CHECKING block (circular import prevention)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["services", "utils", "shared", "window"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/main.py" = ["E402"]
+"src/window/switcher/main.py" = ["E402"]
+"examples/**" = ["INP001", "D101", "D102", "D103"]
+
+[tool.uv.sources]
+fabric = { git = "https://github.com/Fabric-Development/fabric.git" }

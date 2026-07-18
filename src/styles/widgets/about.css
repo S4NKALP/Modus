@@ -1,0 +1,35 @@
+#about-menu {
+  background-color: @glass-card;
+
+  border: 1px solid @glass-border;
+  border-top: none;
+  border-radius: 1.25rem;
+  padding: 2rem;
+}
+
+#vendor-label {
+  color: @glass-text-secondary;
+  margin-top: -1rem;
+}
+
+#info-label {
+  color: @glass-text-secondary;
+}
+
+#more-info-button {
+  background-color: @glass-hover;
+  border-radius: apply(radius-xs);
+  padding: 0px 10px;
+  margin: 1px 2px;
+  transition: all apply(transition-medium) ease-in-out;
+}
+#more-info-button:hover {
+  background-color: @glass-accent;
+}
+
+#more-info-button label {
+  font-size: apply(font-sm);
+  margin: 0px;
+  font-weight: 400;
+  color: @glass-text;
+}

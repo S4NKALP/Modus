@@ -1,0 +1,263 @@
+
+/* === Main Todo List === */
+#todo-list-menu {
+    background-color: @glass-card;
+    border-radius: apply(radius-md);
+    padding: 15px;
+    margin-right: 20px;
+    border: 1px solid @glass-border;
+}
+
+#todo-main-container {
+    padding: 5px;
+    background-color: transparent;
+}
+
+#todo-header {
+    padding: 0;
+    margin-bottom: 5px;
+}
+
+#todo-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+#todo-stats {
+    font-size: 12px;
+    color: @glass-text-secondary;
+    font-family: "SF Pro Rounded";
+}
+
+/* === Add Task Section === */
+#todo-add-section {
+    background-color: @glass-hover;
+    border-radius: apply(radius-sm);
+    padding: 8px 10px;
+}
+
+#new-todo-entry {
+    background: transparent;
+    border: none;
+    color: @glass-text;
+    font-size: 13px;
+    font-family: "SF Pro Rounded";
+    min-height: 24px;
+}
+
+#new-todo-entry placeholder {
+    color: @glass-text-disabled;
+}
+
+#add-todo-button {
+    background-color: @glass-accent;
+    border-radius: apply(radius-full);
+    padding: 6px;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+#add-todo-button:hover {
+    background-color: alpha(@glass-accent, 0.8);
+}
+
+/* === Todo Items === */
+#todos-container {
+    padding: 0;
+}
+
+#todo-item {
+    background-color: transparent;
+    border-radius: apply(radius-sm);
+    padding: 8px 6px;
+    transition: background-color 0.2s ease;
+}
+
+#todo-item:hover {
+    background-color: @glass-hover;
+}
+
+#todo-divider {
+    min-height: 1px;
+    background-color: @glass-highlight-soft;
+    margin: 0 4px;
+}
+
+/* === Progress Ring === */
+#todo-progress-ring {
+    background-color: transparent;
+    color: alpha(@glass-text, 0.15);
+    border-color: @glass-text;
+}
+
+/* === Checkbox === */
+#todo-checkbox {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+#todo-checkbox:hover {
+    background-color: @glass-hover;
+    border-radius: apply(radius-sm);
+}
+
+/* === Task Text === */
+#todo-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+/* === Options Button === */
+#todo-options-btn {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 4px 8px;
+    min-width: 24px;
+    min-height: 24px;
+    font-size: 16px;
+    color: @glass-text-secondary;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+#todo-item:hover #todo-options-btn {
+    opacity: 1;
+}
+
+#todo-options-btn:hover {
+    color: @glass-text;
+    background-color: @glass-hover;
+    border-radius: apply(radius-sm);
+}
+
+/* === Clear + Footer === */
+#clear-completed-button {
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    color: @glass-text-disabled;
+    padding: 4px;
+}
+
+#clear-completed-button:hover {
+    color: @glass-text;
+}
+
+#todo-footer {
+    font-size: 11px;
+    color: @glass-text-secondary;
+    font-family: "SF Pro Rounded";
+    margin-top: 4px;
+}
+
+/* === Options Popover === */
+#todo-options-popover {
+    background-color: @glass-card;
+    border-radius: apply(radius-md);
+    padding: 10px;
+    margin-right: 20px;
+    border: 1px solid @glass-border;
+    min-width: 340px;
+}
+
+#todo-options-container {
+    background-color: transparent;
+}
+
+#todo-opt-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+#todo-opt-subtitle {
+    font-size: 11px;
+    color: @glass-text-secondary;
+    font-family: "SF Pro Rounded";
+}
+
+/* === Color Swatches === */
+#todo-color-swatch {
+    background-color: @glass-hover;
+    border-radius: apply(radius-full);
+    padding: 0;
+    min-width: 28px;
+    min-height: 28px;
+    border: 2px solid transparent;
+    transition: border-color 0.15s ease;
+}
+
+#todo-color-swatch:hover {
+    border-color: @glass-border;
+}
+
+#todo-color-swatch.selected {
+    border-color: @glass-text;
+    box-shadow: 0 0 0 2px alpha(@glass-text, 0.2);
+}
+
+/* === Deadline Pill === */
+#todo-deadline-pill {
+    background-color: @glass-hover;
+    border-radius: apply(radius-full);
+    padding: 6px 12px;
+}
+
+#todo-deadline-value {
+    font-size: 12px;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+    min-width: 70px;
+}
+
+/* === Stepper (reuse pomodoro style) === */
+#todo-spin-box {
+    background-color: @glass-hover;
+    border-radius: apply(radius-sm);
+    padding: 2px;
+}
+
+#todo-spin-btn {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 2px 4px;
+    min-height: 14px;
+    color: @theme_fg_color;
+    border-radius: apply(radius-sm);
+    font-size: 8px;
+}
+
+#todo-spin-btn:hover {
+    background-color: @glass-active;
+}
+
+#todo-spin-value {
+    font-size: 12px;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+/* === Preset Buttons === */
+#todo-preset-btn {
+    background-color: @glass-hover;
+    border-radius: apply(radius-full);
+    padding: 6px 12px;
+    font-size: 11px;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+#todo-preset-btn:hover {
+    background-color: @glass-active;
+}

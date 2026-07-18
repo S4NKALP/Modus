@@ -10,91 +10,120 @@
 #  A hackable shell for Hyprland
 #  Installation Script for Arch Linux
 #
-#  Repository: https://github.com/S4NKALP/Modus --branch macos
+#  Repository: https://github.com/S4NKALP/Modus
 #  License: GPLv3
 
 set -e
 set -u
 set -o pipefail
 
+# CLI flags
+AUTO_YES=false
+DRY_RUN=false
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes)      AUTO_YES=true ;;
+        -n|--dry-run)  DRY_RUN=true ;;
+        -h|--help)
+            echo "Usage: install.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  -y, --yes       Skip all prompts"
+            echo "  -n, --dry-run   Show what would be installed without installing"
+            echo "  -h, --help      Show this help"
+            exit 0
+            ;;
+    esac
+done
+
 REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
+# Package definitions
 PACKAGES=(
-    python-fabric-git
+    uv
     fabric-cli-git
-    glace-git
+    uwsm
     cliphist
-    gnome-bluetooth-3.0
-    gobject-introspection
     slurp
-    ffmpeg
+    grim
+    swappy
+    wl-clipboard
+    wtype
+    libnotify
+    playerctl
+    matugen-bin
     hypridle
     hyprsunset
     hyprpicker
-    imagemagick
-    libnotify
-    matugen-bin
-    playerctl
-    python-gobject
-    python-pillow
-    python-setproctitle
-    python-toml
-    python-requests
-    python-numpy
-    python-pywayland
-    python-pyxdg
-    python-ijson
-    python-watchdog
-    python-pyotp
-    pyzbar
-    python-psutil
-    python-pydbus
-    python-thefuzz
-    python-pam
+    hyprshot
     gtk-session-lock
-    swww
+    awww
     apple-fonts
-    swappy
-    wl-clipboard
     webp-pixbuf-loader
-    wf-recorder
+    cinnamon-desktop
+    libmediaart
     acpi
     brightnessctl
     power-profiles-daemon
-    uwsm
-    cinnamon-desktop
+    ddcutil
+    at-spi2-core
+    networkmanager
+    network-manager-applet
+    blueman
+    pipewire
+    libpulse
+    gcc
+    make
+    pkgconf
+    meson
+    ninja
+    wayland-protocols
+    gobject-introspection
+    gtk-layer-shell
+    librsvg
+    libqalculate
+    appmenu-gtk-module
+    libdbusmenu-gtk3
+    libdbusmenu-qt5
+    pciutils
+    wf-recorder
+    ffmpeg
 )
 
-# Colors and formatting
+# Colors
 if [ -t 1 ]; then
     GREEN=$(tput setaf 2)
     YELLOW=$(tput setaf 3)
     RED=$(tput setaf 1)
     CYAN=$(tput setaf 6)
     BLUE=$(tput setaf 4)
+    MAGENTA=$(tput setaf 5)
     BOLD=$(tput bold)
     DIM=$(tput dim)
     RESET=$(tput sgr0)
 else
-    GREEN="" YELLOW="" RED="" CYAN="" BLUE="" BOLD="" DIM="" RESET=""
+    GREEN="" YELLOW="" RED="" CYAN="" BLUE="" MAGENTA="" BOLD="" DIM="" RESET=""
 fi
 
-# Status symbols
 ARROW="→"
 CHECK="✔"
 CROSS="✖"
 INFO="ℹ"
 WARN="⚠"
 
-# Progress tracking
-TOTAL_STEPS=7
-CURRENT_STEP=0
+# Helpers
+header() {
+    echo ""
+    echo -e "  ${BOLD}${CYAN}╔══════════════════════════════════════════════╗${RESET}"
+    echo -e "  ${BOLD}${CYAN}║${RESET}  ${BOLD}Modus Installer${RESET}  ${DIM}v2.0${RESET}                       ${BOLD}${CYAN}║${RESET}"
+    echo -e "  ${BOLD}${CYAN}╚══════════════════════════════════════════════╝${RESET}"
+    echo ""
+}
 
-# Function for progress indicator
-progress() {
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    echo -e "\n${BOLD}${BLUE}[${CURRENT_STEP}/${TOTAL_STEPS}]${RESET} ${BOLD}$1${RESET}"
+section() {
+    echo ""
+    echo -e "  ${BOLD}${MAGENTA}── $1 ──${RESET}"
 }
 
 step() {
@@ -110,11 +139,31 @@ warn() {
 }
 
 error() {
-    echo -e "\n${RED}${CROSS}${RESET} ${RED}${BOLD}ERROR:${RESET} ${RED}$1${RESET}\n" >&2
+    echo -e "  ${RED}${CROSS}${RESET} ${RED}$1${RESET}"
 }
 
 info() {
     echo -e "  ${BLUE}${INFO}${RESET} ${DIM}$1${RESET}"
+}
+
+divider() {
+    echo -e "  ${DIM}──────────────────────────────────────────────${RESET}"
+}
+
+confirm() {
+    local prompt="$1"
+    local default="${2:-n}"
+    local yn
+    if [ "$AUTO_YES" = true ]; then
+        return 0
+    fi
+    if [ "$default" = "y" ]; then
+        read -rp "  ${BOLD}${prompt} [Y/n]:${RESET} " yn
+        [[ ! "$yn" =~ ^[Nn]$ ]]
+    else
+        read -rp "  ${BOLD}${prompt} [y/N]:${RESET} " yn
+        [[ "$yn" =~ ^[Yy]$ ]]
+    fi
 }
 
 spinner() {
@@ -123,39 +172,40 @@ spinner() {
     local spin=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
     local i=0
 
-    while kill -0 $pid 2>/dev/null; do
-        printf "\r  ${CYAN}${spin[i]}${RESET} $message"
+    while kill -0 "$pid" 2>/dev/null; do
+        printf "\r  %b%s%b %s" "$CYAN" "${spin[i]}" "$RESET" "$message"
         i=$(((i + 1) % 10))
         sleep 0.1
     done
+    wait "$pid" 2>/dev/null
+    local rc=$?
     printf "\r"
+    if [ $rc -eq 0 ]; then
+        echo -e "  ${GREEN}${CHECK}${RESET} ${GREEN}${message}${RESET}"
+    else
+        echo -e "  ${RED}${CROSS}${RESET} ${RED}${message}${RESET}"
+    fi
+    return $rc
 }
 
-# Cleanup handler
+# Cleanup
 cleanup() {
     if [ -n "${SUDO_KEEPER_PID:-}" ]; then
-        kill $SUDO_KEEPER_PID 2>/dev/null || true
+        kill "$SUDO_KEEPER_PID" 2>/dev/null || true
     fi
 }
 trap cleanup EXIT INT TERM
 
-# Header
+# Banner
 clear
-echo -e "${BOLD}${CYAN}"
-cat << "EOF"
-  ███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗███████╗
-  ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██╔════╝
-  ██╔████╔██║██║   ██║██║  ██║██║   ██║███████╗
-  ██║╚██╔╝██║██║   ██║██║  ██║██║   ██║╚════██║
-  ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████║
-  ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝
-EOF
-echo -e "${RESET}"
-echo -e "${BOLD}  A hackable shell for Hyprland${RESET}"
-echo -e "${DIM}  Installation Script v1.0${RESET}\n"
+header
+
+echo -e "  ${BOLD}A hackable shell for Hyprland${RESET}"
+echo -e "  ${DIM}https://github.com/S4NKALP/Modus${RESET}"
+echo ""
 
 # Pre-flight checks
-progress "Pre-flight checks"
+section "Pre-flight checks"
 
 step "Checking operating system..."
 if ! grep -qi "arch" /etc/os-release; then
@@ -171,25 +221,41 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 success "Running as regular user"
 
-step "Checking system requirements..."
+step "Checking git..."
 if ! command -v git &>/dev/null; then
-    error "git is not installed. Please install it first: sudo pacman -S git"
+    error "git is not installed. Run: sudo pacman -S git"
     exit 1
 fi
-success "All requirements met"
+success "git found"
 
-# Sudo authentication
-progress "Requesting permissions"
+# Package list
+section "Packages"
 
-info "Some packages require root privileges for installation"
-echo ""
-if ! sudo -v; then
+if [ "$DRY_RUN" = true ]; then
+    echo ""
+    printf "  ${DIM}%s${RESET}\n" "${PACKAGES[@]}"
+    echo ""
+    info "Dry run — no packages will be installed"
+    exit 0
+fi
+
+info "Total: ${#PACKAGES[@]} packages"
+
+if ! confirm "Proceed with installation?"; then
+    warn "Cancelled"
+    exit 0
+fi
+
+# Sudo
+section "Permissions"
+
+info "Some packages require root privileges"
+if ! sudo -v 2>/dev/null; then
     error "Sudo authentication failed"
     exit 1
 fi
-success "Permissions granted"
+success "Sudo authenticated"
 
-# Keep sudo alive
 while true; do
     sudo -n true
     sleep 60
@@ -197,148 +263,213 @@ while true; do
 done 2>/dev/null &
 SUDO_KEEPER_PID=$!
 
-# Show package list
-progress "Package information"
+# AUR helper
+section "AUR helper"
 
-info "Total packages to install: ${BOLD}${#PACKAGES[@]}${RESET}"
-echo ""
-read -rp "  ${YELLOW}${INFO}${RESET} View full package list? (y/N): " view_packages
-if [[ "$view_packages" =~ ^[Yy]$ ]]; then
-    echo ""
-    printf "  ${DIM}• %s${RESET}\n" "${PACKAGES[@]}"
-    echo ""
-fi
-
-# Confirmation
-read -rp "  ${BOLD}Proceed with installation? (y/N):${RESET} " confirm
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    warn "Installation cancelled by user"
-    exit 0
-fi
-
-# AUR helper setup
-progress "Setting up AUR helper"
-
-aur_helper="yay"
+AUR=""
 if command -v paru &>/dev/null; then
-    aur_helper="paru"
-    success "Found paru"
+    AUR="paru"
+    success "Using paru"
 elif command -v yay &>/dev/null; then
-    success "Found yay"
+    AUR="yay"
+    success "Using yay"
 else
     step "Installing yay-bin..."
     tmpdir=$(mktemp -d)
     (
-        git clone --quiet --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin" 2>&1 | grep -v "Cloning into" || true
+        git clone --quiet --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin"
         cd "$tmpdir/yay-bin"
         makepkg -si --noconfirm >/dev/null 2>&1
     ) &
-    spinner $! "Building yay-bin..."
+    spinner $! "Building yay-bin"
     wait $! || {
         error "Failed to install yay-bin"
         rm -rf "$tmpdir"
         exit 1
     }
     rm -rf "$tmpdir"
-    success "yay-bin installed successfully"
+    AUR="yay"
+    success "yay-bin installed"
 fi
 
-# Repository setup
-progress "Setting up Modus repository"
+# Repository
+section "Repository"
 
 if [ -d "$INSTALL_DIR" ]; then
-    step "Updating existing repository..."
-    git -C "$INSTALL_DIR" pull --quiet 2>&1 | grep -v "Already up to date" || true
+    step "Pulling latest changes..."
+    git -C "$INSTALL_DIR" pull --quiet 2>/dev/null || true
     success "Repository updated"
 else
     step "Cloning repository..."
-    git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>&1 | grep -v "Cloning into" || true
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || true
     success "Repository cloned"
 fi
-info "Location: ${INSTALL_DIR}"
+info "${INSTALL_DIR}"
 
-# Package installation
-progress "Installing packages"
+# Install packages
+section "Installing packages"
 
-step "Syncing package databases..."
-$aur_helper -Syy --noconfirm >/dev/null 2>&1 || true
-success "Database synced"
+step "Syncing databases..."
+$AUR -Syy --noconfirm >/dev/null 2>&1 || true
+success "Databases synced"
 
-step "Installing required packages (this may take a while)..."
 installed=0
 failed=0
+failed_pkgs=()
+total=${#PACKAGES[@]}
+
 for pkg in "${PACKAGES[@]}"; do
-    if $aur_helper -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
+    if $AUR -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
         installed=$((installed + 1))
     else
         failed=$((failed + 1))
-        warn "Failed to install: $pkg"
+        failed_pkgs+=("$pkg")
     fi
-    printf "\r  ${CYAN}${ARROW}${RESET} Progress: ${installed}/${#PACKAGES[@]} packages"
+    pct=$((installed * 100 / total))
+    printf "\r  ${CYAN}${ARROW}${RESET} [%-50s] %3d%% (%d/%d)" "$(printf '#%.0s' $(seq 1 $((pct / 2))))" "$pct" "$installed" "$total"
 done
 echo ""
 
 if [ $failed -eq 0 ]; then
-    success "All packages installed successfully"
+    success "All ${installed} packages installed"
 else
-    warn "$failed package(s) failed to install"
+    warn "${failed} package(s) failed:"
+    for pkg in "${failed_pkgs[@]}"; do
+        echo -e "    ${RED}${CROSS}${RESET} ${pkg}"
+    done
 fi
 
-# Update check
-step "Checking for package updates..."
-outdated=$($aur_helper -Qu 2>/dev/null | awk '{print $1}' || true)
-to_update=()
-for pkg in "${PACKAGES[@]}"; do
-    if echo "$outdated" | grep -q "^$pkg\$"; then
-        to_update+=("$pkg")
+# Build native modules
+section "Building native modules"
+
+# Global Menu shim
+step "Compiling libmenu_button_shim.so..."
+SHIM_SRC="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.c"
+SHIM_OUT="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.so"
+if [ -f "$SHIM_SRC" ]; then
+    if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" "$(pkg-config --cflags --libs gtk+-3.0)" -ldl 2>/dev/null; then
+        success "libmenu_button_shim.so built"
+    else
+        warn "Failed to compile shim — global menu may not work"
     fi
-done
-
-if [ ${#to_update[@]} -gt 0 ]; then
-    step "Updating ${#to_update[@]} outdated package(s)..."
-    $aur_helper -S --noconfirm "${to_update[@]}" >/dev/null 2>&1 || true
-    success "Packages updated"
 else
-    success "All packages are up-to-date"
+    warn "Shim source not found — skipped"
 fi
 
-# Configuration
-# progress "Running configuration"
-# if [ -f "$INSTALL_DIR/config/config.py" ]; then
-#     step "Initializing Modus configuration..."
-#     if python "$INSTALL_DIR/config/config.py" 2>/dev/null; then
-#         success "Configuration completed"
-#     else
-#         warn "Configuration step failed or was skipped"
-#     fi
-# else
-#     info "No configuration file found, skipping"
-# fi
+# App Capture
+step "Compiling libappcapture.so..."
+if [ -d "$INSTALL_DIR/src/window/switcher/app-capture" ]; then
+    if (
+        cd "$INSTALL_DIR/src/window/switcher/app-capture"
+        meson setup builddir --wipe >/dev/null 2>&1 || meson setup builddir >/dev/null 2>&1
+        meson compile -C builddir >/dev/null 2>&1
+    ); then
+        success "libappcapture.so built"
+    else
+        warn "Failed to compile app-capture"
+    fi
+else
+    warn "App-capture source not found — skipped"
+fi
 
-# Hyprland configuration
-progress "Configuring Hyprland"
+# Hyprland config
+section "Hyprland configuration"
 
-HYPR_CONFIG="$HOME/.config/hypr/hyprland.conf"
-MODUS_CONF_LINE="source= ~/.config/Modus/config/hypr/modus.conf"
+HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
+MODUS_MODULE_LINE="dofile(\"$INSTALL_DIR/config/hypr/modus.lua\")"
 
 if [ -f "$HYPR_CONFIG" ]; then
-    step "Checking Hyprland configuration..."
-    if grep -qF "$MODUS_CONF_LINE" "$HYPR_CONFIG"; then
-        success "Modus configuration already sourced"
+    if grep -qF "$MODUS_MODULE_LINE" "$HYPR_CONFIG"; then
+        success "Modus module already in hyprland.lua"
     else
-        step "Adding Modus configuration to Hyprland..."
-        echo "" >> "$HYPR_CONFIG"
-        echo "# Modus configuration" >> "$HYPR_CONFIG"
-        echo "$MODUS_CONF_LINE" >> "$HYPR_CONFIG"
-        success "Modus configuration added to Hyprland"
+        step "Adding Modus module to hyprland.lua..."
+        {
+            echo ""
+            echo "-- Modus configuration"
+            echo "$MODUS_MODULE_LINE"
+        } >> "$HYPR_CONFIG"
+        success "Module added"
     fi
 else
-    warn "Hyprland config not found at $HYPR_CONFIG"
-    info "You may need to manually add: $MODUS_CONF_LINE"
+    warn "hyprland.lua not found at ${HYPR_CONFIG}"
+    info "Add manually: ${MODUS_MODULE_LINE}"
 fi
 
-# Launch Modus
-progress "Launching Modus"
+step "Symlinking hypridle.conf..."
+HYPR_DIR="$HOME/.config/hypr"
+HYPRIDLE_CONF="$INSTALL_DIR/config/hypr/hypridle.conf"
+HYPRIDLE_TARGET="$HYPR_DIR/hypridle.conf"
+mkdir -p "$HYPR_DIR"
+if [ -f "$HYPRIDLE_CONF" ]; then
+    ln -sf "$HYPRIDLE_CONF" "$HYPRIDLE_TARGET"
+    success "hypridle.conf symlinked"
+else
+    warn "hypridle.conf not found — skipped"
+fi
+
+# Environment
+section "Global environment"
+
+APP_CONF_DIR="$HOME/.config/environment.d"
+APP_CONF_FILE="$APP_CONF_DIR/appmenu.conf"
+
+step "Writing environment.d config..."
+mkdir -p "$APP_CONF_DIR"
+cat > "$APP_CONF_FILE" << 'EOF'
+GTK_MODULES=appmenu-gtk-module
+UBUNTU_MENUPROXY=1
+EOF
+success "environment.d/appmenu.conf written"
+
+PAM_FILE="$HOME/.pam_environment"
+step "Updating pam_environment..."
+for entry in "GTK_MODULES DEFAULT=appmenu-gtk-module" "UBUNTU_MENUPROXY DEFAULT=1"; do
+    var_name="${entry%% *}"
+    if ! grep -q "^${var_name} " "$PAM_FILE" 2>/dev/null; then
+        echo "$entry" >> "$PAM_FILE"
+    fi
+done
+success "pam_environment updated"
+
+# Matugen
+section "Matugen"
+
+MATUGEN_CONFIG="$HOME/.config/matugen/config.toml"
+
+MODUS_BLOCK='[templates.modus]
+input_path = "~/.config/Modus/config/matugen/templates/modus.css"
+output_path = "~/.config/Modus/src/styles/colors.css"
+post_hook = "fabric-cli exec modus '\''app.set_css()'\'' &"'
+
+HYPR_BLOCK='[templates.hyprland]
+input_path = "~/.config/Modus/config/matugen/templates/hyprland-colors.lua"
+output_path = "~/.config/Modus/config/matugen/colors.lua"'
+
+if [ -f "$MATUGEN_CONFIG" ]; then
+    if grep -qF "[templates.modus]" "$MATUGEN_CONFIG"; then
+        success "Modus template already configured"
+    else
+        step "Adding Modus template..."
+        echo "" >> "$MATUGEN_CONFIG"
+        echo "$MODUS_BLOCK" >> "$MATUGEN_CONFIG"
+        success "Modus template added"
+    fi
+
+    if grep -qF "[templates.hyprland]" "$MATUGEN_CONFIG"; then
+        success "Hyprland template already configured"
+    else
+        step "Adding Hyprland template..."
+        echo "" >> "$MATUGEN_CONFIG"
+        echo "$HYPR_BLOCK" >> "$MATUGEN_CONFIG"
+        success "Hyprland template added"
+    fi
+else
+    warn "matugen config not found at ${MATUGEN_CONFIG}"
+    info "Install matugen first, then re-run this script"
+fi
+
+# Launch
+section "Launch"
 
 step "Stopping existing instances..."
 if killall modus 2>/dev/null; then
@@ -349,28 +480,26 @@ else
 fi
 
 step "Starting Modus..."
-if uwsm app -- python "$INSTALL_DIR/main.py" >/dev/null 2>&1 & then
-    disown
-    sleep 1
-    if pgrep -f "python.*main.py" >/dev/null; then
-        success "Modus is now running"
-    else
-        warn "Modus may not have started correctly"
-    fi
+uwsm app -- uv run --project "$INSTALL_DIR" start >/dev/null 2>&1 &
+disown
+sleep 2
+if pgrep -x "modus" >/dev/null; then
+    success "Modus is running"
 else
-    error "Failed to start Modus"
-    exit 1
+    warn "Modus may not have started — check logs"
 fi
 
-# Completion
+# Summary
 echo ""
-echo -e "${GREEN}${BOLD}╔════════════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║                                        ║${RESET}"
-echo -e "${GREEN}${BOLD}║     Installation completed! 🎉         ║${RESET}"
-echo -e "${GREEN}${BOLD}║                                        ║${RESET}"
-echo -e "${GREEN}${BOLD}╚════════════════════════════════════════╝${RESET}"
+echo -e "  ${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
+echo -e "  ${GREEN}${BOLD}║${RESET}                                          ${GREEN}${BOLD}║${RESET}"
+echo -e "  ${GREEN}${BOLD}║${RESET}   ${GREEN}${BOLD}Installation complete!${RESET}                 ${GREEN}${BOLD}║${RESET}"
+echo -e "  ${GREEN}${BOLD}║${RESET}                                          ${GREEN}${BOLD}║${RESET}"
+echo -e "  ${GREEN}${BOLD}╚══════════════════════════════════════════╝${RESET}"
 echo ""
-info "Modus is running in the background"
-info "Config location: ${INSTALL_DIR}"
-info "Repository: ${REPO_URL}"
+divider
+info "Packages: ${GREEN}${installed}${RESET} installed${RED:+, ${failed} failed}"
+info "Location: ${INSTALL_DIR}"
+info "Config:   ${INSTALL_DIR}/config/"
+divider
 echo ""

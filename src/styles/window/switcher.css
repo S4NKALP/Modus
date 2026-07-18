@@ -1,0 +1,51 @@
+#app-switcher-container {
+    background-color: @glass-popup;
+    border-radius: apply(radius-xl);
+    padding: 16px 24px;
+    border: 1px solid @glass-border;
+}
+
+#app-switcher-view {
+    padding: 0px;
+}
+
+#app-switcher-button {
+    background-color: transparent;
+    border-radius: apply(radius-lg);
+    padding: 8px 10px;
+    transition: all apply(transition-fast) ease-out;
+}
+
+#app-switcher-button.hovered {
+    background-color: @glass-hover;
+}
+
+#app-switcher-button.selected {
+    background-color: @glass-selected;
+}
+
+#app-switcher-icon-box {
+    border-radius: apply(radius-md);
+    padding: 4px;
+}
+
+#app-switcher-item-label {
+    color: @glass-text;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: -2px;
+}
+
+#app-switcher-workspace-badge {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 0px 4px;
+    margin-bottom: 2px;
+    margin-right: 2px;
+}
+
+#app-switcher-workspace-badge-text {
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+}

@@ -1,0 +1,121 @@
+
+#pomodoro-popup {
+    background-color: @glass-card;
+    border-radius: apply(radius-md);
+    padding: 15px;
+    margin-right: 20px;
+    border: 1px solid @glass-border;
+}
+
+#pomodoro-container {
+    padding: 10px;
+    background-color: transparent;
+}
+
+#pomodoro-time {
+    font-size: 38px;
+    font-weight: 800;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+#pomodoro-cycle {
+    font-size: 13px;
+    font-weight: 500;
+    color: @glass-text-secondary;
+    font-family: "SF Pro Rounded";
+}
+
+#pomodoro-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: @glass-text;
+    font-family: "SF Pro Rounded";
+}
+
+/* Base progress bar color */
+#pomodoro-progress {
+    background-color: transparent;
+    color: alpha(@glass-accent, 0.3);
+    border-color: @glass-accent;
+}
+
+/* Short break color */
+#pomodoro-progress-short {
+    background-color: transparent;
+    color: alpha(@success, 0.3);
+    border-color: @success;
+}
+
+/* Long break color */
+#pomodoro-progress-long {
+    background-color: transparent;
+    color: alpha(@glass-error, 0.3);
+    border-color: @glass-error;
+}
+
+#pomodoro-phase-btn {
+    background-color: @glass-highlight-strong;
+    color: alpha(@theme_fg_color, 0.7);
+    border-radius: apply(radius-sm);
+    padding: 5px 14px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+#pomodoro-phase-btn:hover {
+    background-color: @glass-active;
+    color: @theme_fg_color;
+}
+
+#pomodoro-phase-btn.active {
+    background-color: @glass-accent;
+    color: white;
+}
+
+#pomodoro-start-btn {
+    background-color: @glass-accent;
+    color: white;
+    border-radius: apply(radius-sm);
+    padding: 6px 20px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#pomodoro-start-btn:hover {
+    background-color: alpha(@glass-accent, 0.8);
+}
+
+#pomodoro-reset-btn, #pomodoro-secondary-btn {
+    background-color: @glass-highlight-strong;
+    color: @theme_fg_color;
+    border-radius: apply(radius-sm);
+    padding: 6px 15px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+#pomodoro-reset-btn:hover, #pomodoro-secondary-btn:hover {
+    background-color: @glass-active;
+}
+
+#pomodoro-spin-box {
+    background-color: @glass-highlight-strong;
+    border-radius: apply(radius-sm);
+    padding: 2px;
+}
+
+#pomodoro-spin-btn {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 2px 4px;
+    min-height: 16px;
+    color: @theme_fg_color;
+    border-radius: apply(radius-sm);
+    font-size: 10px;
+}
+
+#pomodoro-spin-btn:hover {
+    background-color: @glass-active;
+}

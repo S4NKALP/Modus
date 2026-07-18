@@ -1,0 +1,24 @@
+#notif-close-button {
+  background-color: @glass-surface-1;
+  border-radius: apply(radius-lg);
+  padding: 4px;
+  transition: background-color apply(transition-fast);
+}
+
+#notif-close-button:hover,
+#notif-close-button:focus {
+  background-color: @glass-active;
+}
+
+#notif-close-button:active {
+  background-color: @glass-error;
+}
+
+#notif-close-label {
+  color: @glass-error;
+  font-size: 20px;
+}
+
+#notif-close-button:active #notif-close-label {
+  color: @glass-overlay-dark;
+}

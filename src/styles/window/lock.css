@@ -1,0 +1,109 @@
+#lockscreen-bg {
+  background-size: cover;
+}
+
+#lock-notch {
+    margin: 0 20px;
+}
+
+#lock-notch-stack {
+    background-color: #000000;
+    border-radius: 0 0 apply(radius-lg) apply(radius-lg);
+    min-width: 200px;
+    min-height: 34px;
+}
+
+#lock-notch-corner {
+    background-color: #000000;
+    border-radius: 0;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+#indicator-box {
+  margin-right: 10px;
+  margin-top: 4px;
+}
+
+#indicator-box #bt-button,
+#indicator-box #network-button,
+#indicator-box #battery-button {
+  background-color: transparent;
+}
+
+#indicator-box #bt-button *,
+#indicator-box #network-button *,
+#indicator-box #battery-button * {
+  color: @glass-text-secondary;
+}
+
+#indicator-box #bt-button:hover,
+#indicator-box #network-button:hover,
+#indicator-box #battery-button:hover {
+  background-color: transparent;
+}
+
+#indicator-box #bt-button:hover *,
+#indicator-box #network-button:hover *,
+#indicator-box #battery-button:hover * {
+  color: @glass-text-secondary;
+}
+#container-box {
+  min-height: 50px;
+  min-width: 250px;
+  transition: all 0.7s ease-in-out;
+}
+#password-entry {
+  background-color: @glass-surface-2;
+  border-radius: apply(radius-xl);
+  color: white;
+  min-width: 220px;
+  min-height: 40px;
+  padding-right: 5px;
+  padding-left: 5px;
+  font-size: apply(font-base);
+  font-weight: 500;
+  transition: all 0.7s ease-in-out;
+}
+#profile-box {
+  margin-bottom: 10px;
+}
+#username {
+  font-size: 21px;
+  font-weight: bold;
+  margin-top: 5px;
+  transition: all 0.7s ease-in-out;
+}
+#lock-date label {
+  background-color: transparent;
+  color: @glass-text-secondary;
+  border: none;
+  font-size: 30px;
+  margin-top: 80px;
+  font-weight: bold;
+}
+#lock-clock label {
+  background-color: transparent;
+  color: @glass-text-secondary;
+  border: none;
+  font-size: 120px;
+  margin-top: -20px;
+  font-weight: bold;
+}
+
+#face-icon image {
+  margin-bottom: 10px;
+  border-radius: apply(radius-full);
+}
+#face-icon {
+  padding-bottom: 10px;
+}
+
+#unlock-box {
+  margin-bottom: 40px;
+}
+#unlock-text {
+  font-size: 15px;
+  color: @glass-text-secondary;
+  font-weight: bold;
+}

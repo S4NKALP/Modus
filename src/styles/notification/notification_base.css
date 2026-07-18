@@ -1,0 +1,9 @@
+#notification {
+  padding: 10px;
+  background-color: @glass-popup;
+  border-radius: apply(radius-sm);
+  margin-top: 10px;
+  margin-right: 10px;
+  border: 1px solid @glass-border-soft;
+  /* margin: 5px; */
+}
