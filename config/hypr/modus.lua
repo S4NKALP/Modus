@@ -1,5 +1,4 @@
--- local modus = os.getenv("HOME") .. "/.config/Modus"
-local modus = os.getenv("HOME") .. "/Projects/dev/Modus"
+local modus = os.getenv("HOME") .. "/.config/Modus"
 local colors = dofile(modus .. "/config/hypr/colors.lua")
 local fabricSend = "fabric-cli exec modus"
 
