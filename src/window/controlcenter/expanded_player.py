@@ -1,6 +1,7 @@
+import os
 import weakref
 
-from fabric.utils import bulk_connect, logger
+from fabric.utils import GLib, bulk_connect, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -657,8 +658,6 @@ class PlayerBox(Box):
                 self.play_pause_icon.dynamic_file(icon_file)
             else:
                 # Fallback if play_pause_icon isn't available
-                import os
-
                 from utils.gtk_utils import get_relative_path
 
                 self.play_pause_button.get_child().set_from_file(
@@ -719,10 +718,7 @@ class PlayerBox(Box):
                     f"[expanded_player] self.player.seek_position(value) failed: {e}"
                 )
         if hasattr(self, "_seek_timeout") and self._seek_timeout:
-            from fabric.utils import GLib
-
             GLib.source_remove(self._seek_timeout)
-        from fabric.utils import GLib
 
         self._seek_timeout = GLib.timeout_add(1000, self._clear_seeking)
         return False
@@ -735,11 +731,7 @@ class PlayerBox(Box):
         self.position_label.set_label(self.length_str(int(value * 1_000_000)))
 
         if hasattr(self, "_debounce_seek") and self._debounce_seek:
-            from fabric.utils import GLib
-
             GLib.source_remove(self._debounce_seek)
-
-        from fabric.utils import GLib
 
         self._debounce_seek = GLib.timeout_add(100, self._do_seek, value)
         return False
