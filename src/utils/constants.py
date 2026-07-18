@@ -22,7 +22,7 @@ DEFAULT = {
     "date_time": True,
     "night_light_temperature": 4500,
     "custom_mods": True,
-    "keyboard_layouts": ["us", "np"],
+    "keyboard_layouts": ["us"],
     "switcher_live_preview": True,
     "switcher_live_preview_delay_ms": 200,
     "systray_ignore": ["blueman", "network"],
