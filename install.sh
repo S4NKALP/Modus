@@ -344,14 +344,40 @@ section "Building native modules"
 
 # Global Menu shim
 step "Compiling libmenu_button_shim.so..."
+
 SHIM_SRC="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.c"
 SHIM_OUT="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.so"
+
 if [ -f "$SHIM_SRC" ]; then
-    if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" "$(pkg-config --cflags --libs gtk+-3.0)" -ldl 2>/dev/null; then
-        success "libmenu_button_shim.so built"
+
+    if PKG_OUTPUT=$(pkg-config --cflags --libs gtk+-3.0 2>/dev/null); then
+        read -r -a PKG_FLAGS <<< "$PKG_OUTPUT"
+
+        if OUTPUT=$(gcc \
+            -shared \
+            -fPIC \
+            -O2 \
+            -o "$SHIM_OUT" \
+            "$SHIM_SRC" \
+            "${PKG_FLAGS[@]}" \
+            -ldl \
+            2>&1); then
+
+            success "libmenu_button_shim.so built"
+
+        else
+            warn "Failed to compile shim — global menu may not work"
+            echo
+            echo "──────────────── Compiler Output ────────────────"
+            echo "$OUTPUT"
+            echo "─────────────────────────────────────────────────"
+            echo
+        fi
+
     else
-        warn "Failed to compile shim — global menu may not work"
+        warn "pkg-config could not find gtk+-3.0"
     fi
+
 else
     warn "Shim source not found — skipped"
 fi
@@ -396,12 +422,25 @@ else
 fi
 
 step "Symlinking hypridle.conf..."
+
 HYPR_DIR="$HOME/.config/hypr"
 HYPRIDLE_CONF="$INSTALL_DIR/config/hypr/hypridle.conf"
 HYPRIDLE_TARGET="$HYPR_DIR/hypridle.conf"
+
 mkdir -p "$HYPR_DIR"
+
 if [ -f "$HYPRIDLE_CONF" ]; then
-    ln -sf "$HYPRIDLE_CONF" "$HYPRIDLE_TARGET"
+    # Backup existing file if it isn't already our symlink
+    if [ -e "$HYPRIDLE_TARGET" ] && [ ! -L "$HYPRIDLE_TARGET" ]; then
+        BACKUP="${HYPRIDLE_TARGET}.bak.$(date +%Y%m%d-%H%M%S)"
+        step "Backing up existing hypridle.conf..."
+        mv "$HYPRIDLE_TARGET" "$BACKUP"
+        success "Backup created: $BACKUP"
+    elif [ -L "$HYPRIDLE_TARGET" ]; then
+        info "Existing hypridle.conf is already a symlink"
+    fi
+
+    ln -sfn "$HYPRIDLE_CONF" "$HYPRIDLE_TARGET"
     success "hypridle.conf symlinked"
 else
     warn "hypridle.conf not found — skipped"
@@ -480,13 +519,17 @@ else
 fi
 
 step "Starting Modus..."
-uwsm app -- uv run --project "$INSTALL_DIR" start >/dev/null 2>&1 &
-disown
-sleep 2
-if pgrep -x "modus" >/dev/null; then
-    success "Modus is running"
+
+uv run python "$INSTALL_DIR/start.py" &
+MODUS_PID=$!
+
+sleep 3
+
+if kill -0 "$MODUS_PID" 2>/dev/null; then
+    success "Modus started (PID: $MODUS_PID)"
 else
-    warn "Modus may not have started — check logs"
+    warn "Modus exited during startup"
+    echo
 fi
 
 # Summary
