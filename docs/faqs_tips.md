@@ -73,6 +73,7 @@ Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
   | `Super + E` | Open emoji picker |
   | `Super + V` | Open clipboard history |
   | `Super + W` | Open wallpaper browser |
+  | `Alt + Shift + W` | Set random wallpaper |
 
 - **Deep Reload a Plugin**: After editing `config/plugins/hello.py`:
 
@@ -99,5 +100,9 @@ Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
   Filters to Modus messages only. Shows plugin discovery, load errors, and
   search crashes.
 
-- **Wayland Screencapture**: Toggle from panel or bind in Hyprland:
-  `bind = SUPER, S, exec, fabric-cli exec modus 'screencapture.toggle()'`
+- **Screencapture Shortcuts** (from `config/hypr/modus.lua`):
+
+  | Key | Action |
+  |-----|--------|
+  | `Super + Z` | Toggle screencapture |
+  | `Super + S` | Screenshot region |
