@@ -17,7 +17,7 @@ set -e
 set -u
 set -o pipefail
 
-# ── CLI flags ──────────────────────────────────────────────────────
+# CLI flags
 AUTO_YES=false
 DRY_RUN=false
 for arg in "$@"; do
@@ -39,7 +39,7 @@ done
 REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
-# ── Package definitions ────────────────────────────────────────────
+# Package definitions
 PACKAGES=(
     uv
     fabric-cli-git
@@ -91,7 +91,7 @@ PACKAGES=(
     ffmpeg
 )
 
-# ── Colors ─────────────────────────────────────────────────────────
+# Colors
 if [ -t 1 ]; then
     GREEN=$(tput setaf 2)
     YELLOW=$(tput setaf 3)
@@ -113,7 +113,7 @@ INFO="ℹ"
 WARN="⚠"
 BULLET="•"
 
-# ── Helpers ────────────────────────────────────────────────────────
+# Helpers
 header() {
     echo ""
     echo -e "  ${BOLD}${CYAN}╔══════════════════════════════════════════════╗${RESET}"
@@ -189,7 +189,7 @@ spinner() {
     return $rc
 }
 
-# ── Cleanup ────────────────────────────────────────────────────────
+# Cleanup
 cleanup() {
     if [ -n "${SUDO_KEEPER_PID:-}" ]; then
         kill "$SUDO_KEEPER_PID" 2>/dev/null || true
@@ -197,7 +197,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# ── Banner ─────────────────────────────────────────────────────────
+# Banner
 clear
 header
 
@@ -205,7 +205,7 @@ echo -e "  ${BOLD}A hackable shell for Hyprland${RESET}"
 echo -e "  ${DIM}https://github.com/S4NKALP/Modus${RESET}"
 echo ""
 
-# ── Pre-flight checks ─────────────────────────────────────────────
+# Pre-flight checks
 section "Pre-flight checks"
 
 step "Checking operating system..."
@@ -229,7 +229,7 @@ if ! command -v git &>/dev/null; then
 fi
 success "git found"
 
-# ── Package list ──────────────────────────────────────────────────
+# Package list
 section "Packages"
 
 if [ "$DRY_RUN" = true ]; then
@@ -247,7 +247,7 @@ if ! confirm "Proceed with installation?"; then
     exit 0
 fi
 
-# ── Sudo ───────────────────────────────────────────────────────────
+# Sudo
 section "Permissions"
 
 info "Some packages require root privileges"
@@ -264,7 +264,7 @@ while true; do
 done 2>/dev/null &
 SUDO_KEEPER_PID=$!
 
-# ── AUR helper ─────────────────────────────────────────────────────
+# AUR helper
 section "AUR helper"
 
 AUR=""
@@ -293,7 +293,7 @@ else
     success "yay-bin installed"
 fi
 
-# ── Repository ─────────────────────────────────────────────────────
+# Repository
 section "Repository"
 
 if [ -d "$INSTALL_DIR" ]; then
@@ -307,7 +307,7 @@ else
 fi
 info "${INSTALL_DIR}"
 
-# ── Install packages ──────────────────────────────────────────────
+# Install packages
 section "Installing packages"
 
 step "Syncing databases..."
@@ -340,7 +340,7 @@ else
     done
 fi
 
-# ── Build native modules ──────────────────────────────────────────
+# Build native modules
 section "Building native modules"
 
 # Global Menu shim
@@ -373,7 +373,7 @@ else
     warn "App-capture source not found — skipped"
 fi
 
-# ── Hyprland config ───────────────────────────────────────────────
+# Hyprland config
 section "Hyprland configuration"
 
 HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
@@ -408,7 +408,7 @@ else
     warn "hypridle.conf not found — skipped"
 fi
 
-# ── Environment ───────────────────────────────────────────────────
+# Environment
 section "Global environment"
 
 APP_CONF_DIR="$HOME/.config/environment.d"
@@ -432,7 +432,7 @@ for entry in "GTK_MODULES DEFAULT=appmenu-gtk-module" "UBUNTU_MENUPROXY DEFAULT=
 done
 success "pam_environment updated"
 
-# ── Matugen ────────────────────────────────────────────────────────
+# Matugen
 section "Matugen"
 
 MATUGEN_CONFIG="$HOME/.config/matugen/config.toml"
@@ -469,7 +469,7 @@ else
     info "Install matugen first, then re-run this script"
 fi
 
-# ── Launch ─────────────────────────────────────────────────────────
+# Launch
 section "Launch"
 
 step "Stopping existing instances..."
@@ -490,7 +490,7 @@ else
     warn "Modus may not have started — check logs"
 fi
 
-# ── Summary ────────────────────────────────────────────────────────
+# Summary
 echo ""
 echo -e "  ${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
 echo -e "  ${GREEN}${BOLD}║${RESET}                                          ${GREEN}${BOLD}║${RESET}"
