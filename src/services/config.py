@@ -32,7 +32,6 @@ class ConfigService:
         if getattr(self, "_initialized", False):
             return
 
-        self._initialized = True
         self._config: Any = {}
         self._reload_callbacks: List[
             Callable[[Dict[str, Any], Dict[str, Any]], None]
@@ -45,6 +44,7 @@ class ConfigService:
         self._load_config()
         self._last_notified_config = self._config.copy()
         self._setup_monitors()
+        self._initialized = True
 
     def get(self, key: str, default: Any = None) -> Any:
         return self._config.get(key, default)
@@ -73,6 +73,14 @@ class ConfigService:
     ) -> None:
         if callback not in self._reload_callbacks:
             self._reload_callbacks.append(callback)
+
+    def unregister_reload_callback(
+        self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
+    ) -> None:
+        try:
+            self._reload_callbacks.remove(callback)
+        except ValueError:
+            pass
 
     @staticmethod
     def _dict_to_toml(d: dict) -> Any:
@@ -201,3 +209,10 @@ def on_config_change(
 ) -> None:
     """Register a reload callback on the singleton service."""
     start_config_service().register_reload_callback(callback)
+
+
+def off_config_change(
+    callback: Callable[[Dict[str, Any], Dict[str, Any]], None],
+) -> None:
+    """Unregister a reload callback from the singleton service."""
+    start_config_service().unregister_reload_callback(callback)
