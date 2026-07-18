@@ -4,13 +4,14 @@ from typing import List, Literal
 
 import gi
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import Gio, bulk_connect, exec_shell_command_async, logger
+from fabric.utils import Gio, GLib, bulk_connect, exec_shell_command_async, logger
 
 try:
     gi.require_version("NM", "1.0")
     from gi.repository import NM
-except ValueError:
-    logger.error("Failed to start network manager")
+except (ValueError, GLib.Error, ImportError) as e:
+    logger.error(f"Failed to start network manager: {e}")
+    NM = None
 
 
 class Wifi(Service):
@@ -258,7 +259,7 @@ class Ethernet(Service):
         elif network == "activating":
             return "network-wired-acquiring-symbolic"
 
-        elif self._device.get_connectivity != NM.ConnectivityState.FULL:
+        elif self._device.get_connectivity() != NM.ConnectivityState.FULL:
             return "network-wired-no-route-symbolic"
 
         return "network-wired-disconnected-symbolic"
