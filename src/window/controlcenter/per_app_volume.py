@@ -65,7 +65,6 @@ class PerAppVolumeControl(Box):
         self._app_widgets = {}
         self._signal_connections = []
         self._destroyed = False
-        self._refresh_timer = None
 
         # Header with back button
         self.header = Box(
@@ -112,37 +111,8 @@ class PerAppVolumeControl(Box):
                 audio_service.connect("stream-removed", self._on_stream_changed)
             )
 
-        # Track last known app names to avoid unnecessary rebuilds
-        self._last_app_names = frozenset()
-
         # Initial population
         self._populate_apps()
-
-        self.connect("map", self._on_map)
-        self.connect("unmap", self._on_unmap)
-
-    def _auto_refresh(self):
-        """Auto-refresh the application list every 2 seconds"""
-        if self._destroyed:
-            self._refresh_timer = None
-            return False
-        if not audio_service:
-            return True
-        apps = audio_service.applications or []
-        current_names = frozenset(a.name or "" for a in apps)
-        if current_names != self._last_app_names:
-            self._last_app_names = current_names
-            self._populate_apps()
-        return True
-
-    def _on_map(self, *_):
-        if self._refresh_timer is None:
-            self._refresh_timer = GLib.timeout_add_seconds(2, self._auto_refresh)
-
-    def _on_unmap(self, *_):
-        if self._refresh_timer is not None:
-            GLib.source_remove(self._refresh_timer)
-            self._refresh_timer = None
 
     def _go_back(self, *_):
         """Return to main control center view"""
@@ -353,14 +323,6 @@ class PerAppVolumeControl(Box):
     def destroy(self):
         """Clean up resources"""
         self._destroyed = True
-
-        # Stop the auto-refresh timer
-        if self._refresh_timer is not None:
-            try:
-                GLib.source_remove(self._refresh_timer)
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
-            self._refresh_timer = None
 
         # Disconnect audio service signals
         if audio_service:
