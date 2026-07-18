@@ -6,6 +6,8 @@ from pathlib import Path
 
 from fabric.utils import exec_shell_command, logger
 
+from utils.functions import shell_split
+
 SHIM_SRC = Path(__file__).resolve().parent / "libmenu_button_shim.c"
 SHIM_SO = Path(__file__).resolve().parent / "libmenu_button_shim.so"
 
@@ -102,10 +104,18 @@ def get_compiled_shim() -> Path | None:
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
-        cmd = f"gcc -shared -fPIC -O2 -o {SHIM_SO} {SHIM_SRC} {gtk_cflags} -ldl"
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=15
-        )
+        cmd = [
+            "gcc",
+            "-shared",
+            "-fPIC",
+            "-O2",
+            "-o",
+            str(SHIM_SO),
+            str(SHIM_SRC),
+            *shell_split(gtk_cflags),
+            "-ldl",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         if result.returncode != 0:
             logger.warning(f"[GlobalMenu] Shim compilation failed:\n{result.stderr}")
             return None
