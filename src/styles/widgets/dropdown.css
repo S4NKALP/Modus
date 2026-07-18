@@ -21,13 +21,13 @@
 }
 
 #dropdown-option:hover {
-  color: @on-primary;
+  color: @glass-text;
   transition: all 20ms ease-in-out;
-  background-color: @glass-accent;
+  background-color: @glass-hover;
 }
 
 #dropdown-option:hover #dropdown-option-label {
-  color: @on-primary;
+  color: @glass-text;
 }
 
 #dropdown-option-label {
@@ -42,7 +42,7 @@
 }
 
 #dropdown-option:hover #dropdown-option-keybind {
-  color: @on-primary;
+  color: @glass-text;
 }
 
 #dropdown-option-keybind {

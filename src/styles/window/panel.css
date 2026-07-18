@@ -15,8 +15,8 @@
 #global-menu:hover,
 #global-menu.active,
 #workspaces>button:hover {
-    background-color: @glass-accent;
-    color: @on-primary;
+    background-color: @glass-hover;
+    color: @glass-text;
 }
 
 #panel-button,
@@ -60,11 +60,11 @@
 }
 
 #workspaces>button.active:hover {
-    background-color: @glass-accent;
+    background-color: @glass-hover;
 }
 
 #workspaces>button.active:hover label {
-    color: @on-primary;
+    color: @glass-text;
 }
 
 #workspaces>button.urgent {
@@ -83,7 +83,7 @@
 #global-menu:hover *,
 #global-menu.active *,
 #workspaces>button:hover * {
-    color: @on-primary;
+    color: @glass-text;
 
 }
 

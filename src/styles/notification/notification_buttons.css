@@ -77,8 +77,8 @@ menu.mac-context-menu {
 }
 
 .mac-context-menu menuitem:hover {
-  background-color: @glass-accent;
-  color: @glass-overlay-dark;
+  background-color: @glass-hover;
+  color: @glass-text;
 }
 
 .mac-header-pill {

@@ -31,7 +31,7 @@
 }
 
 #device-icon.connected {
-  background-color: @glass-accent;
+  background-color: @glass-active;
 }
 
 #toggle-button {
@@ -53,7 +53,7 @@
 }
 
 #toggle-button:checked {
-  background-color: @glass-accent;
+  background-color: @glass-active;
 }
 
 
@@ -123,13 +123,13 @@
   font-weight: bold;
 }
 .wifi-icon-box {
-  background-color: @glass-text-secondary;
+  background-color: @glass-hover;
   border-radius: apply(radius-full);
   padding: 2px;
 }
 
 .wifi-icon-box-connected {
-  background-color: @glass-accent;
+  background-color: @glass-active;
   border-radius: apply(radius-full);
   padding: 2px;
 }

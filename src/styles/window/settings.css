@@ -24,8 +24,8 @@
 }
 
 #settings-sidebar-button:hover {
-    background-color: @glass-accent;
-    color: @on-primary;
+    background-color: @glass-hover;
+    color: @glass-text;
 }
 
 #settings-sidebar-button Label {
@@ -34,16 +34,16 @@
 }
 
 #settings-sidebar-button.active {
-    background-color: @glass-accent;
+    background-color: @glass-hover;
 }
 
 #settings-sidebar-button.active Label {
-    color: @on-primary;
+    color: @glass-text;
 }
 
 #settings-sidebar-button:hover *,
 #settings-sidebar-button.active * {
-    color: @on-primary;
+    color: @glass-text;
 }
 
 #settings-content-wrapper {

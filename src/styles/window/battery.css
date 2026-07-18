@@ -137,11 +137,11 @@
 }
 
 #energy-mode-icon.connected {
-  background-color: @glass-accent;
-  color: @on-primary;
+  background-color: @glass-active;
+  color: @glass-text;
 }
 
 #game-mode-icon.connected {
-  background-color: @glass-accent;
-  color: @on-primary;
+  background-color: @glass-active;
+  color: @glass-text;
 }

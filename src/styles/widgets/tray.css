@@ -40,11 +40,11 @@ menu > menuitem:hover {
   transition: all 20ms ease-in-out;
   font-size: apply(font-md);
   border-radius: apply(radius-xs);
-  color: @on-primary;
-  background-color: @glass-accent;
+  color: @glass-text;
+  background-color: @glass-hover;
 }
 
 menu > menuitem:hover > label {
-  color: @on-primary;
+  color: @glass-text;
   font-weight: 400;
 }

@@ -38,8 +38,8 @@
 
 /* Interactive States */
 
-@define-color glass-hover alpha(@foreground, 0.08);
-@define-color glass-active alpha(@foreground, 0.14);
+@define-color glass-hover alpha(white, 0.10);
+@define-color glass-active alpha(white, 0.50);
 @define-color glass-selected alpha(@primary, 0.18);
 @define-color glass-focus alpha(@primary, 0.25);
 

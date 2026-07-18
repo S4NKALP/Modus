@@ -37,7 +37,17 @@
 }
 
 #wifi-connections #device-icon.connected {
-  background-color: @glass-accent;
+  background-color: @glass-active;
+  color: @glass-text;
+}
+
+/* Bluetooth-specific device icon styles */
+#bluetooth-connections #device-icon {
+  background-color: @glass-hover;
+}
+
+#bluetooth-connections #device-icon.connected {
+  background-color: @glass-active;
   color: @glass-text;
 }
 
