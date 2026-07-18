@@ -2,7 +2,7 @@ from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
 from fabric.utils import logger
 from fabric.widgets.box import Box
 
-from services.config import get_config, on_config_change
+from services.config import get_config, off_config_change, on_config_change
 from utils.functions import is_special_workspace_id
 from utils.gtk_utils import setup_cursor_hover
 
@@ -102,10 +102,7 @@ class WorkspaceIndicator(Box):
 
     def destroy(self):
         try:
-            from services.config import _config_handlers
-
-            if self._on_config_changed in _config_handlers:
-                _config_handlers.remove(self._on_config_changed)
+            off_config_change(self._on_config_changed)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
         if hasattr(self, "workspaces") and self.workspaces:
