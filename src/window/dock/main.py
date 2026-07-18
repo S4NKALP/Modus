@@ -5,7 +5,7 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.config import config, on_config_change
-from services.modus import check_occlusion
+from services.modus import check_occlusion, get_modus_service
 
 from .canvas import DockCanvas
 
@@ -60,7 +60,9 @@ class Dock(Window):
         self.dock_height = 100
         self.is_hovered = False
         self.hide_ticket = 0
-        self._startup_grace = True
+        self._occlusion_timer_id = None
+        self._hyprland_handlers = []
+        self._destroyed = False
 
         self.revealer.set_reveal_child(True)
         self.show_all()
@@ -68,13 +70,52 @@ class Dock(Window):
         on_config_change(self._on_config_change)
 
         if config().get("dock_auto_hide", True):
-            GLib.timeout_add(2000, self._start_occlusion_monitoring)
-        else:
-            self._occlusion_timer_id = None
+            self._setup_occlusion_signals()
+        self._check_occlusion_deferred()
 
-    def _start_occlusion_monitoring(self) -> bool:
-        self._startup_grace = False
-        self.setup_occlusion_monitoring()
+    def _setup_occlusion_signals(self) -> None:
+        """Subscribe to Hyprland events that affect occlusion."""
+        hyprland = get_modus_service()._hyprland_connection
+        events = [
+            "event::openwindow",
+            "event::closewindow",
+            "event::movewindow",
+            "event::workspace",
+            "event::fullscreen",
+        ]
+        for event in events:
+            handler_id = hyprland.connect(
+                event, lambda *_: self._check_occlusion_deferred()
+            )
+            self._hyprland_handlers.append(handler_id)
+
+    def _check_occlusion_deferred(self) -> None:
+        """Debounce occlusion check to avoid rapid successive checks."""
+        if hasattr(self, "_occlusion_check_pending") and self._occlusion_check_pending:
+            return
+        self._occlusion_check_pending = True
+        GLib.timeout_add(50, self._run_occlusion_check)
+
+    def _run_occlusion_check(self) -> bool:
+        """Run the actual occlusion check."""
+        self._occlusion_check_pending = False
+        if self._destroyed:
+            return False
+        try:
+            if not config().get("dock_auto_hide", True):
+                return False
+            is_occ = config().get("dock_always_occluded", False) or check_occlusion(
+                ("bottom", self.dock_height)
+            )
+            if is_occ and not self.is_hovered and self.revealer.get_reveal_child():
+                self.revealer.set_reveal_child(False)
+            elif not is_occ and not self.revealer.get_reveal_child():
+                self.revealer.set_reveal_child(True)
+            elif is_occ and self.is_hovered:
+                if not self.revealer.get_reveal_child():
+                    self.revealer.set_reveal_child(True)
+        except Exception as e:
+            logger.error(f"[Dock] Occlusion check error: {e}")
         return False
 
     def _on_config_change(self, new_config, old_config) -> None:
@@ -86,11 +127,9 @@ class Dock(Window):
 
         if config().has_changed("dock_auto_hide", old_config):
             if new_config.get("dock_auto_hide", True):
-                self.setup_occlusion_monitoring()
+                self._setup_occlusion_signals()
             else:
-                if hasattr(self, "_occlusion_timer_id") and self._occlusion_timer_id:
-                    GLib.source_remove(self._occlusion_timer_id)
-                    self._occlusion_timer_id = None
+                self._disconnect_occlusion_signals()
                 self.revealer.set_reveal_child(True)
 
         if config().has_changed("dock_hide_special_workspace_apps", old_config):
@@ -125,35 +164,19 @@ class Dock(Window):
 
         GLib.timeout_add(500, delayed_hide, ticket)
 
-    def setup_occlusion_monitoring(self) -> None:
-        if hasattr(self, "_occlusion_timer_id") and self._occlusion_timer_id:
-            GLib.source_remove(self._occlusion_timer_id)
-            self._occlusion_timer_id = None
-
-        def check_dock_occlusion() -> bool:
+    def _disconnect_occlusion_signals(self) -> None:
+        """Disconnect all Hyprland occlusion signal handlers."""
+        hyprland = get_modus_service()._hyprland_connection
+        for handler_id in self._hyprland_handlers:
             try:
-                if config().get("dock_always_occluded", False):
-                    is_occ = True
-                else:
-                    is_occ = check_occlusion(("bottom", self.dock_height))
-
-                if is_occ and not self.is_hovered and self.revealer.get_reveal_child():
-                    self.revealer.set_reveal_child(False)
-                elif not is_occ and not self.revealer.get_reveal_child():
-                    self.revealer.set_reveal_child(True)
-                elif is_occ and self.is_hovered:
-                    if not self.revealer.get_reveal_child():
-                        self.revealer.set_reveal_child(True)
+                hyprland.disconnect(handler_id)
             except Exception as e:
-                logger.error(f"[Dock] Occlusion check error: {e}")
-            return True
-
-        self._occlusion_timer_id = GLib.timeout_add(300, check_dock_occlusion)
+                logger.warning(f"[Dock] Error disconnecting occlusion handler: {e}")
+        self._hyprland_handlers.clear()
 
     def destroy(self) -> None:
-        if hasattr(self, "_occlusion_timer_id") and self._occlusion_timer_id:
-            GLib.source_remove(self._occlusion_timer_id)
-            self._occlusion_timer_id = None
+        self._destroyed = True
+        self._disconnect_occlusion_signals()
 
         if hasattr(self, "canvas") and self.canvas:
             self.canvas.destroy()
