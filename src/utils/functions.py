@@ -3,6 +3,8 @@ import html
 import json
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -284,8 +286,6 @@ def is_special_workspace(client: dict) -> bool:
 
 
 def escape_markup_text(text: str) -> str:
-    import re
-
     clean = re.sub(r"<[^>]+>", "", text)
     return html.escape(clean.replace("\n", " "))
 
@@ -304,7 +304,7 @@ def spawn_detached(args: list[str]) -> subprocess.Popen:
 
 
 def kill_process(process_name: str):
-    exec_shell_command_async(f"pkill {process_name}", lambda *_: None)
+    exec_shell_command_async(f"pkill {shlex.quote(process_name)}", lambda *_: None)
 
 
 def is_process_running(process_name: str) -> bool:
@@ -340,14 +340,11 @@ def find_process_pid(process_name: str, timeout: float | None = None) -> list[st
 
 # Binary lookup
 def find_binary(name: str) -> str | None:
-    try:
-        result = subprocess.run(["which", name], capture_output=True, text=True)
-        return result.stdout.strip() or None
-    except Exception as e:
-        logger.warning(
-            f"[functions] result = subprocess.run(['which', name], capture_output=T... failed: {e}"
-        )
-        return None
+    return shutil.which(name)
+
+
+def shell_split(s: str) -> list[str]:
+    return shlex.split(s)
 
 
 # General utilities
