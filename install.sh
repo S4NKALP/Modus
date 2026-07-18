@@ -20,19 +20,16 @@ set -o pipefail
 # ── CLI flags ──────────────────────────────────────────────────────
 AUTO_YES=false
 DRY_RUN=false
-MINIMAL=false
 for arg in "$@"; do
     case "$arg" in
         -y|--yes)      AUTO_YES=true ;;
         -n|--dry-run)  DRY_RUN=true ;;
-        -m|--minimal)  MINIMAL=true ;;
         -h|--help)
             echo "Usage: install.sh [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  -y, --yes       Skip all prompts"
             echo "  -n, --dry-run   Show what would be installed without installing"
-            echo "  -m, --minimal   Install only core packages"
             echo "  -h, --help      Show this help"
             exit 0
             ;;
@@ -43,13 +40,10 @@ REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
 # ── Package definitions ────────────────────────────────────────────
-CORE_PACKAGES=(
+PACKAGES=(
     uv
     fabric-cli-git
     uwsm
-)
-
-SHELL_PACKAGES=(
     cliphist
     slurp
     grim
@@ -59,44 +53,26 @@ SHELL_PACKAGES=(
     libnotify
     playerctl
     matugen-bin
-)
-
-HYPRLAND_PACKAGES=(
     hypridle
     hyprsunset
     hyprpicker
     hyprshot
     gtk-session-lock
-)
-
-UI_PACKAGES=(
     awww
     apple-fonts
     webp-pixbuf-loader
     cinnamon-desktop
     libmediaart
-)
-
-HARDWARE_PACKAGES=(
     acpi
     brightnessctl
     power-profiles-daemon
     ddcutil
     at-spi2-core
-)
-
-NETWORK_PACKAGES=(
     networkmanager
     network-manager-applet
     blueman
-)
-
-AUDIO_PACKAGES=(
     pipewire
     libpulse
-)
-
-BUILD_PACKAGES=(
     gcc
     make
     pkgconf
@@ -113,17 +89,6 @@ BUILD_PACKAGES=(
     pciutils
     wf-recorder
     ffmpeg
-)
-
-ALL_PACKAGES=(
-    "${CORE_PACKAGES[@]}"
-    "${SHELL_PACKAGES[@]}"
-    "${HYPRLAND_PACKAGES[@]}"
-    "${UI_PACKAGES[@]}"
-    "${HARDWARE_PACKAGES[@]}"
-    "${NETWORK_PACKAGES[@]}"
-    "${AUDIO_PACKAGES[@]}"
-    "${BUILD_PACKAGES[@]}"
 )
 
 # ── Colors ─────────────────────────────────────────────────────────
@@ -265,50 +230,23 @@ if ! command -v git &>/dev/null; then
 fi
 success "git found"
 
-# ── Install mode selection ────────────────────────────────────────
-section "Install mode"
+# ── Package list ──────────────────────────────────────────────────
+section "Packages"
 
-if [ "$MINIMAL" = true ]; then
-    PACKAGES=("${CORE_PACKAGES[@]}")
-    info "Minimal mode: ${#PACKAGES[@]} core packages only"
-elif [ "$AUTO_YES" = true ]; then
-    PACKAGES=("${ALL_PACKAGES[@]}")
-    info "Full install: ${#PACKAGES[@]} packages"
-else
-    echo -e "  ${BOLD}Choose install mode:${RESET}"
+if [ "$DRY_RUN" = true ]; then
     echo ""
-    echo -e "    ${GREEN}${ARROW}${RESET} ${BOLD}1) Full${RESET}     ${DIM}— everything (${#ALL_PACKAGES[@]} packages)${RESET}"
-    echo -e "    ${YELLOW}${ARROW}${RESET} ${BOLD}2) Minimal${RESET}  ${DIM}— core only (${#CORE_PACKAGES[@]} packages)${RESET}"
-    echo -e "    ${CYAN}${ARROW}${RESET} ${BOLD}3) Custom${RESET}   ${DIM}— pick categories${RESET}"
+    printf "  ${DIM}%s${RESET}\n" "${PACKAGES[@]}"
     echo ""
-    read -rp "  ${BOLD}Select [1-3]:${RESET} " mode_choice
-
-    case "$mode_choice" in
-        2)
-            PACKAGES=("${CORE_PACKAGES[@]}")
-            ;;
-        3)
-            PACKAGES=("${CORE_PACKAGES[@]}")
-            echo ""
-            for cat in "SHELL:Shell tools" "HYPRLAND:Hyprland extras" "UI:Desktop widgets" "HARDWARE:Hardware control" "NETWORK:Bluetooth & network" "AUDIO:Audio" "BUILD:Build tools"; do
-                local_name="${cat%%:*}"
-                local_label="${cat#*:}"
-                local_ref="${local_name}_PACKAGES[@]"
-                local_count="${#${!local_ref}}"
-                if confirm "${local_label} (${local_count} packages)?" "y"; then
-                    PACKAGES+=("${!local_ref}")
-                fi
-            done
-            ;;
-        *)
-            PACKAGES=("${ALL_PACKAGES[@]}")
-            ;;
-    esac
+    info "Dry run — no packages will be installed"
+    exit 0
 fi
 
-divider
-echo -e "  ${BOLD}Will install ${GREEN}${#PACKAGES[@]}${RESET}${BOLD} packages${RESET}"
-divider
+info "Total: ${#PACKAGES[@]} packages"
+
+if ! confirm "Proceed with installation?"; then
+    warn "Cancelled"
+    exit 0
+fi
 
 # ── Sudo ───────────────────────────────────────────────────────────
 section "Permissions"
@@ -326,28 +264,6 @@ while true; do
     kill -0 "$$" || exit
 done 2>/dev/null &
 SUDO_KEEPER_PID=$!
-
-# ── Show package list ─────────────────────────────────────────────
-section "Packages"
-
-if [ "$DRY_RUN" = true ]; then
-    echo ""
-    printf "  ${DIM}%s${RESET}\n" "${PACKAGES[@]}"
-    echo ""
-    info "Dry run — no packages will be installed"
-    exit 0
-fi
-
-if confirm "View full package list?"; then
-    echo ""
-    printf "  ${DIM}${BULLET} %s${RESET}\n" "${PACKAGES[@]}"
-    echo ""
-fi
-
-if ! confirm "Proceed with installation?"; then
-    warn "Cancelled"
-    exit 0
-fi
 
 # ── AUR helper ─────────────────────────────────────────────────────
 section "AUR helper"
