@@ -10,104 +10,156 @@
 #  A hackable shell for Hyprland
 #  Installation Script for Arch Linux
 #
-#  Repository: https://github.com/S4NKALP/Modus --branch macos
+#  Repository: https://github.com/S4NKALP/Modus
 #  License: GPLv3
 
 set -e
 set -u
 set -o pipefail
 
+# ── CLI flags ──────────────────────────────────────────────────────
 AUTO_YES=false
+DRY_RUN=false
+MINIMAL=false
 for arg in "$@"; do
     case "$arg" in
-        -y|--yes) AUTO_YES=true ;;
+        -y|--yes)      AUTO_YES=true ;;
+        -n|--dry-run)  DRY_RUN=true ;;
+        -m|--minimal)  MINIMAL=true ;;
+        -h|--help)
+            echo "Usage: install.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  -y, --yes       Skip all prompts"
+            echo "  -n, --dry-run   Show what would be installed without installing"
+            echo "  -m, --minimal   Install only core packages"
+            echo "  -h, --help      Show this help"
+            exit 0
+            ;;
     esac
 done
 
 REPO_URL="https://github.com/S4NKALP/Modus.git"
 INSTALL_DIR="$HOME/.config/Modus"
 
-PACKAGES=(
+# ── Package definitions ────────────────────────────────────────────
+CORE_PACKAGES=(
     uv
     fabric-cli-git
+    uwsm
+)
+
+SHELL_PACKAGES=(
     cliphist
-    gnome-bluetooth-3.0
     slurp
-    ffmpeg
+    grim
+    swappy
+    wl-clipboard
+    wtype
+    libnotify
+    playerctl
+    matugen-bin
+)
+
+HYPRLAND_PACKAGES=(
     hypridle
     hyprsunset
     hyprpicker
     hyprshot
-    grim
-    libnotify
-    matugen-bin
-    playerctl
     gtk-session-lock
+)
+
+UI_PACKAGES=(
     awww
     apple-fonts
-    swappy
-    wl-clipboard
     webp-pixbuf-loader
-    wf-recorder
+    cinnamon-desktop
+    libmediaart
+)
+
+HARDWARE_PACKAGES=(
     acpi
     brightnessctl
     power-profiles-daemon
-    uwsm
-    cinnamon-desktop
     ddcutil
     at-spi2-core
-    gcc
-    make
-    pkgconf
-    appmenu-gtk-module
-    libdbusmenu-gtk3
-    libdbusmenu-qt5
-    meson
-    ninja
-    wayland-protocols
-    libmediaart
+)
+
+NETWORK_PACKAGES=(
     networkmanager
     network-manager-applet
     blueman
-    libqalculate
-    wtype
-    pipewire
-    libpulse
-    pciutils
-    gtk-layer-shell
-    librsvg
-    gobject-introspection
 )
 
-# Colors and formatting
+AUDIO_PACKAGES=(
+    pipewire
+    libpulse
+)
+
+BUILD_PACKAGES=(
+    gcc
+    make
+    pkgconf
+    meson
+    ninja
+    wayland-protocols
+    gobject-introspection
+    gtk-layer-shell
+    librsvg
+    libqalculate
+    appmenu-gtk-module
+    libdbusmenu-gtk3
+    libdbusmenu-qt5
+    pciutils
+    wf-recorder
+    ffmpeg
+)
+
+ALL_PACKAGES=(
+    "${CORE_PACKAGES[@]}"
+    "${SHELL_PACKAGES[@]}"
+    "${HYPRLAND_PACKAGES[@]}"
+    "${UI_PACKAGES[@]}"
+    "${HARDWARE_PACKAGES[@]}"
+    "${NETWORK_PACKAGES[@]}"
+    "${AUDIO_PACKAGES[@]}"
+    "${BUILD_PACKAGES[@]}"
+)
+
+# ── Colors ─────────────────────────────────────────────────────────
 if [ -t 1 ]; then
     GREEN=$(tput setaf 2)
     YELLOW=$(tput setaf 3)
     RED=$(tput setaf 1)
     CYAN=$(tput setaf 6)
     BLUE=$(tput setaf 4)
+    MAGENTA=$(tput setaf 5)
     BOLD=$(tput bold)
     DIM=$(tput dim)
     RESET=$(tput sgr0)
 else
-    GREEN="" YELLOW="" RED="" CYAN="" BLUE="" BOLD="" DIM="" RESET=""
+    GREEN="" YELLOW="" RED="" CYAN="" BLUE="" MAGENTA="" BOLD="" DIM="" RESET=""
 fi
 
-# Status symbols
 ARROW="→"
 CHECK="✔"
 CROSS="✖"
 INFO="ℹ"
 WARN="⚠"
+BULLET="•"
 
-# Progress tracking
-TOTAL_STEPS=12
-CURRENT_STEP=0
+# ── Helpers ────────────────────────────────────────────────────────
+header() {
+    echo ""
+    echo -e "  ${BOLD}${CYAN}╔══════════════════════════════════════════════╗${RESET}"
+    echo -e "  ${BOLD}${CYAN}║${RESET}  ${BOLD}Modus Installer${RESET}  ${DIM}v2.0${RESET}                       ${BOLD}${CYAN}║${RESET}"
+    echo -e "  ${BOLD}${CYAN}╚══════════════════════════════════════════════╝${RESET}"
+    echo ""
+}
 
-# Function for progress indicator
-progress() {
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    echo -e "\n${BOLD}${BLUE}[${CURRENT_STEP}/${TOTAL_STEPS}]${RESET} ${BOLD}$1${RESET}"
+section() {
+    echo ""
+    echo -e "  ${BOLD}${MAGENTA}── $1 ──${RESET}"
 }
 
 step() {
@@ -123,11 +175,31 @@ warn() {
 }
 
 error() {
-    echo -e "\n${RED}${CROSS}${RESET} ${RED}${BOLD}ERROR:${RESET} ${RED}$1${RESET}\n" >&2
+    echo -e "  ${RED}${CROSS}${RESET} ${RED}$1${RESET}"
 }
 
 info() {
     echo -e "  ${BLUE}${INFO}${RESET} ${DIM}$1${RESET}"
+}
+
+divider() {
+    echo -e "  ${DIM}──────────────────────────────────────────────${RESET}"
+}
+
+confirm() {
+    local prompt="$1"
+    local default="${2:-n}"
+    local yn
+    if [ "$AUTO_YES" = true ]; then
+        return 0
+    fi
+    if [ "$default" = "y" ]; then
+        read -rp "  ${BOLD}${prompt} [Y/n]:${RESET} " yn
+        [[ ! "$yn" =~ ^[Nn]$ ]]
+    else
+        read -rp "  ${BOLD}${prompt} [y/N]:${RESET} " yn
+        [[ "$yn" =~ ^[Yy]$ ]]
+    fi
 }
 
 spinner() {
@@ -141,34 +213,36 @@ spinner() {
         i=$(((i + 1) % 10))
         sleep 0.1
     done
-    printf "\r"
+    printf "\r  %b%s%b %s\n" "$GREEN" "${CHECK}" "$RESET" "$message"
 }
 
-# Cleanup handler
+print_packages() {
+    local -n pkgs=$1
+    local count=${#pkgs[@]}
+    echo -e "  ${DIM}${BULLET}${RESET} ${BOLD}$2${RESET} ${DIM}(${count} packages)${RESET}"
+    for pkg in "${pkgs[@]}"; do
+        echo -e "    ${DIM}${BULLET}${RESET} ${pkg}"
+    done
+}
+
+# ── Cleanup ────────────────────────────────────────────────────────
 cleanup() {
     if [ -n "${SUDO_KEEPER_PID:-}" ]; then
-        kill $SUDO_KEEPER_PID 2>/dev/null || true
+        kill "$SUDO_KEEPER_PID" 2>/dev/null || true
     fi
 }
 trap cleanup EXIT INT TERM
 
-# Header
+# ── Banner ─────────────────────────────────────────────────────────
 clear
-echo -e "${BOLD}${CYAN}"
-cat << "EOF"
-  ███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗███████╗
-  ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██╔════╝
-  ██╔████╔██║██║   ██║██║  ██║██║   ██║███████╗
-  ██║╚██╔╝██║██║   ██║██║  ██║██║   ██║╚════██║
-  ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████║
-  ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝
-EOF
-echo -e "${RESET}"
-echo -e "${BOLD}  A hackable shell for Hyprland${RESET}"
-echo -e "${DIM}  Installation Script v1.0${RESET}\n"
+header
 
-# Pre-flight checks
-progress "Pre-flight checks"
+echo -e "  ${BOLD}A hackable shell for Hyprland${RESET}"
+echo -e "  ${DIM}https://github.com/S4NKALP/Modus${RESET}"
+echo ""
+
+# ── Pre-flight checks ─────────────────────────────────────────────
+section "Pre-flight checks"
 
 step "Checking operating system..."
 if ! grep -qi "arch" /etc/os-release; then
@@ -184,25 +258,68 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 success "Running as regular user"
 
-step "Checking system requirements..."
+step "Checking git..."
 if ! command -v git &>/dev/null; then
-    error "git is not installed. Please install it first: sudo pacman -S git"
+    error "git is not installed. Run: sudo pacman -S git"
     exit 1
 fi
-success "All requirements met"
+success "git found"
 
-# Sudo authentication
-progress "Requesting permissions"
+# ── Install mode selection ────────────────────────────────────────
+section "Install mode"
 
-info "Some packages require root privileges for installation"
-echo ""
-if ! sudo -v; then
+if [ "$MINIMAL" = true ]; then
+    PACKAGES=("${CORE_PACKAGES[@]}")
+    info "Minimal mode: ${#PACKAGES[@]} core packages only"
+elif [ "$AUTO_YES" = true ]; then
+    PACKAGES=("${ALL_PACKAGES[@]}")
+    info "Full install: ${#PACKAGES[@]} packages"
+else
+    echo -e "  ${BOLD}Choose install mode:${RESET}"
+    echo ""
+    echo -e "    ${GREEN}${ARROW}${RESET} ${BOLD}1) Full${RESET}     ${DIM}— everything (${#ALL_PACKAGES[@]} packages)${RESET}"
+    echo -e "    ${YELLOW}${ARROW}${RESET} ${BOLD}2) Minimal${RESET}  ${DIM}— core only (${#CORE_PACKAGES[@]} packages)${RESET}"
+    echo -e "    ${CYAN}${ARROW}${RESET} ${BOLD}3) Custom${RESET}   ${DIM}— pick categories${RESET}"
+    echo ""
+    read -rp "  ${BOLD}Select [1-3]:${RESET} " mode_choice
+
+    case "$mode_choice" in
+        2)
+            PACKAGES=("${CORE_PACKAGES[@]}")
+            ;;
+        3)
+            PACKAGES=("${CORE_PACKAGES[@]}")
+            echo ""
+            for cat in "SHELL:Shell tools" "HYPRLAND:Hyprland extras" "UI:Desktop widgets" "HARDWARE:Hardware control" "NETWORK:Bluetooth & network" "AUDIO:Audio" "BUILD:Build tools"; do
+                local_name="${cat%%:*}"
+                local_label="${cat#*:}"
+                local_ref="${local_name}_PACKAGES[@]"
+                local_count="${#${!local_ref}}"
+                if confirm "${local_label} (${local_count} packages)?" "y"; then
+                    PACKAGES+=("${!local_ref}")
+                fi
+            done
+            ;;
+        *)
+            PACKAGES=("${ALL_PACKAGES[@]}")
+            ;;
+    esac
+fi
+
+divider
+echo -e "  ${BOLD}Will install ${GREEN}${#PACKAGES[@]}${RESET}${BOLD} packages${RESET}"
+divider
+
+# ── Sudo ───────────────────────────────────────────────────────────
+section "Permissions"
+
+info "Some packages require root privileges"
+if ! sudo -v 2>/dev/null; then
     error "Sudo authentication failed"
     exit 1
 fi
-success "Permissions granted"
+success "Sudo authenticated"
 
-# Keep sudo alive
 while true; do
     sudo -n true
     sleep 60
@@ -210,65 +327,62 @@ while true; do
 done 2>/dev/null &
 SUDO_KEEPER_PID=$!
 
-# Show package list
-progress "Package information"
+# ── Show package list ─────────────────────────────────────────────
+section "Packages"
 
-info "Total packages to install: ${BOLD}${#PACKAGES[@]}${RESET}"
-echo ""
-if [ "$AUTO_YES" = false ]; then
-    read -rp "  ${YELLOW}${INFO}${RESET} View full package list? (y/N): " view_packages
-else
-    view_packages="n"
-fi
-if [[ "$view_packages" =~ ^[Yy]$ ]]; then
+if [ "$DRY_RUN" = true ]; then
     echo ""
-    printf "  ${DIM}• %s${RESET}\n" "${PACKAGES[@]}"
+    printf "  ${DIM}%s${RESET}\n" "${PACKAGES[@]}"
     echo ""
-fi
-
-# Confirmation
-if [ "$AUTO_YES" = false ]; then
-    read -rp "  ${BOLD}Proceed with installation? (y/N):${RESET} " confirm
-else
-    confirm="y"
-fi
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    warn "Installation cancelled by user"
+    info "Dry run — no packages will be installed"
     exit 0
 fi
 
-# AUR helper setup
-progress "Setting up AUR helper"
+if confirm "View full package list?"; then
+    echo ""
+    printf "  ${DIM}${BULLET} %s${RESET}\n" "${PACKAGES[@]}"
+    echo ""
+fi
 
-aur_helper="yay"
+if ! confirm "Proceed with installation?"; then
+    warn "Cancelled"
+    exit 0
+fi
+
+# ── AUR helper ─────────────────────────────────────────────────────
+section "AUR helper"
+
+AUR=""
 if command -v paru &>/dev/null; then
-    aur_helper="paru"
-    success "Found paru"
+    AUR="paru"
+    success "Using paru"
 elif command -v yay &>/dev/null; then
-    success "Found yay"
+    AUR="yay"
+    success "Using yay"
 else
     step "Installing yay-bin..."
     tmpdir=$(mktemp -d)
     (
-        git clone --quiet --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin" 2>/dev/null || true
+        git clone --quiet --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin"
         cd "$tmpdir/yay-bin"
         makepkg -si --noconfirm >/dev/null 2>&1
     ) &
-    spinner $! "Building yay-bin..."
+    spinner $! "Building yay-bin"
     wait $! || {
         error "Failed to install yay-bin"
         rm -rf "$tmpdir"
         exit 1
     }
     rm -rf "$tmpdir"
-    success "yay-bin installed successfully"
+    AUR="yay"
+    success "yay-bin installed"
 fi
 
-# Repository setup
-progress "Setting up Modus repository"
+# ── Repository ─────────────────────────────────────────────────────
+section "Repository"
 
 if [ -d "$INSTALL_DIR" ]; then
-    step "Updating existing repository..."
+    step "Pulling latest changes..."
     git -C "$INSTALL_DIR" pull --quiet 2>/dev/null || true
     success "Repository updated"
 else
@@ -276,70 +390,59 @@ else
     git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || true
     success "Repository cloned"
 fi
-info "Location: ${INSTALL_DIR}"
+info "${INSTALL_DIR}"
 
-# Package installation
-progress "Installing packages"
+# ── Install packages ──────────────────────────────────────────────
+section "Installing packages"
 
-step "Syncing package databases..."
-$aur_helper -Syy --noconfirm >/dev/null 2>&1 || true
-success "Database synced"
+step "Syncing databases..."
+$AUR -Syy --noconfirm >/dev/null 2>&1 || true
+success "Databases synced"
 
-step "Installing required packages (this may take a while)..."
 installed=0
 failed=0
+failed_pkgs=()
+total=${#PACKAGES[@]}
+
 for pkg in "${PACKAGES[@]}"; do
-    if $aur_helper -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
+    if $AUR -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
         installed=$((installed + 1))
     else
         failed=$((failed + 1))
-        warn "Failed to install: $pkg"
+        failed_pkgs+=("$pkg")
     fi
-    printf "\r  %b%s%b Progress: %s/%s packages" "$CYAN" "$ARROW" "$RESET" "$installed" "${#PACKAGES[@]}"
+    pct=$((installed * 100 / total))
+    printf "\r  ${CYAN}${ARROW}${RESET} [%-50s] %3d%% (%d/%d)" "$(printf '#%.0s' $(seq 1 $((pct / 2))))" "$pct" "$installed" "$total"
 done
 echo ""
 
 if [ $failed -eq 0 ]; then
-    success "All packages installed successfully"
+    success "All ${installed} packages installed"
 else
-    warn "$failed package(s) failed to install"
+    warn "${failed} package(s) failed:"
+    for pkg in "${failed_pkgs[@]}"; do
+        echo -e "    ${RED}${CROSS}${RESET} ${pkg}"
+    done
 fi
 
-# Update check
-step "Checking for package updates..."
-outdated=$($aur_helper -Qu 2>/dev/null | awk '{print $1}' || true)
-to_update=()
-for pkg in "${PACKAGES[@]}"; do
-    if echo "$outdated" | grep -q "^$pkg\$"; then
-        to_update+=("$pkg")
-    fi
-done
+# ── Build native modules ──────────────────────────────────────────
+section "Building native modules"
 
-if [ ${#to_update[@]} -gt 0 ]; then
-    step "Updating ${#to_update[@]} outdated package(s)..."
-    $aur_helper -S --noconfirm "${to_update[@]}" >/dev/null 2>&1 || true
-    success "Packages updated"
-else
-    success "All packages are up-to-date"
-fi
-
-progress "Building Global Menu shim"
-
+# Global Menu shim
 step "Compiling libmenu_button_shim.so..."
 SHIM_SRC="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.c"
 SHIM_OUT="$INSTALL_DIR/src/window/globalmenu/libmenu_button_shim.so"
 if [ -f "$SHIM_SRC" ]; then
     if gcc -shared -fPIC -O2 -o "$SHIM_OUT" "$SHIM_SRC" "$(pkg-config --cflags --libs gtk+-3.0)" -ldl 2>/dev/null; then
-        success "libmenu_button_shim.so built successfully"
+        success "libmenu_button_shim.so built"
     else
-        warn "Failed to compile libmenu_button_shim.so - global menu may not work"
+        warn "Failed to compile shim — global menu may not work"
     fi
 else
-    warn "libmenu_button_shim.c not found - skipping shim build"
+    warn "Shim source not found — skipped"
 fi
 
-progress "Building App Capture module"
-
+# App Capture
 step "Compiling libappcapture.so..."
 if [ -d "$INSTALL_DIR/src/window/switcher/app-capture" ]; then
     if (
@@ -347,38 +450,35 @@ if [ -d "$INSTALL_DIR/src/window/switcher/app-capture" ]; then
         meson setup builddir --wipe >/dev/null 2>&1 || meson setup builddir >/dev/null 2>&1
         meson compile -C builddir >/dev/null 2>&1
     ); then
-        success "libappcapture.so built successfully"
+        success "libappcapture.so built"
     else
-        warn "Failed to compile App Capture module"
+        warn "Failed to compile app-capture"
     fi
 else
-    warn "App Capture module directory not found"
+    warn "App-capture source not found — skipped"
 fi
 
-progress "Configuring Hyprland"
+# ── Hyprland config ───────────────────────────────────────────────
+section "Hyprland configuration"
 
 HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
 MODUS_MODULE_LINE="dofile(\"$INSTALL_DIR/config/hypr/modus.lua\")"
 
 if [ -f "$HYPR_CONFIG" ]; then
-    step "Checking Hyprland Lua configuration..."
-
     if grep -qF "$MODUS_MODULE_LINE" "$HYPR_CONFIG"; then
-        success "Modus module already loaded"
+        success "Modus module already in hyprland.lua"
     else
-        step "Adding Modus module to Hyprland Lua config..."
-
+        step "Adding Modus module to hyprland.lua..."
         {
             echo ""
             echo "-- Modus configuration"
             echo "$MODUS_MODULE_LINE"
         } >> "$HYPR_CONFIG"
-
-        success "Modus configuration added"
+        success "Module added"
     fi
 else
-    warn "Hyprland Lua config not found at $HYPR_CONFIG"
-    info "You may need to manually add: $MODUS_MODULE_LINE"
+    warn "hyprland.lua not found at ${HYPR_CONFIG}"
+    info "Add manually: ${MODUS_MODULE_LINE}"
 fi
 
 step "Symlinking hypridle.conf..."
@@ -387,16 +487,14 @@ HYPRIDLE_CONF="$INSTALL_DIR/config/hypr/hypridle.conf"
 HYPRIDLE_TARGET="$HYPR_DIR/hypridle.conf"
 mkdir -p "$HYPR_DIR"
 if [ -f "$HYPRIDLE_CONF" ]; then
-    if [ -L "$HYPRIDLE_TARGET" ]; then
-        rm "$HYPRIDLE_TARGET"
-    fi
     ln -sf "$HYPRIDLE_CONF" "$HYPRIDLE_TARGET"
     success "hypridle.conf symlinked"
 else
-    warn "hypridle.conf not found at $HYPRIDLE_CONF"
+    warn "hypridle.conf not found — skipped"
 fi
 
-progress "Configuring global environment"
+# ── Environment ───────────────────────────────────────────────────
+section "Global environment"
 
 APP_CONF_DIR="$HOME/.config/environment.d"
 APP_CONF_FILE="$APP_CONF_DIR/appmenu.conf"
@@ -407,7 +505,7 @@ cat > "$APP_CONF_FILE" << 'EOF'
 GTK_MODULES=appmenu-gtk-module
 UBUNTU_MENUPROXY=1
 EOF
-success "Environment config written to $APP_CONF_FILE"
+success "environment.d/appmenu.conf written"
 
 PAM_FILE="$HOME/.pam_environment"
 step "Updating pam_environment..."
@@ -417,9 +515,11 @@ for entry in "GTK_MODULES DEFAULT=appmenu-gtk-module" "UBUNTU_MENUPROXY DEFAULT=
         echo "$entry" >> "$PAM_FILE"
     fi
 done
-success ".pam_environment updated"
+success "pam_environment updated"
 
-progress "Configuring Matugen"
+# ── Matugen ────────────────────────────────────────────────────────
+section "Matugen"
+
 MATUGEN_CONFIG="$HOME/.config/matugen/config.toml"
 
 MODUS_BLOCK='[templates.modus]
@@ -432,34 +532,30 @@ input_path = "~/.config/Modus/config/matugen/templates/hyprland-colors.lua"
 output_path = "~/.config/Modus/config/matugen/colors.lua"'
 
 if [ -f "$MATUGEN_CONFIG" ]; then
-    step "Checking matugen config..."
-
-    # ---- Modus1 ----
     if grep -qF "[templates.modus]" "$MATUGEN_CONFIG"; then
-        success "modus1 template already exists"
+        success "Modus template already configured"
     else
-        step "Adding modus1 template..."
+        step "Adding Modus template..."
         echo "" >> "$MATUGEN_CONFIG"
         echo "$MODUS_BLOCK" >> "$MATUGEN_CONFIG"
-        success "modus template added"
+        success "Modus template added"
     fi
 
-    # ---- Hyprland ----
     if grep -qF "[templates.hyprland]" "$MATUGEN_CONFIG"; then
-        success "hyprland template already exists"
+        success "Hyprland template already configured"
     else
-        step "Adding hyprland template..."
+        step "Adding Hyprland template..."
         echo "" >> "$MATUGEN_CONFIG"
         echo "$HYPR_BLOCK" >> "$MATUGEN_CONFIG"
-        success "hyprland template added"
+        success "Hyprland template added"
     fi
-
 else
-    warn "matugen config not found at $MATUGEN_CONFIG"
-    info "Create it first or install matugen"
+    warn "matugen config not found at ${MATUGEN_CONFIG}"
+    info "Install matugen first, then re-run this script"
 fi
 
-progress "Launching Modus"
+# ── Launch ─────────────────────────────────────────────────────────
+section "Launch"
 
 step "Stopping existing instances..."
 if killall modus 2>/dev/null; then
@@ -474,24 +570,26 @@ if uwsm app -- uv run --project "$INSTALL_DIR" start >/dev/null 2>&1 & then
     disown
     sleep 2
     if pgrep -x "modus" >/dev/null; then
-        success "Modus is now running"
+        success "Modus is running"
     else
-        warn "Modus may not have started correctly"
+        warn "Modus may not have started — check logs"
     fi
 else
     error "Failed to start Modus"
     exit 1
 fi
 
-# Completion
+# ── Summary ────────────────────────────────────────────────────────
 echo ""
-echo -e "${GREEN}${BOLD}╔════════════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║                                        ║${RESET}"
-echo -e "${GREEN}${BOLD}║     Installation completed!            ║${RESET}"
-echo -e "${GREEN}${BOLD}║                                        ║${RESET}"
-echo -e "${GREEN}${BOLD}╚════════════════════════════════════════╝${RESET}"
+echo -e "  ${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
+echo -e "  ${GREEN}${BOLD}║${RESET}                                          ${GREEN}${BOLD}║${RESET}"
+echo -e "  ${GREEN}${BOLD}║${RESET}   ${GREEN}${BOLD}Installation complete!${RESET}                 ${GREEN}${BOLD}║${RESET}"
+echo -e "  ${GREEN}${BOLD}║${RESET}                                          ${GREEN}${BOLD}║${RESET}"
+echo -e "  ${GREEN}${BOLD}╚══════════════════════════════════════════╝${RESET}"
 echo ""
-info "Modus is running in the background"
-info "Config location: ${INSTALL_DIR}"
-info "Repository: ${REPO_URL}"
+divider
+info "Packages: ${GREEN}${installed}${RESET} installed${RED:+, ${failed} failed}"
+info "Location: ${INSTALL_DIR}"
+info "Config:   ${INSTALL_DIR}/config/"
+divider
 echo ""
