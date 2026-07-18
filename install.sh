@@ -64,7 +64,6 @@ PACKAGES=(
     libdbusmenu-qt5
     meson
     ninja
-    wayland
     wayland-protocols
     libmediaart
     networkmanager
