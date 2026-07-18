@@ -12,8 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 from fabric.utils import Gio, GLib, logger, os
 from tomlkit import document as toml_document
 from tomlkit import dump as toml_dump
+from tomlkit import item as toml_item
 from tomlkit import load as toml_load
-from tomlkit.items import Array, Bool, Integer, String
 
 from utils.gtk_utils import toml_file
 
@@ -86,27 +86,7 @@ class ConfigService:
     def _dict_to_toml(d: dict) -> Any:
         doc = toml_document()
         for k, v in d.items():
-            if isinstance(v, bool):
-                doc[k] = Bool(v)
-            elif isinstance(v, int):
-                doc[k] = Integer(v)
-            elif isinstance(v, str):
-                doc[k] = String(v, String.STANDARD)
-            elif isinstance(v, list):
-                arr = Array()
-                for item in v:
-                    if isinstance(item, bool):
-                        arr.append(Bool(item))
-                    elif isinstance(item, int):
-                        arr.append(Integer(item))
-                    elif isinstance(item, str):
-                        arr.append(String(item, String.STANDARD))
-                    else:
-                        arr.append(item)
-                arr.set_multiline(True) if len(v) > 1 else None
-                doc[k] = arr
-            else:
-                doc[k] = v
+            doc.add(k, toml_item(v))
         return doc
 
     def _load_config(self) -> None:
@@ -127,6 +107,11 @@ class ConfigService:
                     )
                 except ImportError as e:
                     logger.error(f"[ConfigService] Failed to import defaults: {e}")
+                    self._config = {}
+                except Exception as e:
+                    logger.error(
+                        f"[ConfigService] Failed to generate default config: {e}"
+                    )
                     self._config = {}
         except Exception as e:
             logger.error(f"[ConfigService] Failed to load config: {e}")
