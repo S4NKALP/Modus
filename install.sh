@@ -193,6 +193,7 @@ cleanup() {
     if [ -n "${SUDO_KEEPER_PID:-}" ]; then
         kill "$SUDO_KEEPER_PID" 2>/dev/null || true
     fi
+    jobs -p 2>/dev/null | xargs -r kill 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
