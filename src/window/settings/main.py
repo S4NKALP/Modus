@@ -246,8 +246,8 @@ class SettingsWindow(Gtk.Window):
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_visible(False)
 
-        # Reset global singleton on destroy
-        self.connect("destroy", self._on_window_destroy)
+        # Hide instead of destroy so the __main__ reference stays valid
+        self.connect("delete-event", lambda *_: self.hide() or True)
 
         self.stack = Stack(
             name="settings-stack",
@@ -501,10 +501,6 @@ class SettingsWindow(Gtk.Window):
                 ),
             ],
         )
-
-    def _on_window_destroy(self, *args):
-        global _settings_window
-        _settings_window = None
 
     def toggle(self):
         if not self.get_visible():
