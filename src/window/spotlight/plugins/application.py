@@ -1,10 +1,37 @@
-import time
+import os
 from typing import Any
 
 from fabric.utils import DesktopApp, get_desktop_applications, logger
+from gi.repository import Gio
 
 from utils.functions import fuzzy_score
 from window.spotlight.api import SearchResult, SpotlightPlugin
+
+
+def _get_desktop_dirs() -> list[str]:
+    dirs: list[str] = []
+    xdg_data = os.environ.get("XDG_DATA_HOME", "")
+    if xdg_data:
+        dirs.append(os.path.join(xdg_data, "applications"))
+    home = os.path.expanduser("~")
+    dirs.append(os.path.join(home, ".local", "share", "applications"))
+    xdg_data_dirs = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share")
+    for d in xdg_data_dirs.split(":"):
+        dirs.append(os.path.join(d, "applications"))
+    dirs.append("/var/lib/flatpak/exports/share/applications")
+    dirs.append(
+        os.path.join(
+            home, ".local", "share", "flatpak", "exports", "share", "applications"
+        )
+    )
+    seen: set[str] = set()
+    unique: list[str] = []
+    for d in dirs:
+        real = os.path.realpath(d)
+        if real not in seen and os.path.isdir(real):
+            seen.add(real)
+            unique.append(real)
+    return unique
 
 
 class ApplicationPlugin(SpotlightPlugin):
@@ -18,26 +45,47 @@ class ApplicationPlugin(SpotlightPlugin):
     def __init__(self, context):
         super().__init__(context)
         self._desktop_apps: list[DesktopApp] = []
-        self._apps_loaded_at: float = 0.0
-        self._apps_ttl: float = 1.0
+        self._dirty: bool = True
+        self._monitors: list[Gio.FileMonitor] = []
 
     def initialize(self) -> None:
         self._desktop_apps = get_desktop_applications()
+        self._dirty = False
+        self._start_watching()
+
+    def _start_watching(self) -> None:
+        for path in _get_desktop_dirs():
+            try:
+                gf = Gio.File.new_for_path(path)
+                monitor = gf.monitor_directory(Gio.FileMonitorFlags.NONE, None)
+                monitor.connect("changed", self._on_dir_changed)
+                self._monitors.append(monitor)
+            except Exception as e:
+                logger.warning(f"[application] monitor {path} failed: {e}")
+
+    def _on_dir_changed(self, _monitor, _file, _other, event):
+        if event in (
+            Gio.FileMonitorEvent.CREATED,
+            Gio.FileMonitorEvent.DELETED,
+            Gio.FileMonitorEvent.MOVED_IN,
+            Gio.FileMonitorEvent.MOVED_OUT,
+        ):
+            self._dirty = True
 
     def cleanup(self) -> None:
+        for m in self._monitors:
+            m.cancel()
+        self._monitors.clear()
         self._desktop_apps = []
 
     def search(self, query: str, token: Any) -> list[SearchResult]:
         if not query:
             return []
 
-        # Re-scan (throttled) so newly installed .desktop files appear
-        # without a restart, while avoiding a disk scan on every keystroke.
-        now = time.monotonic()
-        if now - self._apps_loaded_at > self._apps_ttl:
+        if self._dirty:
             try:
                 self._desktop_apps = get_desktop_applications()
-                self._apps_loaded_at = now
+                self._dirty = False
             except Exception as e:
                 logger.warning(
                     f"[application] self._desktop_apps = get_desktop_applications() failed: {e}"
