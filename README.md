@@ -36,9 +36,7 @@
 ## Quick Start
 
 ```bash
-git clone https://github.com/S4NKALP/Modus ~/.config/Modus
-cd ~/.config/Modus
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/S4NKALP/Modus/macos/install.sh -o install.sh && bash install.sh
 ```
 
 The interactive installer handles dependencies, builds C-extensions, and configures Hyprland.
@@ -49,11 +47,13 @@ The interactive installer handles dependencies, builds C-extensions, and configu
 <summary>Click to expand manual install steps</summary>
 
 1. **Install dependencies:**
+
    ```bash
    paru -S uv fabric-cli-git uwsm cliphist slurp grim swappy wl-clipboard wtype libnotify playerctl matugen-bin hypridle hyprsunset hyprpicker hyprshot gtk-session-lock awww apple-fonts webp-pixbuf-loader cinnamon-desktop libmediaart acpi brightnessctl power-profiles-daemon ddcutil at-spi2-core networkmanager network-manager-applet blueman pipewire libpulse gcc make pkgconf meson ninja wayland-protocols gobject-introspection gtk-layer-shell librsvg libqalculate appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 pciutils wf-recorder ffmpeg --needed
    ```
 
 2. **Clone and sync:**
+
    ```bash
    git clone https://github.com/S4NKALP/Modus ~/.config/Modus
    cd ~/.config/Modus
@@ -61,6 +61,7 @@ The interactive installer handles dependencies, builds C-extensions, and configu
    ```
 
 3. **Build App Switcher backend:**
+
    ```bash
    cd src/window/switcher/app-capture
    meson setup builddir
@@ -68,12 +69,14 @@ The interactive installer handles dependencies, builds C-extensions, and configu
    ```
 
 4. **Build Global Menu shim:**
+
    ```bash
    cd src/window/globalmenu
    gcc -shared -fPIC -O2 -o libmenu_button_shim.so libmenu_button_shim.c $(pkg-config --cflags --libs gtk+-3.0) -ldl
    ```
 
 5. **Start Modus:**
+
    ```bash
    cd ~/.config/Modus
    uv run start
@@ -89,31 +92,31 @@ The interactive installer handles dependencies, builds C-extensions, and configu
 
 ## Keybinds
 
-| Key | Action |
-|-----|--------|
-| `Super + D` | Spotlight search |
-| `Super + E` | Emoji picker |
-| `Super + V` | Clipboard history |
-| `Super + W` | Wallpaper browser |
-| `Super + I` | Settings |
-| `Super + L` | Lock screen |
-| `Super + Z` | Screencapture toggle |
-| `Super + S` | Screenshot region |
-| `Alt + Tab` | Window switcher |
-| `Alt + Space` | Keyboard layout switch |
-| `Super + Shift + R` | Reload Modus |
-| `Super + Shift + Y` | Reload CSS |
-| `Alt + Shift + W` | Random wallpaper |
+| Key                 | Action                 |
+| ------------------- | ---------------------- |
+| `Super + D`         | Spotlight search       |
+| `Super + E`         | Emoji picker           |
+| `Super + V`         | Clipboard history      |
+| `Super + W`         | Wallpaper browser      |
+| `Super + I`         | Settings               |
+| `Super + L`         | Lock screen            |
+| `Super + Z`         | Screencapture toggle   |
+| `Super + S`         | Screenshot region      |
+| `Alt + Tab`         | Window switcher        |
+| `Alt + Space`       | Keyboard layout switch |
+| `Super + Shift + R` | Reload Modus           |
+| `Super + Shift + Y` | Reload CSS             |
+| `Alt + Shift + W`   | Random wallpaper       |
 
 ## Configuration
 
 Three TOML files in `config/`:
 
-| File | Purpose | Reload |
-|------|---------|--------|
+| File          | Purpose                                  | Reload  |
+| ------------- | ---------------------------------------- | ------- |
 | `config.toml` | Main settings (features, widgets, paths) | Restart |
-| `mods.toml` | Custom panel buttons | Instant |
-| `dock.toml` | Pinned dock apps | Restart |
+| `mods.toml`   | Custom panel buttons                     | Instant |
+| `dock.toml`   | Pinned dock apps                         | Restart |
 
 You can also toggle most settings from the **Settings window** (`Super + I`).
 
@@ -121,14 +124,14 @@ See [Configuration Guide](docs/configuration.md) for full reference.
 
 ## Documentation
 
-| Doc | What's inside |
-|-----|---------------|
-| [Installation Guide](docs/installation.md) | Automated & manual install, dependencies |
-| [Configuration Guide](docs/configuration.md) | `config.toml`, `mods.toml`, `dock.toml`, keybinds |
-| [Styling Guide](docs/styling.md) | Matugen colors, CSS customization |
+| Doc                                           | What's inside                                      |
+| --------------------------------------------- | -------------------------------------------------- |
+| [Installation Guide](docs/installation.md)    | Automated & manual install, dependencies           |
+| [Configuration Guide](docs/configuration.md)  | `config.toml`, `mods.toml`, `dock.toml`, keybinds  |
+| [Styling Guide](docs/styling.md)              | Matugen colors, CSS customization                  |
 | [Architecture Overview](docs/architecture.md) | App Switcher C-backend, Spotlight engine, Services |
-| [Spotlight Plugins](docs/plugins.md) | Install/customize plugins, write your own |
-| [FAQs & Tips](docs/faqs_tips.md) | Troubleshooting, shortcuts, live reload |
+| [Spotlight Plugins](docs/plugins.md)          | Install/customize plugins, write your own          |
+| [FAQs & Tips](docs/faqs_tips.md)              | Troubleshooting, shortcuts, live reload            |
 
 ## Custom Mods
 
