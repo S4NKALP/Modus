@@ -405,8 +405,9 @@ HYPR_CONFIG="$HOME/.config/hypr/hyprland.lua"
 MODUS_MODULE_LINE="dofile(\"$INSTALL_DIR/config/hypr/modus.lua\")"
 
 if [ -f "$HYPR_CONFIG" ]; then
-    if grep -qF "$MODUS_MODULE_LINE" "$HYPR_CONFIG"; then
-        success "Modus module already in hyprland.lua"
+    if grep -q "modus.lua" "$HYPR_CONFIG"; then
+        sed -i "s|-- *dofile.*modus.lua.*|$MODUS_MODULE_LINE|" "$HYPR_CONFIG"
+        success "Modus module configured in hyprland.lua"
     else
         step "Adding Modus module to hyprland.lua..."
         {
@@ -518,9 +519,16 @@ else
     info "No existing instance found"
 fi
 
+step "Installing Python dependencies..."
+if (cd "$INSTALL_DIR" && uv sync); then
+    success "Python dependencies installed"
+else
+    warn "uv sync failed — Modus may not start"
+fi
+
 step "Starting Modus..."
 hyprctl reload
-uv run python "$INSTALL_DIR/start.py" &
+(cd "$INSTALL_DIR" && uv run python start.py) &
 MODUS_PID=$!
 
 sleep 3
