@@ -320,7 +320,9 @@ failed_pkgs=()
 total=${#PACKAGES[@]}
 
 for pkg in "${PACKAGES[@]}"; do
-    if $AUR -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
+    if pacman -Qi "$pkg" &>/dev/null; then
+        installed=$((installed + 1))
+    elif $AUR -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
         installed=$((installed + 1))
     else
         failed=$((failed + 1))
