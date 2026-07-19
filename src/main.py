@@ -37,6 +37,7 @@ from window.notification.notification import ModusNoti
 from window.osd.main import OSDWindow
 from window.panel.main import Panel
 from window.screencapture import ScreenCaptureWindow
+from window.settings.main import get_settings_window
 from window.spotlight.main import SpotlightWindow
 from window.switcher import ApplicationSwitcher
 
@@ -78,6 +79,7 @@ def main():
     dock = Dock()
     osd = OSDWindow()
     screencapture = ScreenCaptureWindow()
+    settings = get_settings_window()
 
     # Monitor CSS files and subdirectories for changes
     css_monitors = []
@@ -132,6 +134,7 @@ def main():
     __main__.screencapture = screencapture
     __main__.lock_screen = LockScreenWrapper()
     __main__.switch_keyboard_layout = KeyboardLayout.switch_keyboard_layout
+    __main__.settings = settings
 
     app.run()
 

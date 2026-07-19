@@ -1,78 +1,116 @@
 # Configuration Guide
 
-Modus is highly configurable using TOML files located in the `config/` directory.
+Modus is configured via TOML files in the `config/` directory, plus a graphical Settings window.
 
 ## File Overview
 
-| File | Purpose |
-|------|---------|
-| `config.toml` | Main application configuration (modules, features, toggles). |
-| `mods.toml` | Custom panel button definitions (menus, shell commands). |
-| `dock.toml` | Pinned applications for the dock. |
+| File | Purpose | Reload |
+|------|---------|--------|
+| `config.toml` | Main settings (features, widgets, paths) | Restart |
+| `mods.toml` | Custom panel buttons (menus, shell commands) | Instant |
+| `dock.toml` | Pinned dock apps | Restart |
+
+## Settings Window
+
+Press `Super + I` to open the Settings window. It provides a GUI for most `config.toml` options organized into tabs:
+
+- **General**: Debug mode, weather location, keyboard layouts, night light, switcher preview
+- **Dock**: Enable/disable, auto-hide, icon size, special workspace apps
+- **Panel**: All panel widgets (global menu, systray, control center, etc.), wallpapers directory
+- **Notifications**: Timeout, ignored apps, limited history apps
+
+Changes save to `config.toml` immediately. Some settings require a restart.
+
+You can also toggle settings from the terminal:
+
+```bash
+fabric-cli exec modus "settings.toggle()"
+```
 
 ---
 
 ## `config.toml` (Main Settings)
 
-The `config.toml` file controls which widgets and services are enabled. Most changes here require restarting Modus (`uv run start`).
+Auto-generated on first run with sensible defaults. Most changes require restarting Modus (`uv run start`).
 
-**Key Settings:**
-- `wallpapers_dir`: Path to the directory where your wallpapers are stored.
-- `dock_enabled`: Toggle the dock widget (`true`/`false`).
-- `dock_auto_hide`: Whether the dock hides automatically when windows overlap it.
-- `dock_always_occluded`: Whether the dock remains visible even when windows overlap it.
-- `dock_icon_size`: Size of dock icons in pixels (default: `52`).
-- `debug`: Enable debug logging (`true`/`false`).
-- `hide_special_workspace`: Whether to hide the special workspace from the workspace indicator.
-- `dock_hide_special_workspace_apps`: Hide apps from the special workspace in the dock.
-- `notification_timeout`: Duration before a notification automatically dismisses (e.g., `"5s"`).
-- `notification_ignored_apps`: Array of app names whose notifications should be suppressed.
-- `notification_limited_apps_history`: Array of app names whose notification history is limited.
-- `weather_location`: Set your city for the weather widget (e.g., `"Patan, Nepal"`).
+### General
 
-**Panel Module Toggles:**
-- `imac_button`: Enable the Apple logo button in the panel.
-- `systray`: Enable the system tray.
-- `control_center`: Enable the control center widget.
-- `search`: Enable the search/spotlight widget.
-- `global_menu`: Enable the global menu (app menus appear in the panel).
-- `network`: Enable the network indicator in the panel.
-- `battery`: Enable the battery indicator in the panel.
-- `notification_center`: Enable the notification center.
-- `workspace_indicator`: Enable the workspace indicator.
-- `bluetooth`: Enable the bluetooth indicator.
-- `date_time`: Enable the date/time indicator.
-- `osd`: Enable on-screen displays for volume and brightness changes.
-- `custom_mods`: Enable custom panel buttons from `mods.toml`.
-- `night_light_temperature`: Night light color temperature in Kelvin (e.g., `4500`).
-- `keyboard_layouts`: Array of keyboard layout codes (e.g., `["us", "np"]`).
-- `systray_ignore`: Array of app names to hide from the system tray.
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `debug` | bool | `false` | Enable verbose logging |
+| `weather_location` | string | `""` | City for weather widget (e.g., `"London, UK"`) |
+| `keyboard_layouts` | array | `["us"]` | Active keyboard layouts |
+| `night_light_temperature` | int | `4500` | Night light color temp in Kelvin |
+| `wallpapers_dir` | string | `"src/assets/wallpaper_example/"` | Path to wallpapers folder |
+| `switcher_live_preview` | bool | `true` | Live window previews in switcher |
+| `switcher_live_preview_delay_ms` | int | `200` | Preview framerate delay (lower = smoother) |
 
-**App Switcher & Screencapture:**
-- `window_switcher`: Enables the custom Alt-Tab window switcher.
-- `switcher_live_preview`: Enables real-time Wayland video previews of running applications.
-- `switcher_live_preview_delay_ms`: Framerate delay for previews (e.g., `200` = ~5fps). Lower is smoother but uses more CPU.
-- `osd`: Enables on-screen displays for volume and brightness changes.
+### Dock
 
-**Spotlight Search Keybinds** (defined in `config/hypr/modus.lua`):
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dock_enabled` | bool | `true` | Show the dock |
+| `dock_auto_hide` | bool | `true` | Hide when windows overlap |
+| `dock_always_occluded` | bool | `false` | Keep dock behind windows |
+| `dock_icon_size` | int | `52` | Icon size in pixels |
+| `dock_hide_special_workspace_apps` | bool | `true` | Hide special workspace apps |
+
+### Panel Widgets
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `imac_button` | bool | `true` | Apple logo button |
+| `systray` | bool | `true` | System tray |
+| `control_center` | bool | `true` | Control center widget |
+| `search` | bool | `true` | Search/spotlight button |
+| `global_menu` | bool | `true` | App menus in panel |
+| `network` | bool | `true` | Network indicator |
+| `battery` | bool | `true` | Battery indicator |
+| `bluetooth` | bool | `true` | Bluetooth indicator |
+| `date_time` | bool | `true` | Date/time indicator |
+| `workspace_indicator` | bool | `true` | Workspace indicator |
+| `notification_center` | bool | `true` | Notification center |
+| `custom_mods` | bool | `true` | Custom panel buttons from `mods.toml` |
+| `window_switcher` | bool | `true` | Alt-Tab window switcher |
+| `osd` | bool | `true` | Volume/brightness on-screen display |
+| `hide_special_workspace` | bool | `true` | Hide special workspace from indicators |
+
+### Notifications
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `notification_timeout` | string | `"5s"` | Auto-dismiss duration |
+| `notification_ignored_apps` | array | `["Hyprshot"]` | Apps with suppressed notifications |
+| `notification_limited_apps_history` | array | `["Spotify"]` | Apps with limited history |
+| `systray_ignore` | array | `["blueman", "network"]` | Icons hidden from system tray |
+
+---
+
+## Keybinds
+
+Defined in `config/hypr/modus.lua`:
 
 | Key | Action |
 |-----|--------|
-| `Super + D` | Open spotlight search (default) |
-| `Super + E` | Open emoji picker |
-| `Super + V` | Open clipboard history |
-| `Super + W` | Open wallpaper browser |
-| `Alt + Shift + W` | Set random wallpaper |
-
-These can be customized in `config/hypr/modus.lua`. The spotlight `.toggle()`
-method accepts optional arguments to pre-fill keywords: `toggle('em')` opens
-the emoji picker directly.
+| `Super + D` | Spotlight search |
+| `Super + E` | Emoji picker |
+| `Super + V` | Clipboard history |
+| `Super + W` | Wallpaper browser |
+| `Super + I` | Settings window |
+| `Super + L` | Lock screen |
+| `Super + Z` | Screencapture toggle |
+| `Super + S` | Screenshot region |
+| `Alt + Tab` | Window switcher |
+| `Alt + Space` | Keyboard layout switch |
+| `Super + Shift + R` | Reload Modus |
+| `Super + Shift + Y` | Reload CSS |
+| `Alt + Shift + W` | Random wallpaper |
 
 ---
 
 ## `mods.toml` (Custom Panel Buttons)
 
-You can define custom buttons for the top panel that run shell commands or show dropdown menus. **Changes to this file reload instantly!**
+Define custom buttons for the top panel. **Changes reload instantly!**
 
 ```toml
 [Mods.terminal]
@@ -96,17 +134,18 @@ on-left = "wlogout"
 ```
 
 **Properties:**
-- `icon`: The name of an SVG icon placed in `src/assets/icons/`.
-- `icon-size`: Defaults to 16.
-- `order`: Determines left-to-right position (lower numbers appear first).
-- `on-clicked`, `on-left`, `on-right`, `on-middle`: Shell commands executed via `sh -c`. Supports complex piping `|` and `&&`.
-- `on-scroll-up`, `on-scroll-down`: Commands executed on scroll events.
+- `icon` — SVG filename in `src/assets/icons/`
+- `icon-size` — defaults to 16
+- `order` — left-to-right position (lower = first)
+- `on-clicked`, `on-left`, `on-right`, `on-middle` — shell commands via `sh -c`
+- `on-scroll-up`, `on-scroll-down` — scroll event commands
+- `options` — dropdown menu entries (each with `label` + `on-clicked`)
+- Full shell syntax (`&&`, `|`) supported
 
 ---
 
 ## `dock.toml` (Pinned Apps)
 
-Controls which applications are permanently pinned to the dock.
 ```toml
 pinned = [
     "firefox",
@@ -114,4 +153,5 @@ pinned = [
     "org.gnome.Nautilus"
 ]
 ```
-Ensure you use the exact `.desktop` file name or application ID.
+
+Use the exact `.desktop` file name or application ID.

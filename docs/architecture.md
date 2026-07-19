@@ -17,6 +17,7 @@ Entry point is `start.py`, delegates to `src/main.py`. `main.py` instantiates
 - **Spotlight Search**: Super+D search overlay (`src/window/spotlight/`)
 - **Notification Center**: Notification popups and history (`src/window/notification/`)
 - **OSD**: Volume/brightness overlays (`src/window/osd/`)
+- **Settings**: Configuration GUI (`src/window/settings/`)
 - **Wallpaper Picker**: Wallpaper browser and management (`src/window/wallpaper/`)
 
 ## 2. Spotlight Search Engine

@@ -65,7 +65,7 @@ Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
 - **Theme Updates**: Modus uses Matugen tied to your wallpaper. Set a new
   wallpaper and the shell recolors automatically
 
-- **Spotlight Keyboard Shortcuts** (from `config/hypr/modus.lua`):
+- **Keyboard Shortcuts** (from `config/hypr/modus.lua`):
 
   | Key | Action |
   |-----|--------|
@@ -73,7 +73,12 @@ Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
   | `Super + E` | Open emoji picker |
   | `Super + V` | Open clipboard history |
   | `Super + W` | Open wallpaper browser |
-  | `Alt + Shift + W` | Set random wallpaper |
+  | `Super + I` | Open settings |
+  | `Super + L` | Lock screen |
+  | `Super + Z` | Screencapture toggle |
+  | `Super + S` | Screenshot region |
+  | `Alt + Tab` | Window switcher |
+  | `Alt + Shift + W` | Random wallpaper |
 
 - **Deep Reload a Plugin**: After editing `config/plugins/hello.py`:
 

@@ -26,7 +26,8 @@ DEFAULT = {
     "switcher_live_preview": True,
     "switcher_live_preview_delay_ms": 200,
     "systray_ignore": ["blueman", "network"],
-    "wallpapers_dir": "~/Pictures/Wallpapers",
+    "wallpapers_dir": "src/assets/wallpaper_example/",
     "osd": True,
     "window_switcher": True,
+    "weather_location": "",
 }

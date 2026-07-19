@@ -13,13 +13,19 @@ CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
 SYSTEM_CACHE_DIR = GLib.get_user_cache_dir()
 
 
+_PROJECT_ROOT = str(__import__("pathlib").Path(__file__).resolve().parent.parent.parent)
+
+
 def _get_wallpaper_path() -> str:
     try:
         from services.config import get_config
 
         custom = get_config("wallpapers_dir")
         if custom:
-            return os.path.expanduser(str(custom))
+            expanded = os.path.expanduser(str(custom))
+            if not os.path.isabs(expanded):
+                expanded = os.path.join(_PROJECT_ROOT, expanded)
+            return expanded
     except Exception as e:
         logger.warning(f"[data] Failed to load wallpapers_dir from config: {e}")
     return f"{HOME_DIR}/Pictures/Wallpapers"
