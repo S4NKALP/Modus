@@ -529,7 +529,8 @@ fi
 
 step "Starting Modus..."
 hyprctl reload
-(cd "$INSTALL_DIR" && uv run python start.py) &
+nohup bash -c "cd \"$INSTALL_DIR\" && uv run python start.py" >/dev/null 2>&1 &
+MODUS_PID=$!
 MODUS_PID=$!
 
 sleep 3
