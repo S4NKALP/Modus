@@ -59,7 +59,7 @@ PACKAGES=(
     hyprshot
     gtk-session-lock
     awww
-    apple-fonts
+    otf-apple-sf-pro
     webp-pixbuf-loader
     cinnamon-desktop
     libmediaart
