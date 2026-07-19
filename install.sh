@@ -513,7 +513,7 @@ fi
 section "Launch"
 
 step "Stopping existing instances..."
-if killall modus 2>/dev/null; then
+if killall modus 2>/dev/null || pkill -f "start.py" 2>/dev/null; then
     success "Stopped running instance"
     sleep 1
 else
