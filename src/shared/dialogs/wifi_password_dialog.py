@@ -33,7 +33,6 @@ class WiFiPasswordDialog(Window):
         self.set_resizable(False)
         self.on_dialog_closed = on_dialog_closed
         self.is_connecting = False
-        self.connection_timeout_id = None
 
         self._create_dialog_content()
         self.connect("key-press-event", self._on_key_press)
@@ -45,7 +44,7 @@ class WiFiPasswordDialog(Window):
         )
 
         self.title_label = Label(
-            label=f'The Wi-Fi network "{self.ssid}" requires a WPA2 password.',
+            label=f'The Wi-Fi network "{self.ssid}" requires a password.',
             name="wifi-dialog-title",
             h_align="start",
             wrap=True,
@@ -214,7 +213,6 @@ class WiFiPasswordDialog(Window):
         self.is_connecting = True
         self.join_button.set_sensitive(False)
 
-        self.connection_timeout_id = GLib.timeout_add(5000, self._connection_timeout)
         self.error_label.set_visible(False)
 
         self.hide()
@@ -223,24 +221,7 @@ class WiFiPasswordDialog(Window):
         if self.on_dialog_closed:
             self.on_dialog_closed()
 
-    def _connection_timeout(self):
-        if self.is_connecting:
-            self.is_connecting = False
-            self.connection_timeout_id = None
-            try:
-                self.join_button.set_sensitive(True)
-                self.show_error("Connection timeout. Please try again.")
-            except Exception as e:
-                logger.warning(
-                    f"[wifi_password_dialog] _connection_timeout UI update failed: {e}"
-                )
-        return False
-
     def show_dialog(self):
-        if self.connection_timeout_id:
-            GLib.source_remove(self.connection_timeout_id)
-            self.connection_timeout_id = None
-
         self.show_all()
         self.password_entry.set_text("")
         self.error_label.set_visible(False)
@@ -257,10 +238,6 @@ class WiFiPasswordDialog(Window):
         self._update_join_button_state()
 
     def show_error(self, message="Incorrect password. Please try again."):
-        if self.connection_timeout_id:
-            GLib.source_remove(self.connection_timeout_id)
-            self.connection_timeout_id = None
-
         self.is_connecting = False
         self.join_button.set_sensitive(True)
 
