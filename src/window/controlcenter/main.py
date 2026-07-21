@@ -854,18 +854,11 @@ class ModusControlCenter(AppletWindow):
         get_brightness_service().screen_brightness = brightness_value
         self._updating_brightness = False
 
-    def brightness_changed(self, _, brightness_value):
+    def brightness_changed(self, _, brightness_percentage):
         if not self._signals_connected or self._updating_brightness:
             return
 
-        if get_brightness_service().max_screen > 0:
-            brightness_percentage = int(
-                (brightness_value / get_brightness_service().max_screen) * 100
-            )
-
-            GLib.idle_add(
-                lambda: self.brightness_scale.set_value(brightness_percentage)
-            )
+        GLib.idle_add(lambda: self.brightness_scale.set_value(brightness_percentage))
 
     def on_volume_scroll(self, widget, event):
         if not self._signals_connected:

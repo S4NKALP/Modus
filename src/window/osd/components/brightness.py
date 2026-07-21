@@ -14,6 +14,7 @@ class BrightnessOSDContainer(BaseOSDContainer):
     def __init__(self, window, **kwargs):
         super().__init__(window, **kwargs)
         self.brightness_service = Brightness()
+        self._last_percent = None
         self._setup_specific_components()
         self._connect_specific_signals()
 
@@ -39,35 +40,34 @@ class BrightnessOSDContainer(BaseOSDContainer):
         self.add(self.scale)
 
     def _connect_specific_signals(self):
-        self.brightness_service.connect("screen", self._on_screen_brightness_changed)
+        self.brightness_service.connect("screen", self._on_brightness_changed)
 
-    def _on_screen_brightness_changed(self, _sender, value, *_args):
-        self.update()
+    def _on_brightness_changed(self, _sender, percent, *_args):
+        if self._last_percent != percent:
+            self._last_percent = percent
+            self.update()
 
-    def _get_normalized_brightness(self):
-        return (
-            self.brightness_service.screen_brightness
-            / self.brightness_service.max_screen
-        ) * 100
+    def _sync_with_service(self):
+        raw = self.brightness_service.screen_brightness
+        max_br = self.brightness_service.max_screen
+        self._last_percent = int((raw / max_br) * 100) if max_br > 0 and raw >= 0 else 0
+        self.scale.set_value(self._last_percent)
+        self._update_display()
 
     def _update_display(self):
-        normalized = self._get_normalized_brightness()
-        level = 0 if normalized == 0 else min(math.ceil(normalized / 33), 3)
+        percent = self._last_percent if self._last_percent is not None else 0
+        level = 0 if percent == 0 else min(math.ceil(percent / 33), 3)
 
         self.osd_window_image.set_from_file(f"brightness/brightness-{level}.svg")
-
-        self.scale.animate_value(normalized)
+        self.scale.animate_value(percent)
 
     def update(self, *_):
         self._update_display()
         super().update()
 
     def destroy(self):
-        """Disconnect signals from Brightness service"""
         try:
-            self.brightness_service.disconnect_by_func(
-                self._on_screen_brightness_changed
-            )
+            self.brightness_service.disconnect_by_func(self._on_brightness_changed)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
         super().destroy()
