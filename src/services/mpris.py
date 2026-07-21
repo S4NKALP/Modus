@@ -54,6 +54,8 @@ _MPRIS_PLAYER_IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(
 def _variant_to_str(variant) -> str | None:
     if variant is None:
         return None
+    if isinstance(variant, str):
+        return variant
     vtype = variant.get_type_string()
     if vtype == "s":
         return variant.get_string()
@@ -132,6 +134,10 @@ class PlayerService(Service):
         v = m.get("xesam:artist") if m else None
         if v is None:
             return []
+        if isinstance(v, list):
+            return v or []
+        if isinstance(v, str):
+            return [v]
         if v.get_type_string() == "as":
             return list(v.unpack()) or []
         s = _variant_to_str(v)
@@ -146,7 +152,9 @@ class PlayerService(Service):
     @Property(str, "readable", default_value="Stopped")
     def playback_status(self) -> str:
         v = self._proxy.get_cached_property("PlaybackStatus")
-        return v.get_string() if v else "Stopped"
+        if v is None:
+            return "Stopped"
+        return v.get_string() if isinstance(v, GLib.Variant) else str(v)
 
     @Property(int, "readable", default_value=0)
     def length(self) -> int:
@@ -154,7 +162,11 @@ class PlayerService(Service):
         v = m.get("mpris:length") if m else None
         if v is None:
             return 0
-        return v.get_uint64() if v.get_type_string() == "t" else int(v)
+        if isinstance(v, int):
+            return v
+        if isinstance(v, GLib.Variant):
+            return v.get_uint64() if v.get_type_string() == "t" else int(v)
+        return int(v)
 
     @Property(int, "readable", default_value=0)
     def position(self) -> int:
