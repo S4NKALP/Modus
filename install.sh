@@ -66,7 +66,6 @@ PACKAGES=(
     acpi
     brightnessctl
     power-profiles-daemon
-    ddcutil
     at-spi2-core
     networkmanager
     network-manager-applet

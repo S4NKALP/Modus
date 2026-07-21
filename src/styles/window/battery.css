@@ -35,7 +35,9 @@
   color: @glass-text;
 }
 
-#energy-mode-button-clickable {
+#energy-mode-button-clickable,
+#charge-limit-button-clickable,
+#game-mode-button-clickable{
   background: transparent;
   border: none;
   border-radius: apply(radius-sm);
@@ -43,15 +45,21 @@
   margin: 1px 0;
 }
 
-#energy-mode-button-clickable:hover {
+#energy-mode-button-clickable:hover,
+#charge-limit-button-clickable:hover,
+#game-mode-button-clickable:hover {
   background: @glass-hover;
 }
 
-#energy-mode-button-clickable:hover #energy-mode-icon {
+#energy-mode-button-clickable:hover #energy-mode-icon,
+#game-mode-button-clickable:hover #game-mode-icon,
+#charge-limit-button-clickable:hover #charge-limit-icon {
   background-color: @glass-active;
 }
 
-#energy-mode-icon {
+#energy-mode-icon,
+#game-mode-icon,
+#charge-limit-icon{
   border-radius: apply(radius-full);
   padding: 4px;
   margin-top: -2px;
@@ -67,11 +75,13 @@
   margin-bottom: -4px;
   color: @glass-text-secondary;
 }
+
 .battery-section-title {
   font-size: apply(font-base);
   color: @glass-text-secondary;
   margin: 2px 0 0 8px;
 }
+
 .battery-power-mode {
   font-size: apply(font-md);
 }
@@ -82,66 +92,32 @@
   min-height: 30px;
   border-radius: apply(radius-sm);
 }
+
 .battery-settings-button {
   margin-top: -5px;
   min-height: 30px;
   border-radius: apply(radius-sm);
 }
+
 .battery-settings-button label {
   font-weight: 500;
   color: @glass-text;
 }
+
 #energy-mode-button:first-child {
   margin-top: 0;
 }
+
 #energy-mode-button {
   margin-top: -8px;
   margin-bottom: 4px;
   color: @glass-text-secondary;
 }
-.gamemode-button {
-  font-size: apply(font-sm);
-  margin-left: -6px;
-  color: @glass-text-secondary;
-}
 
-#game-mode-button {
-  margin: 2px 0;
-}
-#game-mode-icon {
-  margin-left: -6px;
-}
 
-#game-mode-button-clickable {
-  background: transparent;
-  border: none;
-  border-radius: apply(radius-sm);
-  padding: 6px 12px;
-  margin: 1px 0;
-}
-
-#game-mode-button-clickable:hover {
-  background: @glass-hover;
-}
-
-#game-mode-button-clickable:hover #game-mode-icon {
-  background-color: @glass-active;
-}
-
-#game-mode-icon {
-  border-radius: apply(radius-full);
-  padding: 4px;
-  margin-right: 8px;
-  background-color: @glass-hover;
-  color: @glass-text-secondary;
-}
-
-#energy-mode-icon.connected {
+#energy-mode-icon.connected,
+#charge-limit-icon.connected {
   background-color: @glass-active;
   color: @glass-text;
 }
 
-#game-mode-icon.connected {
-  background-color: @glass-active;
-  color: @glass-text;
-}
