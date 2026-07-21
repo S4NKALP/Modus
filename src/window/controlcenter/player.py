@@ -460,7 +460,7 @@ class PlayerBox(Box):
             self.cover_path = result
 
         try:
-            metadata = self.player._player.props.metadata
+            metadata = self.player.metadata
             if metadata:
                 keys = metadata.keys()
                 self.track_title.set_label(
@@ -472,9 +472,7 @@ class PlayerBox(Box):
                     else "No Artist"
                 )
         except Exception as e:
-            logger.warning(
-                f"[player] metadata = self.player._player.props.metadata failed: {e}"
-            )
+            logger.warning(f"[player] metadata = self.player.metadata failed: {e}")
 
     def update_buttons(self, player_buttons, show_buttons):
         if show_buttons and len(player_buttons) > 1:
@@ -576,7 +574,7 @@ class PlayerBox(Box):
             self.play_pause_icon.dynamic_file(
                 "player/play.svg" if current_status == "paused" else "player/pause.svg"
             )
-            self._on_metadata(self.player, self.player._player.props.metadata)
+            self._on_metadata(self.player, self.player.metadata)
             self.set_image()
 
     def _on_map(self, *_):

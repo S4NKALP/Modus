@@ -6,19 +6,14 @@ import urllib.request
 from pathlib import Path
 
 import gi
-from fabric.utils import GLib, exec_shell_command_async, logger
+from fabric.core.service import Property, Service, Signal
+from fabric.utils import Gio, GLib, logger
 
-gi.require_version("Playerctl", "2.0")
-from fabric.core.service import Property, Service, Signal  # noqa: E402
-from gi.repository import Playerctl  # noqa: E402
+from shared.data import CACHE_DIR
 
-from shared.data import CACHE_DIR  # noqa: E402
-
-TEMP_DIR = CACHE_DIR
-
-# Native Linux media artwork cache (libmediaart). Optional: when the GI
-# namespace is unavailable we transparently fall back to our own cache dir,
-# so the service keeps working without adding a hard dependency.
+# libmediaart: native Linux album art cache used by GNOME/GTK apps (Rhythmbox,
+# Lollypop, etc.). We follow its cache paths so artwork is shared across apps
+# instead of duplicated in our own cache dir.
 try:
     gi.require_version("MediaArt", "2.0")
     from gi.repository import MediaArt
@@ -28,13 +23,54 @@ except (ValueError, ImportError):
     MediaArt = None
     _MEDIAART_AVAILABLE = False
 
+TEMP_DIR = CACHE_DIR
+
+MPRIS_PLAYER_PREFIX = "org.mpris.MediaPlayer2."
+PLAYERCTLD_SERVICE = "org.mpris.MediaPlayer2.playerctld"
+MPRIS_PLAYER_IFACE = "org.mpris.MediaPlayer2.Player"
+MPRIS_PLAYER_PATH = "/org/mpris/MediaPlayer2"
+
+_MPRIS_PLAYER_IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(
+    """<node>
+    <interface name="org.mpris.MediaPlayer2.Player">
+        <method name="Next"/>
+        <method name="Previous"/>
+        <method name="PlayPause"/>
+        <method name="SetPosition">
+            <parameter type="i" name="Position" direction="in"/>
+        </method>
+        <method name="Seek">
+            <parameter type="x" name="Offset" direction="in"/>
+        </method>
+        <property type="s" name="PlaybackStatus" access="read"/>
+        <property type="a{sv}" name="Metadata" access="read"/>
+        <property type="d" name="Volume" access="readwrite"/>
+        <property type="b" name="CanSeek" access="read"/>
+    </interface>
+</node>"""
+).lookup_interface("org.mpris.MediaPlayer2.Player")
+
+
+def _variant_to_str(variant) -> str | None:
+    if variant is None:
+        return None
+    vtype = variant.get_type_string()
+    if vtype == "s":
+        return variant.get_string()
+    if vtype == "ay":
+        raw = variant.get_fixed_array()
+        return raw.tobytes().decode("utf-8", errors="replace") if len(raw) > 0 else None
+    return None
+
+
+def _is_valid_art_url(url: str) -> bool:
+    if not url:
+        return False
+    parsed = urllib.parse.urlparse(url)
+    return parsed.scheme in ("http", "https", "file")
+
 
 def _mediaart_cache_path(artist: str | None, album: str | None, title: str | None):
-    """Standard media-art cache path for a track, or None when unavailable.
-
-    Does NOT download; merely derives the canonical cache location so we can
-    both look artwork up and store new downloads following the same rules.
-    """
     if not _MEDIAART_AVAILABLE:
         return None
     try:
@@ -44,7 +80,6 @@ def _mediaart_cache_path(artist: str | None, album: str | None, title: str | Non
     except Exception as e:
         logger.debug(f"MediaArt.get_path failed: {e}")
         return None
-    # PyGObject return shape varies by version: (found, path, uri) or (path, uri).
     if isinstance(result, tuple):
         if len(result) == 3:
             found, path, _uri = result
@@ -58,7 +93,7 @@ def _mediaart_cache_path(artist: str | None, album: str | None, title: str | Non
 
 class PlayerService(Service):
     @Signal
-    def meta_change(self, metadata: GLib.Variant, player: Playerctl.Player) -> None: ...
+    def meta_change(self, metadata: object, player: object) -> None: ...
 
     @Signal
     def artwork_change(self, local_path: str) -> None: ...
@@ -74,115 +109,104 @@ class PlayerService(Service):
 
     @Property(bool, "readable", default_value=False)
     def can_seek(self) -> bool:
-        return self._player.get_property("can_seek")
+        v = self._proxy.get_cached_property("CanSeek")
+        return v.get_boolean() if v else False
 
     @Property(str, "readable", default_value="")
     def player_name(self) -> str:
-        try:
-            return self._player.props.player_name or ""
-        except Exception as e:
-            logger.warning(
-                f"[mpris] return self._player.props.player_name or '' failed: {e}"
-            )
-            return ""
+        return self._name
+
+    @Property(object, "readable")
+    def metadata(self) -> dict:
+        return self._get_metadata() or {}
 
     @Property(str, "readable", default_value="")
     def title(self) -> str:
-        try:
-            return self._player.get_title() or ""
-        except Exception as e:
-            logger.warning(f"[mpris] return self._player.get_title() or '' failed: {e}")
-            return ""
+        m = self._get_metadata()
+        v = m.get("xesam:title") if m else None
+        return _variant_to_str(v) or ""
 
     @Property(object, "readable")
     def artist(self) -> list:
-        try:
-            return list(self._player.props.metadata["xesam:artist"]) or []
-        except Exception as e:
-            logger.warning(
-                f"[mpris] return list(self._player.props.metadata['xesam:artist']) ... failed: {e}"
-            )
+        m = self._get_metadata()
+        v = m.get("xesam:artist") if m else None
+        if v is None:
             return []
+        if v.get_type_string() == "as":
+            return list(v.unpack()) or []
+        s = _variant_to_str(v)
+        return [s] if s else []
 
     @Property(str, "readable", default_value="")
     def album(self) -> str:
-        try:
-            return self._player.props.metadata["xesam:album"] or ""
-        except Exception as e:
-            logger.warning(
-                f"[mpris] return self._player.props.metadata['xesam:album'] or '' failed: {e}"
-            )
-            return ""
+        m = self._get_metadata()
+        v = m.get("xesam:album") if m else None
+        return _variant_to_str(v) or ""
 
     @Property(str, "readable", default_value="Stopped")
     def playback_status(self) -> str:
-        try:
-            val = int(self._player.props.playback_status)
-            if val == 0:
-                return "Playing"
-            elif val == 1:
-                return "Paused"
-            else:
-                return "Stopped"
-        except Exception as e:
-            logger.warning(
-                f"[mpris] val = int(self._player.props.playback_status) failed: {e}"
-            )
-            return "Stopped"
+        v = self._proxy.get_cached_property("PlaybackStatus")
+        return v.get_string() if v else "Stopped"
 
     @Property(int, "readable", default_value=0)
     def length(self) -> int:
-        try:
-            return int(self._player.props.metadata["mpris:length"])
-        except Exception as e:
-            logger.warning(
-                f"[mpris] return int(self._player.props.metadata['mpris:length']) failed: {e}"
-            )
+        m = self._get_metadata()
+        v = m.get("mpris:length") if m else None
+        if v is None:
             return 0
+        return v.get_uint64() if v.get_type_string() == "t" else int(v)
 
     @Property(int, "readable", default_value=0)
     def position(self) -> int:
+        if self._is_cleaning_up:
+            return 0
         try:
-            return int(self._player.get_position())
-        except Exception as e:
-            logger.warning(
-                f"[mpris] return int(self._player.get_position()) failed: {e}"
+            result = self._proxy.call_sync(
+                "org.freedesktop.DBus.Properties.Get",
+                GLib.Variant("(ss)", (MPRIS_PLAYER_IFACE, "Position")),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
             )
+            return result.get_child_value(0).unpack()
+        except GLib.Error as e:
+            logger.warning(f"[mpris] position failed: {e}")
             return 0
 
     def play_pause(self, *_):
         try:
-            self._player.play_pause()
+            self._proxy.call_sync("PlayPause", None, Gio.DBusCallFlags.NONE, -1, None)
         except GLib.Error as e:
             logger.warning(f"play_pause failed: {e}")
 
     def next(self, *_):
         try:
-            self._player.next()
+            self._proxy.call_sync("Next", None, Gio.DBusCallFlags.NONE, -1, None)
         except GLib.Error as e:
             logger.warning(f"next failed: {e}")
 
     def previous(self, *_):
         try:
-            self._player.previous()
+            self._proxy.call_sync("Previous", None, Gio.DBusCallFlags.NONE, -1, None)
         except GLib.Error as e:
             logger.warning(f"previous failed: {e}")
 
-    def __init__(self, player: Playerctl.Player, **kwargs):
+    def __init__(self, name: str, proxy: Gio.DBusProxy, **kwargs):
         super().__init__(**kwargs)
-        self._player: Playerctl.Player = player
+        self._name = name
+        self._proxy = proxy
         self._current_artwork_hash = ""
         self._current_artwork_path = ""
         self._is_cleaning_up = False
         self._artwork_generation = 0
         self._signal_ids = []
         self._last_emitted_status = ""
+        self._failed_covers: set[str] = set()
+        self._download_threads: dict[str, threading.Thread] = {}
 
         self._signal_ids.append(
-            self._player.connect("playback-status", self.on_playback_status)
+            self._proxy.connect("g-properties-changed", self._on_properties_changed)
         )
-        self._signal_ids.append(self._player.connect("metadata", self.on_metadata))
-        self._signal_ids.append(self._player.connect("seeked", self.on_seeked))
 
         self._pos_source_id = 0
         self._status_source_id = 0
@@ -190,50 +214,27 @@ class PlayerService(Service):
         self._start_status_polling()
         self.poll_progress()
 
-        try:
-            metadata = self._player.props.metadata
-            if metadata:
-                # meta_change emission must not block artwork discovery.
-                try:
-                    self.meta_change(metadata, self._player)
-                except Exception as e:
-                    logger.debug(f"meta_change emit failed: {e}")
-                self._handle_artwork(metadata)
-        except Exception as e:
-            logger.warning(f"Failed to initialize metadata: {e}")
+        metadata = self._get_metadata()
+        if metadata:
+            self.meta_change(metadata, self)
+            self._handle_artwork(metadata)
 
-        # Playerctl loads player properties asynchronously. For a player that
-        # was already playing before Modus started, the initial metadata read
-        # above can be empty, and the `metadata` signal only fires on *change*
-        # — so it would never re-fire and artwork would stay missing. Browser
-        # players (YouTube in Firefox/Chromium) in particular populate
-        # `mpris:artUrl` lazily, seconds after playback begins. Re-read metadata
-        # repeatedly for a short window so the artwork is eventually picked up.
+        # Browser players (YouTube in Firefox/Chromium) populate
+        # `mpris:artUrl` lazily, seconds after playback begins. Re-read
+        # metadata repeatedly for a short window so artwork is picked up.
         GLib.timeout_add(500, self._refresh_initial_state, 0)
 
     def _refresh_initial_state(self, attempt: int = 0):
         if self._is_cleaning_up:
             return False
-        try:
-            metadata = self._player.props.metadata
-        except Exception as e:
-            logger.warning(
-                f"[mpris] metadata = self._player.props.metadata failed: {e}"
-            )
-            return False
+        metadata = self._get_metadata()
         if metadata:
-            # Push full metadata only once to avoid UI churn on every retry.
             if attempt == 0:
-                try:
-                    self.meta_change(metadata, self._player)
-                except Exception as e:
-                    logger.debug(f"meta_change emit failed: {e}")
+                self.meta_change(metadata, self)
             self._handle_artwork(metadata)
             self.fabricating(metadata)
-            # Stop as soon as artwork was found/queued.
             if self._current_artwork_hash:
                 return False
-        # Retry for ~10s (browser players can be very slow to expose artUrl).
         if attempt < 12:
             GLib.timeout_add(800, self._refresh_initial_state, attempt + 1)
         return False
@@ -245,19 +246,24 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return 0
         try:
-            return self._player.get_position()
-        except Exception as e:
+            result = self._proxy.call_sync(
+                "org.freedesktop.DBus.Properties.Get",
+                GLib.Variant("(ss)", (MPRIS_PLAYER_IFACE, "Position")),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+            return result.get_child_value(0).unpack() / 1_000_000
+        except GLib.Error as e:
             logger.warning(f"Could not get position: {e}")
             return 0
 
     def _start_pos_fabricator(self):
-        """Start position polling only if not already running."""
         if self._pos_source_id:
             return
         self._pos_source_id = GLib.timeout_add(2000, self._on_pos_poll)
 
     def _stop_pos_fabricator(self):
-        """Stop position polling."""
         if not self._pos_source_id:
             return
         GLib.source_remove(self._pos_source_id)
@@ -267,17 +273,15 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return False
         self.fabricating()
-        return True  # keep polling while playing
+        return True
 
     def _start_status_polling(self):
-        """Start status polling for browser players that don't emit signals."""
         if self._status_source_id:
             return
         self._last_polled_status = self.playback_status
         self._status_source_id = GLib.timeout_add(5000, self._on_status_poll)
 
     def _stop_status_polling(self):
-        """Stop status polling."""
         if not self._status_source_id:
             return
         GLib.source_remove(self._status_source_id)
@@ -291,26 +295,33 @@ class PlayerService(Service):
             self._last_polled_status = status
             self.poll_progress()
             self._notify_playback(status)
-        return True  # keep polling
+        return True
 
     def seek_position(self, pos: float):
         if self._is_cleaning_up:
             return
         self._stop_pos_fabricator()
-        current = self.get_position() / 1_000_000
         try:
-            self._player.set_position(int(pos * 1_000_000))
+            self._proxy.call_sync(
+                "SetPosition",
+                GLib.Variant("(i)", (int(pos * 1_000_000),)),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
         except GLib.Error:
             try:
+                current = self.get_position() / 1_000_000
                 offset = pos - current
-                self._player.seek(int(offset * 1_000_000))
-            except GLib.Error:
-                name = self.player_name
-                if name:
-                    # No shell: pass args as a list so player_name can't inject.
-                    exec_shell_command_async(
-                        ["playerctl", "-p", name, "position", str(pos)]
-                    )
+                self._proxy.call_sync(
+                    "Seek",
+                    GLib.Variant("(x)", (int(offset * 1_000_000),)),
+                    Gio.DBusCallFlags.NONE,
+                    -1,
+                    None,
+                )
+            except GLib.Error as e:
+                logger.error(f"seek_position fallback failed: {e}")
         finally:
             if self.playback_status.lower() == "playing":
                 self._start_pos_fabricator()
@@ -320,7 +331,13 @@ class PlayerService(Service):
             return
         self._stop_pos_fabricator()
         try:
-            self._player.seek(int(offset * 1_000_000))
+            self._proxy.call_sync(
+                "Seek",
+                GLib.Variant("(x)", (int(offset * 1_000_000),)),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
         except GLib.Error as e:
             logger.error(f"Failed to seek: {e}")
         finally:
@@ -339,39 +356,52 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return
         try:
-            pos = self._player.get_position() / 1_000_000
+            result = self._proxy.call_sync(
+                "org.freedesktop.DBus.Properties.Get",
+                GLib.Variant("(ss)", (MPRIS_PLAYER_IFACE, "Position")),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+            pos = result.get_child_value(0).unpack() / 1_000_000
         except GLib.Error as e:
             logger.warning(f"Failed to get position: {e}")
             return
         dur = 0
         if metadata is None:
-            try:
-                metadata = self._player.props.metadata
-            except Exception as e:
-                logger.debug(f"[mpris] Failed to read metadata: {e}")
-                metadata = None
+            metadata = self._get_metadata()
         if metadata is not None:
-            try:
-                dur = metadata["mpris:length"] / 1_000_000
-            except Exception as e:
-                logger.debug(f"[mpris] Failed to read duration: {e}")
-                dur = 0
-            # Browser players (YouTube in Firefox/Chromium) populate
-            # `mpris:artUrl` lazily and don't reliably emit the `metadata`
-            # signal. Since the position poll runs every 2s while playing, this
-            # also polls the artwork so it shows up even for an already-playing tab.
+            v = metadata.get("mpris:length")
+            if v is not None:
+                dur = (
+                    v.get_uint64() / 1_000_000
+                    if v.get_type_string() == "t"
+                    else int(v) / 1_000_000
+                )
             self._handle_artwork(metadata)
         self.track_position(pos, dur)
 
-    def on_seeked(self, player, position):
+    def _on_properties_changed(self, _proxy, changed_properties, _changed_invalidated):
         if self._is_cleaning_up:
             return
-        if self.playback_status.lower() == "playing":
-            self._start_pos_fabricator()
+        props = changed_properties.unpack()
+
+        if "PlaybackStatus" in props:
+            self.poll_progress()
+            self._notify_playback(props["PlaybackStatus"])
+
+        if "Metadata" in props:
+            metadata = props["Metadata"]
+            if isinstance(metadata, dict):
+                self.meta_change(metadata, self)
+                self.fabricating(metadata)
+            elif isinstance(metadata, GLib.Variant):
+                unpacked = metadata.unpack()
+                if isinstance(unpacked, dict):
+                    self.meta_change(unpacked, self)
+                    self.fabricating(unpacked)
 
     def _notify_playback(self, status_str: str):
-        """Emit play/pause once per actual state change (dedupes the
-        Playerctl signal and the status poller so listeners don't churn)."""
         if self._is_cleaning_up:
             return
         status_str = (status_str or "").lower()
@@ -383,39 +413,23 @@ class PlayerService(Service):
         else:
             self.pause()
 
-    def on_playback_status(self, player, status):
-        """DBus signal handler - instant when it fires (e.g. Modus buttons)."""
-        if self._is_cleaning_up:
-            return
-        self.poll_progress()
-        self._notify_playback(self.playback_status)
-
-    def _on_polled_status_change(self, new_status: str):
-        """Status poll change - fires reliably for browser players
-        that don't emit playback-status signals."""
-        if self._is_cleaning_up:
-            return
-        self.poll_progress()
-        self._notify_playback(new_status)
-
-    def on_metadata(self, player, metadata):
-        if self._is_cleaning_up:
-            return
-        self.meta_change(metadata, player)
-        self.fabricating(metadata)
+    def _get_metadata(self) -> dict | None:
+        v = self._proxy.get_cached_property("Metadata")
+        if v is None:
+            return None
+        return v.unpack() if isinstance(v, GLib.Variant) else v
 
     def _meta_str(self, metadata, key: str) -> str | None:
-        try:
-            value = metadata[key]
-        except (KeyError, TypeError, GLib.Error) as e:
-            logger.warning(f"[mpris] value = metadata[key] failed: {e}")
+        value = metadata.get(key)
+        if value is None:
             return None
+        if isinstance(value, GLib.Variant):
+            return _variant_to_str(value)
         if isinstance(value, (list, tuple)):
             return " ".join(str(v) for v in value) if value else None
         return str(value) if value else None
 
     def _find_cached_artwork(self, metadata) -> str | None:
-        """Locate already-cached artwork for this track (native MediaArt cache)."""
         if not _MEDIAART_AVAILABLE:
             return None
         artist = self._meta_str(metadata, "xesam:artist")
@@ -429,7 +443,6 @@ class PlayerService(Service):
         base = Path(base)
         if base.exists():
             return str(base)
-        # MediaArt files usually carry an extension; look for any sibling.
         matches = list(base.parent.glob(base.stem + ".*"))
         return str(matches[0]) if matches else None
 
@@ -444,18 +457,27 @@ class PlayerService(Service):
     def _handle_artwork(self, metadata):
         if self._is_cleaning_up:
             return
-        try:
-            art_url = metadata["mpris:artUrl"]
-        except (KeyError, TypeError) as e:
-            logger.warning(f"[mpris] art_url = metadata['mpris:artUrl'] failed: {e}")
+        art_url_raw = metadata.get("mpris:artUrl")
+        if art_url_raw is None:
             return
-        if not art_url:
+        art_url = (
+            art_url_raw.get_string()
+            if isinstance(art_url_raw, GLib.Variant)
+            else str(art_url_raw)
+        )
+        if not _is_valid_art_url(art_url):
             return
         artwork_hash = hashlib.md5(art_url.encode()).hexdigest()
 
         if artwork_hash == self._current_artwork_hash:
             return
+        if artwork_hash in self._failed_covers:
+            return
         self._current_artwork_hash = artwork_hash
+
+        for h in list(self._download_threads):
+            if h != artwork_hash:
+                del self._download_threads[h]
 
         parsed = urllib.parse.urlparse(art_url)
         if parsed.scheme == "file":
@@ -469,14 +491,14 @@ class PlayerService(Service):
             if existing and Path(existing).exists():
                 self._set_artwork(existing)
                 return
-            # Capture generation so the thread can bail out if cleanup runs
-            # while the download is in-flight.
             gen = self._artwork_generation
-            threading.Thread(
+            t = threading.Thread(
                 target=self._download_artwork,
                 args=(art_url, artwork_hash, metadata, gen),
                 daemon=True,
-            ).start()
+            )
+            self._download_threads[artwork_hash] = t
+            t.start()
 
     def _set_artwork(self, path: str):
         if self._is_cleaning_up:
@@ -485,8 +507,6 @@ class PlayerService(Service):
         self.artwork_change(path)
 
     def _artwork_target_path(self, artwork_hash: str, metadata, suffix: str) -> Path:
-        """Where to store a freshly downloaded cover: the standard MediaArt
-        cache location when available, otherwise our own fallback cache."""
         ma_base = self._find_cached_artwork(metadata)
         if ma_base:
             base = Path(ma_base)
@@ -508,20 +528,20 @@ class PlayerService(Service):
                 tmp.write_bytes(data)
                 tmp.replace(target)
 
-            # Bail out if cleanup ran while we were downloading — the idle
-            # callback would reference a stale service.
             if not self._is_cleaning_up and gen == self._artwork_generation:
                 GLib.idle_add(self._set_artwork, str(target))
 
         except Exception as e:
             logger.error(f"Failed to download artwork: {e}")
+            if not self._is_cleaning_up:
+                self._failed_covers.add(artwork_hash)
+        finally:
+            self._download_threads.pop(artwork_hash, None)
 
     def cleanup(self):
         if self._is_cleaning_up:
             return
         self._is_cleaning_up = True
-        # Invalidate any in-flight artwork download threads so they won't
-        # call _set_artwork on a stale service.
         self._artwork_generation += 1
 
         self._stop_pos_fabricator()
@@ -529,11 +549,13 @@ class PlayerService(Service):
 
         for signal_id in self._signal_ids:
             try:
-                self._player.disconnect(signal_id)
+                self._proxy.disconnect(signal_id)
             except Exception as e:
                 logger.warning(f"Error disconnecting signal: {e}")
         self._signal_ids.clear()
         self._current_artwork_path = ""
+        self._failed_covers.clear()
+        self._download_threads.clear()
 
 
 class PlayerManager(Service):
@@ -553,44 +575,84 @@ class PlayerManager(Service):
 
     def _init_singleton(self):
         super().__init__()
-        self._manager = Playerctl.PlayerManager()
+        self._connection: Gio.DBusConnection | None = None
         self._services: dict[str, PlayerService] = {}
-        self._player_objects: dict[str, Playerctl.Player] = {}
+        self._owner_watch_id = 0
 
-        self._manager.connect("name-appeared", self._on_name_appeared, self._manager)
-        self._manager.connect(
-            "player-vanished", self._on_player_vanished, self._manager
+        try:
+            self._connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        except GLib.Error as e:
+            logger.error(f"Failed to connect to session bus: {e}")
+            return
+
+        self._owner_watch_id = self._connection.signal_subscribe(
+            None,
+            "org.freedesktop.DBus",
+            "NameOwnerChanged",
+            "/org/freedesktop/DBus",
+            None,
+            Gio.DBusSignalFlags.NONE,
+            self._on_name_owner_changed,
         )
         self._init_existing_players()
 
     def _init_existing_players(self):
-        for player_obj in self._manager.props.player_names:
-            self._create_player(player_obj)
-
-    def _create_player(self, name_obj):
-        name_str = name_obj.name
-        if name_str in self._services:
+        if not self._connection:
             return
         try:
-            player = Playerctl.Player.new_from_name(name_obj)
-            self._manager.manage_player(player)
-            service = PlayerService(player)
-            self._services[name_str] = service
-            self._player_objects[name_str] = player
-            self.new_player(name_str, service)
-        except Exception as e:
-            logger.error(f"Failed to create player {name_str}: {e}")
+            result = self._connection.call_sync(
+                "org.freedesktop.DBus",
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                "ListNames",
+                None,
+                GLib.VariantType("(as)"),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+            names = result.get_child_value(0).unpack()
+            for name in names:
+                if name.startswith(MPRIS_PLAYER_PREFIX) and name != PLAYERCTLD_SERVICE:
+                    self._create_player(name)
+        except GLib.Error as e:
+            logger.error(f"Failed to list bus names: {e}")
 
-    def _on_name_appeared(self, sender, name, _manager):
-        self._create_player(name)
+    def _on_name_owner_changed(
+        self, _connection, _sender, _object_path, _interface, _signal_name, parameters
+    ):
+        name, old_owner, new_owner = parameters.unpack()
+        if not name.startswith(MPRIS_PLAYER_PREFIX) or name == PLAYERCTLD_SERVICE:
+            return
+        if new_owner and not old_owner:
+            self._create_player(name)
+        elif old_owner and not new_owner:
+            self._on_player_vanished(name)
 
-    def _on_player_vanished(self, sender, player, _manager):
-        name = player.props.player_name
+    def _create_player(self, name: str):
+        if name in self._services:
+            return
+        try:
+            proxy = Gio.DBusProxy.new_sync(
+                self._connection,
+                Gio.DBusProxyFlags.NONE,
+                _MPRIS_PLAYER_IFACE_INFO,
+                name,
+                MPRIS_PLAYER_PATH,
+                MPRIS_PLAYER_IFACE,
+                None,
+            )
+            service = PlayerService(name, proxy)
+            self._services[name] = service
+            self.new_player(name, service)
+        except GLib.Error as e:
+            logger.error(f"Failed to create player {name}: {e}")
+
+    def _on_player_vanished(self, name: str):
         if name in self._services:
             self._services[name].cleanup()
             del self._services[name]
-        self._player_objects.pop(name, None)
-        self.player_vanish(name)
+            self.player_vanish(name)
 
     def get_player_service(self, name: str) -> PlayerService | None:
         return self._services.get(name)

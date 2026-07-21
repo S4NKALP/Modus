@@ -509,7 +509,7 @@ class PlayerBox(Box):
 
     def _load_initial_metadata(self):
         try:
-            metadata = self.player._player.props.metadata
+            metadata = self.player.metadata
             if metadata:
                 keys = metadata.keys()
                 self.track_title.set_label(
@@ -529,7 +529,7 @@ class PlayerBox(Box):
                 )
         except Exception as e:
             logger.warning(
-                f"[expanded_player] metadata = self.player._player.props.metadata failed: {e}"
+                f"[expanded_player] metadata = self.player.metadata failed: {e}"
             )
 
     def update_buttons(self, player_buttons, show_buttons):
