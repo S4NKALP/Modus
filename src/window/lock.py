@@ -1,5 +1,14 @@
 import getpass
 
+# python-pam uses six.text_type which is just str in Python 3 — shim it out
+import sys
+import types as _types
+
+if "six" not in sys.modules:
+    _six = _types.ModuleType("six")
+    _six.text_type = str  # type: ignore[attr-defined]
+    sys.modules["six"] = _six
+
 import pam
 from fabric import Application
 from fabric.utils import (
@@ -249,7 +258,7 @@ class LockScreen(Window):
         return False  # stop timeout
 
     def on_activate(self, entry: Entry, *args):
-        if not pam.authenticate(getpass.getuser(), (entry.get_text() or "").strip()):
+        if not pam.pam().authenticate(getpass.getuser(), (entry.get_text() or "").strip()):
             entry.set_text("")
             entry.set_placeholder_text("Wrong Password")
             return
