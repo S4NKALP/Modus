@@ -1,10 +1,7 @@
-import atexit
 import os
 
 # App-capture typelib path (built via meson in src/window/switcher/app-capture/builddir)
 # Must be set before gi is imported so the typelib search path includes it.
-# Note: LD_LIBRARY_PATH does not take effect in the current process, so the
-# .so is preloaded via ctypes in window/switcher/main.py instead.
 _app_capture_builddir = os.path.join(
     os.path.dirname(__file__), "window", "switcher", "app-capture", "builddir"
 )
@@ -18,18 +15,11 @@ if os.path.isdir(_app_capture_builddir):
 from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
-for log in [
-    "fabric",
-    "services",
-    "window",
-    "utils",
-    "window.globalmenu",
-]:
-    logger.disable(log)
-
+from services.config import config
 from services.keyboard_layout import KeyboardLayout
 from shared.data import APP_NAME, load_config
 from utils.functions import set_process_name
+from utils.gtk_utils import generate_colors_from_wallpaper
 from window.desktop.widget import Deskwidgets
 from window.dock import Dock
 from window.lock import LockScreenWrapper
@@ -42,25 +32,19 @@ from window.spotlight.main import SpotlightWindow
 from window.switcher import ApplicationSwitcher
 
 
-def main():
-
-    # Generate colors.css if it doesn't exist
-    colors_css_path = get_relative_path("styles/colors.css")
-    if not os.path.exists(colors_css_path):
-        from utils.gtk_utils import generate_colors_from_wallpaper
-
-        default_wallpaper = get_relative_path("assets/wallpaper_example/example-1.png")
-        if os.path.exists(default_wallpaper):
-            generate_colors_from_wallpaper(default_wallpaper)
-
-    set_process_name(APP_NAME)
-
-    load_config()
-
-    from services.config import config
+def setup_logger():
+    for log in [
+        "fabric",
+        "services",
+        "window",
+        "utils",
+        "window.globalmenu",
+        "LIBDBUSMENU-GLIB",
+        "libdbusmenu-glib",
+    ]:
+        logger.disable(log)
 
     _debug = config().get("debug", False)
-
     if not _debug:
         logger.disable("modus_plugin_builtin_emoji")
     else:
@@ -69,6 +53,48 @@ def main():
         logger.enable("window")
         logger.enable("utils")
         logger.enable("window.globalmenu")
+
+
+def setup_css(app):
+    # Generate colors.css if it doesn't exist
+    colors_css_path = get_relative_path("styles/colors.css")
+    if not os.path.exists(colors_css_path):
+        default_wallpaper = get_relative_path("assets/wallpaper_example/example-1.png")
+        if os.path.exists(default_wallpaper):
+            generate_colors_from_wallpaper(default_wallpaper)
+
+    def set_css():
+        app.set_stylesheet_from_file(get_relative_path("styles/main.css"))
+
+    app.set_css = set_css
+    app.set_css()
+
+    css_monitors = []
+    for root, dirs, files in os.walk(get_relative_path("styles/")):
+        monitor = monitor_file(root)
+        monitor.connect("changed", lambda *_: set_css())
+        css_monitors.append(monitor)
+
+    def cleanup_css_monitors(*args):
+        for m in css_monitors:
+            try:
+                m.cancel()
+            except Exception as e:
+                logger.warning(f"[main] m.cancel() failed: {e}")
+
+    app.connect("shutdown", cleanup_css_monitors)
+
+
+def main():
+    set_process_name(APP_NAME)
+    load_config()
+    setup_logger()
+
+    # Initialize the Application first so it can manage styles globally
+    app = Application(f"{APP_NAME}")
+
+    # Set up styling before creating windows to prevent unstyled flashes
+    setup_css(app)
 
     switcher = ApplicationSwitcher()
     panel = Panel()
@@ -81,15 +107,8 @@ def main():
     screencapture = ScreenCaptureWindow()
     settings = get_settings_window()
 
-    # Monitor CSS files and subdirectories for changes
-    css_monitors = []
-    for root, dirs, files in os.walk(get_relative_path("styles/")):
-        monitor = monitor_file(root)
-        monitor.connect("changed", lambda *_: set_css())
-        css_monitors.append(monitor)
-
-    app = Application(
-        f"{APP_NAME}",
+    # Register windows with the application
+    for w in [
         panel,
         modusnoti,
         deskwidget.top_left,
@@ -99,25 +118,10 @@ def main():
         dock,
         screencapture,
         spotlight,
-    )
-
-    def set_css():
-        app.set_stylesheet_from_file(get_relative_path("styles/main.css"))
-
-    app.set_css = set_css
-    app.set_css()
-
-    def cleanup_css_monitors():
-        for m in css_monitors:
-            try:
-                m.cancel()
-            except Exception as e:
-                logger.warning(f"[main] m.cancel() failed: {e}")
-
-    atexit.register(cleanup_css_monitors)
+    ]:
+        app.add_window(w)
 
     # Inject into the executing module's namespace (__main__)
-    # to emulate what happened when this file was run directly.
     # This allows fabric-cli exec to execute commands flawlessly.
     import __main__
 
