@@ -375,7 +375,7 @@ class PlayerService(Service):
             if v is not None:
                 dur = (
                     v.get_uint64() / 1_000_000
-                    if v.get_type_string() == "t"
+                    if isinstance(v, GLib.Variant) and v.get_type_string() == "t"
                     else int(v) / 1_000_000
                 )
             self._handle_artwork(metadata)

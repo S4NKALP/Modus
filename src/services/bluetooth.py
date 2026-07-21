@@ -1,3 +1,5 @@
+import enum
+import subprocess
 from collections.abc import Callable
 from typing import Any, Concatenate, ParamSpec
 
@@ -12,6 +14,14 @@ BLUEZ_DEVICE_IFACE = "org.bluez.Device1"
 BLUEZ_BATTERY_IFACE = "org.bluez.Battery1"
 DBUS_OM_IFACE = "org.freedesktop.DBus.ObjectManager"
 DBUS_PROPS_IFACE = "org.freedesktop.DBus.Properties"
+
+RFKILL_PATH = "/dev/rfkill"
+
+
+class BluetoothState(enum.Enum):
+    UNAVAILABLE = "unavailable"
+    ACTIVE = "active"
+    INACTIVE = "inactive"
 
 
 def _unpack_variant(v):
@@ -36,6 +46,23 @@ def _make_proxy(bus: Gio.DBusConnection, path: str, iface: str) -> Gio.DBusProxy
         iface,
         None,
     )
+
+
+def _rfkill_soft_blocked() -> bool:
+    try:
+        result = subprocess.run(
+            ["rfkill", "list", "bluetooth"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return "Soft blocked: yes" in result.stdout
+    except FileNotFoundError:
+        logger.warning("[Bluetooth] rfkill not found, assuming not soft blocked")
+        return False
+    except Exception as e:
+        logger.warning(f"[Bluetooth] rfkill check failed: {e}")
+        return False
 
 
 class BluetoothDevice(Service):
@@ -570,10 +597,14 @@ class BluetoothClient(Service):
 
     @Property(str, "readable")
     def state(self) -> str:
+        if not self._adapters:
+            return BluetoothState.UNAVAILABLE.value
+        if _rfkill_soft_blocked():
+            return BluetoothState.INACTIVE.value
         for a in self._adapters.values():
             if a.powered:
                 return a.state
-        return "absent" if not self._adapters else "off"
+        return BluetoothState.INACTIVE.value
 
     @Property(bool, "read-write", default_value=False)
     def enabled(self) -> bool:
@@ -639,7 +670,18 @@ class BluetoothClient(Service):
             None,
         )
 
+        self._cached_rfkill_blocked = _rfkill_soft_blocked()
+        self._rfkill_timeout_id = GLib.timeout_add_seconds(10, self._check_rfkill)
+
         self._populate_from_object_manager()
+
+    def _check_rfkill(self) -> bool:
+        blocked = _rfkill_soft_blocked()
+        if blocked != self._cached_rfkill_blocked:
+            self._cached_rfkill_blocked = blocked
+            self.notify("state")
+            self.emit("changed")
+        return True
 
     def _populate_from_object_manager(self):
         try:
