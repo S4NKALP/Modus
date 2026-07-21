@@ -4,7 +4,7 @@ from utils.functions import parse_timeout_string
 from utils.gtk_utils import toml_file
 
 HOME_DIR = GLib.get_home_dir()
-APP_NAME = "modus"
+APP_NAME = "modus1"
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
 
