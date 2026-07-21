@@ -8,8 +8,11 @@ from fabric.widgets.separator import Separator
 
 from services.battery import Battery
 from services.gamemode import GameModeService
+from shared.capture import CaptureNotifier
 from utils.functions import clear_children, format_duration
 from utils.gtk_utils import svg_file
+
+_charge_notifier = CaptureNotifier(app_name="Modus")
 
 
 class EnergyModeButton(Box):
@@ -82,6 +85,62 @@ class EnergyModeButton(Box):
             self.mode_icon.add_style_class("connected")
         else:
             self.mode_icon.remove_style_class("connected")
+
+
+class ChargeLimitButton(Box):
+    def __init__(self, battery_service: Battery, parent, **kwargs):
+        super().__init__(name="energy-mode-button", h_expand=True, **kwargs)
+        self.battery_service = battery_service
+        self.parent = parent
+
+        self.charge_icon_svg = svg_file("zap.svg", size=16)
+
+        self.charge_icon = Box(
+            children=[self.charge_icon_svg],
+            name="charge-limit-icon",
+        )
+
+        self.charge_label = Label(
+            label="Charge Limit",
+            style_classes="charge-limit-button",
+            h_align="start",
+            h_expand=True,
+        )
+
+        start_box = Box(
+            orientation="horizontal",
+            spacing=3,
+            children=[self.charge_icon, self.charge_label],
+        )
+
+        self.button = Button(
+            child=start_box,
+            name="charge-limit-button-clickable",
+            on_clicked=self.on_clicked,
+            h_expand=True,
+        )
+
+        self.children = [self.button]
+        self.update_state()
+
+    def on_clicked(self, *args):
+        self.battery_service.toggle_charge_limit()
+        self.update_state()
+        cl = self.battery_service.charge_limit
+        if cl is not None:
+            state = "enabled" if cl.enabled else "disabled"
+            _charge_notifier.notify(
+                "Charge Limit",
+                f"Battery charge limit {state}",
+                icon="battery-full-charging-symbolic",
+            )
+
+    def update_state(self, *_):
+        cl = self.battery_service.charge_limit
+        if cl is not None and cl.enabled:
+            self.charge_icon.add_style_class("connected")
+        else:
+            self.charge_icon.remove_style_class("connected")
 
 
 class GameModeButton(Box):
@@ -192,6 +251,18 @@ class BatteryControl(Box):
             orientation="vertical", spacing=4, name="energy-modes-container"
         )
 
+        self.charge_limit_section = Box(
+            orientation="vertical", spacing=8, name="charge-limit-section"
+        )
+
+        self.charge_limit_title = Label(
+            label="Charge Limit", style_classes="battery-section-title", h_align="start"
+        )
+
+        self.charge_limit_container = Box(
+            orientation="vertical", spacing=4, name="charge-limit-container"
+        )
+
         self.game_mode_section = Box(
             orientation="vertical", spacing=8, name="game-mode-section"
         )
@@ -228,32 +299,38 @@ class BatteryControl(Box):
         separator2 = Separator(orientation="h", name="separator")
         self.battery_widget.add(separator2)
 
+        self.charge_limit_section.add(self.charge_limit_title)
+        self.charge_limit_section.add(self.charge_limit_container)
+        self.battery_widget.add(self.charge_limit_section)
+
+        separator3 = Separator(orientation="h", name="separator")
+        self.battery_widget.add(separator3)
+
         self.game_mode_section.add(self.game_mode_title)
         self.game_mode_section.add(self.game_mode_container)
         self.battery_widget.add(self.game_mode_section)
 
-        separator3 = Separator(orientation="h", name="separator")
-        self.battery_widget.add(separator3)
+        separator4 = Separator(orientation="h", name="separator")
+        self.battery_widget.add(separator4)
 
         self.battery_widget.add(self.battery_settings_button)
 
         self.add(self.battery_widget)
 
         self.battery_service.connect("changed", self.on_battery_changed)
-        if hasattr(self.battery_service, "connect"):
-            try:
-                self.battery_service.connect(
-                    "power_profile_changed", self.on_profile_changed
-                )
-            except TypeError as e:
-                logger.warning(
-                    f"[battery_widget] self.battery_service.connect( 'power_profile_changed', se... failed: {e}"
-                )
-                # signal does not exist
+        try:
+            self.battery_service.connect(
+                "power_profile_changed", self.on_profile_changed
+            )
+        except TypeError as e:
+            logger.warning(
+                f"[battery_widget] connect power_profile_changed failed: {e}"
+            )
 
         # Initialize display
         self.update_battery_info()
         self.create_energy_mode_buttons()
+        self.create_charge_limit_button()
         self.create_game_mode_button()
 
     def open_battery_settings(self, *args):
@@ -261,12 +338,10 @@ class BatteryControl(Box):
         pass
 
     def create_energy_mode_buttons(self):
-        # Clear existing buttons
         for button in self.energy_mode_buttons:
             button.destroy()
         self.energy_mode_buttons.clear()
 
-        # Get available profiles
         available_profiles = []
         if hasattr(self.battery_service, "get_available_power_profiles"):
             available_profiles = (
@@ -282,7 +357,6 @@ class BatteryControl(Box):
             self.energy_modes_container.add(no_profiles_label)
             return
 
-        # Define energy mode mappings with proper icon names
         energy_mode_config = {
             "balanced": {"display": "Automatic", "icon": "balanced"},
             "power-saver": {"display": "Low Power", "icon": "power"},
@@ -290,21 +364,17 @@ class BatteryControl(Box):
             "performance": {"display": "High Power", "icon": "performance"},
         }
 
-        # Define the desired order for energy modes
         desired_order = ["balanced", "power-saver", "powersave", "performance"]
 
-        # Create ordered list of available profiles
         ordered_profiles = []
         for profile_name in desired_order:
             if profile_name in available_profiles:
                 ordered_profiles.append(profile_name)
 
-        # Add any remaining profiles not in the desired order
         for profile in available_profiles:
             if profile not in ordered_profiles:
                 ordered_profiles.append(profile)
 
-        # Create button for each available profile in the specified order
         for profile in ordered_profiles:
             config = energy_mode_config.get(
                 profile, {"display": profile.title(), "icon": "good"}
@@ -324,11 +394,21 @@ class BatteryControl(Box):
         for button in self.energy_mode_buttons:
             button.update_state()
 
-    def create_game_mode_button(self):
-        # Clear existing game mode button if any
-        clear_children(self.game_mode_container)
+    def create_charge_limit_button(self):
+        if self.battery_service.charge_limit is None:
+            self.charge_limit_section.hide()
+            return
+        self.charge_limit_section.show()
+        if not hasattr(self, "charge_limit_button"):
+            self.charge_limit_button = ChargeLimitButton(
+                battery_service=self.battery_service,
+                parent=self,
+            )
+            self.charge_limit_container.add(self.charge_limit_button)
+        self.charge_limit_button.update_state()
 
-        # Create game mode button
+    def create_game_mode_button(self):
+        clear_children(self.game_mode_container)
         self.game_mode_button = GameModeButton(parent=self)
         self.game_mode_container.add(self.game_mode_button)
 
@@ -340,11 +420,9 @@ class BatteryControl(Box):
             self.charging_time_label.set_label("")
             return
 
-        # Update percentage in header
         percentage = int(self.battery_service.percent)
         self.battery_percentage_label.set_label(f"{percentage}%")
 
-        # Update power source and charging info
         if self.battery_service.charging:
             state = "CHARGING"
         elif self.battery_service.discharging:
@@ -371,9 +449,7 @@ class BatteryControl(Box):
             self.power_source_label.set_label("Power Source: Battery")
             seconds_to_empty = self.battery_service.time_remaining
             time_to_empty = format_duration(seconds_to_empty)
-            if time_to_empty != "N/A" and not time_to_empty.startswith(
-                "4553h"
-            ):  # Filter out unrealistic times
+            if time_to_empty != "N/A" and not time_to_empty.startswith("4553h"):
                 self.charging_time_label.set_label(f"{time_to_empty} remaining")
             else:
                 self.charging_time_label.set_label("On Battery Power")
@@ -383,6 +459,9 @@ class BatteryControl(Box):
         else:
             self.power_source_label.set_label("Power Source: Unknown")
             self.charging_time_label.set_label("")
+
+        if hasattr(self, "charge_limit_button"):
+            self.charge_limit_button.update_state()
 
     def on_battery_changed(self, *args):
         self.update_battery_info()
@@ -395,12 +474,12 @@ class BatteryControl(Box):
             self.battery_service.disconnect_by_func(self.on_battery_changed)
         except Exception as e:
             logger.warning(
-                f"[battery_widget] self.battery_service.disconnect_by_func(self.on_battery_c... failed: {e}"
+                f"[battery_widget] disconnect on_battery_changed failed: {e}"
             )
         try:
             self.battery_service.disconnect_by_func(self.on_profile_changed)
         except Exception as e:
             logger.warning(
-                f"[battery_widget] self.battery_service.disconnect_by_func(self.on_profile_c... failed: {e}"
+                f"[battery_widget] disconnect on_profile_changed failed: {e}"
             )
         super().destroy()
