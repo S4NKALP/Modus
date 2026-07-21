@@ -90,12 +90,14 @@ Modus/
 ## Development Workflow
 
 1. **Create a branch** from `dev`:
+
    ```bash
    git checkout dev
    git checkout -b feat/my-feature
    ```
 
 2. **Make your changes** and ensure they pass linting:
+
    ```bash
    # Lint
    .venv/bin/ruff check
@@ -111,6 +113,7 @@ Modus/
    ```
 
 3. **Test your changes** by running the app:
+
    ```bash
    uv run start
    ```
@@ -133,18 +136,18 @@ Modus uses [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting.
 
 ### Enforced via Ruff
 
-| Rule | What it catches |
-|------|----------------|
-| `E`, `W` | Pycodestyle style errors |
-| `F` | Pyflakes (unused imports, undefined names) |
-| `I` | Import sorting (isort) |
-| `UP` | Python upgrade suggestions |
-| `B` | Bugbear (common bugs) |
-| `SIM` | Simplification suggestions |
-| `C4` | Unnecessary comprehensions |
-| `RET` | Return statement issues |
-| `RUF` | Ruff-specific rules |
-| `T20` | `print()` detection |
+| Rule     | What it catches                            |
+| -------- | ------------------------------------------ |
+| `E`, `W` | Pycodestyle style errors                   |
+| `F`      | Pyflakes (unused imports, undefined names) |
+| `I`      | Import sorting (isort)                     |
+| `UP`     | Python upgrade suggestions                 |
+| `B`      | Bugbear (common bugs)                      |
+| `SIM`    | Simplification suggestions                 |
+| `C4`     | Unnecessary comprehensions                 |
+| `RET`    | Return statement issues                    |
+| `RUF`    | Ruff-specific rules                        |
+| `T20`    | `print()` detection                        |
 
 ### Running Ruff
 
@@ -175,16 +178,16 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Types
 
-| Type | Use for |
-|------|---------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `refactor` | Code restructuring without behavior change |
-| `perf` | Performance improvement |
-| `docs` | Documentation changes |
-| `style` | Code style changes (formatting, no logic change) |
-| `chore` | Build, CI, tooling, dependencies |
-| `test` | Adding or updating tests |
+| Type       | Use for                                          |
+| ---------- | ------------------------------------------------ |
+| `feat`     | New feature                                      |
+| `fix`      | Bug fix                                          |
+| `refactor` | Code restructuring without behavior change       |
+| `perf`     | Performance improvement                          |
+| `docs`     | Documentation changes                            |
+| `style`    | Code style changes (formatting, no logic change) |
+| `chore`    | Build, CI, tooling, dependencies                 |
+| `test`     | Adding or updating tests                         |
 
 ### Scopes
 

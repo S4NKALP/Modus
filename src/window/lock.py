@@ -258,7 +258,9 @@ class LockScreen(Window):
         return False  # stop timeout
 
     def on_activate(self, entry: Entry, *args):
-        if not pam.pam().authenticate(getpass.getuser(), (entry.get_text() or "").strip()):
+        if not pam.pam().authenticate(
+            getpass.getuser(), (entry.get_text() or "").strip()
+        ):
             entry.set_text("")
             entry.set_placeholder_text("Wrong Password")
             return
