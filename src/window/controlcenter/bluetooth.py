@@ -1,6 +1,6 @@
 from enum import Enum, auto
 
-from fabric.utils import Gdk, GLib, Gtk, logger
+from fabric.utils import Gdk, GLib, Gtk, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -518,7 +518,7 @@ class BluetoothConnections(Box):
             ):
                 self.client.scan()
             # Defer refresh until after the height animation completes
-            GLib.idle_add(self._refresh_after_animation)
+            idle_add(self._refresh_after_animation)
 
     def _cancel_pending_refresh(self):
         if hasattr(self, "_anim_finished_handler") and self._anim_finished_handler:

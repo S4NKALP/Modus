@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib, logger
+from fabric.utils import Gdk, GLib, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -35,9 +35,8 @@ class WifiNetworkSlot(Box):
 
         self.is_connected = access_point.is_active
 
-        self.styles = [
-            "connected" if self.is_connected else "",
-        ]
+        if self.is_connected:
+            self.add_style_class("connected")
 
         wifi_icon_path = get_wifi_icon_for_strength(self.strength)
         self.dimage = svg_file(wifi_icon_path, size=28)
@@ -108,15 +107,8 @@ class WifiNetworkSlot(Box):
             self.dimage.set_from_file(connecting_icon)
             self.dimage.add_style_class("disconnecting")
 
-            if self.wifi_service and self.wifi_service._device:
-                spawn_detached(
-                    [
-                        "nmcli",
-                        "device",
-                        "disconnect",
-                        self.wifi_service._device.get_iface(),
-                    ]
-                )
+            if self.network_service:
+                self.network_service.disconnect_wifi()
             self.is_connected = False
             GLib.timeout_add(500, lambda: self._reset_disconnect_state())
         else:
@@ -150,8 +142,8 @@ class WifiNetworkSlot(Box):
 
                 try:
                     if self.network_service:
-                        self.network_service.connect_wifi_bssid(
-                            self.access_point.bssid, callback=on_open_connection_result
+                        self.network_service.connect_wifi(
+                            self.access_point, callback=on_open_connection_result
                         )
                 except Exception as e:
                     logger.error(
@@ -180,9 +172,10 @@ class WifiNetworkSlot(Box):
 
     def on_changed(self, *_):
         self.is_connected = self.access_point.is_active
-        self.styles = [
-            "connected" if self.is_connected else "",
-        ]
+        if self.is_connected:
+            self.add_style_class("connected")
+        else:
+            self.remove_style_class("connected")
 
         if self.is_connected:
             self.wifi_icon_box.add_style_class("wifi-icon-box-connected")
@@ -220,12 +213,7 @@ class WifiNetworkSlot(Box):
 
                     GLib.timeout_add(500, lambda: self._reset_connect_state())
 
-                    if (
-                        self.password_dialog
-                        and self.password_dialog.connection_timeout_id
-                    ):
-                        GLib.source_remove(self.password_dialog.connection_timeout_id)
-                        self.password_dialog.connection_timeout_id = None
+                    if self.password_dialog:
                         self.password_dialog.is_connecting = False
                 else:
                     self._reset_connect_state()
@@ -237,7 +225,7 @@ class WifiNetworkSlot(Box):
             try:
                 if self.network_service:
                     self.network_service.connect_wifi_with_password(
-                        self.access_point.bssid, password, callback=on_connection_result
+                        self.access_point, password, callback=on_connection_result
                     )
             except Exception as e:
                 logger.error(
@@ -278,8 +266,8 @@ class WifiConnections(Box):
         self._network_ready_fired = False  # Guard against duplicate device-ready
         self._pending_toggle = None  # Force toggle to target after stale revert
 
-        if network_service and network_service.wifi_device:
-            self.on_network_ready()
+        if self.network_service and self.network_service.wifi_device:
+            idle_add(self.on_network_ready)
         else:
             self._signal_ids.append(
                 (
@@ -411,7 +399,7 @@ class WifiConnections(Box):
             if self.wifi_service:
                 self.wifi_service.scan()
             # Defer refresh until after the height animation completes
-            GLib.idle_add(self._refresh_after_animation)
+            idle_add(self._refresh_after_animation)
 
     def _cancel_pending_refresh(self):
         if hasattr(self, "_anim_finished_handler") and self._anim_finished_handler:
@@ -449,7 +437,16 @@ class WifiConnections(Box):
             return
         self._network_ready_fired = True
         self.wifi_service = wifi
-        self.toggle_button.set_active(self.wifi_service.enabled)
+        # Defer the initial sync: the D-Bus cached property may not yet be
+        # populated when device-ready fires inside _init_devices, causing
+        # enabled to read as False even when WiFi is on.
+        idle_add(
+            lambda: (
+                self.toggle_button.set_active(self.wifi_service.enabled)
+                if self.wifi_service
+                else False
+            )
+        )
 
         self._signal_ids.append(
             (
@@ -468,6 +465,9 @@ class WifiConnections(Box):
 
         # Initial network update
         self.update_networks()
+
+        # Trigger initial scan so AP list is populated
+        self.wifi_service.scan()
 
     def on_toggle_changed(self, toggle_button, *_):
         """Handle WiFi toggle button changes"""
@@ -508,109 +508,82 @@ class WifiConnections(Box):
         self._update_in_progress = True
 
         try:
-            current_known_ssids = {
-                child.ssid
-                for child in self.known_networks.get_children()
-                if hasattr(child, "ssid")
-            }
-            current_other_ssids = {
-                child.ssid
-                for child in self.other_networks.get_children()
-                if hasattr(child, "ssid")
-            }
-
             access_points = self.wifi_service.access_points
             known_networks = []
             other_networks = []
-            new_known_ssids = set()
-            new_other_ssids = set()
 
             for access_point in access_points:
-                try:
-                    if access_point.ssid and access_point.ssid != "Unknown":
-                        if access_point.is_active or self._is_saved_network(
-                            access_point
-                        ):
-                            known_networks.append(access_point)
-                            new_known_ssids.add(access_point.ssid)
-                        else:
-                            other_networks.append(access_point)
-                            new_other_ssids.add(access_point.ssid)
-                except Exception as e:
-                    logger.warning(
-                        f"[WiFi] Failed to process access point {access_point}: {e}"
-                    )
-                    continue
+                if access_point.ssid and access_point.ssid != "Unknown":
+                    if access_point.is_active or self._is_saved_network(access_point):
+                        known_networks.append(access_point)
+                    else:
+                        other_networks.append(access_point)
 
-            known_changed = current_known_ssids != new_known_ssids
-            other_changed = current_other_ssids != new_other_ssids
+            # Get existing networks
+            existing_known = {
+                child.ssid: child for child in self.known_networks.get_children()
+            }
+            existing_other = {
+                child.ssid: child for child in self.other_networks.get_children()
+            }
 
-            if known_changed or other_changed:
-                # Get existing networks
-                existing_known = {
-                    child.ssid: child for child in self.known_networks.get_children()
-                }
-                existing_other = {
-                    child.ssid: child for child in self.other_networks.get_children()
-                }
+            for access_point in known_networks:
+                if not self._destroyed:
+                    if access_point.ssid in existing_known:
+                        slot = existing_known.pop(access_point.ssid)
+                        slot.update_ap(access_point)
+                    elif access_point.ssid in existing_other:
+                        slot = existing_other.pop(access_point.ssid)
+                        slot.update_ap(access_point)
+                        self.other_networks.remove(slot)
+                        self.known_networks.add(slot)
+                    else:
+                        network_slot = WifiNetworkSlot(
+                            access_point,
+                            self.wifi_service,
+                            network_service=self.network_service,
+                            parent=self.parent,
+                        )
+                        self.known_networks.add(network_slot)
 
-                for access_point in known_networks:
-                    if not self._destroyed:
-                        if access_point.ssid in existing_known:
-                            slot = existing_known.pop(access_point.ssid)
-                            slot.update_ap(access_point)
-                        elif access_point.ssid in existing_other:
-                            slot = existing_other.pop(access_point.ssid)
-                            slot.update_ap(access_point)
-                            self.other_networks.remove(slot)
-                            self.known_networks.add(slot)
-                        else:
-                            network_slot = WifiNetworkSlot(
-                                access_point,
-                                self.wifi_service,
-                                network_service=self.network_service,
-                                parent=self.parent,
-                            )
-                            self.known_networks.add(network_slot)
+            for access_point in other_networks:
+                if not self._destroyed:
+                    if access_point.ssid in existing_other:
+                        slot = existing_other.pop(access_point.ssid)
+                        slot.update_ap(access_point)
+                    elif access_point.ssid in existing_known:
+                        slot = existing_known.pop(access_point.ssid)
+                        slot.update_ap(access_point)
+                        self.known_networks.remove(slot)
+                        self.other_networks.add(slot)
+                    else:
+                        network_slot = WifiNetworkSlot(
+                            access_point,
+                            self.wifi_service,
+                            network_service=self.network_service,
+                            parent=self.parent,
+                        )
+                        self.other_networks.add(network_slot)
 
-                for access_point in other_networks:
-                    if not self._destroyed:
-                        if access_point.ssid in existing_other:
-                            slot = existing_other.pop(access_point.ssid)
-                            slot.update_ap(access_point)
-                        elif access_point.ssid in existing_known:
-                            slot = existing_known.pop(access_point.ssid)
-                            slot.update_ap(access_point)
-                            self.known_networks.remove(slot)
-                            self.other_networks.add(slot)
-                        else:
-                            network_slot = WifiNetworkSlot(
-                                access_point,
-                                self.wifi_service,
-                                network_service=self.network_service,
-                                parent=self.parent,
-                            )
-                            self.other_networks.add(network_slot)
+            for slot in existing_known.values():
+                if hasattr(slot, "access_point"):
+                    slot.strength = 0
+                    from shared.widgets.wifi_icon import get_wifi_icon_for_strength
 
-                for slot in existing_known.values():
-                    if hasattr(slot, "access_point"):
-                        slot.strength = 0
-                        from shared.widgets.wifi_icon import get_wifi_icon_for_strength
+                    if not slot.dimage.has_style_class(
+                        "connecting"
+                    ) and not slot.dimage.has_style_class("disconnecting"):
+                        slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
 
-                        if not slot.dimage.has_style_class(
-                            "connecting"
-                        ) and not slot.dimage.has_style_class("disconnecting"):
-                            slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
+            for slot in existing_other.values():
+                if hasattr(slot, "access_point"):
+                    slot.strength = 0
+                    from shared.widgets.wifi_icon import get_wifi_icon_for_strength
 
-                for slot in existing_other.values():
-                    if hasattr(slot, "access_point"):
-                        slot.strength = 0
-                        from shared.widgets.wifi_icon import get_wifi_icon_for_strength
-
-                        if not slot.dimage.has_style_class(
-                            "connecting"
-                        ) and not slot.dimage.has_style_class("disconnecting"):
-                            slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
+                    if not slot.dimage.has_style_class(
+                        "connecting"
+                    ) and not slot.dimage.has_style_class("disconnecting"):
+                        slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
 
             if not self._destroyed:
                 has_known_networks = len(known_networks) > 0

@@ -767,23 +767,7 @@ class ModusControlCenter(AppletWindow):
     def toggle_flight_mode(self, *_):
         try:
             self.flight_mode = not self.flight_mode
-
-            if self.flight_mode:
-                # Turn off WiFi and Bluetooth
-                if self.wifi_service:
-                    self.wifi_service.wireless_enabled = False
-                if hasattr(self, "bluetooth_man") and hasattr(
-                    self.bluetooth_man, "client"
-                ):
-                    self.bluetooth_man.client.set_enabled(False)
-            else:
-                # Turn on WiFi and Bluetooth
-                if self.wifi_service:
-                    self.wifi_service.wireless_enabled = True
-                if hasattr(self, "bluetooth_man") and hasattr(
-                    self.bluetooth_man, "client"
-                ):
-                    self.bluetooth_man.client.set_enabled(True)
+            self.network_service.set_airplane_mode(self.flight_mode)
 
             # Update icon
             self.flight_icon.dynamic_file(
