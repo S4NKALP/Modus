@@ -78,6 +78,7 @@ class NumLockIndicator(BaseNotchIndicator):
 class ChargingIndicator(BaseNotchIndicator):
     def __init__(self, show_cb, hide_cb, **kwargs):
         self._battery = Battery.get_initial()
+        self._last_charger_state = self._is_charger_connected()
         super().__init__(
             name="notch-charging",
             icon_name="notch/charging.svg",
@@ -89,13 +90,13 @@ class ChargingIndicator(BaseNotchIndicator):
             **kwargs,
         )
         self._battery.connect("changed", self._on_battery_changed)
-        GLib.timeout_add(500, self._initial_check)
+        if self._last_charger_state:
+            GLib.timeout_add(500, self._initial_show)
 
     def _is_charger_connected(self) -> bool:
         return self._battery.charging or self._battery.charged
 
-    def _initial_check(self):
-        self._last_charger_state = self._is_charger_connected()
+    def _initial_show(self):
         if self._last_charger_state:
             self._show_cb(self)
             self._schedule_hide()

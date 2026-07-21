@@ -234,7 +234,9 @@ class NetworkIndicator(Box):
     def update_modus_service_wlan_state(self):
         wlan_state = "disconnected"
 
-        if self.network_service.wifi_device:
+        if self.network_service.airplane_mode:
+            wlan_state = "airplane"
+        elif self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
             if not wifi.enabled:
                 wlan_state = "disabled"
@@ -263,8 +265,12 @@ class NetworkIndicator(Box):
         tooltip = "No network connection"
         icon_file = "wifi-off-clear.svg"
 
+        # Airplane mode takes priority
+        if self.network_service.airplane_mode:
+            icon_file = "wifi-off-clear.svg"
+            tooltip = "Airplane mode"
         # Check WiFi first (prioritize WiFi over Ethernet)
-        if self.network_service.wifi_device:
+        elif self.network_service.wifi_device:
             wifi = self.network_service.wifi_device
             if not wifi.enabled:
                 icon_file = "wifi-off-clear.svg"
