@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib, Gtk, logger
+from fabric.utils import Gdk, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -235,7 +235,6 @@ class SettingsPage(ScrolledWindow):
 
 class SettingsWindow(Gtk.Window):
     def __init__(self, **kwargs):
-        GLib.set_prgname("modus-settings")
         super().__init__(title="Modus Settings", **kwargs)
         self.set_name("settings-window")
         self.set_title("modus-settings")
