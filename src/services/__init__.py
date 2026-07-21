@@ -9,7 +9,16 @@ from .modus import ModusService  # noqa: F401
 from .mpris import PlayerManager, PlayerService  # noqa: F401
 from .mpris import PlayerManager as MprisPlayerManager  # noqa: F401
 from .mpris import PlayerService as MprisPlayer  # noqa: F401
-from .network import Ethernet, NetworkClient, Wifi  # noqa: F401
+from .network import (  # noqa: F401
+    AccessPointData,
+    ActiveConnectionInfo,
+    Ethernet,
+    KnownConnection,
+    NetworkClient,
+    NetworkData,
+    Vpn,
+    Wifi,
+)
 from .numlock import NumLock  # noqa: F401
 from .todo import TodoService  # noqa: F401
 from .wallpaper import WallpaperService, create_thumbnail  # noqa: F401
