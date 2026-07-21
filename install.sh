@@ -51,7 +51,6 @@ PACKAGES=(
     wl-clipboard
     wtype
     libnotify
-    playerctl
     matugen-bin
     hypridle
     hyprsunset

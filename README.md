@@ -49,7 +49,7 @@ The interactive installer handles dependencies, builds C-extensions, and configu
 1. **Install dependencies:**
 
    ```bash
-   paru -S uv fabric-cli-git uwsm cliphist slurp grim swappy wl-clipboard wtype libnotify playerctl matugen-bin hypridle hyprsunset hyprpicker hyprshot gtk-session-lock awww otf-apple-sf-pro webp-pixbuf-loader cinnamon-desktop libmediaart acpi brightnessctl power-profiles-daemon at-spi2-core networkmanager network-manager-applet blueman pipewire libpulse gcc make pkgconf meson ninja wayland-protocols gobject-introspection gtk-layer-shell librsvg libqalculate appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 pciutils wf-recorder ffmpeg --needed
+   paru -S uv fabric-cli-git uwsm cliphist slurp grim swappy wl-clipboard wtype libnotify matugen-bin hypridle hyprsunset hyprpicker hyprshot gtk-session-lock awww otf-apple-sf-pro webp-pixbuf-loader cinnamon-desktop libmediaart acpi brightnessctl power-profiles-daemon at-spi2-core networkmanager network-manager-applet blueman pipewire libpulse gcc make pkgconf meson ninja wayland-protocols gobject-introspection gtk-layer-shell librsvg libqalculate appmenu-gtk-module libdbusmenu-gtk3 libdbusmenu-qt5 pciutils wf-recorder ffmpeg --needed
    ```
 
 2. **Clone and sync:**
