@@ -12,3 +12,4 @@ src/styles/colors.css
 .venv/*
 .venv/
 config/plugins/
+config/desktop.toml
