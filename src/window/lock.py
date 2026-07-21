@@ -86,7 +86,6 @@ class ContentBox(CenterBox):
             orientation="vertical",
             v_expand=True,
             start_children=[
-                IndicatorBox(),
                 DateTime(
                     formatters=["%A,%B %-d"],
                     interval=10000,
@@ -153,7 +152,13 @@ class LockScreen(Window):
             anchor="center",
             child=Box(
                 orientation="vertical",
-                children=[self.lock_notch, self.content],
+                children=[
+                    CenterBox(
+                        center_children=self.lock_notch,
+                        end_children=IndicatorBox(),
+                    ),
+                    self.content,
+                ],
             ),
         )
 
@@ -170,7 +175,7 @@ class LockScreen(Window):
             name="lock-notch",
             orientation="h",
             h_align="center",
-            v_align="center",
+            v_align="start",
             start_children=Box(
                 name="lock-notch-corner-left",
                 orientation="v",
