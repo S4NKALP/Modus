@@ -22,7 +22,7 @@ from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
 from shared.widgets.custom_image import CustomImage
 from shared.widgets.customrevealer import SlideRevealer
-from utils.gtk_utils import setup_cursor_hover
+from utils.gtk_utils import setup_cursor_hover, svg_file
 from utils.functions import escape_markup_text
 from utils.roam import modus_service
 from utils.icon_resolver import IconResolver
@@ -166,7 +166,23 @@ def load_and_cache_local_icon(file_path, cache_key, size):
 def load_and_cache_theme_icon(icon_name, cache_key, size):
     """Load an icon from the current theme and cache it"""
     try:
-        pixbuf = _icon_resolver.get_icon_pixbuf(icon_name, size[0])
+        icon_theme = Gtk.IconTheme.get_default()
+        pixbuf = None
+        try:
+            pixbuf = icon_theme.load_icon(
+                icon_name, size[0], Gtk.IconLookupFlags.FORCE_SIZE
+            )
+        except GLib.Error:
+            # Try common suffixed variants
+            for suffix in ("-symbolic", "-desktop", ""):
+                try:
+                    pixbuf = icon_theme.load_icon(
+                        icon_name + suffix, size[0], Gtk.IconLookupFlags.FORCE_SIZE
+                    )
+                    if pixbuf:
+                        break
+                except GLib.Error:
+                    continue
         if pixbuf:
             save_pixbuf_to_cache(pixbuf, cache_key, NOTIFICATION_ICON_CACHE_DIR)
             return pixbuf
@@ -502,20 +518,14 @@ class NotificationWidget(Box):
                 # Fallback to theme icon if caching fails completely
                 app_icon = ClippingBox(
                     name="notification-icon",
-                    children=Image(
-                        icon_name="notifications",
-                        icon_size=24,
-                    ),
+                    children=svg_file("notifications/notification-active.svg", size=24),
                 )
         except Exception as e:
             logger.warning(f"Failed to load cached header icon: {e}")
             # Ultimate fallback
             app_icon = ClippingBox(
                 name="notification-icon",
-                children=Image(
-                    icon_name="notifications",
-                    icon_size=24,
-                ),
+                children=svg_file("notifications/notification-active.svg", size=24),
             )
 
         return CenterBox(
