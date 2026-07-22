@@ -57,11 +57,7 @@ class WifiNetworkSlot(Box):
         self.lock_icon = None
         if self.access_point.requires_password:
             self.lock_icon = svg_file(
-                "notch/lock.svg",
-                size=12,
-                name="wifi-lock-icon",
-                h_align="center",
-                v_align="center",
+                "notch/lock.svg", size=12, name="wifi-lock-icon"
             )
 
         self.password_dialog = None
