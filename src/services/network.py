@@ -112,7 +112,7 @@ def _call(proxy: Gio.DBusProxy, method: str, args=None, flags=0):
         result = proxy.call_sync(method, args, flags, -1, None)
         return result.unpack() if result else None
     except GLib.Error as e:
-        logger.debug(f"[Network] D-Bus call {method} failed: {e}")
+        logger.warning(f"[Network] D-Bus call {method} failed: {e}")
         return None
 
 
@@ -257,11 +257,11 @@ class NmProxy:
 
     def activate_connection(
         self, conn_path: str, device_path: str, specific_path: str = "/"
-    ) -> str | None:
+    ) -> tuple | None:
         return _call(
             self._nm,
             "ActivateConnection",
-            GLib.Variant("(sss)", (conn_path, device_path, specific_path)),
+            GLib.Variant("(ooo)", (conn_path, device_path, specific_path)),
         )
 
     def add_and_activate_connection(
@@ -280,7 +280,7 @@ class NmProxy:
                 "DeactivateConnection",
                 GLib.Variant("(o)", (active_conn_path,)),
             )
-            is not None
+            is True
         )
 
     #  Device enumeration
@@ -590,12 +590,14 @@ class Wifi(Service):
 
     def _on_nm_props_changed(self, proxy, changed, invalidated):
         """React to WirelessEnabled changes on the NM main proxy."""
-        if "WirelessEnabled" in changed:
+        props = changed.unpack() if changed else {}
+        if "WirelessEnabled" in props:
             self.notify("enabled")
             self.emit("changed")
 
     def _on_device_props_changed(self, proxy, changed, invalidated):
-        if "ActiveAccessPoint" in changed or "AccessPoints" in changed:
+        props = changed.unpack() if changed else {}
+        if "ActiveAccessPoint" in props or "AccessPoints" in props:
             self._refresh_active_ap()
             self.emit("changed")
             for sn in (
@@ -770,6 +772,8 @@ class Ethernet(Service):
 
 
 class NetworkClient(Service):
+    _instance: "NetworkClient | None" = None
+
     @Signal
     def device_ready(self) -> None: ...
 
@@ -779,7 +783,15 @@ class NetworkClient(Service):
     @Signal
     def device_removed(self, iface: str) -> None: ...
 
+    def __new__(cls, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, **kwargs):
+        if getattr(self, "_initialized", False):
+            return
+        self._initialized = True
         self._nm: NmProxy | None = None
         self.wifi_device: Wifi | None = None
         self.wifi_devices: dict[str, Wifi] = {}
@@ -815,7 +827,8 @@ class NetworkClient(Service):
         self.notify("airplane-mode")
 
     def _on_nm_props_changed(self, proxy, changed, invalidated):
-        if "Devices" not in changed:
+        props = changed.unpack() if changed else {}
+        if "Devices" not in props:
             return
         new_devices = set(self._nm.devices)
         # Track by old wifi device paths
@@ -924,9 +937,15 @@ class NetworkClient(Service):
 
         def _do_connect():
             try:
+                logger.info(
+                    f"[Network] connect_wifi ssid={ap.ssid!r} device={ap.device_path} ap={ap.path}"
+                )
                 conn_path = self._nm.find_connection(ap.ssid)
+                logger.info(f"[Network] find_connection({ap.ssid!r}) = {conn_path!r}")
                 if conn_path:
-                    self._nm.activate_connection(conn_path, ap.device_path, ap.path)
+                    result = self._nm.activate_connection(
+                        conn_path, ap.device_path, ap.path
+                    )
                 else:
                     settings = {
                         "802-11-wireless": {
@@ -937,11 +956,15 @@ class NetworkClient(Service):
                             "type": GLib.Variant("s", "802-11-wireless"),
                         },
                     }
-                    self._nm.add_and_activate_connection(
+                    result = self._nm.add_and_activate_connection(
                         settings, ap.device_path, ap.path
                     )
+                logger.info(
+                    f"[Network] activate/add_result={result!r} for ssid={ap.ssid!r}"
+                )
+                ok = isinstance(result, tuple) and result[0]
                 if callback:
-                    GLib.idle_add(callback, True, "")
+                    GLib.idle_add(callback, ok, "")
             except Exception as e:
                 logger.error(f"[Network] Connect failed: {e}")
                 if callback:
@@ -961,10 +984,16 @@ class NetworkClient(Service):
 
         def _do_connect():
             try:
+                logger.info(
+                    f"[Network] connect_wifi_with_password ssid={ap.ssid!r} device={ap.device_path} ap={ap.path}"
+                )
                 conn_path = self._nm.find_connection(ap.ssid)
+                logger.info(f"[Network] find_connection({ap.ssid!r}) = {conn_path!r}")
                 if conn_path:
                     self._nm.update_connection_password(conn_path, password)
-                    self._nm.activate_connection(conn_path, ap.device_path, ap.path)
+                    result = self._nm.activate_connection(
+                        conn_path, ap.device_path, ap.path
+                    )
                 else:
                     settings = {
                         "802-11-wireless": {
@@ -979,11 +1008,15 @@ class NetworkClient(Service):
                             "psk": GLib.Variant("s", password),
                         },
                     }
-                    self._nm.add_and_activate_connection(
+                    result = self._nm.add_and_activate_connection(
                         settings, ap.device_path, ap.path
                     )
+                logger.info(
+                    f"[Network] activate/add_result={result!r} for ssid={ap.ssid!r}"
+                )
+                ok = isinstance(result, tuple) and result[0]
                 if callback:
-                    GLib.idle_add(callback, True, "")
+                    GLib.idle_add(callback, ok, "")
             except Exception as e:
                 logger.error(f"[Network] Connect with password failed: {e}")
                 if callback:
