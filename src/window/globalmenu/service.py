@@ -110,8 +110,8 @@ def _dbus_introspect(bus, service: str, path: str, timeout: int) -> str:
         )
         return res.get_child_value(0).get_string() if res else ""
     except Exception as e:
-        logger.warning(
-            f"[service] res = bus.call_sync( service, path, 'org.freedesktop.DBus... failed: {e}"
+        logger.debug(
+            f"[service] introspect {service}:{path} failed: {e}"
         )
         return ""
 
@@ -131,8 +131,8 @@ def _dbus_get_pid(bus, service: str, timeout: int) -> int:
         )
         return res.get_child_value(0).get_uint32() if res else 0
     except Exception as e:
-        logger.warning(
-            f"[service] res = bus.call_sync( 'org.freedesktop.DBus', '/org/freede... failed: {e}"
+        logger.debug(
+            f"[service] GetConnectionUnixProcessID for {service} failed: {e}"
         )
         return 0
 
