@@ -12,6 +12,7 @@ from services.bluetooth import BluetoothClient, BluetoothDevice
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.window.animated_scrollwindow import AnimatedScrollable
 from utils.functions import spawn_detached
+from utils.gtk_utils import svg_file
 
 
 def get_battery_icon_file(
@@ -32,17 +33,6 @@ def get_battery_icon_file(
     step = int((clamped // 10) * 10)
     filename = f"battery-{step:03d}{'-charging' if is_charging else ''}.svg"
     return f"battery/{filename}"
-
-
-def get_battery_theme_icon(percentage: float, charging: bool = False) -> str:
-    level = round(percentage / 10.0) * 10
-    if level <= 0:
-        return (
-            "battery-empty-charging-symbolic" if charging else "battery-empty-symbolic"
-        )
-    if level >= 100:
-        return "battery-full-charged-symbolic" if charging else "battery-full-symbolic"
-    return f"battery-level-{level:02d}{'-charging' if charging else ''}-symbolic"
 
 
 def set_bluetooth_enabled_with_fallback(client, enabled: bool):
@@ -99,9 +89,8 @@ class BluetoothDeviceSlot(Box):
         self.battery_icon = None
         self.battery_label = None
         if hasattr(device, "battery_percentage") and device.battery_percentage > 0:
-            self.battery_icon = Image(
-                icon_name=get_battery_theme_icon(device.battery_percentage, False),
-                pixel_size=16,
+            self.battery_icon = svg_file(
+                get_battery_icon_file(device.battery_percentage, False), size=20
             )
             self.battery_label = Label(
                 label=f"{device.battery_percentage:.0f}%", name="battery-label"
@@ -204,17 +193,14 @@ class BluetoothDeviceSlot(Box):
             if self.battery_icon and self.battery_label:
                 self.battery_icon.set_visible(True)
                 self.battery_label.set_visible(True)
-                self.battery_icon.set_property(
-                    "icon-name",
-                    get_battery_theme_icon(self.device.battery_percentage, False),
+                self.battery_icon.set_from_file(
+                    get_battery_icon_file(self.device.battery_percentage, False)
                 )
                 self.battery_label.set_label(f"{self.device.battery_percentage:.0f}%")
             else:
-                self.battery_icon = Image(
-                    icon_name=get_battery_theme_icon(
-                        self.device.battery_percentage, False
-                    ),
-                    pixel_size=16,
+                self.battery_icon = svg_file(
+                    get_battery_icon_file(self.device.battery_percentage, False),
+                    size=20,
                 )
                 self.battery_label = Label(
                     label=f"{self.device.battery_percentage:.0f}%",
@@ -350,7 +336,7 @@ class BluetoothConnections(Box):
         if show_back_button:
             title_children.append(
                 Button(
-                    image=Image(icon_name="back", size=10),
+                    image=svg_file("misc/chevron-left.svg", size=10),
                     on_clicked=lambda *_: self.parent.close_bluetooth(),
                 )
             )
