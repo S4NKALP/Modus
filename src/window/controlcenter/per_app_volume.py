@@ -9,6 +9,7 @@ from fabric.widgets.separator import Separator
 from shared.widgets.flat_scale import FlatScale
 
 # Local imports
+from utils.gtk_utils import svg_file
 from utils.roam import audio_service
 
 # Mappings used to resolve an app's icon/display name from its description or
@@ -73,7 +74,7 @@ class PerAppVolumeControl(Box):
             style_classes="menu-header",
             children=[
                 Button(
-                    image=Image(icon_name="back", size=10),
+                    image=svg_file("misc/chevron-left.svg", size=10),
                     on_clicked=lambda *_: self.control_center.close_per_app_volume(),
                 ),
                 Label("App Volume", name="app-volume-header"),

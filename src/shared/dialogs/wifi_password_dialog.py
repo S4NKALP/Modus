@@ -6,6 +6,8 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.window import Window
 
+from utils.gtk_utils import svg_file
+
 
 class WiFiPasswordDialog(Window):
     def __init__(
@@ -39,8 +41,8 @@ class WiFiPasswordDialog(Window):
         self.connect("notify::visible", self._on_visibility_changed)
 
     def _create_dialog_content(self):
-        self.wifi_icon = Image(
-            icon_name="network-wireless-symbolic", size=20, name="wifi-dialog-icon"
+        self.wifi_icon = svg_file(
+            "wifi/network-wireless-100.svg", size=20, name="wifi-dialog-icon"
         )
 
         self.title_label = Label(
