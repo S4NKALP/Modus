@@ -256,6 +256,34 @@ class BluetoothDevice(Service):
             self.notify("battery-percentage")
             self.emit("changed")
 
+    def attach_battery_proxy(self):
+        """Attach Battery1 proxy if not already present (late Battery1 appearance)."""
+        if self._battery_proxy is not None:
+            return
+        try:
+            self._battery_proxy = _make_proxy(
+                self._bus, self._object_path, BLUEZ_BATTERY_IFACE
+            )
+            if not self._battery_sub_id:
+                self._battery_sub_id = self._bus.signal_subscribe(
+                    BLUEZ_SERVICE,
+                    DBUS_PROPS_IFACE,
+                    "PropertiesChanged",
+                    self._object_path,
+                    BLUEZ_BATTERY_IFACE,
+                    Gio.DBusSignalFlags.NONE,
+                    self._on_battery_properties_changed,
+                    None,
+                )
+            self.notify("battery-level")
+            self.notify("battery-percentage")
+            self.emit("changed")
+            logger.info(f"[bluetooth] Attached Battery1 proxy for {self._object_path}")
+        except Exception as e:
+            logger.warning(
+                f"[bluetooth] attach_battery_proxy failed for {self._object_path}: {e}"
+            )
+
     def pair(self, callback: Callable | None = None):
         """Initiate pairing with the device."""
 
@@ -757,6 +785,16 @@ class BluetoothClient(Service):
             self._add_adapter(obj_path, ifaces[BLUEZ_ADAPTER_IFACE])
         if BLUEZ_DEVICE_IFACE in ifaces:
             self._add_device(obj_path, ifaces[BLUEZ_DEVICE_IFACE])
+        if BLUEZ_BATTERY_IFACE in ifaces:
+            self._attach_battery_to_existing_device(obj_path)
+
+    def _attach_battery_to_existing_device(self, obj_path: str):
+        """Attach Battery1 proxy to an already-known device when Battery1 appears late."""
+        for adapter in self._adapters.values():
+            for device in adapter.devices:
+                if device._object_path == obj_path:
+                    device.attach_battery_proxy()
+                    return
 
     def _on_interfaces_removed(
         self, _conn, _sender, _path, _iface, _signal, params, _data
