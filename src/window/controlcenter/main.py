@@ -651,14 +651,14 @@ class ModusControlCenter(AppletWindow):
                 try:
                     self.volume_scale.disconnect_by_func(self.set_volume)
                     self.volume_scale.disconnect_by_func(self.on_volume_scroll)
-                except Exception as e:
-                    logger.error(f"An error occurred: {e}")
+                except Exception:
+                    pass
             if hasattr(self, "brightness_scale"):
                 try:
                     self.brightness_scale.disconnect_by_func(self.set_brightness)
                     self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
-                except Exception as e:
-                    logger.error(f"An error occurred: {e}")
+                except Exception:
+                    pass
 
             self._signals_connected = False
             self._resources_initialized = False
