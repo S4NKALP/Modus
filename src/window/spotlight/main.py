@@ -13,12 +13,40 @@ from shared.widgets.clipping_box import ClippingBox
 from shared.window.animated_scrollwindow import AnimatedScrollable
 from utils.debounce import debounce
 from utils.functions import get_children_height_limit
+from utils.gtk_utils import svg_file
 from window.spotlight.api.context import PluginContext
 from window.spotlight.api.result import SearchResult
 from window.spotlight.core.loader import PluginLoader
 from window.spotlight.core.manager import PluginManager
 from window.spotlight.core.registry import PluginRegistry
 from window.spotlight.core.search import SearchPipeline
+
+# Map GTK theme icon names to SVG asset paths
+_ICON_SVG_MAP = {
+    "system-search-symbolic": "misc/search.svg",
+    "system-shutdown-symbolic": "misc/shutdown.svg",
+    "system-reboot-symbolic": "misc/reboot.svg",
+    "system-suspend-symbolic": "misc/suspend.svg",
+    "system-hibernate-symbolic": "misc/hibernate.svg",
+    "system-log-out-symbolic": "misc/logout.svg",
+    "system-lock-screen-symbolic": "misc/lock.svg",
+    "edit-find-symbolic": "misc/search.svg",
+    "edit-paste-symbolic": "misc/paste.svg",
+    "video-x-generic-symbolic": "misc/video.svg",
+    "insert-link-symbolic": "misc/link.svg",
+    "face-smile-symbolic": "misc/emoji.svg",
+    "accessories-calculator-symbolic": "misc/calculator.svg",
+    "user-available-symbolic": "misc/coffee-on.svg",
+    "user-away-symbolic": "misc/coffee-off.svg",
+}
+
+
+def _icon_to_svg(icon_name: str, size: int = 32):
+    """Return an Svg widget for a GTK theme icon name, or None if unmapped."""
+    path = _ICON_SVG_MAP.get(icon_name)
+    if path:
+        return svg_file(path, size=size)
+    return None
 
 
 class PluginService:
@@ -62,7 +90,7 @@ class Spotlight(Box):
 
         self.plugin_service = PluginService()
 
-        self.header_icon = Image(icon_name="system-search-symbolic")
+        self.header_icon = svg_file("misc/search.svg", size=16)
         self.header_entry = Entry(
             placeholder="Search...",
             style_classes="app-search-entry",
@@ -118,15 +146,15 @@ class Spotlight(Box):
 
         if not text.strip():
             self._clear_viewport()
-            self.header_icon.set_from_icon_name("system-search-symbolic")
+            self.header_icon.set_from_file("misc/search.svg")
             return
 
         for pe in self.plugin_service.manager.registry.get_searchable():
             inst = pe.instance
             if inst and inst.detect(text):
-                self.header_icon.set_from_icon_name(
-                    getattr(inst, "icon", "") or "system-search-symbolic"
-                )
+                icon = getattr(inst, "icon", "") or "system-search-symbolic"
+                svg_path = _ICON_SVG_MAP.get(icon, "misc/search.svg")
+                self.header_icon.set_from_file(svg_path)
                 # Scope to the detected plugin only — a global search would
                 # mix in unrelated plugins' results.
                 self.plugin_service.pipeline.search_single(
@@ -134,7 +162,7 @@ class Spotlight(Box):
                 )
                 return
 
-        self.header_icon.set_from_icon_name("system-search-symbolic")
+        self.header_icon.set_from_file("misc/search.svg")
         self.plugin_service.pipeline.search(text, self._on_search_results)
 
     def _activate_keyword_plugin(self, entry, keyword: str, query: str):
@@ -154,7 +182,8 @@ class Spotlight(Box):
             keyword_icons.get(keyword, getattr(inst, "icon", ""))
             or "system-search-symbolic"
         )
-        self.header_icon.set_from_icon_name(icon_name)
+        svg_path = _ICON_SVG_MAP.get(icon_name, "misc/search.svg")
+        self.header_icon.set_from_file(svg_path)
 
         if getattr(inst, "full_viewport_clear", False):
             self._clear_viewport()
@@ -711,7 +740,7 @@ class SpotlightWindow(Window):
         self.spotlight_box.scrolled_window.animate_size(0)
         self.spotlight_box.scrolled_window.hide()
         self.spotlight_box.scrolled_clip.hide()
-        self.spotlight_box.header_icon.set_from_icon_name("system-search-symbolic")
+        self.spotlight_box.header_icon.set_from_file("misc/search.svg")
         self.spotlight_box._deactivate_keyword_plugin()
         self.spotlight_box.plugin_service.manager.release_memory_all()
         self.hide()
