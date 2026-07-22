@@ -189,6 +189,7 @@ class BluetoothDeviceSlot(Box):
         if (
             hasattr(self.device, "battery_percentage")
             and self.device.battery_percentage > 0
+            and self.device.connected
         ):
             if self.battery_icon and self.battery_label:
                 self.battery_icon.set_visible(True)
