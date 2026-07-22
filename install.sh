@@ -51,7 +51,7 @@ PACKAGES=(
     wl-clipboard
     wtype
     libnotify
-    matugen-bin
+    matugen
     hypridle
     hyprsunset
     hyprpicker
@@ -484,16 +484,56 @@ post_hook = "fabric-cli exec modus '\''app.set_css()'\'' &"'
 
 HYPR_BLOCK='[templates.hyprland]
 input_path = "~/.config/Modus/config/matugen/templates/hyprland-colors.lua"
-output_path = "~/.config/Modus/config/matugen/colors.lua"'
+output_path = "~/.config/Modus/config/hypr/colors.lua"'
 
 if [ -f "$MATUGEN_CONFIG" ]; then
-    if grep -qF "[templates.modus]" "$MATUGEN_CONFIG"; then
-        success "Modus template already configured"
+    if grep -qF "reload_apps = true" "$MATUGEN_CONFIG"; then
+        success "reload_apps already configured"
     else
-        step "Adding Modus template..."
-        echo "" >> "$MATUGEN_CONFIG"
-        echo "$MODUS_BLOCK" >> "$MATUGEN_CONFIG"
-        success "Modus template added"
+        step "Adding [config] reload_apps..."
+        cat >> "$MATUGEN_CONFIG" << 'EOF'
+
+[config]
+reload_apps = true
+EOF
+        success "[config] reload_apps added"
+    fi
+
+    if grep -qF "[config.custom_colors.red]" "$MATUGEN_CONFIG"; then
+        success "Custom colors already configured"
+    else
+        step "Adding custom colors..."
+        cat >> "$MATUGEN_CONFIG" << 'EOF'
+
+[config.custom_colors.red]
+color = "#FF0000"
+blend = true
+
+[config.custom_colors.green]
+color = "#00FF00"
+blend = true
+
+[config.custom_colors.yellow]
+color = "#FFFF00"
+blend = true
+
+[config.custom_colors.blue]
+color = "#0000FF"
+blend = true
+
+[config.custom_colors.magenta]
+color = "#FF00FF"
+blend = true
+
+[config.custom_colors.cyan]
+color = "#00FFFF"
+blend = true
+
+[config.custom_colors.white]
+color = "#FFFFFF"
+blend = true
+EOF
+        success "Custom colors added"
     fi
 
     if grep -qF "[templates.hyprland]" "$MATUGEN_CONFIG"; then
@@ -504,9 +544,67 @@ if [ -f "$MATUGEN_CONFIG" ]; then
         echo "$HYPR_BLOCK" >> "$MATUGEN_CONFIG"
         success "Hyprland template added"
     fi
+
+    if grep -qF "[templates.modus]" "$MATUGEN_CONFIG"; then
+        success "Modus template already configured"
+    else
+        step "Adding Modus template..."
+        echo "" >> "$MATUGEN_CONFIG"
+        echo "$MODUS_BLOCK" >> "$MATUGEN_CONFIG"
+        success "Modus template added"
+    fi
 else
-    warn "matugen config not found at ${MATUGEN_CONFIG}"
-    info "Install matugen first, then re-run this script"
+    step "Creating matugen config..."
+    mkdir -p "$(dirname "$MATUGEN_CONFIG")"
+    cat > "$MATUGEN_CONFIG" << EOF
+[config]
+reload_apps = true
+
+[config.custom_colors.red]
+color = "#FF0000"
+blend = true
+
+[config.custom_colors.green]
+color = "#00FF00"
+blend = true
+
+[config.custom_colors.yellow]
+color = "#FFFF00"
+blend = true
+
+[config.custom_colors.blue]
+color = "#0000FF"
+blend = true
+
+[config.custom_colors.magenta]
+color = "#FF00FF"
+blend = true
+
+[config.custom_colors.cyan]
+color = "#00FFFF"
+blend = true
+
+[config.custom_colors.white]
+color = "#FFFFFF"
+blend = true
+
+$HYPR_BLOCK
+
+$MODUS_BLOCK
+EOF
+    success "Matugen config created at ${MATUGEN_CONFIG}"
+fi
+
+step "Generating initial colors from default wallpaper..."
+DEFAULT_WALLPAPER="$INSTALL_DIR/src/assets/wallpaper_example/example-1.png"
+if [ -f "$DEFAULT_WALLPAPER" ]; then
+    if matugen image "$DEFAULT_WALLPAPER" --source-color-index 0 >/dev/null 2>&1; then
+        success "Initial colors generated"
+    else
+        warn "matugen failed to generate colors — CSS will generate on first wallpaper change"
+    fi
+else
+    warn "Default wallpaper not found — skipped"
 fi
 
 # Launch
