@@ -142,12 +142,6 @@ class MicrophoneIndicator(BaseNotchIndicator):
                 logger.warning(
                     f"[indicators] old.disconnect_by_func(self._on_mic_stream_changed) failed: {e}"
                 )
-        try:
-            mic.disconnect_by_func(self._on_mic_stream_changed)
-        except Exception as e:
-            logger.warning(
-                f"[indicators] mic.disconnect_by_func(self._on_mic_stream_changed) failed: {e}"
-            )
         mic.connect("changed", self._on_mic_stream_changed)
         self._mic_device = mic
         self._sync_state()
