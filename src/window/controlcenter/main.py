@@ -903,16 +903,14 @@ class ModusControlCenter(AppletWindow):
         self._signal_connections.append(
             (
                 self.wifi_service,
-                self.wifi_service.connect(
-                    "notify::wireless-enabled", self.update_wifi_icon
-                ),
+                self.wifi_service.connect("notify::enabled", self.update_wifi_icon),
             )
         )
 
     def update_wifi_icon(self, *_):
         try:
             if self.wifi_service and hasattr(self, "wifi_svg"):
-                is_enabled = self.wifi_service.wireless_enabled
+                is_enabled = self.wifi_service.enabled
                 self.wifi_svg.dynamic_file(
                     "applets/wifi.svg" if is_enabled else "applets/wifi-off.svg"
                 )
