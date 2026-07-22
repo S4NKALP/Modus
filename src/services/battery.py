@@ -405,8 +405,8 @@ class Battery(Service):
             return
         try:
             _iface, changed_props, _invalidated = parameters.unpack()
-            for prop_name, variant in changed_props.items():
-                self._prop_cache[prop_name] = variant.unpack()
+            for prop_name, value in changed_props.items():
+                self._prop_cache[prop_name] = value
         except Exception as e:
             logger.warning(
                 f"[Battery] Failed to parse DisplayDevice PropertiesChanged: {e}"
