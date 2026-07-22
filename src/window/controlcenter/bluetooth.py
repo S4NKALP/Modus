@@ -616,6 +616,7 @@ class BluetoothConnections(Box):
                             slot = existing_paired.pop(device.address)
                             # update existing
                             slot.device = device
+                            slot.device.emit("changed")
                         elif device.address in existing_other:
                             slot = existing_other.pop(device.address)
                             slot.device = device
@@ -630,6 +631,7 @@ class BluetoothConnections(Box):
                         if device.address in existing_other:
                             slot = existing_other.pop(device.address)
                             slot.device = device
+                            slot.device.emit("changed")
                         elif device.address in existing_paired:
                             slot = existing_paired.pop(device.address)
                             slot.device = device
