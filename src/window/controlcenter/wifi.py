@@ -34,6 +34,7 @@ class WifiNetworkSlot(Box):
         self.icon_name = access_point.icon
 
         self.is_connected = access_point.is_active
+        self._anim_state = None  # "connecting" | "disconnecting" | None
 
         if self.is_connected:
             self.add_style_class("connected")
@@ -89,11 +90,12 @@ class WifiNetworkSlot(Box):
         self.strength = access_point.strength
         self.is_connected = access_point.is_active
 
-        if not self.dimage.has_style_class(
-            "connecting"
-        ) and not self.dimage.has_style_class("disconnecting"):
-            from shared.widgets.wifi_icon import get_wifi_icon_for_strength
+        if access_point.is_active:
+            self.dimage.remove_style_class("connecting")
+            self.dimage.remove_style_class("disconnecting")
+            self._anim_state = None
 
+        if self._anim_state is None:
             wifi_icon_path = get_wifi_icon_for_strength(self.strength)
             self.dimage.set_from_file(wifi_icon_path)
 
@@ -106,6 +108,7 @@ class WifiNetworkSlot(Box):
             connecting_icon = get_wifi_connecting_icon()
             self.dimage.set_from_file(connecting_icon)
             self.dimage.add_style_class("disconnecting")
+            self._anim_state = "disconnecting"
 
             if self.network_service:
                 self.network_service.disconnect_wifi()
@@ -119,26 +122,20 @@ class WifiNetworkSlot(Box):
             if self.access_point.requires_password and not is_saved:
                 self._show_password_dialog()
             else:
-                # Try to connect without password (for open or saved networks)
                 connecting_icon = get_wifi_connecting_icon()
                 self.dimage.set_from_file(connecting_icon)
                 self.dimage.add_style_class("connecting")
+                self._anim_state = "connecting"
 
                 def on_open_connection_result(success, message):
-                    """Handle the connection result for open networks"""
+                    if not self.get_parent():
+                        return
                     if success:
-                        self.is_connected = True
-                        # Remove connecting state after a short delay
                         GLib.timeout_add(500, lambda: self._reset_connect_state())
                     else:
-                        # Connection failed
                         self._reset_connect_state()
-                        # If password was wrong or auth failed, prompt the user
                         if message == "Wrong password":
                             self._show_password_dialog()
-
-                    # Update display after connection attempt
-                    self.on_changed()
 
                 try:
                     if self.network_service:
@@ -150,13 +147,11 @@ class WifiNetworkSlot(Box):
                         f"[WiFi] Failed to connect to {self.access_point.ssid}: {e}"
                     )
                     self._reset_connect_state()
-                    self.on_changed()
-
-        self.on_changed()
 
     def _reset_disconnect_state(self):
         """Reset visual state after disconnect operation"""
         self.dimage.remove_style_class("disconnecting")
+        self._anim_state = None
         wifi_icon_path = get_wifi_icon_for_strength(self.strength)
         self.dimage.set_from_file(wifi_icon_path)
         self.on_changed()
@@ -165,6 +160,7 @@ class WifiNetworkSlot(Box):
     def _reset_connect_state(self):
         """Reset visual state after connect operation"""
         self.dimage.remove_style_class("connecting")
+        self._anim_state = None
         wifi_icon_path = get_wifi_icon_for_strength(self.strength)
         self.dimage.set_from_file(wifi_icon_path)
         self.on_changed()
@@ -205,9 +201,12 @@ class WifiNetworkSlot(Box):
             connecting_icon = get_wifi_connecting_icon()
             self.dimage.set_from_file(connecting_icon)
             self.dimage.add_style_class("connecting")
+            self._anim_state = "connecting"
 
             def on_connection_result(success, message):
                 """Handle the connection result"""
+                if not self.get_parent():
+                    return
                 if success:
                     self.is_connected = True
 
@@ -289,7 +288,7 @@ class WifiConnections(Box):
         if show_back_button:
             title_children.append(
                 Button(
-                    image=Image(icon_name="back", size=10),
+                    image=svg_file("misc/chevron-left.svg", size=10),
                     on_clicked=lambda *_: self.parent.close_wifi(),
                 )
             )
@@ -379,6 +378,13 @@ class WifiConnections(Box):
 
         self.connect("destroy", self.on_destroy)
         self.connect("unmap", self.on_hide)
+        self.connect("map", self.on_show)
+
+    def on_show(self, *_):
+        """Called when the widget is mapped (popup opened)"""
+        if self.wifi_service:
+            self.wifi_service.scan()
+            self.force_network_refresh()
 
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
@@ -508,6 +514,17 @@ class WifiConnections(Box):
         self._update_in_progress = True
 
         try:
+            # When WiFi is disabled, clear all network slots
+            if not self.wifi_service.enabled:
+                for child in self.known_networks.get_children():
+                    self.known_networks.remove(child)
+                for child in self.other_networks.get_children():
+                    self.other_networks.remove(child)
+                self.known_networks_scrolled.set_visible(True)
+                self.no_networks_label.set_visible(True)
+                self.other_networks_button.set_visible(True)
+                return
+
             access_points = self.wifi_service.access_points
             known_networks = []
             other_networks = []
@@ -568,21 +585,13 @@ class WifiConnections(Box):
             for slot in existing_known.values():
                 if hasattr(slot, "access_point"):
                     slot.strength = 0
-                    from shared.widgets.wifi_icon import get_wifi_icon_for_strength
-
-                    if not slot.dimage.has_style_class(
-                        "connecting"
-                    ) and not slot.dimage.has_style_class("disconnecting"):
+                    if slot._anim_state is None:
                         slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
 
             for slot in existing_other.values():
                 if hasattr(slot, "access_point"):
                     slot.strength = 0
-                    from shared.widgets.wifi_icon import get_wifi_icon_for_strength
-
-                    if not slot.dimage.has_style_class(
-                        "connecting"
-                    ) and not slot.dimage.has_style_class("disconnecting"):
+                    if slot._anim_state is None:
                         slot.dimage.set_from_file(get_wifi_icon_for_strength(0))
 
             if not self._destroyed:
@@ -594,6 +603,13 @@ class WifiConnections(Box):
                 self.no_networks_label.set_visible(not has_any_networks)
                 self.other_networks_button.set_visible(True)  # Always visible
                 self.refresh_network_states()
+
+                if self.other_networks.get_visible():
+                    other_children = self.other_networks.get_children()
+                    if other_children:
+                        nat_h = self.other_networks.get_preferred_height()[1]
+                        if nat_h > 0:
+                            self.other_networks_scrolled.snap_to_size(min(nat_h, 300))
 
         except Exception as e:
             logger.error(f"[WiFi] Error during update_networks: {e}")
