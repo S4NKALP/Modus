@@ -120,3 +120,27 @@
   background-color: @glass-active;
   color: @glass-text;
 }
+
+#charge-threshold-slider {
+  margin: 0;
+}
+
+#charge-threshold-slider slider {
+  min-height: 14px;
+  min-width: 14px;
+}
+
+#charge-threshold-slider trough {
+  min-height: 14px;
+}
+
+#charge-threshold-slider highlight {
+  min-height: 14px;
+}
+
+.charge-threshold-value {
+  font-size: apply(font-sm);
+  font-weight: 500;
+  color: @glass-text;
+  min-width: 32px;
+}
