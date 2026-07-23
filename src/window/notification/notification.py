@@ -9,7 +9,6 @@ from fabric.notifications import (
 from fabric.utils import Gdk, GdkPixbuf, GLib, Gtk, logger, os
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
@@ -444,6 +443,39 @@ class ActionButton(Button):
         self.action.parent.close("dismissed-by-user")
 
 
+def _get_urgency_class(notification: Notification) -> str:
+    urgency = getattr(notification, "urgency", None)
+    if urgency is None:
+        return "normal"
+    urgency_str = str(urgency).lower()
+    if "low" in urgency_str:
+        return "low"
+    if "critical" in urgency_str:
+        return "critical"
+    return "normal"
+
+
+def _get_relative_time(notification: Notification) -> str:
+    try:
+        import time as _time
+
+        ts = getattr(notification, "time", None)
+        if ts is None:
+            return ""
+        diff = _time.time() - float(ts)
+        if diff < 60:
+            return "now"
+        mins = int(diff / 60)
+        if mins < 60:
+            return f"{mins}m ago"
+        hours = int(mins / 60)
+        if hours < 24:
+            return f"{hours}h ago"
+        return f"{int(hours / 24)}d ago"
+    except Exception:
+        return ""
+
+
 class NotificationWidget(Box):
     def __init__(
         self,
@@ -453,18 +485,15 @@ class NotificationWidget(Box):
         name="notification",
         **kwargs,
     ):
-        # Get current timeout from config manager if not provided
         if timeout_ms is None:
             timeout_ms = self._get_current_notification_timeout()
 
         self.show_close_button = show_close_button
         self.close_button = None
         self._is_hovered = False
-        self.notification_image_cache_key = None  # Track cached image for cleanup
-        self.app_icon_source = (
-            notification.app_icon
-        )  # Track app icon source for cleanup
-        self._should_cleanup_cache = False  # Only cleanup cache on manual dismissal
+        self.notification_image_cache_key = None
+        self.app_icon_source = notification.app_icon
+        self._should_cleanup_cache = False
 
         content_box = Box(
             name=f"{name}-inner-content",
@@ -490,6 +519,9 @@ class NotificationWidget(Box):
             children=[self.hover_event_box],
         )
 
+        # Apply urgency CSS class
+        self.get_style_context().add_class(_get_urgency_class(notification))
+
         self.notification = notification
         self.timeout_ms = timeout_ms
         self._timeout_id = None
@@ -498,129 +530,99 @@ class NotificationWidget(Box):
         self.show_all()
 
     def create_header(self, notification):
-        """Create notification header with optimized cached app icon - SINGLE CACHE SIZE"""
+        """Create notification header with app icon + app name + time"""
         try:
-            # Get 64x64 cached icon and scale down to 24x24 for header
             cached_app_icon_pixbuf = cache_notification_icon(
                 notification.app_icon or notification.app_name, (64, 64)
             )
-
             if cached_app_icon_pixbuf:
-                # Scale down the 64x64 cached icon to 24x24 for header display
                 header_icon_pixbuf = cached_app_icon_pixbuf.scale_simple(
-                    24, 24, GdkPixbuf.InterpType.BILINEAR
+                    16, 16, GdkPixbuf.InterpType.BILINEAR
                 )
                 app_icon = ClippingBox(
                     name="notification-icon",
                     children=Image(pixbuf=header_icon_pixbuf),
                 )
             else:
-                # Fallback to theme icon if caching fails completely
                 app_icon = ClippingBox(
                     name="notification-icon",
-                    children=svg_file("notifications/notification-active.svg", size=24),
+                    children=svg_file("notifications/notification-active.svg", size=16),
                 )
         except Exception as e:
             logger.warning(f"Failed to load cached header icon: {e}")
-            # Ultimate fallback
             app_icon = ClippingBox(
                 name="notification-icon",
-                children=svg_file("notifications/notification-active.svg", size=24),
+                children=svg_file("notifications/notification-active.svg", size=16),
             )
 
-        return CenterBox(
-            name="notification-title",
-            start_children=[
-                Box(
-                    spacing=4,
-                    children=[
-                        app_icon,
-                        Label(
-                            notification.app_name,
-                            name="notification-app-name",
-                            h_align="start",
-                        ),
-                    ],
-                )
+        return Box(
+            name="notification-header",
+            orientation="h",
+            spacing=4,
+            children=[
+                app_icon,
+                Label(
+                    notification.app_name or "",
+                    name="notification-app-name",
+                    h_align="start",
+                    ellipsization="end",
+                ),
             ],
-            end_children=[Box()],
         )
 
     def create_content(self, notification):
-        if self.show_close_button:
-            self.close_button = Button(
-                name="notification-close-button",
-                image=CustomImage(icon_name="close-symbolic", icon_size=18),
-                on_clicked=lambda *_: self._manual_close(),
-            )
-            self.close_button.get_style_context().add_class("mac-close-button")
-            setup_cursor_hover(self.close_button)
-        else:
-            self.close_button = None
-
         return Box(
             name="notification-content",
-            spacing=8,
+            orientation="v",
+            spacing=6,
             children=[
-                ClippingBox(
-                    name="notification-image",
-                    children=Image(pixbuf=self._get_notification_pixbuf(notification)),
-                ),
                 Box(
-                    name="notification-text",
-                    orientation="v",
-                    v_align="center",
+                    spacing=8,
                     children=[
+                        ClippingBox(
+                            name="notification-image",
+                            children=Image(
+                                pixbuf=self._get_notification_pixbuf(notification)
+                            ),
+                        ),
                         Box(
-                            name="notification-summary-box",
-                            orientation="h",
+                            name="notification-text",
+                            orientation="v",
+                            v_align="center",
+                            h_expand=True,
                             children=[
+                                self.create_header(notification),
                                 Label(
                                     name="notification-summary",
                                     markup=escape_markup_text(
                                         notification.summary.replace("\n", " ")
                                     ),
                                     h_align="start",
-                                    max_chars_width=40,
+                                    max_chars_width=38,
                                     ellipsization="end",
+                                ),
+                                (
+                                    Label(
+                                        markup=escape_markup_text(
+                                            notification.body.replace("\n", " ")
+                                        ),
+                                        h_align="start",
+                                        max_chars_width=42,
+                                        ellipsization="end",
+                                    )
+                                    if notification.body
+                                    else Box()
                                 ),
                             ],
                         ),
-                        (
-                            Label(
-                                markup=escape_markup_text(
-                                    notification.body.replace("\n", " ")
-                                ),
-                                h_align="start",
-                                max_chars_width=45,
-                                ellipsization="end",
-                            )
-                            if notification.body
-                            else Label(
-                                markup="",
-                                h_align="start",
-                                ellipsization="end",
-                            )
-                        ),
                     ],
                 ),
-                Box(h_expand=True),
-                Box(
-                    orientation="v",
-                    children=[
-                        self.close_button,
-                        Box(v_expand=True),
-                    ],
-                )
-                if self.show_close_button
-                else Box(h_expand=True),
             ],
         )
 
     def _on_enter_notify(self, widget, event):
         if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
             return False
-
         self._is_hovered = True
         self.pause_timeout()
         return False
@@ -628,7 +630,6 @@ class NotificationWidget(Box):
     def _on_leave_notify(self, widget, event):
         if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
             return False
-
         self._is_hovered = False
         self.resume_timeout()
         return False
@@ -857,9 +858,42 @@ class NotificationRevealer(SlideRevealer):
         self.notif_box = NotificationWidget(notification, show_close_button=True)
         self.notification = notification
         self.on_transition_end = on_transition_end
-        # Reference to NotificationCenter window for queue clearing
         self.parent_window = parent_window
         self._is_closing = False
+
+        # Close button pinned to top-right of the whole popup
+        self.close_button = Button(
+            name="notification-close-button",
+            image=CustomImage(icon_name="close-symbolic", icon_size=14),
+            on_clicked=lambda *_: self._manual_close(),
+        )
+        self.close_button.set_halign(Gtk.Align.CENTER)
+        self.close_button.set_valign(Gtk.Align.CENTER)
+        setup_cursor_hover(self.close_button)
+
+        self._is_close_button_hovered = False
+        self._is_popup_hovered = False
+        self._close_button_hide_timeout_id = None
+
+        self.close_button_event_box = EventBox(
+            events=["enter-notify-event", "leave-notify-event"],
+            child=self.close_button,
+        )
+        self.close_button_event_box.connect(
+            "enter-notify-event", self._on_close_button_enter
+        )
+        self.close_button_event_box.connect(
+            "leave-notify-event", self._on_close_button_leave
+        )
+
+        self.close_button_revealer = Gtk.Revealer(
+            transition_type=Gtk.RevealerTransitionType.CROSSFADE,
+            transition_duration=200,
+            child=self.close_button_event_box,
+            halign=Gtk.Align.END,
+            valign=Gtk.Align.START,
+            reveal_child=False,
+        )
 
         # Enhanced swipe detection variables for Android-style animation
         self._drag_start_y = 0
@@ -880,7 +914,6 @@ class NotificationRevealer(SlideRevealer):
         self._animation_in_progress = False
         self._spring_timer_id = None
         self._anim_timeout_id = None
-        self._css_provider = None
 
         # Wrap notification in EventBox for swipe detection
         self.event_box = EventBox(
@@ -888,14 +921,27 @@ class NotificationRevealer(SlideRevealer):
                 "button-press-event",
                 "button-release-event",
                 "motion-notify-event",
+                "enter-notify-event",
+                "leave-notify-event",
             ],
             child=self.notif_box,
         )
+        self.event_box.connect("enter-notify-event", self._on_popup_enter)
+        self.event_box.connect("leave-notify-event", self._on_popup_leave)
+        self.event_box.connect("button-press-event", self._on_button_press)
+        self.event_box.connect("button-release-event", self._on_button_release)
+        self.event_box.connect("motion-notify-event", self._on_motion_notify)
+
+        # Overlay so close button sits at top-right of the whole popup
+        self._popup_overlay = Gtk.Overlay()
+        self._popup_overlay.add(self.event_box)
+        self._popup_overlay.add_overlay(self.close_button_revealer)
+        self._popup_overlay.show_all()
 
         super().__init__(
-            child=self.event_box,
+            child=self._popup_overlay,
             direction="right",
-            duration=280,  # Faster, smoother duration
+            duration=280,
         )
 
         smooth_revealer_animation(self)
@@ -909,65 +955,140 @@ class NotificationRevealer(SlideRevealer):
         """Smoother easing function for better animation quality"""
         return 1 - pow(1 - t, 3)
 
+    def _on_popup_enter(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+        self._is_popup_hovered = True
+        self._cancel_close_button_hide()
+        self.close_button_revealer.set_reveal_child(True)
+        return False
+
+    def _on_popup_leave(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+        self._is_popup_hovered = False
+        self._schedule_close_button_hide()
+        return False
+
+    def _on_close_button_enter(self, widget, event):
+        self._is_close_button_hovered = True
+        self._cancel_close_button_hide()
+        return False
+
+    def _on_close_button_leave(self, widget, event):
+        self._is_close_button_hovered = False
+        self._schedule_close_button_hide()
+        return False
+
+    def _schedule_close_button_hide(self):
+        self._cancel_close_button_hide()
+        self._close_button_hide_timeout_id = GLib.timeout_add(
+            80, self._do_hide_close_button
+        )
+
+    def _cancel_close_button_hide(self):
+        if self._close_button_hide_timeout_id is not None:
+            GLib.source_remove(self._close_button_hide_timeout_id)
+            self._close_button_hide_timeout_id = None
+
+    def _do_hide_close_button(self):
+        self._close_button_hide_timeout_id = None
+        if not self._is_popup_hovered and not self._is_close_button_hovered:
+            self.close_button_revealer.set_reveal_child(False)
+        return False
+
+    def _on_button_press(self, widget, event):
+        if event.button != 1:
+            return False
+        self._is_dragging = True
+        self._drag_start_x = event.x_root
+        self._drag_start_y = event.y_root
+        self._current_offset = 0
+        self._last_drag_time = GLib.get_monotonic_time() / 1000
+        self._drag_velocity = 0
+        if self._spring_timer_id:
+            GLib.source_remove(self._spring_timer_id)
+            self._spring_timer_id = None
+        return False
+
+    def _on_button_release(self, widget, event):
+        if not self._is_dragging:
+            return False
+        self._is_dragging = False
+        if (
+            abs(self._current_offset) > NOTIFICATION_WIDTH * self._dismiss_threshold
+            or abs(self._drag_velocity) > self._swipe_velocity_threshold
+        ):
+            self._swipe_in_progress = True
+            self._animate_dismiss(self._current_offset)
+        else:
+            self._animate_spring_back()
+        return False
+
+    def _on_motion_notify(self, widget, event):
+        if not self._is_dragging:
+            return False
+        current_x = event.x_root
+        delta_x = current_x - self._drag_start_x
+        if delta_x <= 0:
+            return False
+        self._current_offset = delta_x
+        self._calculate_drag_velocity(current_x)
+        self._fixed.move(self.child, round(delta_x), 0)
+        progress = min(1.0, delta_x / NOTIFICATION_WIDTH)
+        self.child.set_opacity(1.0 - (progress * 0.5))
+        return False
+
+    def _animate_spring_back(self):
+        if self._spring_timer_id:
+            GLib.source_remove(self._spring_timer_id)
+        start_offset = self._current_offset
+        start_time = GLib.get_monotonic_time() / 1000
+        duration = 200
+
+        def step():
+            elapsed = (GLib.get_monotonic_time() / 1000) - start_time
+            progress = min(1.0, elapsed / duration)
+            eased = self._ease_out_cubic(progress)
+            offset = start_offset * (1.0 - eased)
+            self._fixed.move(self.child, round(offset), 0)
+            self.child.set_opacity(1.0 - (abs(offset) / NOTIFICATION_WIDTH * 0.5))
+            if progress >= 1.0:
+                self._fixed.move(self.child, 0, 0)
+                self.child.set_opacity(1.0)
+                self._spring_timer_id = None
+                return False
+            return True
+
+        self._spring_timer_id = GLib.timeout_add(16, step)
+
     def _ease_out_quart(self, t):
         """Even smoother easing for ultra-smooth animations"""
         return 1 - pow(1 - t, 4)
 
-    def _apply_transform(self, offset_x, opacity, scale):
-        """Apply smooth CSS transforms for animation"""
-        try:
-            # Create CSS transformation
-            transform_css = f"""
-                opacity: {opacity};
-                transform: translateX({offset_x}px) scale({scale});
-                transition: none;
-            """
-
-            # Apply to the notification box
-            if hasattr(self.notif_box, "get_style_context"):
-                style_context = self.notif_box.get_style_context()
-                if style_context:
-                    # Use CSS provider for smooth transforms
-                    if not hasattr(self, "_css_provider") or not self._css_provider:
-                        self._css_provider = Gtk.CssProvider()
-                        style_context.add_provider(
-                            self._css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-                        )
-
-                    css_data = f"* {{ {transform_css} }}"
-                    self._css_provider.load_from_data(css_data.encode())
-
-        except Exception as e:
-            logger.debug(f"Transform apply failed (non-critical): {e}")
-
     def _animate_dismiss(self, start_offset):
         """Animate the notification sliding out with smooth 60fps animation"""
         target_offset = NOTIFICATION_WIDTH + 50
-        duration = 200  # Slightly longer for smoother feel
 
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
 
         start_time = GLib.get_monotonic_time() / 1000
         offset_diff = target_offset - start_offset
+        duration = 200
 
         def animate_step():
             current_time = GLib.get_monotonic_time() / 1000
             elapsed = current_time - start_time
             progress = min(1.0, elapsed / duration)
 
-            # Use smoother easing for premium feel
             eased_progress = self._ease_out_quart(progress)
             current_offset = start_offset + (offset_diff * eased_progress)
 
-            # Smoother fade and scale transitions
-            opacity = max(0.0, 1.0 - (progress * 0.9))  # Gentler fade
-            scale = max(0.9, 1.0 - (progress * 0.1))  # Subtle scale
-
-            self._apply_transform(current_offset, opacity, scale)
+            self._fixed.move(self.child, round(current_offset), 0)
+            self.child.set_opacity(max(0.0, 1.0 - (progress * 0.9)))
 
             if progress >= 1.0:
-                # Mark notification for cache cleanup on swipe dismissal
                 self.notif_box._should_cleanup_cache = True
                 try:
                     self.notification.close("dismissed-by-user")
@@ -977,9 +1098,8 @@ class NotificationRevealer(SlideRevealer):
 
             return True
 
-        # Use consistent 60fps timing
         self._animation_in_progress = True
-        self._spring_timer_id = GLib.timeout_add(16, animate_step)  # ~60 FPS
+        self._spring_timer_id = GLib.timeout_add(16, animate_step)
 
     def _calculate_drag_velocity(self, current_x):
         """Calculate the velocity of the drag gesture"""
@@ -1017,17 +1137,19 @@ class NotificationRevealer(SlideRevealer):
             GLib.source_remove(self._spring_timer_id)
             self._spring_timer_id = None
 
+        # Swipe already animated the child off-screen — skip revealer animation
+        if self._swipe_in_progress:
+            self.notif_box.destroy()
+            if self.on_transition_end:
+                self.on_transition_end()
+            self.destroy()
+            return
+
         # Use different slide directions based on dismiss reason
         if reason == "expired":
-            # Gentle fade-out for auto-dismiss
             self.set_slide_direction("left")
-            self.duration = 250  # Slightly slower for natural feel
-        elif self._swipe_in_progress:
-            # Quick slide for swipe dismissals
-            self.duration = 150
-            self.set_slide_direction("right")
+            self.duration = 250
         else:
-            # Smooth slide for manual close
             self.set_slide_direction("right")
             self.duration = 200
 
@@ -1038,8 +1160,13 @@ class NotificationRevealer(SlideRevealer):
             timeout_duration, lambda: self._on_animation_complete(True)
         )
 
+    def _manual_close(self):
+        self.notif_box._should_cleanup_cache = True
+        self.notification.close("dismissed-by-user")
+
     def destroy(self):
-        # Clean up CSS provider and timers
+        # Clean up timers
+        self._cancel_close_button_hide()
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
             self._spring_timer_id = None
@@ -1054,16 +1181,6 @@ class NotificationRevealer(SlideRevealer):
             except Exception as e:
                 logger.error(f"An error occurred: {e}")
             self._closed_handler_id = 0
-
-        # Clean up CSS provider from style context
-        if self._css_provider:
-            try:
-                style_context = self.notif_box.get_style_context()
-                if style_context:
-                    style_context.remove_provider(self._css_provider)
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
-            self._css_provider = None
 
         super().destroy()
 
