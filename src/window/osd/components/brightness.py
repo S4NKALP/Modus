@@ -14,6 +14,7 @@ class BrightnessOSDContainer(BaseOSDContainer):
         super().__init__(window, **kwargs)
         self.brightness_service = Brightness()
         self._last_percent = None
+        self._last_blocks = None
         self._setup_specific_components()
         self._connect_specific_signals()
 
@@ -31,7 +32,7 @@ class BrightnessOSDContainer(BaseOSDContainer):
             value=70,
             min_value=0,
             max_value=100,
-            block_count=20,
+            block_count=15,
             block_spacing=2.0,
             block_height=10.0,
             block_radius=0.0,
@@ -54,7 +55,9 @@ class BrightnessOSDContainer(BaseOSDContainer):
         raw = self.brightness_service.screen_brightness
         max_br = self.brightness_service.max_screen
         self._last_percent = int((raw / max_br) * 100) if max_br > 0 and raw >= 0 else 0
-        self.scale.set_value(self._last_percent)
+        block_size = 100 / self.scale._block_count
+        self._last_blocks = int(self._last_percent / block_size)
+        self.scale.set_value(self._last_blocks * block_size)
         self._update_display()
 
     def _update_display(self):
@@ -65,10 +68,24 @@ class BrightnessOSDContainer(BaseOSDContainer):
                 int((raw / max_br) * 100) if max_br > 0 and raw >= 0 else 0
             )
         percent = self._last_percent
+        block_size = 100 / self.scale._block_count
+        target_blocks = int(percent / block_size)
+
+        if self._last_blocks is None:
+            display_blocks = target_blocks
+        elif target_blocks > self._last_blocks:
+            display_blocks = self._last_blocks + 1
+        elif target_blocks < self._last_blocks:
+            display_blocks = self._last_blocks - 1
+        else:
+            display_blocks = self._last_blocks
+
+        self._last_blocks = display_blocks
+        snapped = display_blocks * block_size
         level = 0 if percent == 0 else min(math.ceil(percent / 33), 3)
 
         self.osd_window_image.set_from_file(f"brightness/brightness-{level}.svg")
-        self.scale.animate_value(percent)
+        self.scale.animate_value(snapped)
 
     def update(self, *_):
         self._update_display()
