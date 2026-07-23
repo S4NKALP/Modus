@@ -566,6 +566,12 @@ class Wifi(Service):
             "g-properties-changed", self._on_device_props_changed
         )
 
+        # Watch device State changes (DISCONNECTED -> ACTIVATED transitions)
+        dev = _make_proxy(nm._bus, device_path, NM_DEVICE_IFACE)
+        self._device_handler_id = dev.connect(
+            "g-properties-changed", self._on_device_state_changed
+        )
+
         # Watch WirelessEnabled on the NM main proxy so the toggle stays in sync
         self._nm_handler_id = nm._nm.connect(
             "g-properties-changed", self._on_nm_props_changed
@@ -587,6 +593,13 @@ class Wifi(Service):
             except Exception:
                 pass
             self._handler_id = None
+        if self._device_handler_id is not None:
+            try:
+                dev = _make_proxy(self._nm._bus, self._device_path, NM_DEVICE_IFACE)
+                dev.disconnect(self._device_handler_id)
+            except Exception:
+                pass
+            self._device_handler_id = None
 
     def _on_nm_props_changed(self, proxy, changed, invalidated):
         """React to WirelessEnabled changes on the NM main proxy."""
@@ -609,6 +622,18 @@ class Wifi(Service):
                 "icon-name",
             ):
                 self.notify(sn)
+        elif "State" in props:
+            self.emit("changed")
+            self.notify("ssid")
+            self.notify("internet")
+
+    def _on_device_state_changed(self, proxy, changed, invalidated):
+        props = changed.unpack() if changed else {}
+        if "State" in props:
+            self._refresh_active_ap()
+            self.emit("changed")
+            self.notify("ssid")
+            self.notify("internet")
 
     def _refresh_active_ap(self):
         self._ap_path = self._nm.active_access_point_path(self._device_path)
