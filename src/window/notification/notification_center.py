@@ -18,6 +18,7 @@ from shared.window.applet_window import AppletWindow
 from utils.functions import clear_children, escape_markup_text
 from window.notification.notification import (
     NotificationWidget,
+    _get_relative_time,
     cache_notification_icon,
     cleanup_all_notification_caches,
     cleanup_notification_specific_caches,
@@ -379,6 +380,18 @@ class ExpandableNotificationGroup(Box):
         self.expanded_container.set_visible(False)
         return False  # Don't repeat timeout
 
+    def _refresh_expanded_state(self):
+        """Update the expanded notification list in-place without collapsing"""
+        for child in list(self.notifications_list.get_children()):
+            self.notifications_list.remove(child)
+            child.destroy()
+
+        for notification in self.notifications:
+            notification_widget = NotificationCenterWidget(notification=notification)
+            self.notifications_list.add(notification_widget)
+
+        self.notifications_list.show_all()
+
     def close_all(self, *args):
         """Close all notifications in this group with proper cache cleanup"""
         # Close all notifications in this group
@@ -425,26 +438,23 @@ class ExpandableNotificationGroup(Box):
         """Close notification and prevent click from expanding the group"""
         self._close_single_notification(notification)
 
-        # If this was the last notification in the group, the group will be removed
-        # by the notification_removed signal handler. If there are still notifications,
-        # we need to check if this group should be removed from view.
         remaining_notifications = [
             n for n in self.notifications if n.cache_id != notification.cache_id
         ]
 
         if not remaining_notifications:
-            # This was the last notification, the group will be destroyed by signal handler
             pass
         else:
-            # Update the notifications list and refresh the view immediately
             self.notifications = remaining_notifications
-            # Force immediate UI update by destroying and recreating collapsed state
-            if hasattr(self, "collapsed_eventbox"):
-                self.collapsed_eventbox.destroy()
-            self.create_collapsed_state()
-            self.show_all()
+            if self.is_expanded:
+                self._refresh_expanded_state()
+            else:
+                if hasattr(self, "collapsed_eventbox"):
+                    self.collapsed_eventbox.destroy()
+                self.create_collapsed_state()
+                self.show_all()
 
-        return True  # Stop event propagation
+        return True
 
 
 class NotificationCenterWidget(NotificationWidget):
@@ -517,23 +527,38 @@ class NotificationCenterWidget(NotificationWidget):
             return pixbuf
 
     def create_content(self, notification):
-        # Create our custom close button for notification center
-
         self.close_button = Button(
             name="notification-close-button",
             image=CustomImage(
-                icon_name="close-symbolic", name="notification-close", icon_size=18
+                icon_name="close-symbolic", name="notification-close", icon_size=14
             ),
             on_clicked=self._on_close_clicked,
         )
-        self.close_button.get_style_context().add_class("mac-close-button")
-
         from utils.gtk_utils import setup_cursor_hover
 
         setup_cursor_hover(self.close_button)
 
-        # Create the content box manually with our custom close button
-        return Box(
+        self._is_close_button_hovered = False
+        self._is_content_hovered = False
+        self._close_button_hide_timeout_id = None
+
+        close_event_box = EventBox(
+            events=["enter-notify-event", "leave-notify-event"],
+            child=self.close_button,
+        )
+        close_event_box.connect("enter-notify-event", self._on_close_button_enter)
+        close_event_box.connect("leave-notify-event", self._on_close_button_leave)
+
+        self.close_revealer = Gtk.Revealer(
+            transition_type=Gtk.RevealerTransitionType.CROSSFADE,
+            transition_duration=200,
+            child=close_event_box,
+            halign=Gtk.Align.END,
+            valign=Gtk.Align.START,
+            reveal_child=False,
+        )
+
+        content = Box(
             name="notification-content",
             spacing=8,
             children=[
@@ -547,6 +572,7 @@ class NotificationCenterWidget(NotificationWidget):
                     v_align="center",
                     h_expand=True,
                     children=[
+                        self.create_header(notification),
                         Box(
                             name="notification-summary-box",
                             orientation="h",
@@ -557,8 +583,14 @@ class NotificationCenterWidget(NotificationWidget):
                                         notification.summary.replace("\n", " ")
                                     ),
                                     h_align="start",
-                                    max_chars_width=40,
+                                    max_chars_width=30,
                                     ellipsization="end",
+                                ),
+                                Box(h_expand=True),
+                                Label(
+                                    label=_get_relative_time(notification),
+                                    name="notification-time",
+                                    h_align="end",
                                 ),
                             ],
                         ),
@@ -568,27 +600,32 @@ class NotificationCenterWidget(NotificationWidget):
                                     notification.body.replace("\n", " ")
                                 ),
                                 h_align="start",
-                                max_chars_width=45,
+                                max_chars_width=38,
                                 ellipsization="end",
                             )
                             if notification.body
-                            else Label(
-                                markup="",
-                                h_align="start",
-                            )
+                            else Box()
                         ),
-                    ],
-                ),
-                Box(h_expand=True),
-                Box(
-                    orientation="v",
-                    children=[
-                        self.close_button,
-                        Box(v_expand=True),
                     ],
                 ),
             ],
         )
+
+        content_event_box = EventBox(
+            events=[
+                "enter-notify-event",
+                "leave-notify-event",
+            ],
+            child=content,
+        )
+        content_event_box.connect("enter-notify-event", self._on_content_enter)
+        content_event_box.connect("leave-notify-event", self._on_content_leave)
+
+        overlay = Gtk.Overlay()
+        overlay.add(content_event_box)
+        overlay.add_overlay(self.close_revealer)
+        overlay.show_all()
+        return overlay
 
     def create_action_buttons(self, notification):
         # Create an options button to hold the context menu
@@ -660,6 +697,48 @@ class NotificationCenterWidget(NotificationWidget):
         except Exception as e:
             logger.error(f"Error removing notification {self.notification_id}: {e}")
 
+    def _on_content_enter(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+        self._is_content_hovered = True
+        self._cancel_close_button_hide()
+        self.close_revealer.set_reveal_child(True)
+        return False
+
+    def _on_content_leave(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+        self._is_content_hovered = False
+        self._schedule_close_button_hide()
+        return False
+
+    def _on_close_button_enter(self, widget, event):
+        self._is_close_button_hovered = True
+        self._cancel_close_button_hide()
+        return False
+
+    def _on_close_button_leave(self, widget, event):
+        self._is_close_button_hovered = False
+        self._schedule_close_button_hide()
+        return False
+
+    def _schedule_close_button_hide(self):
+        self._cancel_close_button_hide()
+        self._close_button_hide_timeout_id = GLib.timeout_add(
+            80, self._do_hide_close_button
+        )
+
+    def _cancel_close_button_hide(self):
+        if self._close_button_hide_timeout_id is not None:
+            GLib.source_remove(self._close_button_hide_timeout_id)
+            self._close_button_hide_timeout_id = None
+
+    def _do_hide_close_button(self):
+        self._close_button_hide_timeout_id = None
+        if not self._is_content_hovered and not self._is_close_button_hovered:
+            self.close_revealer.set_reveal_child(False)
+        return False
+
     # Override to disable timeout functionality
     def start_timeout(self):
         pass
@@ -671,6 +750,10 @@ class NotificationCenterWidget(NotificationWidget):
     # Override to disable auto-close functionality
     def close_notification(self):
         return False
+
+    def destroy(self):
+        self._cancel_close_button_hide()
+        super().destroy()
 
 
 class NotificationCenter(AppletWindow):
@@ -863,16 +946,28 @@ class NotificationCenter(AppletWindow):
             logger.error(f"Error adding notification to group: {e}")
 
     def _refresh_group_widget(self, group_widget):
-        """Refresh a group widget's content"""
+        """Refresh a group widget's content, preserving expanded state"""
         try:
+            if group_widget.is_expanded:
+                children = list(group_widget.notifications_list.get_children())
+                current_ids = {n.cache_id for n in group_widget.notifications}
+                for child in children:
+                    if getattr(child, "notification_id", None) not in current_ids:
+                        group_widget.notifications_list.remove(child)
+                        child.destroy()
+                # Only show expanded container, not the whole group
+                group_widget.expanded_container.show_all()
+                return
+
             clear_children(group_widget)
 
-            # Recreate content (collapsed + expanded states)
             group_widget.create_collapsed_state()
             group_widget.create_expanded_state()
+
+            group_widget.show_all()
+
             group_widget.collapsed_eventbox.set_visible(True)
             group_widget.expanded_container.set_visible(False)
-            group_widget.show_all()
 
         except Exception as e:
             logger.error(f"Error refreshing group widget: {e}")
