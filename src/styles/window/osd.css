@@ -8,20 +8,18 @@
     border: 1px solid @glass-border-soft;
 }
 
-#osd-container scale {
-    min-width: 180px;
+#osd-container .block-progress-bar {
+    min-height: 12px;
 }
 
-#osd-container trough {
-    background: @glass-surface-1;
-    min-height: 15px;
-    margin-right: 4px;
-    transition: all apply(transition-slower) cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border-radius: apply(radius-lg);
+#osd-container .block-progress-bar block-bg {
+    background-color: alpha(@glass-surface-1, 0.6);
 }
 
-#osd-container trough highlight {
-    border-radius: apply(radius-full);
-    background: @glass-accent;
-    transition: all apply(transition-slower) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+#osd-container .block-progress-bar block-fg {
+    background-color: @glass-accent;
+}
+
+#osd-container .block-progress-bar.muted block-fg {
+    background-color: alpha(@glass-surface-1, 0.3);
 }
