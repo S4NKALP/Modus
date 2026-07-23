@@ -33,7 +33,7 @@ class AudioOSDContainer(BaseOSDContainer):
             value=70,
             min_value=0,
             max_value=100,
-            block_count=20,
+            block_count=15,
             block_spacing=2.0,
             block_height=10.0,
             block_radius=0.0,
@@ -94,7 +94,9 @@ class AudioOSDContainer(BaseOSDContainer):
         )
 
         display_volume = 0 if (volume == 0 or muted) else volume
-        level = 0 if display_volume == 0 else min(math.ceil(display_volume / 33), 3)
+        block_size = 100 / self.scale._block_count
+        snapped = int(display_volume / block_size) * block_size
+        level = 0 if snapped == 0 else min(math.ceil(snapped / 33), 3)
 
         self.osd_window_image.set_from_file(f"volume/audio-volume-{level}.svg")
 
@@ -103,7 +105,7 @@ class AudioOSDContainer(BaseOSDContainer):
         else:
             self.scale.remove_style_class("muted")
 
-        self.scale.animate_value(display_volume)
+        self.scale.animate_value(snapped)
 
     def update(self, *_):
         self._update_display()
