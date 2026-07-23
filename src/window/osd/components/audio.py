@@ -2,11 +2,10 @@ import math
 
 from fabric.audio import Audio
 from fabric.utils import logger
-from fabric.widgets.scale import ScaleMark
 
+from shared.widgets.block_progress_bar import BlockProgressBar
 from utils.gtk_utils import svg_file
 
-from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer
 
 
@@ -30,13 +29,17 @@ class AudioOSDContainer(BaseOSDContainer):
             h_expand=True,
             v_expand=True,
         )
-        self.scale = AnimatedScale(
-            marks=(ScaleMark(value=i) for i in range(1, 100, 10)),
+        self.scale = BlockProgressBar(
             value=70,
             min_value=0,
             max_value=100,
-            increments=(1, 1),
-            orientation="h",
+            block_count=20,
+            block_spacing=2.0,
+            block_height=10.0,
+            block_radius=0.0,
+            orientation="horizontal",
+            name="osd-block-bar",
+            h_expand=True,
         )
         self.add(self.osd_window_image)
         self.add(self.scale)
@@ -100,7 +103,7 @@ class AudioOSDContainer(BaseOSDContainer):
         else:
             self.scale.remove_style_class("muted")
 
-        self.scale.animate_value(volume)
+        self.scale.animate_value(display_volume)
 
     def update(self, *_):
         self._update_display()
