@@ -9,6 +9,7 @@ from fabric.widgets.separator import Separator
 from services.battery import Battery
 from services.gamemode import GameModeService
 from shared.capture import CaptureNotifier
+from shared.widgets.flat_scale import FlatScale
 from utils.functions import clear_children, format_duration
 from utils.gtk_utils import svg_file
 
@@ -92,6 +93,10 @@ class ChargeLimitButton(Box):
         super().__init__(name="energy-mode-button", h_expand=True, **kwargs)
         self.battery_service = battery_service
         self.parent = parent
+        self._has_threshold = (
+            battery_service.charge_limit is not None
+            and battery_service.charge_limit.sysfs_path is not None
+        )
 
         self.charge_icon_svg = svg_file("zap.svg", size=16)
 
@@ -120,7 +125,37 @@ class ChargeLimitButton(Box):
             h_expand=True,
         )
 
-        self.children = [self.button]
+        children = [self.button]
+
+        if self._has_threshold:
+            self.threshold_label = Label(
+                label="80%",
+                style_classes="charge-threshold-value",
+                h_align="end",
+            )
+
+            self.slider = FlatScale(
+                value=80.0,
+                min_value=20.0,
+                max_value=100.0,
+                step=5.0,
+                draw_value=True,
+                orientation="horizontal",
+                on_value_changed=self._on_slider_changed,
+                name="charge-threshold-slider",
+                style_classes="charge-threshold-flat-scale",
+                h_expand=True,
+            )
+
+            self.slider_box = Box(
+                orientation="horizontal",
+                spacing=8,
+                children=[self.slider, self.threshold_label],
+            )
+
+            children.append(self.slider_box)
+
+        self.children = children
         self.update_state()
 
     def on_clicked(self, *args):
@@ -132,8 +167,13 @@ class ChargeLimitButton(Box):
             _charge_notifier.notify(
                 "Charge Limit",
                 f"Battery charge limit {state}",
-                icon="battery-full-charging-symbolic",
+                icon="battery-full-charged-symbolic",
             )
+
+    def _on_slider_changed(self, _scale, value):
+        threshold = round(value)
+        self.threshold_label.set_label(f"{threshold}%")
+        self.battery_service.set_charge_threshold(threshold)
 
     def update_state(self, *_):
         cl = self.battery_service.charge_limit
@@ -141,6 +181,17 @@ class ChargeLimitButton(Box):
             self.charge_icon.add_style_class("connected")
         else:
             self.charge_icon.remove_style_class("connected")
+
+        if self._has_threshold:
+            threshold = self.battery_service.get_charge_threshold()
+            if threshold is not None:
+                self.slider.handler_block_by_func(self._on_slider_changed)
+                self.slider.set_value(float(threshold))
+                self.slider.handler_unblock_by_func(self._on_slider_changed)
+                self.threshold_label.set_label(f"{threshold}%")
+            is_enabled = cl is not None and cl.enabled
+            self.slider.set_sensitive(is_enabled)
+            self.slider_box.set_visible(is_enabled)
 
 
 class GameModeButton(Box):
