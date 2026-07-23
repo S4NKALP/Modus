@@ -7,19 +7,27 @@
   color: var(--on-surface);
 }
 
-#notification-summary,
-#button-label {
+#notification-header {
+  margin-bottom: 4px;
+}
+
+#notification-app-name {
+  color: @glass-text-secondary;
+  font-weight: bold;
+  font-size: apply(font-sm);
+}
+
+#notification-time {
+  color: @glass-text-secondary;
+  font-size: apply(font-xs);
 }
 
 #notification-summary {
   font-weight: bold;
   font-size: apply(font-lg);
-  /* color: var(--primary); */
 }
 
-#notification-app-name {
-  color: @glass-border;
-  font-weight: bold;
+#button-label {
 }
 
 #action-button {
