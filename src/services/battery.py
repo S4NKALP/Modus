@@ -1,4 +1,6 @@
+import os
 from enum import IntEnum
+from glob import glob
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import Gio, GLib, logger
@@ -161,11 +163,19 @@ class Peripheral:
 
 
 class ChargeLimit:
-    __slots__ = ("device_path", "enabled")
+    __slots__ = ("device_path", "enabled", "sysfs_path", "threshold")
 
-    def __init__(self, enabled: bool, device_path: str):
+    def __init__(
+        self,
+        enabled: bool,
+        device_path: str,
+        threshold: int | None = None,
+        sysfs_path: str | None = None,
+    ):
         self.enabled = enabled
         self.device_path = device_path
+        self.threshold = threshold
+        self.sysfs_path = sysfs_path
 
 
 class Battery(Service):
@@ -563,6 +573,28 @@ class Battery(Service):
 
     def _do_recalculate_charge_limit(self) -> None:
         self._charge_limit = None
+
+        # Try sysfs first
+        sysfs_path = self._find_sysfs_charge_control()
+        if sysfs_path is not None:
+            try:
+                with open(sysfs_path) as f:
+                    current = int(f.read().strip())
+                enabled = current < 100
+                self._charge_limit = ChargeLimit(
+                    enabled=enabled,
+                    device_path="sysfs",
+                    threshold=current if enabled else None,
+                    sysfs_path=sysfs_path,
+                )
+                logger.info(
+                    f"[Battery] Charge limit via sysfs: {sysfs_path} = {current}"
+                )
+                return
+            except Exception as e:
+                logger.warning(f"[Battery] Failed to read sysfs charge control: {e}")
+
+        # Fall back to UPower D-Bus
         for path in self._system_battery_paths:
             proxy = self._device_proxies.get(path)
             if proxy is None:
@@ -596,6 +628,16 @@ class Battery(Service):
                 return
             except Exception as e:
                 logger.warning(f"[Battery] Failed to check charge limit on {path}: {e}")
+
+    @staticmethod
+    def _find_sysfs_charge_control() -> str | None:
+        candidates = sorted(glob("/sys/class/power_supply/BAT*"))
+        for bat_dir in candidates:
+            for name in ("charge_control_end", "charge_control"):
+                path = os.path.join(bat_dir, name)
+                if os.path.isfile(path) and os.access(path, os.R_OK | os.W_OK):
+                    return path
+        return None
 
     def _do_recalculate_peripherals(self) -> None:
         peripherals = []
@@ -710,11 +752,31 @@ class Battery(Service):
     def toggle_charge_limit(self) -> bool:
         if self._charge_limit is None:
             return False
+        cl = self._charge_limit
+
+        # sysfs path: write directly
+        if cl.sysfs_path is not None:
+            try:
+                target = 100 if cl.enabled else (cl.threshold or 80)
+                with open(cl.sysfs_path, "w") as f:
+                    f.write(str(target))
+                self._charge_limit = ChargeLimit(
+                    enabled=target < 100,
+                    device_path=cl.device_path,
+                    threshold=target if target < 100 else None,
+                    sysfs_path=cl.sysfs_path,
+                )
+                return True
+            except Exception as e:
+                logger.error(f"[Battery] Failed to toggle sysfs charge limit: {e}")
+                return False
+
+        # UPower D-Bus path
         try:
-            proxy = self._device_proxies.get(self._charge_limit.device_path)
+            proxy = self._device_proxies.get(cl.device_path)
             if proxy is None:
                 return False
-            target = not self._charge_limit.enabled
+            target = not cl.enabled
             self._toggling_charge_limit = True
             try:
                 proxy.call_sync(
@@ -726,13 +788,51 @@ class Battery(Service):
                 )
             finally:
                 GLib.idle_add(self._clear_toggling_flag)
-            self._charge_limit = ChargeLimit(
-                enabled=target, device_path=self._charge_limit.device_path
-            )
+            self._charge_limit = ChargeLimit(enabled=target, device_path=cl.device_path)
             return True
         except Exception as e:
             logger.error(f"[Battery] Failed to toggle charge limit: {e}")
             return False
+
+    def get_charge_threshold(self) -> int | None:
+        cl = self._charge_limit
+        if cl is None:
+            return None
+        if cl.threshold is not None:
+            return cl.threshold
+        if cl.enabled:
+            return 80
+        return 100
+
+    def set_charge_threshold(self, threshold: int) -> bool:
+        cl = self._charge_limit
+        if cl is None:
+            return False
+
+        threshold = max(20, min(100, threshold))
+
+        # sysfs path
+        if cl.sysfs_path is not None:
+            try:
+                with open(cl.sysfs_path, "w") as f:
+                    f.write(str(threshold))
+                self._charge_limit = ChargeLimit(
+                    enabled=threshold < 100,
+                    device_path=cl.device_path,
+                    threshold=threshold if threshold < 100 else None,
+                    sysfs_path=cl.sysfs_path,
+                )
+                return True
+            except Exception as e:
+                logger.error(f"[Battery] Failed to set sysfs charge threshold: {e}")
+                return False
+
+        # UPower D-Bus: only supports on/off, not percentage
+        if threshold < 100 and not cl.enabled:
+            return self.toggle_charge_limit()
+        if threshold >= 100 and cl.enabled:
+            return self.toggle_charge_limit()
+        return True
 
     def _clear_toggling_flag(self) -> bool:
         self._toggling_charge_limit = False
