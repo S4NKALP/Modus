@@ -1,12 +1,11 @@
 import math
 
 from fabric.utils import logger
-from fabric.widgets.scale import ScaleMark
 
 from services.brightness import Brightness
+from shared.widgets.block_progress_bar import BlockProgressBar
 from utils.gtk_utils import svg_file
 
-from .animated_scale import AnimatedScale
 from .base import BaseOSDContainer
 
 
@@ -28,13 +27,17 @@ class BrightnessOSDContainer(BaseOSDContainer):
             h_expand=True,
             v_expand=True,
         )
-        self.scale = AnimatedScale(
-            marks=(ScaleMark(value=i) for i in range(0, 101, 10)),
+        self.scale = BlockProgressBar(
             value=70,
             min_value=0,
             max_value=100,
-            increments=(1, 1),
-            orientation="h",
+            block_count=20,
+            block_spacing=2.0,
+            block_height=10.0,
+            block_radius=0.0,
+            orientation="horizontal",
+            name="osd-block-bar",
+            h_expand=True,
         )
         self.add(self.osd_window_image)
         self.add(self.scale)
@@ -55,7 +58,13 @@ class BrightnessOSDContainer(BaseOSDContainer):
         self._update_display()
 
     def _update_display(self):
-        percent = self._last_percent if self._last_percent is not None else 0
+        if self._last_percent is None:
+            raw = self.brightness_service.screen_brightness
+            max_br = self.brightness_service.max_screen
+            self._last_percent = (
+                int((raw / max_br) * 100) if max_br > 0 and raw >= 0 else 0
+            )
+        percent = self._last_percent
         level = 0 if percent == 0 else min(math.ceil(percent / 33), 3)
 
         self.osd_window_image.set_from_file(f"brightness/brightness-{level}.svg")
