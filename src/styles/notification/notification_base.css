@@ -5,5 +5,18 @@
   margin-top: 10px;
   margin-right: 10px;
   border: 1px solid @glass-border-soft;
-  /* margin: 5px; */
+}
+
+#notification.low {
+  border-color: @glass-border-soft;
+  opacity: 0.85;
+}
+
+#notification.normal {
+  border-color: @glass-border-soft;
+}
+
+#notification.critical {
+  border-color: var(--error);
+  border-width: 1.5px;
 }
