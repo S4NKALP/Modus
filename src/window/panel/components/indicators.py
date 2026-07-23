@@ -240,7 +240,7 @@ class NetworkIndicator(Box):
             wifi = self.network_service.wifi_device
             if not wifi.enabled:
                 wlan_state = "disabled"
-            elif wifi.ssid:
+            elif wifi.ssid and wifi.ssid != "Disconnected":
                 wlan_state = f"connected:{wifi.ssid}"
                 if wifi.strength >= 0:
                     wlan_state += f":{wifi.strength}%"
@@ -275,7 +275,7 @@ class NetworkIndicator(Box):
             if not wifi.enabled:
                 icon_file = "wifi-off-clear.svg"
                 tooltip = "WiFi disabled"
-            elif wifi.ssid:
+            elif wifi.ssid and wifi.ssid != "Disconnected":
                 wifi_icon_path = get_wifi_icon_for_strength(wifi.strength)
                 self.network_icon.set_from_file(wifi_icon_path)
                 tooltip = f"Connected to {wifi.ssid}"
