@@ -16,7 +16,7 @@ class Brightness(Service):
     """
 
     _instance = None
-    MIN_CHANGE_THRESHOLD = 2
+    MIN_CHANGE_THRESHOLD = 1
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
