@@ -70,6 +70,7 @@ Auto-generated on first run with sensible defaults. Most changes require restart
 | `date_time` | bool | `true` | Date/time indicator |
 | `workspace_indicator` | bool | `true` | Workspace indicator |
 | `notification_center` | bool | `true` | Notification center |
+| `notch` | bool | `true` | Center notch (player, indicators, recording) |
 | `custom_mods` | bool | `true` | Custom panel buttons from `mods.toml` |
 | `window_switcher` | bool | `true` | Alt-Tab window switcher |
 | `osd` | bool | `true` | Volume/brightness on-screen display |

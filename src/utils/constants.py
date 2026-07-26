@@ -21,6 +21,7 @@ DEFAULT = {
     "bluetooth": True,
     "date_time": True,
     "night_light_temperature": 4500,
+    "notch": True,
     "custom_mods": True,
     "keyboard_layouts": ["us"],
     "switcher_live_preview": True,

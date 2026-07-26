@@ -140,7 +140,7 @@ class Panel(Window):
         # Create boxes and mount
         self.left_box = Box(name="window-left")
         self.notch = Notch()
-        self.center_box = Box(name="window-center", children=self.notch)
+        self.center_box = Box(name="window-center")
         self.right_box = Box(name="window-right", spacing=4, orientation="h")
 
         self.children = CenterBox(
@@ -271,6 +271,12 @@ class Panel(Window):
         if bluetooth_visible:
             self.bluetooth_indicator.update_state()
 
+        # Center (notch)
+        if config_data.get("notch", True):
+            self.center_box.children = [self.notch]
+        else:
+            self.center_box.children = []
+
         # Left
         left_children = []
         if config_data.get("imac_button", True):
@@ -319,6 +325,7 @@ class Panel(Window):
         keys = {
             "imac_button",
             "global_menu",
+            "notch",
             "custom_mods",
             "workspace_indicator",
             "systray",
