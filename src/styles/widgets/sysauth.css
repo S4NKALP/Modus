@@ -1,0 +1,98 @@
+/* Sysauth Dialog */
+
+#sysauth-dialog {
+  background-color: transparent;
+}
+
+#sysauth-dialog-background {
+  background-color: @glass-dialog;
+  border-radius: apply(radius-md);
+  border: 1px solid @glass-border;
+  padding: 20px;
+  min-width: 400px;
+}
+
+#sysauth-title-container {
+  margin-bottom: 8px;
+}
+
+#sysauth-icon {
+  color: @glass-accent;
+  margin-right: 4px;
+}
+
+#sysauth-title {
+  color: @glass-text;
+  font-size: apply(font-base);
+  font-weight: 500;
+}
+
+#sysauth-description {
+  color: @glass-text-secondary;
+  font-size: apply(font-sm);
+  margin-bottom: 8px;
+}
+
+#sysauth-error {
+  color: @glass-error;
+  font-size: apply(font-sm);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+#sysauth-password-label {
+  color: @glass-text;
+  font-size: apply(font-md);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+#sysauth-password-entry {
+  background-color: @glass-surface-1;
+  border: 1px solid @glass-border;
+  border-radius: apply(radius-xs);
+  padding: 8px 12px;
+  color: @glass-text;
+  font-size: apply(font-md);
+}
+
+#sysauth-password-entry:focus {
+  border-color: @glass-ring;
+  box-shadow: 0 0 0 2px @glass-focus;
+  background-color: @glass-hover;
+}
+
+#sysauth-button-box {
+  margin-top: 8px;
+}
+
+#sysauth-cancel-button,
+#sysauth-ok-button {
+  border-radius: apply(radius-xs);
+  font-size: apply(font-md);
+  font-weight: 500;
+  min-width: 80px;
+  min-height: 30px;
+  padding: 6px 12px;
+}
+
+#sysauth-cancel-button {
+  background-color: @glass-hover;
+  border: 1px solid @glass-border;
+  color: @glass-text;
+}
+
+#sysauth-cancel-button:hover {
+  background-color: @glass-active;
+}
+
+#sysauth-ok-button {
+  background-color: @glass-accent;
+  border: 1px solid @glass-accent;
+  color: @glass-text;
+}
+
+#sysauth-ok-button:hover {
+  background-color: @glass-accent;
+  border-color: @glass-accent;
+}

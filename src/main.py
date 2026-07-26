@@ -17,6 +17,7 @@ from fabric.utils import get_relative_path, logger, monitor_file
 
 from services.config import config
 from services.keyboard_layout import KeyboardLayout
+from services.sysauth import SysauthService
 from shared.data import APP_NAME, load_config
 from utils.functions import set_process_name
 from utils.gtk_utils import generate_colors_from_wallpaper
@@ -95,6 +96,10 @@ def main():
 
     # Set up styling before creating windows to prevent unstyled flashes
     setup_css(app)
+
+    # Initialize Polkit authentication agent
+    sysauth = SysauthService()
+    sysauth.start()
 
     switcher = ApplicationSwitcher()
     panel = Panel()

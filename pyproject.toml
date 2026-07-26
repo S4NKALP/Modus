@@ -20,6 +20,8 @@ classifiers = [
 dependencies = [
     "fabric",
     "httpx>=0.28.1",
+    "keyring>=23.0.0",
+    "keyrings-alt>=5.0.2",
     "psutil>=7.2.2",
     "python-pam>=2.0.2",
     "tomlkit>=0.15.0",

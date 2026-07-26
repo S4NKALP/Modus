@@ -20,5 +20,6 @@ from .network import (  # noqa: F401
     Wifi,
 )
 from .numlock import NumLock  # noqa: F401
+from .sysauth import SysauthService, get_sysauth_service  # noqa: F401
 from .todo import TodoService  # noqa: F401
 from .wallpaper import WallpaperService, create_thumbnail  # noqa: F401
