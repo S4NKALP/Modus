@@ -109,29 +109,17 @@ class DesktopWidgetWindow(WaylandWindow):
         self._in_size_allocate = False
         self._edit_mode = False
 
-        # Free-drag state
+        # Drag state
         self._dragging_key: str | None = None
-        self._drag_start_wx: int = 0  # widget top-left x when drag began
-        self._drag_start_wy: int = 0  # widget top-left y when drag began
-        self._drag_start_px: int = 0  # pointer x when drag began
-        self._drag_start_py: int = 0  # pointer y when drag began
+        self._drag_start_wx: int = 0
+        self._drag_start_wy: int = 0
+        self._drag_start_px: int = 0
+        self._drag_start_py: int = 0
 
         self._root = Box(h_expand=True, v_expand=True)
 
         self._overlay = Gtk.Overlay()
         self._overlay.add(self._fixed)
-
-        self._stop_edit_box = Gtk.Box(
-            halign=Gtk.Align.CENTER, valign=Gtk.Align.START, margin_top=40
-        )
-        self._stop_edit_btn = Gtk.Button(label="Done Editing")
-        self._stop_edit_btn.get_style_context().add_class("suggested-action")
-        self._stop_edit_btn.connect("clicked", self._on_stop_edit_clicked)
-        self._stop_edit_box.add(self._stop_edit_btn)
-
-        self._overlay.add_overlay(self._stop_edit_box)
-        self._stop_edit_box.set_no_show_all(True)
-        self._stop_edit_box.set_visible(False)
 
         self._root.add(self._overlay)
 
@@ -174,8 +162,15 @@ class DesktopWidgetWindow(WaylandWindow):
             name=f"desktop-widgets-{monitor_id}",
         )
 
+        self.add_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
+        )
         self.connect("size-allocate", self._on_size_allocate)
         self.connect("button-press-event", self._on_window_button_press)
+        self.connect("button-release-event", self._on_window_button_release)
+        self.connect("motion-notify-event", self._on_window_motion)
 
         GLib.timeout_add(50, self._initial_build)
 
@@ -219,134 +214,88 @@ class DesktopWidgetWindow(WaylandWindow):
     def _on_fade_out_finished(self, animator) -> None:
         self._fixed.set_opacity(0.0)
 
-    # right-click context menu
+    # right-click context menu (window level — edit mode toggle only)
     def _on_window_button_press(self, widget, event: Gdk.EventButton) -> bool:
-        if event.button != 3:
-            return False
-        menu = Gtk.Menu()
-        edit_item = Gtk.CheckMenuItem(label="Edit Widgets")
-        edit_item.set_active(self._edit_mode)
-        edit_item.connect("toggled", self._on_edit_toggled)
-        menu.append(edit_item)
-        menu.show_all()
-        menu.popup_at_pointer(event)
-        return True
+        if event.button == 3:
+            menu = Gtk.Menu()
+            label_text = "Done Edit" if self._edit_mode else "Edit Widgets"
+            edit_item = Gtk.CheckMenuItem(label=label_text)
+            edit_item.set_active(self._edit_mode)
+            edit_item.connect("toggled", self._on_edit_toggled)
+            menu.append(edit_item)
+            menu.show_all()
+            menu.popup_at_pointer(event)
+            return True
 
-    # edit mode
-    def _on_edit_toggled(self, item) -> None:
-        self._edit_mode = item.get_active()
-        if self._edit_mode:
-            self._stop_edit_box.set_visible(True)
-            self._stop_edit_btn.set_visible(True)
-        else:
-            self._stop_edit_box.set_visible(False)
-            self._stop_edit_btn.set_visible(False)
-        for key, eb in self._children.items():
-            self._configure_eb_for_edit(eb, key, self._edit_mode)
+        if event.button == 1 and self._edit_mode:
+            # Find which widget was clicked via hit test
+            key = self._hit_test(int(event.x_root), int(event.y_root))
+            if key is None:
+                return False
+            eb = self._children[key]
+            if eb.get_window():
+                eb.get_window().raise_()
+            alloc = eb.get_allocation()
+            self._dragging_key = key
+            self._drag_start_wx = alloc.x
+            self._drag_start_wy = alloc.y
+            self._drag_start_px = int(event.x_root)
+            self._drag_start_py = int(event.y_root)
+            eb.set_opacity(0.5)
+            self._set_cursor(eb, "grabbing")
+            return True
 
-    def _on_stop_edit_clicked(self, btn) -> None:
-        self._edit_mode = False
-        self._stop_edit_box.set_visible(False)
-        self._stop_edit_btn.set_visible(False)
-        for key, eb in self._children.items():
-            self._configure_eb_for_edit(eb, key, False)
-
-    def _configure_eb_for_edit(self, eb: Gtk.EventBox, key: str, edit: bool) -> None:
-        """Wire / unwire the free-drag signals on an EventBox."""
-        if edit:
-            eb.get_style_context().add_class("edit-mode")
-        else:
-            eb.get_style_context().remove_class("edit-mode")
-            # We leave the signals connected; _on_eb_press guards on _edit_mode.
-
-    # free-drag implementation
-    def _is_overlapping(self, eb: Gtk.EventBox, new_x: int, new_y: int) -> bool:
-        aw = eb.get_allocation().width or eb.get_preferred_width()[1]
-        ah = eb.get_allocation().height or eb.get_preferred_height()[1]
-        for key, other_eb in self._children.items():
-            if other_eb == eb:
-                continue
-            # Read the position we actually set, fallback to allocation
-            ox = getattr(other_eb, "_target_x", other_eb.get_allocation().x)
-            oy = getattr(other_eb, "_target_y", other_eb.get_allocation().y)
-            ow = other_eb.get_allocation().width or other_eb.get_preferred_width()[1]
-            oh = other_eb.get_allocation().height or other_eb.get_preferred_height()[1]
-
-            # Simple rectangle intersection check
-            if not (
-                new_x + aw <= ox
-                or new_x >= ox + ow
-                or new_y + ah <= oy
-                or new_y >= oy + oh
-            ):
-                return True
         return False
 
-    def _on_eb_press(self, eb: Gtk.EventBox, event: Gdk.EventButton, key: str) -> bool:
-        if not self._edit_mode or event.button != 1:
+    def _on_window_button_release(self, _widget, event: Gdk.EventButton) -> bool:
+        if self._dragging_key is not None and event.button == 1:
+            eb = self._children.get(self._dragging_key)
+            if eb is not None:
+                self._finish_drag(eb, self._dragging_key)
+            else:
+                self._dragging_key = None
+            return True
+        return False
+
+    def _on_window_motion(self, _widget, event: Gdk.EventMotion) -> bool:
+        if self._dragging_key is None:
             return False
 
-        # Bring to front when dragging
-        if eb.get_window():
-            eb.get_window().raise_()
-
-        alloc = eb.get_allocation()
-        self._dragging_key = key
-        self._drag_start_wx = alloc.x
-        self._drag_start_wy = alloc.y
-        self._drag_start_px = int(event.x_root)
-        self._drag_start_py = int(event.y_root)
-        eb.set_opacity(0.7)
-        eb.get_window().set_cursor(
-            Gdk.Cursor.new_from_name(Gdk.Display.get_default(), "grabbing")
-        )
-        return True
-
-    def _on_eb_motion(self, eb: Gtk.EventBox, event: Gdk.EventMotion, key: str) -> bool:
-        if self._dragging_key != key:
+        key = self._dragging_key
+        eb = self._children.get(key)
+        if eb is None:
+            self._dragging_key = None
             return False
 
         dx = int(event.x_root) - self._drag_start_px
         dy = int(event.y_root) - self._drag_start_py
 
-        new_x = max(
-            0, min(self._win_w - eb.get_allocation().width, self._drag_start_wx + dx)
-        )
-        new_y = max(
-            0, min(self._win_h - eb.get_allocation().height, self._drag_start_wy + dy)
-        )
+        aw = eb.get_allocation().width
+        ah = eb.get_allocation().height
+        new_x = max(0, min(self._win_w - aw, self._drag_start_wx + dx))
+        new_y = max(0, min(self._win_h - ah, self._drag_start_wy + dy))
 
-        curr_x = getattr(eb, "_target_x", eb.get_allocation().x)
-        curr_y = getattr(eb, "_target_y", eb.get_allocation().y)
-
-        if not self._is_overlapping(eb, new_x, new_y):
-            self._fixed.move(eb, new_x, new_y)
-            eb._target_x = new_x
-            eb._target_y = new_y
-        else:
-            # Try horizontal only
-            if not self._is_overlapping(eb, new_x, curr_y):
-                self._fixed.move(eb, new_x, curr_y)
-                eb._target_x = new_x
-            # Try vertical only
-            elif not self._is_overlapping(eb, curr_x, new_y):
-                self._fixed.move(eb, curr_x, new_y)
-                eb._target_y = new_y
+        self._fixed.move(eb, new_x, new_y)
+        eb._target_x = new_x
+        eb._target_y = new_y
 
         return True
 
-    def _on_eb_release(
-        self, eb: Gtk.EventBox, event: Gdk.EventButton, key: str
-    ) -> bool:
-        if self._dragging_key != key or event.button != 1:
-            return False
-        self._dragging_key = None
+    def _hit_test(self, rx: int, ry: int) -> str | None:
+        """Find which widget is under root-coords (rx, ry)."""
+        for key, eb in reversed(list(self._children.items())):
+            x = getattr(eb, "_target_x", eb.get_allocation().x)
+            y = getattr(eb, "_target_y", eb.get_allocation().y)
+            w = eb.get_allocation().width
+            h = eb.get_allocation().height
+            if x <= rx <= x + w and y <= ry <= y + h:
+                return key
+        return None
 
+    def _finish_drag(self, eb: Gtk.EventBox, key: str) -> None:
+        self._dragging_key = None
         eb.set_opacity(1.0)
-        eb.get_window().set_cursor(
-            Gdk.Cursor.new_from_name(Gdk.Display.get_default(), "grab")
-        )
-        # Persist the new position as fractions of screen size
+        self._set_cursor(eb, "grab")
         alloc = eb.get_allocation()
         if self._win_w > 1 and self._win_h > 1:
             position_manager.save_position(
@@ -355,7 +304,32 @@ class DesktopWidgetWindow(WaylandWindow):
                 alloc.x / self._win_w,
                 alloc.y / self._win_h,
             )
-        return True
+
+    def _set_cursor(self, eb: Gtk.EventBox, name: str | None) -> None:
+        gdk_window = eb.get_window()
+        if gdk_window is None:
+            return
+        if name:
+            gdk_window.set_cursor(
+                Gdk.Cursor.new_from_name(Gdk.Display.get_default(), name)
+            )
+        else:
+            gdk_window.set_cursor(None)
+
+    # edit mode
+    def _on_edit_toggled(self, item) -> None:
+        self._edit_mode = item.get_active()
+        for key, eb in self._children.items():
+            self._configure_eb_for_edit(eb, self._edit_mode)
+
+    def _configure_eb_for_edit(self, eb: Gtk.EventBox, edit: bool) -> None:
+        sc = eb.get_style_context()
+        if edit:
+            sc.add_class("edit-mode")
+            self._set_cursor(eb, "grab")
+        else:
+            sc.remove_class("edit-mode")
+            self._set_cursor(eb, None)
 
     # size allocate
     def _on_size_allocate(self, widget, alloc: Gdk.Rectangle) -> None:
@@ -389,23 +363,10 @@ class DesktopWidgetWindow(WaylandWindow):
                 continue
             px = int(entry["px"] * self._win_w)
             py = int(entry["py"] * self._win_h)
-            # Clamp so widget never goes off-screen
             aw = eb.get_allocation().width or eb.get_preferred_width()[1]
             ah = eb.get_allocation().height or eb.get_preferred_height()[1]
             px = max(0, min(self._win_w - aw, px))
             py = max(0, min(self._win_h - ah, py))
-
-            # During initial load, ensure no overlap even if config overlaps
-            if self._is_overlapping(eb, px, py):
-                # Try to nudge it slightly until it fits
-                for step_y in range(0, self._win_h, 50):
-                    for step_x in range(0, self._win_w, 50):
-                        if not self._is_overlapping(eb, step_x, step_y):
-                            px, py = step_x, step_y
-                            break
-                    else:
-                        continue
-                    break
 
             eb._target_x = px
             eb._target_y = py
@@ -434,24 +395,13 @@ class DesktopWidgetWindow(WaylandWindow):
                 eb = Gtk.EventBox()
                 eb.set_size_request(w_px, h_px)
                 eb.set_above_child(True)
-                eb.add_events(
-                    Gdk.EventMask.BUTTON_PRESS_MASK
-                    | Gdk.EventMask.BUTTON_RELEASE_MASK
-                    | Gdk.EventMask.POINTER_MOTION_MASK
-                    | Gdk.EventMask.BUTTON1_MOTION_MASK
-                )
-
-                eb.connect("button-press-event", self._on_eb_press, key)
-                eb.connect("button-release-event", self._on_eb_release, key)
-                eb.connect("motion-notify-event", self._on_eb_motion, key)
-
                 eb.add(widget)
                 eb.show_all()
 
                 self._fixed.put(eb, 0, 0)
                 self._children[key] = eb
                 if self._edit_mode:
-                    self._configure_eb_for_edit(eb, key, True)
+                    self._configure_eb_for_edit(eb, True)
             except Exception as e:
                 logger.error(f"[DesktopWidgetService] failed to build {key!r}: {e}")
 
@@ -472,24 +422,13 @@ class DesktopWidgetWindow(WaylandWindow):
             eb = Gtk.EventBox()
             eb.set_size_request(w_px, h_px)
             eb.set_above_child(True)
-            eb.add_events(
-                Gdk.EventMask.BUTTON_PRESS_MASK
-                | Gdk.EventMask.BUTTON_RELEASE_MASK
-                | Gdk.EventMask.POINTER_MOTION_MASK
-                | Gdk.EventMask.BUTTON1_MOTION_MASK
-            )
-
-            eb.connect("button-press-event", self._on_eb_press, key)
-            eb.connect("button-release-event", self._on_eb_release, key)
-            eb.connect("motion-notify-event", self._on_eb_motion, key)
-
             eb.add(widget)
             eb.show_all()
 
             self._fixed.put(eb, int(px * self._win_w), int(py * self._win_h))
             self._children[key] = eb
             if self._edit_mode:
-                self._configure_eb_for_edit(eb, key, True)
+                self._configure_eb_for_edit(eb, True)
             self._force_refresh()
         except Exception as e:
             logger.error(f"[DesktopWidgetService] failed to build {key!r}: {e}")
@@ -501,7 +440,6 @@ class DesktopWidgetWindow(WaylandWindow):
             widget.destroy()
 
     def _force_refresh(self):
-        # Niri needs a hide/show cycle; show_all() is safe now (no canvas to hide).
         self.hide()
         self.show_all()
         return False
