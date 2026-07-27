@@ -160,7 +160,7 @@ class DesktopWidgetWindow(WaylandWindow):
 
         GLib.timeout_add(50, self._initial_build)
 
-    # ── lifecycle ─────────────────────────────────────────────────────────────
+    # lifecycle
 
     def _initial_build(self) -> bool:
         self._ready = True
@@ -172,7 +172,7 @@ class DesktopWidgetWindow(WaylandWindow):
         self._fade_in()
         return False
 
-    # ── fade ──────────────────────────────────────────────────────────────────
+    # fade
 
     def _on_fade_value(self, animator, _) -> None:
         self._fixed.set_opacity(animator.value)
@@ -202,7 +202,7 @@ class DesktopWidgetWindow(WaylandWindow):
     def _on_fade_out_finished(self, animator) -> None:
         self._fixed.set_opacity(0.0)
 
-    # ── right-click context menu ──────────────────────────────────────────────
+    # right-click context menu
 
     def _on_window_button_press(self, widget, event: Gdk.EventButton) -> bool:
         if event.button == 3:
@@ -220,7 +220,7 @@ class DesktopWidgetWindow(WaylandWindow):
         menu.show_all()
         menu.popup_at_pointer(event)
 
-    # ── edit mode ─────────────────────────────────────────────────────────────
+    # edit mode
 
     def _on_edit_toggled(self, item) -> None:
         self._edit_mode = item.get_active()
@@ -233,7 +233,7 @@ class DesktopWidgetWindow(WaylandWindow):
                 sc.remove_class("edit-mode")
                 eb.drag_source_unset()
 
-    # ── GTK DnD — like caffyne-shell ─────────────────────────────────────────
+    # GTK DnD
 
     def _setup_drag_dest(self) -> None:
         self.drag_dest_set(
@@ -277,7 +277,6 @@ class DesktopWidgetWindow(WaylandWindow):
                 getattr(eb, "_target_x", 0),
                 getattr(eb, "_target_y", 0),
             )
-            GLib.idle_add(self._force_refresh)
         self._dragging_key = None
         self._dragging_eb = None
 
@@ -333,9 +332,8 @@ class DesktopWidgetWindow(WaylandWindow):
 
         self._drag_drop_success = True
         Gtk.drag_finish(ctx, True, False, time)
-        GLib.idle_add(self._force_refresh)
 
-    # ── size allocate ─────────────────────────────────────────────────────────
+    # size allocate
 
     def _on_size_allocate(self, widget, alloc: Gdk.Rectangle) -> None:
         if not self._ready or self._in_size_allocate:
@@ -351,14 +349,14 @@ class DesktopWidgetWindow(WaylandWindow):
             self._win_w = w
             self._win_h = h
             self._reposition_all()
-            GLib.idle_add(self._force_refresh)
+            self._force_refresh()
 
             if is_first_real_size:
                 self._fixed.set_opacity(0.0)
                 self._fixed.show()
                 self._fade_in()
 
-    # ── positioning ───────────────────────────────────────────────────────────
+    # positioning
 
     def _reposition_all(self) -> None:
         entries = position_manager.get_widgets(self._monitor_id)
@@ -379,7 +377,7 @@ class DesktopWidgetWindow(WaylandWindow):
             self._fixed.remove(eb)
             self._fixed.put(eb, px, py)
 
-    # ── widget management ─────────────────────────────────────────────────────
+    # widget management
 
     def rebuild(self) -> None:
         self._dragging_eb = None
@@ -413,7 +411,7 @@ class DesktopWidgetWindow(WaylandWindow):
                 logger.error(f"[DesktopWidgetService] failed to build {key!r}: {e}")
 
         self._reposition_all()
-        GLib.idle_add(self._force_refresh)
+        self._force_refresh()
 
     def add_widget(self, key: str, px: float = 0.02, py: float = 0.04) -> None:
         if key in self._children:
