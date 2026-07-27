@@ -1,9 +1,10 @@
 import importlib
 import os
 import pkgutil
+import sys
 
 import tomlkit
-from fabric.utils import Gdk, GLib, Gtk, logger
+from fabric.utils import Gdk, Gio, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.wayland import WaylandWindow
 
@@ -22,19 +23,54 @@ for _, _name, _ in pkgutil.iter_modules([_dir]):
 
 #  Config-backed position manager (stores percentage-based positions)          #
 
-_DEFAULT_POSITIONS = [
-    {"key": "date", "px": 0.0, "py": 0.0},
-    {"key": "weather", "px": 0.0974, "py": 0.0},
-    {"key": "calendar", "px": 0.19271, "py": 0.0},
-    {"key": "cpu_info", "px": 0.81042, "py": 0.82732},
-    {"key": "ram_info", "px": 0.90521, "py": 0.82732},
-]
-
+_CONFIG_DESKTOP_DIR = os.path.join(
+    os.path.dirname(toml_file("desktop.toml")), "desktop"
+)
 _TARGET = Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)
 
 
+_user_widget_modules: dict[str, str] = {}
+_user_key_to_file: dict[str, str] = {}
+
+
+def _load_user_widgets() -> set[str]:
+    """Import every .py in config/desktop/. Returns set of loaded keys."""
+    if not os.path.isdir(_CONFIG_DESKTOP_DIR):
+        return set()
+    loaded_keys: set[str] = set()
+    for fname in os.listdir(_CONFIG_DESKTOP_DIR):
+        if not fname.endswith(".py") or fname.startswith("_"):
+            continue
+        module_name = fname[:-3]
+        full_path = os.path.join(_CONFIG_DESKTOP_DIR, fname)
+        try:
+            before_keys = set(DesktopWidgetRegistry._widgets)
+            spec = importlib.util.spec_from_file_location(
+                f"user_widget_{module_name}", full_path
+            )
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[spec.name] = mod
+            spec.loader.exec_module(mod)
+            _user_widget_modules[module_name] = spec.name
+            new_keys = set(DesktopWidgetRegistry._widgets) - before_keys
+            for k in new_keys:
+                _user_key_to_file[k] = module_name
+                DesktopWidgetRegistry.register_user(k)
+            loaded_keys.update(new_keys)
+        except Exception as e:
+            logger.error(f"[DesktopWidgets] failed to load user widget {fname}: {e}")
+    return loaded_keys
+
+
+_load_user_widgets()
+
+
 class PositionManager:
-    """Manages widget positions stored in desktop.toml as fractional coords."""
+    """Merges widget defaults from registry with user overrides in desktop.toml.
+
+    config/desktop/*.py widgets register themselves with a default position.
+    desktop.toml stores drag-and-drop overrides per monitor.
+    """
 
     _file = toml_file("desktop.toml")
 
@@ -61,36 +97,49 @@ class PositionManager:
     def get_widgets(cls, monitor_id: int) -> list[dict]:
         state = cls._read()
         mid_str = str(monitor_id)
-        if mid_str not in state:
-            state[mid_str] = list(_DEFAULT_POSITIONS)
+        if mid_str not in state or not state[mid_str]:
+            state[mid_str] = []
+            for key in DesktopWidgetRegistry._widgets:
+                pos = DesktopWidgetRegistry.get_default_position(key)
+                px, py = pos if pos else (0.0, 0.0)
+                state[mid_str].append({"key": key, "px": px, "py": py})
             cls._write(state)
-        return state[mid_str]
+        else:
+            registered = set(DesktopWidgetRegistry._widgets)
+            before = len(state[mid_str])
+            state[mid_str] = [e for e in state[mid_str] if e["key"] in registered]
+            for key in registered - {e["key"] for e in state[mid_str]}:
+                pos = DesktopWidgetRegistry.get_default_position(key)
+                px, py = pos if pos else (0.0, 0.0)
+                state[mid_str].append({"key": key, "px": px, "py": py})
+            if len(state[mid_str]) != before:
+                cls._write(state)
+        return list(state[mid_str])
 
     @classmethod
     def save_position(cls, monitor_id: int, key: str, px: float, py: float) -> None:
         state = cls._read()
         mid_str = str(monitor_id)
         if mid_str not in state:
-            state[mid_str] = list(_DEFAULT_POSITIONS)
+            state[mid_str] = []
         for entry in state[mid_str]:
             if entry["key"] == key:
                 entry["px"] = round(max(0.0, min(1.0, px)), 5)
                 entry["py"] = round(max(0.0, min(1.0, py)), 5)
                 break
         else:
-            state[mid_str].append({"key": key, "px": px, "py": py})
+            state[mid_str].append({"key": key, "px": round(px, 5), "py": round(py, 5)})
         cls._write(state)
 
     @classmethod
-    def remove(cls, monitor_id: int, key: str) -> bool:
+    def remove_override(cls, monitor_id: int, key: str) -> None:
+        """Remove a drag/drop override so the widget reverts to its default position."""
         state = cls._read()
         mid_str = str(monitor_id)
         if mid_str not in state:
-            return False
-        before = len(state[mid_str])
+            return
         state[mid_str] = [e for e in state[mid_str] if e["key"] != key]
         cls._write(state)
-        return len(state[mid_str]) < before
 
 
 position_manager = PositionManager()
@@ -157,6 +206,9 @@ class DesktopWidgetWindow(WaylandWindow):
         self.connect("size-allocate", self._on_size_allocate)
         self.connect("button-press-event", self._on_window_button_press)
         self._setup_drag_dest()
+        self._setup_file_monitor()
+        self._last_user_files: set[str] = set()
+        GLib.timeout_add(2000, self._poll_user_widgets)
 
         GLib.timeout_add(50, self._initial_build)
 
@@ -202,6 +254,71 @@ class DesktopWidgetWindow(WaylandWindow):
     def _on_fade_out_finished(self, animator) -> None:
         self._fixed.set_opacity(0.0)
 
+    # fallback poll — catches deletions that Gio file monitor misses
+
+    def _poll_user_widgets(self) -> bool:
+        if not os.path.isdir(_CONFIG_DESKTOP_DIR):
+            return True
+        current = {
+            f[:-3]
+            for f in os.listdir(_CONFIG_DESKTOP_DIR)
+            if f.endswith(".py") and not f.startswith("_")
+        }
+        if current != self._last_user_files:
+            self._last_user_files = current
+            stale = {k for k, f in _user_key_to_file.items() if f not in current}
+            if stale:
+                logger.info(f"[DesktopWidgets] poll found stale: {stale}")
+                for key in stale:
+                    mod_name = _user_key_to_file.pop(key, None)
+                    if mod_name:
+                        sys.modules.pop(f"user_widget_{mod_name}", None)
+                        _user_widget_modules.pop(mod_name, None)
+                DesktopWidgetRegistry.unregister_user_keys(stale)
+                _load_user_widgets()
+                self.rebuild()
+        return True
+
+    # file monitor — live-rebuild when config/desktop/ changes
+
+    def _setup_file_monitor(self) -> None:
+        if not os.path.isdir(_CONFIG_DESKTOP_DIR):
+            os.makedirs(_CONFIG_DESKTOP_DIR, exist_ok=True)
+        config_dir = Gio.File.new_for_path(_CONFIG_DESKTOP_DIR)
+        monitor = config_dir.monitor_directory(Gio.FileMonitorFlags.NONE, None)
+        monitor.connect("changed", self._on_config_changed)
+        self._config_monitor = monitor
+
+    def _on_config_changed(self, _monitor, _file, _other, event_type) -> None:
+        logger.info(f"[DesktopWidgets] file monitor event: {event_type}")
+        if event_type in (
+            Gio.FileMonitorEvent.CREATED,
+            Gio.FileMonitorEvent.DELETED,
+            Gio.FileMonitorEvent.CHANGED,
+        ):
+            GLib.idle_add(self._on_widget_dir_changed)
+
+    def _on_widget_dir_changed(self) -> bool:
+        current_files = {
+            f[:-3]
+            for f in os.listdir(_CONFIG_DESKTOP_DIR)
+            if f.endswith(".py") and not f.startswith("_")
+        }
+        stale_keys = {k for k, f in _user_key_to_file.items() if f not in current_files}
+        logger.info(
+            f"[DesktopWidgets] dir changed: current={current_files}, "
+            f"stale={stale_keys}, tracked={set(_user_key_to_file.keys())}"
+        )
+        for key in stale_keys:
+            mod_name = _user_key_to_file.pop(key, None)
+            if mod_name:
+                sys.modules.pop(f"user_widget_{mod_name}", None)
+                _user_widget_modules.pop(mod_name, None)
+        DesktopWidgetRegistry.unregister_user_keys(stale_keys)
+        _load_user_widgets()
+        self.rebuild()
+        return False
+
     # right-click context menu
 
     def _on_window_button_press(self, widget, event: Gdk.EventButton) -> bool:
@@ -212,11 +329,13 @@ class DesktopWidgetWindow(WaylandWindow):
 
     def _show_context_menu(self, event: Gdk.EventButton) -> None:
         menu = Gtk.Menu()
+
         label_text = "Done Edit" if self._edit_mode else "Edit Widgets"
         edit_item = Gtk.CheckMenuItem(label=label_text)
         edit_item.set_active(self._edit_mode)
         edit_item.connect("toggled", self._on_edit_toggled)
         menu.append(edit_item)
+
         menu.show_all()
         menu.popup_at_pointer(event)
 

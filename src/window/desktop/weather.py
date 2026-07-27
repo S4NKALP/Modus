@@ -129,4 +129,6 @@ class DesktopWeatherWidget(Box):
         super().destroy()
 
 
-DesktopWidgetRegistry.register("weather", DesktopWeatherWidget, (174, 174))
+DesktopWidgetRegistry.register(
+    "weather", DesktopWeatherWidget, (174, 174), (0.0974, 0.0)
+)

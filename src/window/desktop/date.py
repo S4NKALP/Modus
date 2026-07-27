@@ -49,4 +49,4 @@ class DesktopDateContainer(Box):
         )
 
 
-DesktopWidgetRegistry.register("date", DesktopDateContainer, (174, 174))
+DesktopWidgetRegistry.register("date", DesktopDateContainer, (174, 174), (0.0, 0.0))

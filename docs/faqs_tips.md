@@ -49,12 +49,35 @@ Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
 - The venv lives at `config/plugins/.venvs/<plugin_name>/`
 - Delete that directory to force re-install on next load
 
+### 8. Desktop widget not appearing?
+
+- Check the file is in `config/desktop/` (not a subdirectory)
+- Ensure it calls `DesktopWidgetRegistry.register()` at module level
+- Check `journalctl --user -f -t modus` for `[DesktopWidgets]` errors
+- Ensure the widget `key` is unique (not `"date"`, `"weather"`, etc.)
+
+### 9. Desktop widget still showing after deleting the file?
+
+The cleanup runs within 2 seconds via file monitor + poll fallback. If it persists:
+- Check `journalctl --user -f -t modus` for stale widget messages
+- Restart Modus: `uv run start`
+
+### 10. Desktop widget position resets after restart?
+
+- Positions are stored in `config/desktop.toml`
+- If you delete `desktop.toml`, positions revert to defaults from `register()` calls
+- Ensure `config/desktop.toml` is writable
+
 ---
 
 ## Pro Tips
 
 - **Live Reload for Mods**: `config/mods.toml` is monitored for changes. Edits
   apply instantly — no restart needed
+
+- **Desktop Widgets**: Drop `.py` files in `config/desktop/` for instant widgets.
+  Edit `config/desktop.toml` or drag in edit mode to reposition.
+  Remove by deleting the `.py` file — disappears within 2 seconds.
 
 - **Pinning Apps**: Use exact `.desktop` filename in `dock.toml` (e.g.,
   `"org.gnome.Nautilus"`, not `"Files"`)

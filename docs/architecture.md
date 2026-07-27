@@ -19,6 +19,7 @@ Entry point is `start.py`, delegates to `src/main.py`. `main.py` instantiates
 - **OSD**: Volume/brightness overlays (`src/window/osd/`)
 - **Settings**: Configuration GUI (`src/window/settings/`)
 - **Wallpaper Picker**: Wallpaper browser and management (`src/window/wallpaper/`)
+- **Desktop Widgets**: User-defined widgets on the desktop background (`src/window/desktop/`)
 
 ## 2. Spotlight Search Engine
 
@@ -87,7 +88,35 @@ macOS-style menu bar in the top panel.
 - Python daemon (`src/window/globalmenu/service.py`) listens for exported menus and
   renders them as Fabric widgets in the panel
 
-## 5. State Management & Services
+## 5. Desktop Widgets
+
+Desktop widgets render GTK widgets directly on the wallpaper background.
+
+### Widget System
+
+- **Registry** (`src/window/desktop/registry.py`): Stores widget classes, sizes, and default positions keyed by string id.
+- **Built-in widgets** (`src/window/desktop/*.py`): Date, weather, calendar, CPU/RAM info. Each module registers itself at import time.
+- **User widgets** (`config/desktop/*.py`): Drop-in `.py` files that call `DesktopWidgetRegistry.register()`. Loaded dynamically at startup and watched for live reload.
+- **Position Manager** (`src/window/desktop/main.py`): Reads widget positions from `config/desktop.toml` (per-monitor, fractional coords). Merges with defaults from registry. Drag/drop saves overrides.
+- **Desktop Window** (`src/window/desktop/main.py`): `DesktopWidgetWindow` uses a `Gtk.Fixed` container to position widgets at fractional screen coordinates. Handles edit mode (drag and drop), fade animations, and file monitoring.
+
+### Lifecycle
+
+```
+Startup:
+  1. Import built-in widget modules → register widgets
+  2. Scan config/desktop/*.py → import & register user widgets
+  3. Read config/desktop.toml → get positions (or populate defaults)
+  4. Create DesktopWidgetWindow per monitor → render widgets
+
+Runtime:
+  File monitor on config/desktop/ → detect add/delete
+    → unregister stale widgets → re-import new widgets → rebuild
+  2-second poll fallback for missed file monitor events
+  Drag/drop in edit mode → save position to desktop.toml
+```
+
+## 6. State Management & Services
 
 Services in `src/services/` monitor system state asynchronously and emit
 signals:

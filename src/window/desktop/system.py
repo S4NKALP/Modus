@@ -168,5 +168,9 @@ class DesktopCpuInfoWidget(SystemInfoBase):
         return True
 
 
-DesktopWidgetRegistry.register("ram_info", DesktopRamInfoWidget, (174, 174))
-DesktopWidgetRegistry.register("cpu_info", DesktopCpuInfoWidget, (174, 174))
+DesktopWidgetRegistry.register(
+    "ram_info", DesktopRamInfoWidget, (174, 174), (0.90521, 0.82732)
+)
+DesktopWidgetRegistry.register(
+    "cpu_info", DesktopCpuInfoWidget, (174, 174), (0.81042, 0.82732)
+)

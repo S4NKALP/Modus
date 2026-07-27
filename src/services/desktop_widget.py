@@ -73,9 +73,7 @@ class DesktopWidgetService(Service):
         return True
 
     def remove(self, monitor_id: int, key: str) -> bool:
-        removed = position_manager.remove(monitor_id, key)
-        if not removed:
-            return False
+        position_manager.remove_override(monitor_id, key)
         win = self._windows.get(monitor_id)
         if win:
             win.remove_widget(key)

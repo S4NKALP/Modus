@@ -122,6 +122,23 @@ You can also toggle most settings from the **Settings window** (`Super + I`).
 
 See [Configuration Guide](docs/configuration.md) for full reference.
 
+## Desktop Widgets
+
+Drop a `.py` file in `config/desktop/` and it appears on your desktop instantly:
+
+```bash
+cp examples/desktop/example.py config/desktop/example.py
+```
+
+Edit positions in `config/desktop.toml` or drag widgets in edit mode (right-click → Edit Widgets).
+
+```bash
+nvim config/desktop/example.py    # live reload, no restart needed
+rm config/desktop/example.py      # widget disappears within 2s
+```
+
+See [Desktop Widgets Guide](docs/desktop_widgets.md) for full docs and examples.
+
 ## Documentation
 
 | Doc                                           | What's inside                                      |
@@ -131,6 +148,7 @@ See [Configuration Guide](docs/configuration.md) for full reference.
 | [Styling Guide](docs/styling.md)              | Matugen colors, CSS customization                  |
 | [Architecture Overview](docs/architecture.md) | App Switcher C-backend, Spotlight engine, Services |
 | [Spotlight Plugins](docs/plugins.md)          | Install/customize plugins, write your own          |
+| [Desktop Widgets](docs/desktop_widgets.md)    | Custom desktop widgets, user widget system         |
 | [FAQs & Tips](docs/faqs_tips.md)              | Troubleshooting, shortcuts, live reload            |
 
 ## Custom Mods
