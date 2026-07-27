@@ -461,7 +461,7 @@ class DesktopWidgetWindow(WaylandWindow):
 
     def do_size_allocate(self, alloc):
         Gtk.Window.do_size_allocate(self, alloc)
-        self._rebuild_input_region()
+        self._schedule_input_rebuild()
 
     def _on_size_allocate(self, widget, alloc: Gdk.Rectangle) -> None:
         if not self._ready or self._in_size_allocate:
@@ -599,7 +599,9 @@ class DesktopWidgetWindow(WaylandWindow):
             if a.width > 0 and a.height > 0:
                 rects.append(cairo.RectangleInt(a.x, a.y, a.width, a.height))
         if not rects:
-            self.input_shape_combine_region(cairo.Region(cairo.RectangleInt(0, 0, 0, 0)))
+            self.input_shape_combine_region(
+                cairo.Region(cairo.RectangleInt(0, 0, 0, 0))
+            )
             return
         region = cairo.Region(rects[0])
         for rect in rects[1:]:
