@@ -906,6 +906,7 @@ class NotificationRevealer(SlideRevealer):
         self._swipe_in_progress = False
         self._current_offset = 0
         self._last_drag_time = 0
+        self._last_drag_x = 0
         self._drag_velocity = 0
         self._spring_back_duration = 200  # Duration for spring-back animation
         self._dismiss_threshold = 0.3  # Dismiss if swiped 30% of width
@@ -1005,6 +1006,7 @@ class NotificationRevealer(SlideRevealer):
         self._drag_start_y = event.y_root
         self._current_offset = 0
         self._last_drag_time = GLib.get_monotonic_time() / 1000
+        self._last_drag_x = event.x_root
         self._drag_velocity = 0
         if self._spring_timer_id:
             GLib.source_remove(self._spring_timer_id)
@@ -1108,10 +1110,11 @@ class NotificationRevealer(SlideRevealer):
         if self._last_drag_time > 0:
             time_diff = current_time - self._last_drag_time
             if time_diff > 0:
-                distance_diff = current_x - self._drag_start_x - self._current_offset
+                distance_diff = current_x - self._last_drag_x
                 self._drag_velocity = abs(distance_diff / time_diff)
 
         self._last_drag_time = current_time
+        self._last_drag_x = current_x
 
     def _on_animation_complete(self, is_hiding=False):
         if is_hiding:

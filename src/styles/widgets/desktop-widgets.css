@@ -257,7 +257,3 @@
   border-color: @glass-text;
   background-color: alpha(@glass-accent, 0.08);
 }
-
-.dragging {
-  opacity: 0.5;
-}
