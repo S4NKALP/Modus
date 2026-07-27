@@ -9,6 +9,8 @@ Modus is configured via TOML files in the `config/` directory, plus a graphical 
 | `config.toml` | Main settings (features, widgets, paths) | Restart |
 | `mods.toml` | Custom panel buttons (menus, shell commands) | Instant |
 | `dock.toml` | Pinned dock apps | Restart |
+| `desktop.toml` | Desktop widget positions (per-monitor) | Restart |
+| `config/desktop/*.py` | User desktop widgets | Instant (live reload) |
 
 ## Settings Window
 
@@ -156,3 +158,59 @@ pinned = [
 ```
 
 Use the exact `.desktop` file name or application ID.
+
+---
+
+## Desktop Widgets (`config/desktop/` + `desktop.toml`)
+
+Desktop widgets render directly on your wallpaper. Drop a `.py` file in `config/desktop/` and it appears live.
+
+### Adding a Widget
+
+```bash
+cp examples/desktop/example.py config/desktop/example.py
+```
+
+The widget file calls `DesktopWidgetRegistry.register()` with a key, class, size, and default position:
+
+```python
+DesktopWidgetRegistry.register("my_widget", MyWidget, (174, 174), (0.5, 0.5))
+```
+
+### Positioning
+
+Positions live in `config/desktop.toml`, one entry per monitor:
+
+```toml
+[[0]]
+key = "my_widget"
+px = 0.5
+py = 0.5
+```
+
+- `0` = monitor ID
+- `px`, `py` = 0.0–1.0 fractions of screen
+
+Drag widgets in edit mode (right-click desktop → Edit Widgets) to reposition.
+
+### Removing a Widget
+
+Delete the `.py` file from `config/desktop/`:
+
+```bash
+rm config/desktop/example.py
+```
+
+Widget disappears within 2 seconds. The entry is also removed from `desktop.toml`.
+
+### Built-in Widgets
+
+| Key | Description |
+|-----|-------------|
+| `date` | Date display |
+| `weather` | Weather info |
+| `calendar` | Monthly calendar |
+| `cpu_info` | CPU usage |
+| `ram_info` | RAM usage |
+
+See [Desktop Widgets Guide](desktop_widgets.md) for full documentation and examples.

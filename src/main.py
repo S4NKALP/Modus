@@ -16,12 +16,12 @@ from fabric import Application
 from fabric.utils import get_relative_path, logger, monitor_file
 
 from services.config import config
+from services.desktop_widget import DesktopWidgetService
 from services.keyboard_layout import KeyboardLayout
 from services.sysauth import SysauthService
 from shared.data import APP_NAME, load_config
 from utils.functions import set_process_name
 from utils.gtk_utils import generate_colors_from_wallpaper
-from window.desktop.widget import Deskwidgets
 from window.dock import Dock
 from window.lock import LockScreenWrapper
 from window.notification.notification import ModusNoti
@@ -106,7 +106,6 @@ def main():
     modusnoti = ModusNoti()
     spotlight = SpotlightWindow()
     panel.set_spotlight_toggle(spotlight.toggle)
-    deskwidget = Deskwidgets()
     dock = Dock()
     osd = OSDWindow()
     screencapture = ScreenCaptureWindow()
@@ -116,8 +115,6 @@ def main():
     for w in [
         panel,
         modusnoti,
-        deskwidget.top_left,
-        deskwidget.bottom_left,
         osd,
         switcher,
         dock,
@@ -135,7 +132,6 @@ def main():
     __main__.panel = panel
     __main__.modusnoti = modusnoti
     __main__.spotlight = spotlight
-    __main__.deskwidget = deskwidget
     __main__.dock = dock
     __main__.osd = osd
     __main__.osd_show_audio = osd.osd_show_audio
@@ -144,6 +140,7 @@ def main():
     __main__.lock_screen = LockScreenWrapper()
     __main__.switch_keyboard_layout = KeyboardLayout.switch_keyboard_layout
     __main__.settings = settings
+    __main__.desktop_widgets = DesktopWidgetService.get_instance()
 
     app.run()
 
