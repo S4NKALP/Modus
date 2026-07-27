@@ -68,6 +68,15 @@ The cleanup runs within 2 seconds via file monitor + poll fallback. If it persis
 - If you delete `desktop.toml`, positions revert to defaults from `register()` calls
 - Ensure `config/desktop.toml` is writable
 
+### 11. Desktop widget interfering with window keybinds (e.g., Super+Q)?
+
+The desktop window is a full-screen layer shell surface, which can intercept pointer events and make Hyprland treat it as the focused window. Modus handles this by using a **partial input region** — only widget areas receive input; empty desktop space passes through.
+
+If keybinds still don't work:
+- Check the widget's `size` in `register()` matches its actual rendered size
+- Ensure no widget is expanding beyond its expected bounds (e.g., `h_expand=True` without fixed width)
+- Restart Modus: `uv run start`
+
 ---
 
 ## Pro Tips

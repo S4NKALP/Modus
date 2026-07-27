@@ -98,7 +98,7 @@ Desktop widgets render GTK widgets directly on the wallpaper background.
 - **Built-in widgets** (`src/window/desktop/*.py`): Date, weather, calendar, CPU/RAM info. Each module registers itself at import time.
 - **User widgets** (`config/desktop/*.py`): Drop-in `.py` files that call `DesktopWidgetRegistry.register()`. Loaded dynamically at startup and watched for live reload.
 - **Position Manager** (`src/window/desktop/main.py`): Reads widget positions from `config/desktop.toml` (per-monitor, fractional coords). Merges with defaults from registry. Drag/drop saves overrides.
-- **Desktop Window** (`src/window/desktop/main.py`): `DesktopWidgetWindow` uses a `Gtk.Fixed` container to position widgets at fractional screen coordinates. Handles edit mode (drag and drop), fade animations, and file monitoring.
+- **Desktop Window** (`src/window/desktop/main.py`): `DesktopWidgetWindow` uses a `Gtk.Fixed` container to position widgets at fractional screen coordinates. Handles edit mode (drag and drop), fade animations, and file monitoring. Uses a **partial input region** (via `cairo.Region`) so only widget areas receive pointer input — empty desktop space passes through to windows below, preventing interference with Hyprland keybinds like `Super+Q`.
 
 ### Lifecycle
 

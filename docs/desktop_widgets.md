@@ -188,6 +188,17 @@ class LiveClockWidget(Box):
 DesktopWidgetRegistry.register("live_clock", LiveClockWidget, (174, 174), (0.5, 0.0))
 ```
 
+## Input Regions & Keybind Compatibility
+
+The desktop widget window uses a **partial input region** — only the rectangular areas occupied by widgets receive pointer and keyboard input. Empty desktop space passes through to windows below.
+
+This means:
+- Hyprland keybinds (e.g., `Super+Q` minimize) work normally even with widgets visible
+- Right-clicking on widget areas opens the edit context menu; right-clicking on empty desktop passes through
+- Drag and drop works within widget areas
+
+No configuration needed — this is automatic. If widgets ever interfere with keybinds, check that the widget's `size` in `register()` matches its actual rendered size.
+
 ## Troubleshooting
 
 ### Widget not appearing?
