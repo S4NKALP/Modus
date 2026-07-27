@@ -195,9 +195,10 @@ class DesktopWidgetWindow(WaylandWindow):
         super().__init__(
             monitor=monitor_id,
             anchor="left right top bottom",
-            exclusivity="ignore",
-            layer="background",
+            exclusivity="none",
+            layer="bottom",
             child=self._root,
+            keyboard_mode="none",
             visible=True,
             name=f"desktop-widgets-{monitor_id}",
         )
