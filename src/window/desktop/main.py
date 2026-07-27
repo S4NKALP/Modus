@@ -3,6 +3,7 @@ import os
 import pkgutil
 import sys
 
+import cairo
 import tomlkit
 from fabric.utils import Gdk, Gio, GLib, Gtk, logger
 from fabric.widgets.box import Box
@@ -161,6 +162,7 @@ class DesktopWidgetWindow(WaylandWindow):
         self._dragging_key: str | None = None
         self._dragging_eb: Gtk.EventBox | None = None
         self._drag_drop_success: bool = False
+        self._input_rebuild_pending: bool = False
 
         self._root = Box(h_expand=True, v_expand=True)
         self._root.add(self._fixed)
@@ -399,6 +401,7 @@ class DesktopWidgetWindow(WaylandWindow):
             )
         self._dragging_key = None
         self._dragging_eb = None
+        self._schedule_input_rebuild()
 
     def _on_drag_motion(self, widget, ctx, x, y, time) -> bool:
         targets = [t.name() for t in ctx.list_targets()]
@@ -452,8 +455,13 @@ class DesktopWidgetWindow(WaylandWindow):
 
         self._drag_drop_success = True
         Gtk.drag_finish(ctx, True, False, time)
+        self._schedule_input_rebuild()
 
     # size allocate
+
+    def do_size_allocate(self, alloc):
+        Gtk.Window.do_size_allocate(self, alloc)
+        self._rebuild_input_region()
 
     def _on_size_allocate(self, widget, alloc: Gdk.Rectangle) -> None:
         if not self._ready or self._in_size_allocate:
@@ -470,6 +478,7 @@ class DesktopWidgetWindow(WaylandWindow):
             self._win_h = h
             self._reposition_all()
             self._force_refresh()
+            self._schedule_input_rebuild()
 
             if is_first_real_size:
                 self._fixed.set_opacity(0.0)
@@ -532,6 +541,7 @@ class DesktopWidgetWindow(WaylandWindow):
 
         self._reposition_all()
         self._force_refresh()
+        self._schedule_input_rebuild()
 
     def add_widget(self, key: str, px: float = 0.02, py: float = 0.04) -> None:
         if key in self._children:
@@ -551,6 +561,7 @@ class DesktopWidgetWindow(WaylandWindow):
 
             self._fixed.put(eb, int(px * self._win_w), int(py * self._win_h))
             self._children[key] = eb
+            self._schedule_input_rebuild()
         except Exception as e:
             logger.error(f"[DesktopWidgetService] failed to build {key!r}: {e}")
 
@@ -559,6 +570,7 @@ class DesktopWidgetWindow(WaylandWindow):
         if widget:
             self._fixed.remove(widget)
             widget.destroy()
+            self._schedule_input_rebuild()
 
     def _force_refresh(self):
         self._in_size_allocate = True
@@ -566,3 +578,30 @@ class DesktopWidgetWindow(WaylandWindow):
         self.show_all()
         self._in_size_allocate = False
         return False
+
+    # partial input region — only widget areas capture events, empty desktop passes through
+
+    def _schedule_input_rebuild(self) -> None:
+        if self._input_rebuild_pending:
+            return
+        self._input_rebuild_pending = True
+        GLib.idle_add(self._do_input_rebuild)
+
+    def _do_input_rebuild(self) -> bool:
+        self._input_rebuild_pending = False
+        self._rebuild_input_region()
+        return False
+
+    def _rebuild_input_region(self) -> None:
+        rects = []
+        for eb in self._children.values():
+            a = eb.get_allocation()
+            if a.width > 0 and a.height > 0:
+                rects.append(cairo.RectangleInt(a.x, a.y, a.width, a.height))
+        if not rects:
+            self.input_shape_combine_region(cairo.Region(cairo.RectangleInt(0, 0, 0, 0)))
+            return
+        region = cairo.Region(rects[0])
+        for rect in rects[1:]:
+            region.union(cairo.Region(rect))
+        self.input_shape_combine_region(region)
