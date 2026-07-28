@@ -144,5 +144,5 @@ class DesktopCalendarContainer(Box):
 
 
 DesktopWidgetRegistry.register(
-    "calendar", DesktopCalendarContainer, (174, 174), (0.18958, 0.00474)
+    "calendar", DesktopCalendarContainer, (174, 174), (0.19375, 0.00949)
 )

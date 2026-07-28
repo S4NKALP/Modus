@@ -76,5 +76,5 @@ class DesktopDateContainer(Box):
 
 
 DesktopWidgetRegistry.register(
-    "date", DesktopDateContainer, (174, 174), (0.00417, 0.00474)
+    "date", DesktopDateContainer, (174, 174), (0.00573, 0.00949)
 )
