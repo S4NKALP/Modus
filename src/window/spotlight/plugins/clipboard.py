@@ -2,7 +2,7 @@ import os
 import threading
 from typing import Any
 
-from fabric.utils import Gio, GLib
+from fabric.utils import Gio, GLib, logger
 
 from shared.data import CLIPBOARD_DB_PATH, CLIPBOARD_THUMBS_DIR
 from utils.functions import copy_image, copy_text, run_command, trigger_paste_shortcut
@@ -54,14 +54,25 @@ class ClipboardPlugin(SpotlightPlugin):
             q = q[5:].strip()
         elif q.lower() == "clip":
             q = ""
+        logger.info(
+            f"[Clipboard] search query={query!r} stripped_q={q!r} history_len={len(self._history)}"
+        )
 
         self._ensure_history()
-        return self._build_results(self._filter_entries(q), q)
+        filtered = self._filter_entries(q)
+        logger.info(f"[Clipboard] filtered {len(filtered)} entries for q={q!r}")
+        results = self._build_results(filtered, q)
+        logger.info(f"[Clipboard] returning {len(results)} results")
+        return results
 
     def _ensure_history(self) -> None:
         with self._history_lock:
             if self._history:
+                logger.info(
+                    f"[Clipboard] _ensure_history: already loaded ({len(self._history)} entries)"
+                )
                 return
+        logger.info("[Clipboard] _ensure_history: loading history...")
         self._load_history()
 
     def _setup_file_monitor(self) -> None:
@@ -88,10 +99,17 @@ class ClipboardPlugin(SpotlightPlugin):
     def _load_history(self) -> None:
         result = run_command(["cliphist", "list"], timeout=5)
         raw = result.stdout if isinstance(result.stdout, str) else ""
+        logger.info(
+            f"[Clipboard] _load_history: stdout type={type(result.stdout).__name__} len={len(raw)} returncode={result.returncode}"
+        )
         lines = raw.splitlines()
+        logger.info(f"[Clipboard] _load_history: {len(lines)} lines from cliphist")
         new_entries = []
         for line in lines[:100]:
             if "\t" not in line:
+                logger.info(
+                    f"[Clipboard] _load_history: skipping line without tab: {line[:50]!r}"
+                )
                 continue
             identifier, content = line.split("\t", 1)
             content = content.strip()
@@ -104,9 +122,13 @@ class ClipboardPlugin(SpotlightPlugin):
             if "binary data" in content:
                 entry["type"] = "image"
             new_entries.append(entry)
+        logger.info(f"[Clipboard] _load_history: parsed {len(new_entries)} entries")
         with self._history_lock:
             self._history.clear()
             self._history.extend(new_entries)
+        logger.info(
+            f"[Clipboard] _load_history: history now has {len(self._history)} entries"
+        )
 
     def _filter_entries(self, query: str) -> list[dict]:
         q = query.strip().lower()
