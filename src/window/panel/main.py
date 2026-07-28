@@ -42,6 +42,7 @@ class Panel(Window):
         self.globalmenu = GlobalMenu(parent_window=self)
 
         self.imac = Gtk.MenuButton(name="panel-button")
+        self.imac.get_style_context().add_class("flat")
         self.imac.add(svg_file("misc/logo.svg", size=18))
         setup_cursor_hover(self.imac, "pointer")
         self.globalmenu.set_imac_button(self.imac)
