@@ -48,6 +48,7 @@ class _IntrospectionCache:
 
     def __init__(self):
         self._cache: dict[str, str] = {}
+        self._dead: set[str] = set()
         self._lock = threading.Lock()
 
     def get(self, service: str, path: str, bus, timeout: int) -> str:
@@ -55,12 +56,17 @@ class _IntrospectionCache:
             return ""
         key = f"{service}:{path}"
         with self._lock:
+            if key in self._dead:
+                return ""
             cached = self._cache.get(key)
             if cached is not None:
                 return cached
         xml = _dbus_introspect(bus, service, path, timeout)
         with self._lock:
-            self._cache[key] = xml
+            if xml:
+                self._cache[key] = xml
+            else:
+                self._dead.add(key)
         return xml
 
     def invalidate(self, service: str):
