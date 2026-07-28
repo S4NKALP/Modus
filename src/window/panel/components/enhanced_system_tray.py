@@ -12,7 +12,7 @@ _tracked_items = weakref.WeakSet()
 
 def should_hide(item) -> bool:
     """Check if a tray item should be hidden based on config."""
-    ignore_list = get_config("systray_ignore", [])
+    ignore_list = get_config("panel.systray_ignore", [])
     if not ignore_list:
         return False
 

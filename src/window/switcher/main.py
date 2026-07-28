@@ -120,9 +120,9 @@ class ApplicationSwitcher(Window):
         self.set_visible(False)
 
     def _on_config_changed(self, new_config, old_config):
-        preview_changed = config().has_changed("switcher_live_preview", old_config)
+        preview_changed = config().has_changed("switcher.live_preview", old_config)
         if (
-            config().has_changed("hide_special_workspace", old_config)
+            config().has_changed("panel.hide_special_workspace", old_config)
             or preview_changed
         ):
             if preview_changed:
@@ -133,7 +133,7 @@ class ApplicationSwitcher(Window):
                 self._rebuild()
 
     def show_switcher(self) -> None:
-        if not config().get("window_switcher", True):
+        if not config().get("switcher.window_switcher", True):
             return
         self._rebuild()
         if not self.windows:
@@ -180,7 +180,7 @@ class ApplicationSwitcher(Window):
         return pixbuf
 
     def _create_item(self) -> _SwitcherItem:
-        use_preview = config().get("switcher_live_preview", True)
+        use_preview = config().get("switcher.live_preview", True)
 
         if use_preview:
             app_icon = Image(name="app-switcher-app-icon")
@@ -300,7 +300,7 @@ class ApplicationSwitcher(Window):
                     item.button.set_visible(False)
                 return
 
-            hide_special = config().get("hide_special_workspace", True)
+            hide_special = config().get("panel.hide_special_workspace", True)
             filtered = []
             for c in clients:
                 if c.get("hidden", False):
@@ -333,7 +333,7 @@ class ApplicationSwitcher(Window):
                 )
                 self.current_index = idx
 
-            use_preview = config().get("switcher_live_preview", True)
+            use_preview = config().get("switcher.live_preview", True)
 
             display = Gdk.Display.get_default()
             monitor = display.get_primary_monitor() if display else None
@@ -430,7 +430,7 @@ class ApplicationSwitcher(Window):
             self._update_selection()
             self._addr_to_idx = {w["address"]: i for i, w in enumerate(self.windows)}
 
-            use_preview = config().get("switcher_live_preview", True)
+            use_preview = config().get("switcher.live_preview", True)
             if use_preview:
                 self._capture_queue = [w["address"] for w in self.windows]
                 self._current_capture_addr = None
@@ -574,7 +574,7 @@ class ApplicationSwitcher(Window):
                     item.preview_image.set_from_pixbuf(pixbuf)
 
                 if self.get_visible() and config().get("switcher_live_preview", True):
-                    fps_delay = config().get("switcher_live_preview_delay_ms", 200)
+                    fps_delay = config().get("switcher.live_preview_delay_ms", 200)
                     invoke_repeater(
                         fps_delay,
                         lambda: (
@@ -604,7 +604,7 @@ class ApplicationSwitcher(Window):
             )
 
     def _pump_capture_queue(self):
-        use_preview = config().get("switcher_live_preview", True)
+        use_preview = config().get("switcher.live_preview", True)
         if not use_preview:
             return
 

@@ -69,7 +69,7 @@ class Dock(Window):
 
         on_config_change(self._on_config_change)
 
-        if config().get("dock_auto_hide", True):
+        if config().get("dock.auto_hide", True):
             self._setup_occlusion_signals()
         self._check_occlusion_deferred()
 
@@ -104,7 +104,7 @@ class Dock(Window):
         try:
             if not config().get("dock_auto_hide", True):
                 return False
-            is_occ = config().get("dock_always_occluded", False) or check_occlusion(
+            is_occ = config().get("dock.always_occluded", False) or check_occlusion(
                 ("bottom", self.dock_height)
             )
             if is_occ and not self.is_hovered and self.revealer.get_reveal_child():
@@ -119,24 +119,24 @@ class Dock(Window):
         return False
 
     def _on_config_change(self, new_config, old_config) -> None:
-        if config().has_changed("dock_enabled", old_config):
+        if config().has_changed("dock.enabled", old_config):
             self._update_visibility()
 
-        if config().has_changed("dock_icon_size", old_config):
+        if config().has_changed("dock.icon_size", old_config):
             self.canvas.update_icon_size()
 
-        if config().has_changed("dock_auto_hide", old_config):
-            if new_config.get("dock_auto_hide", True):
+        if config().has_changed("dock.auto_hide", old_config):
+            if new_config.get("dock.auto_hide", True):
                 self._setup_occlusion_signals()
             else:
                 self._disconnect_occlusion_signals()
                 self.revealer.set_reveal_child(True)
 
-        if config().has_changed("dock_hide_special_workspace_apps", old_config):
+        if config().has_changed("dock.hide_special_workspace_apps", old_config):
             self.canvas._rebuild_model()
 
     def _update_visibility(self) -> None:
-        if config().get("dock_enabled", True):
+        if config().get("dock.enabled", True):
             self.show()
             self.revealer.set_reveal_child(True)
         else:
@@ -154,9 +154,9 @@ class Dock(Window):
 
         def delayed_hide(t):
             if t == self.hide_ticket and not self.is_hovered:
-                if config().get("dock_auto_hide", True):
+                if config().get("dock.auto_hide", True):
                     is_occ = config().get(
-                        "dock_always_occluded", False
+                        "dock.always_occluded", False
                     ) or check_occlusion(("bottom", self.dock_height))
                     if is_occ:
                         self.revealer.set_reveal_child(False)

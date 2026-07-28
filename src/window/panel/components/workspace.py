@@ -29,25 +29,19 @@ class WorkspaceIndicator(Box):
         self._apply_initial_config()
 
     def _apply_initial_config(self):
-        new_value = get_config("hide_special_workspace", True)
+        new_value = get_config("panel.hide_special_workspace", True)
         if new_value != self._current_config["hide_special_workspace"]:
             self._current_config["hide_special_workspace"] = new_value
             self.update_config({"hide_special_workspace": new_value})
 
     def _on_config_changed(self, new_config: dict, old_config: dict):
-        if "hide_special_workspace" in new_config and new_config.get(
-            "hide_special_workspace"
-        ) != old_config.get("hide_special_workspace"):
-            self._current_config["hide_special_workspace"] = new_config.get(
-                "hide_special_workspace", True
-            )
-            self.update_config(
-                {
-                    "hide_special_workspace": self._current_config[
-                        "hide_special_workspace"
-                    ]
-                }
-            )
+        new_panel = new_config.get("panel", {})
+        old_panel = old_config.get("panel", {})
+        new_val = new_panel.get("hide_special_workspace", True)
+        old_val = old_panel.get("hide_special_workspace", True)
+        if new_val != old_val:
+            self._current_config["hide_special_workspace"] = new_val
+            self.update_config({"hide_special_workspace": new_val})
 
     def _get_button_factory(self):
         if self._current_config.get("hide_special_workspace", True):

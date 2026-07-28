@@ -94,7 +94,7 @@ class KeyboardLayout(Service):
             self._set_current(0, emit=False)
 
     def _load_layouts_from_config(self) -> list[str]:
-        layouts = get_config("keyboard_layouts", DEFAULT_LAYOUTS)
+        layouts = get_config("general.keyboard_layouts", DEFAULT_LAYOUTS)
         if not isinstance(layouts, list) or not layouts:
             return list(DEFAULT_LAYOUTS)
         return [str(layout).strip() for layout in layouts if str(layout).strip()]
@@ -199,7 +199,8 @@ class KeyboardLayout(Service):
     # config changes
 
     def _on_config_change(self, new_config, old_config):
-        new_layouts = new_config.get("keyboard_layouts")
+        new_general = new_config.get("general", {})
+        new_layouts = new_general.get("keyboard_layouts")
         if not isinstance(new_layouts, list) or not new_layouts:
             return
         new_layouts = [str(item).strip() for item in new_layouts if str(item).strip()]

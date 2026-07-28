@@ -5,7 +5,7 @@ from fabric.utils import Gio, GLib, logger
 
 from services.config import get_config, on_config_change
 
-_CONFIG_KEY = "night_light_temperature"
+_CONFIG_KEY = "panel.night_light_temperature"
 _DEFAULT_TEMPERATURE = 4500
 _NEUTRAL_TEMPERATURE = 6000
 _PROFILE_TEMP_RE = re.compile(r"(\d{3,5})")
@@ -106,9 +106,13 @@ class NightLightService(Service):
         self._sync_state()
 
     def _on_config_change(self, new_config, old_config):
-        if new_config.get(_CONFIG_KEY) == old_config.get(_CONFIG_KEY):
+        new_panel = new_config.get("panel", {})
+        old_panel = old_config.get("panel", {})
+        new_temp = new_panel.get("night_light_temperature")
+        old_temp = old_panel.get("night_light_temperature")
+        if new_temp == old_temp:
             return
-        self.set_temperature(_coerce_temperature(new_config.get(_CONFIG_KEY)))
+        self.set_temperature(_coerce_temperature(new_temp))
 
     def _set_active(self, value: bool):
         if value != self._active:

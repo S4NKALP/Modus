@@ -253,10 +253,12 @@ class Panel(Window):
         if config_data is None:
             config_data = get_config_all()
 
+        panel = config_data.get("panel", {})
+
         # Update indicator visibility directly
-        battery_visible = config_data.get("battery", True)
-        network_visible = config_data.get("network", True)
-        bluetooth_visible = config_data.get("bluetooth", True)
+        battery_visible = panel.get("battery", True)
+        network_visible = panel.get("network", True)
+        bluetooth_visible = panel.get("bluetooth", True)
 
         self.battery_indicator.set_visible(battery_visible)
         self.network_indicator.set_visible(network_visible)
@@ -271,16 +273,16 @@ class Panel(Window):
             self.bluetooth_indicator.update_state()
 
         # Center (notch)
-        if config_data.get("notch", True):
+        if panel.get("notch", True):
             self.center_box.children = [self.notch]
         else:
             self.center_box.children = []
 
         # Left
         left_children = []
-        if config_data.get("imac_button", True):
+        if panel.get("imac_button", True):
             left_children.append(self.imac)
-        if config_data.get("global_menu", True):
+        if panel.get("global_menu", True):
             left_children.append(self.globalmenu)
 
         for child in left_children:
@@ -289,23 +291,23 @@ class Panel(Window):
 
         # Right
         right_children = []
-        if config_data.get("custom_mods", True):
+        if panel.get("custom_mods", True):
             right_children.append(self.custom_mods)
-        if config_data.get("workspace_indicator", True):
+        if panel.get("workspace_indicator", True):
             right_children.append(self.workspace_indicator)
 
-        if config_data.get("systray", True):
+        if panel.get("systray", True):
             right_children.extend([self.tray_revealer, self.chevron_button])
 
         right_children.append(self.indicators)
 
-        if config_data.get("search", True):
+        if panel.get("search", True):
             right_children.append(self.search)
-        if config_data.get("control_center", True):
+        if panel.get("control_center", True):
             right_children.append(self.control_center_btn)
-        if config_data.get("date_time", True):
+        if panel.get("date_time", True):
             right_children.append(self.datetime_btn)
-        if config_data.get("notification_center", True):
+        if panel.get("notification_center", True):
             right_children.append(self.notification_center_btn)
 
         for child in right_children:
@@ -321,11 +323,13 @@ class Panel(Window):
 
     def _on_config_changed(self, new_config, old_config):
         logger.debug("Config changed, checking keys...")
-        keys = {
+        new_panel = new_config.get("panel", {})
+        old_panel = old_config.get("panel", {})
+
+        panel_keys = {
             "imac_button",
             "global_menu",
             "notch",
-            "custom_mods",
             "workspace_indicator",
             "systray",
             "battery",
@@ -335,8 +339,12 @@ class Panel(Window):
             "control_center",
             "date_time",
             "notification_center",
+            "custom_mods",
+            "hide_special_workspace",
         }
-        changed_keys = [k for k in keys if new_config.get(k) != old_config.get(k)]
+
+        changed_keys = [k for k in panel_keys if new_panel.get(k) != old_panel.get(k)]
+
         if changed_keys:
             logger.debug(f"Rebuilding due to changes in: {changed_keys}")
             self._rebuild_layout_from_config(new_config)

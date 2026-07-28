@@ -372,7 +372,9 @@ class Weather(Service):
         self.emit("ready")
 
     def _on_config_changed(self, new_config: dict, old_config: dict) -> None:
-        if new_config.get("weather_location") != old_config.get("weather_location"):
+        new_general = new_config.get("general", {})
+        old_general = old_config.get("general", {})
+        if new_general.get("weather_location") != old_general.get("weather_location"):
             self.refresh()
 
     def _start_fetch_thread(self) -> None:
@@ -387,7 +389,7 @@ class Weather(Service):
 
             from services.config import config
 
-            target_loc = config().get("weather_location", "").strip()
+            target_loc = config().get("general.weather_location", "").strip()
 
             # Invalidate location cache if the config target changed
             if location_data and location_data.get("config_location", "") != target_loc:
