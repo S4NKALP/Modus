@@ -1,81 +1,124 @@
-from fabric.utils import GLib, logger
-from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.eventbox import EventBox
+from functools import partial
 
-from shared.window.applet_window import AppletWindow
-from utils.roam import modus_service
+from fabric.utils import logger
+from gi.repository import Gdk, Gtk
 
-dropdowns = []
+from utils.functions import run_command, thread
 
 
-def dropdown_divider(comment):
-    return Box(
-        children=[Box(name="dropdown-divider", h_expand=True)],
-        name="dropdown-divider-box",
-        h_align="fill",
-        h_expand=True,
-        v_expand=True,
-    )
+class ModusDropdown:
+    """Reusable Gtk.Menu-based dropdown."""
 
+    def __init__(self, items=None):
+        self._menu = Gtk.Menu()
+        self._source_button = None
+        self._menu.connect("hide", self._on_menu_hide)
 
-class ModusDropdown(AppletWindow):
-    def __init__(
-        self, dropdown_children=None, dropdown_id=None, parent_dropdown=None, **kwargs
-    ):
-        super().__init__(
-            layer="top",
-            exclusivity="auto",
-            name="dropdown-menu",
-            title="modus-dropdown",
-            visible=False,
-            parent_dropdown=parent_dropdown,
-            **kwargs,
-        )
+        if items:
+            self._build(items)
 
-        self.id = dropdown_id or str(len(dropdowns))
-        dropdowns.append(self)
+    @property
+    def menu(self):
+        return self._menu
 
-        self.connect("notify::visible", self._on_visible_changed)
-        modus_service.connect("dropdowns-hide-changed", self.hide_dropdown)
+    def _build(self, items):
+        for entry in items:
+            item = self._create_item(entry)
+            if item is not None:
+                self._menu.append(item)
+        self._menu.show_all()
 
-        self.dropdown = Box(
-            children=dropdown_children or [],
-            h_expand=True,
-            name="dropdown-options",
-            orientation="vertical",
-        )
+    def _create_item(self, entry):
+        if entry is None:
+            return Gtk.SeparatorMenuItem()
 
-        self.child_box = CenterBox(start_children=[self.dropdown])
+        if isinstance(entry, Gtk.Widget):
+            return entry
 
-        self.event_box = EventBox(
-            events=["enter-notify", "leave-notify"],
-            child=self.child_box,
-            all_visible=True,
-        )
+        if isinstance(entry, dict):
+            return self._make_item(entry)
 
-        self.children = [self.event_box]
-        self.add_keybinding("escape", self.hide_dropdown)
+        label, callback = entry[0], entry[1]
+        sensitive = entry[2] if len(entry) > 2 else True
+        item = Gtk.MenuItem.new_with_label(label)
+        if sensitive and callback:
+            item.connect("activate", callback)
+        elif not sensitive:
+            item.set_sensitive(False)
+        return item
 
-    def hide_dropdown(self, *_):
-        if self.is_visible():
-            GLib.idle_add(lambda: self.hide())
+    def _make_item(self, entry):
+        label = entry.get("label", "")
+        accel = entry.get("accel")
+        command = entry.get("command")
+        callback = entry.get("callback")
+        sensitive = entry.get("sensitive", True)
 
-    def _on_visible_changed(self, *_):
-        if self.is_visible():
-            modus_service.current_dropdown = self.id
-        elif str(modus_service.current_dropdown) == str(self.id):
-            modus_service.current_dropdown = None
+        if accel:
+            label = f"{label}    {accel}"
 
-    def destroy(self):
-        """Clean up resources and global references"""
-        global dropdowns
-        if self in dropdowns:
-            dropdowns.remove(self)
+        item = Gtk.MenuItem.new_with_label(label)
+        if not sensitive:
+            item.set_sensitive(False)
+        elif callback or command:
+            item.connect(
+                "activate",
+                partial(self._activate, callback, command),
+            )
+        return item
 
+    @staticmethod
+    def _activate(callback, command, *_):
+        if callback:
+            callback()
+        if command:
+            thread(run_command, ["sh", "-c", command], timeout=30)
+
+    def _on_menu_hide(self, *_):
+        if not self._source_button:
+            return
         try:
-            modus_service.disconnect_by_func(self.hide_dropdown)
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
+            self._source_button.unset_state_flags(Gtk.StateFlags.ACTIVE)
+            self._source_button.queue_draw()
+        except Exception:
+            logger.exception("[ModusDropdown] failed to reset button state")
+        self._source_button = None
 
-        super().destroy()
+    def append(self, item):
+        created = self._create_item(item)
+        if created is not None:
+            self._menu.append(created)
+            self._menu.show_all()
+
+    def clear(self):
+        for child in self._menu.get_children():
+            child.destroy()
+
+    def popup_at_widget(self, widget, source_button=None):
+        self._source_button = source_button or widget
+        self._menu.popup_at_widget(
+            widget,
+            Gdk.Gravity.SOUTH_WEST,
+            Gdk.Gravity.NORTH_WEST,
+            None,
+        )
+
+    def popup(self, widget, source_button=None):
+        self.popup_at_widget(widget, source_button)
+
+
+def dropdown_option(label, accel=None, command=None, callback=None, sensitive=True):
+    """Create a dropdown menu option dict.
+
+    Usage:
+        dropdown_option("Lock Screen", "󰘳     L", "fabric-cli exec modus 'lock_screen.lock()'")
+        dropdown_option("Settings", callback=my_func)
+        dropdown_option("Disabled Item", sensitive=False)
+    """
+    return {
+        "label": label,
+        "accel": accel,
+        "command": command,
+        "callback": callback,
+        "sensitive": sensitive,
+    }
