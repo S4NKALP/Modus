@@ -212,29 +212,38 @@ class CaffeinePlugin(SpotlightPlugin):
 
     def search(self, query: str, token) -> list[SearchResult]:
         q = query.strip().lower()
+        had_prefix = False
         for kw in ("caffeine ", "caff "):
             if q.startswith(kw):
                 q = q[len(kw) :].strip()
+                had_prefix = True
                 break
 
         active = self.is_active()
+        logger.info(
+            f"[Caffeine] search query={query!r} q={q!r} had_prefix={had_prefix} active={active}"
+        )
 
         if not q or q in ("caffeine", "caff"):
+            logger.info("[Caffeine] returning menu (keyword match)")
             return self._menu(active)
 
         if q == "off":
+            logger.info("[Caffeine] returning off")
             return [
                 self._mk(
                     "off", "Disable Caffeine", "Allow idle and sleep again", active
                 )
             ]
         if q == "on":
+            logger.info("[Caffeine] returning on")
             return [
                 self._mk("on", "Enable Caffeine", "Stay awake until turned off", active)
             ]
 
         secs = self._parse_duration(q)
         if secs is not None:
+            logger.info(f"[Caffeine] returning duration secs={secs}")
             return [
                 self._mk(
                     q,
@@ -244,15 +253,19 @@ class CaffeinePlugin(SpotlightPlugin):
                 )
             ]
 
-        return [
-            self._result(
-                "caffeine_help",
-                "Caffeine",
-                "Usage: caffeine on | off | <time> (e.g. 15m, 1hr)",
-                None,
-                active,
-            )
-        ]
+        if had_prefix:
+            logger.info("[Caffeine] returning help (had_prefix)")
+            return [
+                self._result(
+                    "caffeine_help",
+                    "Caffeine",
+                    "Usage: caffeine on | off | <time> (e.g. 15m, 1hr)",
+                    None,
+                    active,
+                )
+            ]
+        logger.info("[Caffeine] returning EMPTY (no match)")
+        return []
 
     def detect(self, text: str) -> bool:
         t = text.strip().lower()
