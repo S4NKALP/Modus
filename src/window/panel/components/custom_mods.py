@@ -1,86 +1,16 @@
 from pathlib import Path
 
 import tomlkit
-from fabric.utils import Gio, GLib, logger
+from fabric.utils import Gio, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.label import Label
 
-from shared.window.applet_window import AppletWindow
+from shared.window.dropdown import ModusDropdown
 from utils.functions import clear_children, run_command, thread
 from utils.gtk_utils import setup_cursor_hover, svg_file, toml_file
 
 MODS_CONFIG_PATH = Path(toml_file("mods.toml"))
 RELOAD_DELAY_MS = 200
-
-
-def dropdown_divider():
-    return Box(
-        children=[Box(name="dropdown-divider", h_expand=True)],
-        name="dropdown-divider-box",
-        h_align="fill",
-        h_expand=True,
-    )
-
-
-class ModPopup(AppletWindow):
-    def __init__(
-        self, mod_name, options, parent_window, pointing_to, source_button, **kwargs
-    ):
-        self._mod_name = mod_name
-        self._source_button = source_button
-
-        option_widgets = []
-        for opt in sorted(options, key=lambda o: o.get("order", 99)):
-            if opt.get("divider"):
-                option_widgets.append(dropdown_divider())
-
-            btn = Button(
-                name="dropdown-option",
-                child=Label(label=opt["label"], name="dropdown-option-label"),
-                h_align="fill",
-                h_expand=True,
-            )
-            cmd = opt["on-clicked"]
-            btn.connect("clicked", lambda *_, c=cmd: self._run_command(c))
-            setup_cursor_hover(btn, "pointer")
-            option_widgets.append(btn)
-
-        options_box = Box(
-            name="dropdown-options",
-            orientation="vertical",
-            spacing=0,
-            children=option_widgets,
-        )
-
-        main_box = Box(name="dropdown-menu", children=[options_box])
-
-        super().__init__(
-            parent=parent_window,
-            pointing_to=pointing_to,
-            name="dropdown-menu",
-            title="modus-dropdown",
-            layer="overlay",
-            visible=False,
-            **kwargs,
-        )
-        self.children = [main_box]
-        self.connect("notify::visible", self._on_visible_changed)
-
-    def _on_visible_changed(self, *_):
-        if self.get_visible():
-            self._source_button.add_style_class("active")
-        else:
-            self._source_button.remove_style_class("active")
-
-    def _run_command(self, cmd):
-        self.close_applet()
-        thread(run_command, ["sh", "-c", cmd], timeout=30)
-
-    def toggle(self, pointing_to=None):
-        if pointing_to:
-            self.set_pointing_to(pointing_to)
-        super().toggle()
 
 
 class CustomMods(Box):
@@ -128,6 +58,22 @@ class CustomMods(Box):
 
         self._rebuild(mods)
 
+    def _build_dropdown(self, options, btn):
+        menu_items = []
+        for opt in sorted(options, key=lambda o: o.get("order", 99)):
+            if opt.get("divider"):
+                menu_items.append(None)
+
+            cmd = opt["on-clicked"]
+
+            def _on_activate(_, c=cmd):
+                thread(run_command, ["sh", "-c", c], timeout=30)
+
+            menu_items.append((opt["label"], _on_activate))
+
+        dropdown = ModusDropdown(items=menu_items)
+        return dropdown
+
     def _on_btn_press(self, btn, event, mod):
         button_map = {1: "on-left", 2: "on-middle", 3: "on-right"}
         button_key = button_map.get(event.button)
@@ -135,43 +81,26 @@ class CustomMods(Box):
         popup = self._mod_popups.get(mod["name"])
 
         if per_button_cmd is not None:
-            if popup and popup._is_open:
-                popup.toggle()
+            if popup and popup.menu.get_visible():
+                popup.menu.popdown()
             thread(run_command, ["sh", "-c", per_button_cmd], timeout=30)
             return True
 
         cmd = mod.get("on-clicked")
         if cmd:
-            if popup and popup._is_open:
-                popup.toggle()
+            if popup and popup.menu.get_visible():
+                popup.menu.popdown()
             thread(run_command, ["sh", "-c", cmd], timeout=30)
             return True
 
-        if event.button == 3:
-            if popup:
-                popup.toggle(pointing_to=btn)
-            return True
-
-        if event.button == 1:
-            if popup and popup._is_open:
-                popup.toggle()
-                return True
-
-            if popup:
-                popup.toggle(pointing_to=btn)
-            return True
-
-        if event.button == 2 and popup:
-            popup.toggle(pointing_to=btn)
-
-        return True
+        return False
 
     def _rebuild(self, mods):
         clear_children(self)
 
         for popup in self._mod_popups.values():
             if popup:
-                popup.destroy()
+                popup.menu.destroy()
         self._mod_popups.clear()
         self._mod_buttons.clear()
         self._mods_data.clear()
@@ -180,19 +109,19 @@ class CustomMods(Box):
 
         for mod in sorted_mods:
             icon_widget = svg_file(mod["icon"], size=mod["icon_size"])
-            btn = Button(name="global-menu", child=icon_widget)
-            setup_cursor_hover(btn, "pointer")
 
-            popup = None
             if mod["options"]:
-                popup = ModPopup(
-                    mod_name=mod["name"],
-                    options=mod["options"],
-                    parent_window=self._parent,
-                    pointing_to=btn,
-                    source_button=btn,
-                )
+                btn = Gtk.MenuButton(name="panel-button", child=icon_widget)
+                btn.get_style_context().add_class("flat")
+                dropdown = self._build_dropdown(mod["options"], btn)
+                btn.set_popup(dropdown.menu)
+            else:
+                btn = Button(name="panel-button", child=icon_widget)
+                btn.get_style_context().add_class("flat")
 
+            btn.set_margin_start(4)
+            btn.set_margin_end(4)
+            setup_cursor_hover(btn, "pointer")
             btn.connect(
                 "button-press-event",
                 lambda b, e, m=mod: self._on_btn_press(b, e, m),
@@ -200,7 +129,7 @@ class CustomMods(Box):
 
             self.add(btn)
             self._mod_buttons[mod["name"]] = btn
-            self._mod_popups[mod["name"]] = popup
+            self._mod_popups[mod["name"]] = dropdown if mod["options"] else None
             self._mods_data[mod["name"]] = mod
 
         self.show_all()
@@ -248,7 +177,7 @@ class CustomMods(Box):
             monitor.cancel()
         for popup in self._mod_popups.values():
             if popup:
-                popup.destroy()
+                popup.menu.destroy()
         self._mod_popups.clear()
         self._mod_buttons.clear()
         self._mods_data.clear()
