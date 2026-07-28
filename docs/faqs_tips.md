@@ -15,22 +15,22 @@ export GTK menus over DBus.
 
 The App Switcher uses a custom C-backend to capture live window previews.
 - 4K windows with many open can spike CPU
-- **Fix**: Increase `switcher_live_preview_delay_ms` in `config.toml` (e.g., `200`
-  for ~5 FPS) or set `switcher_live_preview = false` to disable previews entirely
+- **Fix**: Increase `switcher.live_preview_delay_ms` in `config.toml` (e.g., `200`
+  for ~5 FPS) or set `switcher.live_preview = false` to disable previews entirely
 
 ### 3. Dock covering fullscreen games/videos?
 
-Set `dock_auto_hide = true` in `config.toml`. The dock hides automatically
+Set `dock.auto_hide = true` in `config.toml`. The dock hides automatically
 when a window is maximized or fullscreen.
 
 ### 4. Volume/Brightness OSD not showing?
 
-Set `osd = true` in `config.toml`. Requires `brightnessctl` for brightness and
+Set `panel.osd = true` in `config.toml`. Requires `brightnessctl` for brightness and
 Pipewire/Wireplumber for audio.
 
 ### 5. Weather widget shows wrong location?
 
-Update `weather_location` in `config.toml` (e.g., `"London, UK"` or
+Update `general.weather_location` in `config.toml` (e.g., `"London, UK"` or
 `"Patan, Nepal"`).
 
 ### 6. Spotlight plugin isn't showing up?

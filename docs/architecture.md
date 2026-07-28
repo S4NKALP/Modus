@@ -76,7 +76,7 @@ Python DBus polling is too slow, so Modus uses a C-extension at
   from Hyprland
 - Compiled to `libappcapture.so`, exposed to Python via GObject Introspection
 - Framerate throttled by Python using `invoke_repeater`, controlled by
-  `switcher_live_preview_delay_ms` in `config.toml`
+  `switcher.live_preview_delay_ms` in `config.toml`
 
 ## 4. Global Menu (DBus)
 
