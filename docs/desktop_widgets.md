@@ -52,10 +52,10 @@ class ExampleClockWidget(Box):
 
 
 DesktopWidgetRegistry.register(
-    "example",              # unique key (used in desktop.toml)
-    ExampleClockWidget,       # GTK widget class
-    (174, 174),               # size (width, height) in pixels
-    (0.45, 0.45),             # default position (px, py) as 0.0–1.0 fractions
+    "example",  # unique key (used in desktop.toml)
+    ExampleClockWidget,  # GTK widget class
+    (174, 174),  # size (width, height) in pixels
+    (0.45, 0.45),  # default position (px, py) as 0.0–1.0 fractions
 )
 ```
 
@@ -175,6 +175,7 @@ class LiveClockWidget(Box):
 
     def _update(self) -> bool:
         import datetime
+
         now = datetime.datetime.now()
         self.label.set_label(now.strftime("%H:%M"))
         return True

@@ -45,7 +45,7 @@ def setup_logger():
     ]:
         logger.disable(log)
 
-    _debug = config().get("debug", False)
+    _debug = config().get("general.debug", False)
     if not _debug:
         logger.disable("modus_plugin_builtin_emoji")
     else:

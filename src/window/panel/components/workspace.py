@@ -9,25 +9,6 @@ from utils.gtk_utils import setup_cursor_hover
 # TODO: Support multi-monitor setups
 
 
-class LuaHyprlandWorkspaces(HyprlandWorkspaces):
-    def do_action_next(self):
-        ws = "e" if not self._empty_scroll else ""
-        return self.connection.send_command(
-            f"batch/dispatch hl.dsp.focus({{workspace=[[{ws}+1]]}})"
-        )
-
-    def do_action_previous(self):
-        ws = "e" if not self._empty_scroll else ""
-        return self.connection.send_command(
-            f"batch/dispatch hl.dsp.focus({{workspace=[[{ws}-1]]}})"
-        )
-
-    def do_button_clicked(self, button: WorkspaceButton):
-        return self.connection.send_command(
-            f"batch/dispatch hl.dsp.focus({{workspace=[[{button.id}]]}})"
-        )
-
-
 class WorkspaceIndicator(Box):
     def __init__(self, **kwargs):
         Box.__init__(
@@ -36,7 +17,7 @@ class WorkspaceIndicator(Box):
         self._current_config = {"hide_special_workspace": True}
         on_config_change(self._on_config_changed)
 
-        self.workspaces = LuaHyprlandWorkspaces(
+        self.workspaces = HyprlandWorkspaces(
             name="workspaces",
             spacing=4,
             buttons_factory=self._get_button_factory(),
@@ -48,25 +29,19 @@ class WorkspaceIndicator(Box):
         self._apply_initial_config()
 
     def _apply_initial_config(self):
-        new_value = get_config("hide_special_workspace", True)
+        new_value = get_config("panel.hide_special_workspace", True)
         if new_value != self._current_config["hide_special_workspace"]:
             self._current_config["hide_special_workspace"] = new_value
             self.update_config({"hide_special_workspace": new_value})
 
     def _on_config_changed(self, new_config: dict, old_config: dict):
-        if "hide_special_workspace" in new_config and new_config.get(
-            "hide_special_workspace"
-        ) != old_config.get("hide_special_workspace"):
-            self._current_config["hide_special_workspace"] = new_config.get(
-                "hide_special_workspace", True
-            )
-            self.update_config(
-                {
-                    "hide_special_workspace": self._current_config[
-                        "hide_special_workspace"
-                    ]
-                }
-            )
+        new_panel = new_config.get("panel", {})
+        old_panel = old_config.get("panel", {})
+        new_val = new_panel.get("hide_special_workspace", True)
+        old_val = old_panel.get("hide_special_workspace", True)
+        if new_val != old_val:
+            self._current_config["hide_special_workspace"] = new_val
+            self.update_config({"hide_special_workspace": new_val})
 
     def _get_button_factory(self):
         if self._current_config.get("hide_special_workspace", True):
@@ -92,7 +67,7 @@ class WorkspaceIndicator(Box):
             if hasattr(self, "workspaces") and self.workspaces:
                 self.workspaces.destroy()
 
-            self.workspaces = LuaHyprlandWorkspaces(
+            self.workspaces = HyprlandWorkspaces(
                 name="workspaces",
                 spacing=4,
                 buttons_factory=button_factory,

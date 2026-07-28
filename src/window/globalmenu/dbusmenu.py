@@ -275,6 +275,91 @@ class DBusMenuClient:
                 f"[dbusmenu] click_item: Event call failed for item_id={item_id}: {e}"
             )
 
+        self._try_gtk_actions_fallback(item_id, pid)
+
+    def _try_gtk_actions_fallback(self, item_id, pid=0):
+        item = None
+        if self._cache:
+            item = self._find_in_cache(item_id)
+        if not item or not item.action_name:
+            return
+        bus = _get_bus()
+        action_name = item.action_name
+        for path in (self.object_path,):
+            try:
+                desc = bus.call_sync(
+                    self.service_name,
+                    path,
+                    "org.gtk.Actions",
+                    "Describe",
+                    GLib.Variant("(s)", (action_name,)),
+                    GLib.VariantType("(bgav)"),
+                    Gio.DBusCallFlags.NONE,
+                    1000,
+                    None,
+                )
+                if not desc:
+                    continue
+                enabled, param_type_v, state_v = desc.unpack()
+                if not enabled:
+                    continue
+                has_state = state_v and state_v.n_children() > 0
+                if has_state:
+                    st = state_v.get_child_value(0)
+                    state_type = st.get_type_string() if st else ""
+                    new_val = (
+                        not st.get_boolean() if state_type == "b" else st.get_value()
+                    )
+                    bus.call_sync(
+                        self.service_name,
+                        path,
+                        "org.gtk.Actions",
+                        "ChangeState",
+                        GLib.Variant(
+                            "(sv)",
+                            (action_name, GLib.Variant(state_type, new_val)),
+                        ),
+                        None,
+                        Gio.DBusCallFlags.NONE,
+                        1000,
+                        None,
+                    )
+                else:
+                    param_type = str(param_type_v) if param_type_v else ""
+                    params = GLib.Variant("av", [])
+                    if param_type and param_type != "()":
+                        pt = GLib.VariantType(param_type)
+                        params = GLib.Variant(
+                            "av", [GLib.Variant.new_tuple(GLib.Variant(pt, None))]
+                        )
+                    bus.call_sync(
+                        self.service_name,
+                        path,
+                        "org.gtk.Actions",
+                        "Activate",
+                        GLib.Variant("(sava{sv})", (action_name, params, {})),
+                        None,
+                        Gio.DBusCallFlags.NONE,
+                        1000,
+                        None,
+                    )
+                self.invalidate()
+                return
+            except Exception:
+                continue
+
+    def _find_in_cache(self, item_id):
+        def walk(items):
+            for i in items:
+                if i.id == item_id:
+                    return i
+                found = walk(i.children)
+                if found:
+                    return found
+            return None
+
+        return walk(self._cache) if self._cache else None
+
     def invalidate(self):
         self._cache_valid = False
 

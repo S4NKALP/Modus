@@ -130,5 +130,5 @@ class DesktopWeatherWidget(Box):
 
 
 DesktopWidgetRegistry.register(
-    "weather", DesktopWeatherWidget, (174, 174), (0.0974, 0.0)
+    "weather", DesktopWeatherWidget, (174, 174), (0.10052, 0.01044)
 )

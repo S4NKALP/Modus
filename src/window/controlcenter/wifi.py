@@ -6,6 +6,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.separator import Separator
 
+from services import dns as dns_service
 from services.network import NetworkClient
 from shared.dialogs.sysauth_dialog import run_auth_dialog
 from shared.widgets.smooth_switch import SmoothSwitch
@@ -16,6 +17,14 @@ from utils.functions import (
     spawn_detached,
 )
 from utils.gtk_utils import svg_file
+
+DEFAULT_DNS_PROVIDERS = [
+    {"label": "Cloudflare", "primary": "1.1.1.1", "secondary": "1.0.0.1"},
+    {"label": "Google", "primary": "8.8.8.8", "secondary": "8.8.4.4"},
+    {"label": "OpenDNS", "primary": "208.67.222.222", "secondary": "208.67.220.220"},
+    {"label": "AdGuard", "primary": "94.140.14.14", "secondary": "94.140.15.15"},
+    {"label": "Quad9", "primary": "9.9.9.9", "secondary": "149.112.112.112"},
+]
 
 
 class WifiNetworkSlot(Box):
@@ -239,6 +248,160 @@ class WifiNetworkSlot(Box):
         return False  # Don't repeat if called from GLib.timeout_add
 
 
+class DnsSwitcher:
+    """DNS provider switcher with predefined and manual options.
+
+    Builds two widgets: ``button`` (the header row) and ``content_box``
+    (the expandable panel).  Both should be added as separate children
+    of the parent container, matching how Other Networks is structured.
+    """
+
+    def __init__(self):
+        self._current_dns = []
+        self._provider_buttons = {}
+        self._is_expanded = False
+
+        self._dns_label = Label(
+            label="Automatic",
+            name="dns-current-label",
+            h_align="end",
+        )
+
+        self.button = Button(
+            child=CenterBox(
+                start_children=Label("DNS", h_align="start"),
+                end_children=self._dns_label,
+            ),
+            name="wifi-other-button",
+            on_clicked=self._toggle_expanded,
+        )
+
+        self.content_box = Box(
+            orientation="vertical",
+            spacing=4,
+            name="dns-content",
+        )
+        self.content_box.set_visible(False)
+
+        auto_row = self._make_provider_row("Automatic (DHCP)", "", is_auto=True)
+        self.content_box.pack_start(auto_row, False, False, 0)
+
+        for provider in DEFAULT_DNS_PROVIDERS:
+            row = self._make_provider_row(
+                provider["label"],
+                f"{provider['primary']}, {provider['secondary']}",
+                is_auto=False,
+                primary=provider["primary"],
+                secondary=provider["secondary"],
+            )
+            self.content_box.pack_start(row, False, False, 0)
+
+        self._load_current_dns()
+
+    def _make_provider_row(
+        self,
+        label,
+        subtitle,
+        is_auto=False,
+        primary=None,
+        secondary=None,
+    ):
+        check_icon = Image(
+            icon_name="object-select-symbolic",
+            size=14,
+            name="dns-check-icon",
+        )
+        check_icon.set_no_show_all(True)
+        check_icon.hide()
+
+        title_label = Label(
+            label=label, h_align="start", h_expand=True, name="dns-provider-name"
+        )
+
+        children = [title_label]
+        if subtitle:
+            children.append(
+                Label(
+                    label=subtitle,
+                    h_align="end",
+                    name="dns-provider-address",
+                )
+            )
+        children.append(check_icon)
+
+        row_button = Button(
+            child=Box(orientation="h", spacing=8, children=children),
+            name="dns-provider-button",
+        )
+
+        if is_auto:
+            row_button.connect("clicked", lambda *_: self._on_auto_selected())
+        else:
+            row_button.connect(
+                "clicked",
+                lambda *_: self._on_provider_selected(primary, secondary),
+            )
+
+        row_button._dns_check = check_icon
+        row_button._dns_primary = primary
+        self._provider_buttons[primary or "auto"] = row_button
+        return row_button
+
+    def _toggle_expanded(self, *_):
+        self._is_expanded = not self._is_expanded
+        self.content_box.set_visible(self._is_expanded)
+
+    def _load_current_dns(self):
+        dns_service.get_dns(callback=self._on_dns_loaded)
+
+    def _on_dns_loaded(self, dns_servers):
+        self._current_dns = dns_servers or []
+        self._update_checkmarks()
+        self._update_dns_label()
+
+    def _update_checkmarks(self):
+        key = self._current_dns[0] if self._current_dns else "auto"
+        for btn_key, btn in self._provider_buttons.items():
+            check = getattr(btn, "_dns_check", None)
+            if check:
+                if btn_key == key:
+                    check.show()
+                else:
+                    check.hide()
+
+    def _update_dns_label(self):
+        if not self._current_dns:
+            self._dns_label.set_label("Automatic")
+        elif len(self._current_dns) == 1:
+            self._dns_label.set_label(self._current_dns[0])
+        else:
+            self._dns_label.set_label(
+                f"{self._current_dns[0]} +{len(self._current_dns) - 1}"
+            )
+
+    def _on_auto_selected(self):
+        self._current_dns = []
+        self._update_checkmarks()
+        self._update_dns_label()
+        dns_service.set_dns([], callback=self._on_dns_applied)
+
+    def _on_provider_selected(self, primary, secondary):
+        dns = [primary]
+        if secondary:
+            dns.append(secondary)
+        self._current_dns = dns
+        self._update_checkmarks()
+        self._update_dns_label()
+        dns_service.set_dns(dns, callback=self._on_dns_applied)
+
+    def _on_dns_applied(self, success):
+        if not success:
+            self._load_current_dns()
+
+    def refresh_dns(self):
+        self._load_current_dns()
+
+
 class WifiConnections(Box):
     def __init__(self, parent, show_back_button=True, network_service=None, **kwargs):
         super().__init__(
@@ -352,6 +515,9 @@ class WifiConnections(Box):
             on_clicked=self.open_network_settings,
         )
 
+        # DNS Switcher
+        self.dns_switcher = DnsSwitcher()
+
         self.children = [
             CenterBox(
                 start_children=self.title,
@@ -366,6 +532,9 @@ class WifiConnections(Box):
             self.other_networks_button,
             self.other_networks_scrolled,
             Separator(orientation="h", name="separator"),
+            self.dns_switcher.button,
+            self.dns_switcher.content_box,
+            Separator(orientation="h", name="separator"),
             self.more_settings_button,
         ]
 
@@ -378,6 +547,8 @@ class WifiConnections(Box):
         if self.wifi_service:
             self.wifi_service.scan()
             self.force_network_refresh()
+        if self.dns_switcher:
+            self.dns_switcher.refresh_dns()
 
     def on_hide(self, *_):
         """Called when the widget is hidden (popup closed)"""
@@ -385,6 +556,9 @@ class WifiConnections(Box):
         if self.other_networks.get_visible():
             self.other_networks.set_visible(False)
             self.other_networks_scrolled.snap_to_size(0)
+        if self.dns_switcher and self.dns_switcher._is_expanded:
+            self.dns_switcher._is_expanded = False
+            self.dns_switcher.content_box.set_visible(False)
 
     def toggle_other_networks(self, *_):
         """Toggle the visibility of other networks section"""
@@ -729,3 +903,6 @@ class WifiConnections(Box):
         if self.other_networks.get_visible():
             self.other_networks.set_visible(False)
             self.other_networks_scrolled.snap_to_size(0)
+        if self.dns_switcher and self.dns_switcher._is_expanded:
+            self.dns_switcher._is_expanded = False
+            self.dns_switcher.content_box.set_visible(False)

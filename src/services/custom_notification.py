@@ -238,9 +238,11 @@ class CachedNotifications(Notifications):
         on_config_change(self._on_config_changed)
 
     def _on_config_changed(self, new_config, old_config):
+        new_notif = new_config.get("notification", {})
+
         # If ignored apps changed, remove them from history
-        if config().has_changed("notification_ignored_apps", old_config):
-            ignored_apps = new_config.get("notification_ignored_apps", [])
+        if config().has_changed("notification.ignored_apps", old_config):
+            ignored_apps = new_notif.get("ignored_apps", [])
             ids_to_remove = [
                 cid
                 for cid, cnotif in self._cached_notifications.items()
@@ -254,8 +256,8 @@ class CachedNotifications(Notifications):
                 )
 
         # If limited apps changed, prune duplicates
-        if config().has_changed("notification_limited_apps_history", old_config):
-            limited_apps = new_config.get("notification_limited_apps_history", [])
+        if config().has_changed("notification.limited_apps_history", old_config):
+            limited_apps = new_notif.get("limited_apps_history", [])
             for app in limited_apps:
                 app_notifs = [
                     (cid, cnotif.timestamp)
@@ -355,7 +357,7 @@ class CachedNotifications(Notifications):
         )
 
         # Check if this app should be ignored for history (don't cache)
-        ignored_apps = config().get("notification_ignored_apps", [])
+        ignored_apps = config().get("notification.ignored_apps", [])
         if notification.app_name in ignored_apps:
             # Don't cache notifications from ignored apps, but still allow popup display
             logger.debug(
@@ -395,7 +397,7 @@ class CachedNotifications(Notifications):
         )
 
         # Handle limited history apps - remove previous notifications from same app
-        limited_apps = config().get("notification_limited_apps_history", [])
+        limited_apps = config().get("notification.limited_apps_history", [])
         if notification.app_name in limited_apps:
             ids_to_remove = [
                 cid

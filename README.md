@@ -118,6 +118,8 @@ Three TOML files in `config/`:
 | `mods.toml`   | Custom panel buttons                     | Instant |
 | `dock.toml`   | Pinned dock apps                         | Restart |
 
+Settings are organized into sections: `[general]`, `[dock]`, `[panel]`, `[switcher]`, `[notification]`.
+
 You can also toggle most settings from the **Settings window** (`Super + I`).
 
 See [Configuration Guide](docs/configuration.md) for full reference.

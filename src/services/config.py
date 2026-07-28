@@ -47,17 +47,47 @@ class ConfigService:
         self._initialized = True
 
     def get(self, key: str, default: Any = None) -> Any:
-        return self._config.get(key, default)
+        """Get a config value. Supports dot notation for nested keys (e.g. 'dock.enabled')."""
+        parts = key.split(".")
+        current = self._config
+        for part in parts:
+            if isinstance(current, dict):
+                current = current.get(part)
+                if current is None:
+                    return default
+            else:
+                return default
+        return current
 
     def get_all(self) -> Dict[str, Any]:
         return self._config.copy()
 
     def has_changed(self, key: str, old_config: Dict[str, Any]) -> bool:
-        return self._config.get(key) != old_config.get(key)
+        """Check if a config value changed. Supports dot notation for nested keys."""
+
+        def _get_nested(d, k):
+            parts = k.split(".")
+            current = d
+            for part in parts:
+                if isinstance(current, dict):
+                    current = current.get(part)
+                    if current is None:
+                        return None
+                else:
+                    return None
+            return current
+
+        return _get_nested(self._config, key) != _get_nested(old_config, key)
 
     def set(self, key: str, value: Any) -> None:
-        """Set a config value (local state only)."""
-        self._config[key] = value
+        """Set a config value (local state only). Supports dot notation for nested keys."""
+        parts = key.split(".")
+        current = self._config
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = {}
+            current = current[part]
+        current[parts[-1]] = value
 
     def save(self) -> None:
         """Persist current in-memory config to disk."""

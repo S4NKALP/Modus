@@ -26,6 +26,8 @@ class AppletWindow(PopupWindow):
     def __init__(self, edge_margin: int = 0, **kwargs):
         self._is_open = False
         self._hide_timeout_id = None
+        self._parent_dropdown = kwargs.pop("parent_dropdown", None)
+        self._child_dropdown = None
         self.dismiss_layer = DismissLayer(on_dismiss=self.toggle)
         kwargs["keyboard_mode"] = "on-demand"
         super().__init__(edge_margin=edge_margin, **kwargs)
@@ -44,7 +46,11 @@ class AppletWindow(PopupWindow):
         self._is_open = True
 
         active = AppletWindow._active_popup
-        if active and active != self:
+        if (
+            active
+            and active != self
+            and active is not getattr(self, "_parent_dropdown", None)
+        ):
             try:
                 if hasattr(active, "close_applet"):
                     active.close_applet()
@@ -56,6 +62,9 @@ class AppletWindow(PopupWindow):
                 )
 
         AppletWindow._active_popup = self
+
+        if self._parent_dropdown:
+            self._parent_dropdown._child_dropdown = self
 
         if self._hide_timeout_id is not None:
             GLib.source_remove(self._hide_timeout_id)
@@ -75,6 +84,13 @@ class AppletWindow(PopupWindow):
             return
 
         self._is_open = False
+
+        if hasattr(self, "_child_dropdown") and self._child_dropdown:
+            try:
+                self._child_dropdown.close_applet()
+            except Exception:
+                pass
+            self._child_dropdown = None
 
         if self._hide_timeout_id is not None:
             GLib.source_remove(self._hide_timeout_id)

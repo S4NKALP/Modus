@@ -837,7 +837,7 @@ class NotificationWidget(Box):
         """Get the current notification timeout from config manager."""
         try:
             timeout_str = get_config(
-                "notification_timeout", data.NOTIFICATION_TIMEOUT_STR
+                "notification.timeout", data.NOTIFICATION_TIMEOUT_STR
             )
             from shared.data import parse_timeout_string
 
@@ -1472,13 +1472,13 @@ class ModusNoti(Window):
     def _apply_initial_config(self):
         try:
             timeout_val = get_config(
-                "notification_timeout", data.NOTIFICATION_TIMEOUT_STR
+                "notification.timeout", data.NOTIFICATION_TIMEOUT_STR
             )
             ignored_apps = get_config(
-                "notification_ignored_apps", data.NOTIFICATION_IGNORED_APPS_HISTORY
+                "notification.ignored_apps", data.NOTIFICATION_IGNORED_APPS_HISTORY
             )
             limited_apps = get_config(
-                "notification_limited_apps_history",
+                "notification.limited_apps_history",
                 data.NOTIFICATION_LIMITED_APPS_HISTORY,
             )
             initial = {
@@ -1493,14 +1493,19 @@ class ModusNoti(Window):
 
     def _on_config_changed(self, new_config: dict, old_config: dict):
         try:
+            new_notif = new_config.get("notification", {})
+            old_notif = old_config.get("notification", {})
             changes = {}
-            for key in (
-                "notification_timeout",
-                "notification_ignored_apps",
-                "notification_limited_apps_history",
-            ):
-                if key in new_config and new_config.get(key) != old_config.get(key):
-                    changes[key] = new_config.get(key)
+            key_map = {
+                "timeout": "notification_timeout",
+                "ignored_apps": "notification_ignored_apps",
+                "limited_apps_history": "notification_limited_apps_history",
+            }
+            for new_key, local_key in key_map.items():
+                if new_key in new_notif and new_notif.get(new_key) != old_notif.get(
+                    new_key
+                ):
+                    changes[local_key] = new_notif.get(new_key)
 
             if changes:
                 self.update_config(changes)

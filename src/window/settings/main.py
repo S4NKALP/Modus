@@ -335,37 +335,37 @@ class SettingsWindow(Gtk.Window):
             [
                 SettingsRow(
                     "Debug Mode",
-                    SettingsSwitch("debug"),
+                    SettingsSwitch("general.debug"),
                     "Enable verbose logging for development",
                 ),
                 SettingsRow(
                     "Weather Location",
-                    SettingsEntry("weather_location"),
+                    SettingsEntry("general.weather_location"),
                     "City name for weather updates",
                 ),
                 SettingsRow(
                     "Keyboard Layouts",
-                    SettingsList("keyboard_layouts"),
+                    SettingsList("general.keyboard_layouts"),
                     "Manage active keyboard input languages",
                 ),
                 SettingsRow(
                     "Hide Special Workspace",
-                    SettingsSwitch("hide_special_workspace"),
+                    SettingsSwitch("panel.hide_special_workspace"),
                     "Don't show special workspace in indicators",
                 ),
                 SettingsRow(
                     "Night Light Temperature",
-                    SettingsEntry("night_light_temperature"),
+                    SettingsEntry("panel.night_light_temperature"),
                     "Color temperature in Kelvin (e.g. 4500)",
                 ),
                 SettingsRow(
                     "Live Preview",
-                    SettingsSwitch("switcher_live_preview"),
+                    SettingsSwitch("switcher.live_preview"),
                     "Show live window previews in switcher",
                 ),
                 SettingsRow(
                     "Preview Delay (ms)",
-                    SettingsEntry("switcher_live_preview_delay_ms"),
+                    SettingsEntry("switcher.live_preview_delay_ms"),
                     "Delay before live preview appears",
                 ),
             ],
@@ -377,27 +377,27 @@ class SettingsWindow(Gtk.Window):
             [
                 SettingsRow(
                     "Enabled",
-                    SettingsSwitch("dock_enabled"),
+                    SettingsSwitch("dock.enabled"),
                     "Show the application dock",
                 ),
                 SettingsRow(
                     "Auto Hide",
-                    SettingsSwitch("dock_auto_hide"),
+                    SettingsSwitch("dock.auto_hide"),
                     "Hide dock when not in use",
                 ),
                 SettingsRow(
                     "Always Occluded",
-                    SettingsSwitch("dock_always_occluded"),
+                    SettingsSwitch("dock.always_occluded"),
                     "Keep dock behind other windows",
                 ),
                 SettingsRow(
                     "Icon Size",
-                    SettingsEntry("dock_icon_size"),
+                    SettingsEntry("dock.icon_size"),
                     "Size of dock icons in pixels",
                 ),
                 SettingsRow(
                     "Hide Special Apps",
-                    SettingsSwitch("dock_hide_special_workspace_apps"),
+                    SettingsSwitch("dock.hide_special_workspace_apps"),
                     "Hide apps from special workspace in dock",
                 ),
             ],
@@ -407,72 +407,72 @@ class SettingsWindow(Gtk.Window):
         rows = [
             SettingsRow(
                 "Global Menu",
-                SettingsSwitch("global_menu"),
+                SettingsSwitch("panel.global_menu"),
                 "Show application menu in the panel",
             ),
             SettingsRow(
                 "iMac Button",
-                SettingsSwitch("imac_button"),
+                SettingsSwitch("panel.imac_button"),
             ),
             SettingsRow(
                 "Systray",
-                SettingsSwitch("systray"),
+                SettingsSwitch("panel.systray"),
             ),
             SettingsRow(
                 "Control Center",
-                SettingsSwitch("control_center"),
+                SettingsSwitch("panel.control_center"),
             ),
             SettingsRow(
                 "Search",
-                SettingsSwitch("search"),
+                SettingsSwitch("panel.search"),
             ),
             SettingsRow(
                 "Network",
-                SettingsSwitch("network"),
+                SettingsSwitch("panel.network"),
             ),
             SettingsRow(
                 "Battery",
-                SettingsSwitch("battery"),
+                SettingsSwitch("panel.battery"),
             ),
             SettingsRow(
                 "Bluetooth",
-                SettingsSwitch("bluetooth"),
+                SettingsSwitch("panel.bluetooth"),
             ),
             SettingsRow(
                 "Date & Time",
-                SettingsSwitch("date_time"),
+                SettingsSwitch("panel.date_time"),
             ),
             SettingsRow(
                 "Workspace Indicator",
-                SettingsSwitch("workspace_indicator"),
+                SettingsSwitch("panel.workspace_indicator"),
             ),
             SettingsRow(
                 "Notification Center",
-                SettingsSwitch("notification_center"),
+                SettingsSwitch("panel.notification_center"),
             ),
             SettingsRow(
                 "Custom Mods",
-                SettingsSwitch("custom_mods"),
+                SettingsSwitch("panel.custom_mods"),
                 "Enable custom Hyprland mods in panel",
             ),
             SettingsRow(
                 "Window Switcher",
-                SettingsSwitch("window_switcher"),
+                SettingsSwitch("switcher.window_switcher"),
                 "Enable Alt+Tab window switcher",
             ),
             SettingsRow(
                 "OSD",
-                SettingsSwitch("osd"),
+                SettingsSwitch("panel.osd"),
                 "Enable on-screen display for volume/brightness",
             ),
             SettingsRow(
                 "Wallpapers Directory",
-                SettingsEntry("wallpapers_dir"),
+                SettingsEntry("general.wallpapers_dir"),
                 "Path to wallpapers folder",
             ),
             SettingsRow(
                 "Systray Ignore",
-                SettingsList("systray_ignore"),
+                SettingsList("panel.systray_ignore"),
                 "Icons to hide from the system tray",
             ),
         ]
@@ -485,17 +485,17 @@ class SettingsWindow(Gtk.Window):
             [
                 SettingsRow(
                     "Timeout",
-                    SettingsEntry("notification_timeout"),
+                    SettingsEntry("notification.timeout"),
                     "How long notifications stay on screen (e.g. 5s)",
                 ),
                 SettingsRow(
                     "Ignored Apps",
-                    SettingsList("notification_ignored_apps"),
+                    SettingsList("notification.ignored_apps"),
                     "Apps that won't show notifications",
                 ),
                 SettingsRow(
                     "Limited History",
-                    SettingsList("notification_limited_apps_history"),
+                    SettingsList("notification.limited_apps_history"),
                     "Apps with only the latest notification shown",
                 ),
             ],

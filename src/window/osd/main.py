@@ -40,14 +40,14 @@ class OSD(Box):
     def show_audio_osd(self):
         from services.config import get_config
 
-        if not get_config("osd", True):
+        if not get_config("panel.osd", True):
             return
         self.show_container(self.containers.get("audio"))
 
     def show_brightness_osd(self):
         from services.config import get_config
 
-        if not get_config("osd", True):
+        if not get_config("panel.osd", True):
             return
         self.show_container(self.containers.get("brightness"))
 
@@ -71,13 +71,13 @@ class OSDWindow(Window):
     def osd_show_audio(self):
         from services.config import get_config
 
-        if not get_config("osd", True):
+        if not get_config("panel.osd", True):
             return
         self.osd.containers["audio"].update()
 
     def osd_show_brightness(self):
         from services.config import get_config
 
-        if not get_config("osd", True):
+        if not get_config("panel.osd", True):
             return
         self.osd.containers["brightness"].update()

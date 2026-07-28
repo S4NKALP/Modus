@@ -38,8 +38,10 @@ Once compiled, you can easily load the library into any Python script using PyGO
 
 ```python
 import gi
+
 gi.require_version("AppCapture", "1.0")
 from gi.repository import AppCapture
+
 
 def on_frame_ready(capture, address, data, width, height, stride):
     # 'data' is a GLib.Bytes object containing the raw ARGB32 pixel data
@@ -49,8 +51,10 @@ def on_frame_ready(capture, address, data, width, height, stride):
     # Example: Request the next frame, but wait for damage (0% CPU idle)
     capture.capture_by_handle(address, 300, 168, True)
 
+
 def on_frame_failed(capture, address, reason):
     print(f"Failed to capture {address}: {reason}")
+
 
 # 1. Initialize the capture module
 capture = AppCapture.Capture()

@@ -20,7 +20,7 @@ def _get_wallpaper_path() -> str:
     try:
         from services.config import get_config
 
-        custom = get_config("wallpapers_dir")
+        custom = get_config("general.wallpapers_dir")
         if custom:
             expanded = os.path.expanduser(str(custom))
             if not os.path.isabs(expanded):

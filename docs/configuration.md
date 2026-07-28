@@ -35,34 +35,34 @@ fabric-cli exec modus "settings.toggle()"
 
 Auto-generated on first run with sensible defaults. Most changes require restarting Modus (`uv run start`).
 
-### General
+Config is organized into sections. Values are accessed via dot notation (e.g. `panel.battery`).
+
+### `[general]`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `debug` | bool | `false` | Enable verbose logging |
 | `weather_location` | string | `""` | City for weather widget (e.g., `"London, UK"`) |
 | `keyboard_layouts` | array | `["us"]` | Active keyboard layouts |
-| `night_light_temperature` | int | `4500` | Night light color temp in Kelvin |
 | `wallpapers_dir` | string | `"src/assets/wallpaper_example/"` | Path to wallpapers folder |
-| `switcher_live_preview` | bool | `true` | Live window previews in switcher |
-| `switcher_live_preview_delay_ms` | int | `200` | Preview framerate delay (lower = smoother) |
 
-### Dock
+### `[dock]`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `dock_enabled` | bool | `true` | Show the dock |
-| `dock_auto_hide` | bool | `true` | Hide when windows overlap |
-| `dock_always_occluded` | bool | `false` | Keep dock behind windows |
-| `dock_icon_size` | int | `52` | Icon size in pixels |
-| `dock_hide_special_workspace_apps` | bool | `true` | Hide special workspace apps |
+| `enabled` | bool | `true` | Show the dock |
+| `auto_hide` | bool | `true` | Hide when windows overlap |
+| `always_occluded` | bool | `false` | Keep dock behind windows |
+| `icon_size` | int | `52` | Icon size in pixels |
+| `hide_special_workspace_apps` | bool | `true` | Hide special workspace apps |
 
-### Panel Widgets
+### `[panel]`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `imac_button` | bool | `true` | Apple logo button |
 | `systray` | bool | `true` | System tray |
+| `systray_ignore` | array | `["blueman", "network"]` | Icons hidden from system tray |
 | `control_center` | bool | `true` | Control center widget |
 | `search` | bool | `true` | Search/spotlight button |
 | `global_menu` | bool | `true` | App menus in panel |
@@ -73,19 +73,26 @@ Auto-generated on first run with sensible defaults. Most changes require restart
 | `workspace_indicator` | bool | `true` | Workspace indicator |
 | `notification_center` | bool | `true` | Notification center |
 | `notch` | bool | `true` | Center notch (player, indicators, recording) |
-| `custom_mods` | bool | `true` | Custom panel buttons from `mods.toml` |
-| `window_switcher` | bool | `true` | Alt-Tab window switcher |
 | `osd` | bool | `true` | Volume/brightness on-screen display |
+| `night_light_temperature` | int | `4500` | Night light color temp in Kelvin |
 | `hide_special_workspace` | bool | `true` | Hide special workspace from indicators |
+| `custom_mods` | bool | `true` | Custom panel buttons from `mods.toml` |
 
-### Notifications
+### `[switcher]`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `notification_timeout` | string | `"5s"` | Auto-dismiss duration |
-| `notification_ignored_apps` | array | `["Hyprshot"]` | Apps with suppressed notifications |
-| `notification_limited_apps_history` | array | `["Spotify"]` | Apps with limited history |
-| `systray_ignore` | array | `["blueman", "network"]` | Icons hidden from system tray |
+| `live_preview` | bool | `true` | Live window previews in switcher |
+| `live_preview_delay_ms` | int | `200` | Preview framerate delay (lower = smoother) |
+| `window_switcher` | bool | `true` | Alt-Tab window switcher |
+
+### `[notification]`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `timeout` | string | `"5s"` | Auto-dismiss duration |
+| `ignored_apps` | array | `["Hyprshot"]` | Apps with suppressed notifications |
+| `limited_apps_history` | array | `["Spotify"]` | Apps with limited history |
 
 ---
 
@@ -143,6 +150,7 @@ on-left = "wlogout"
 - `on-clicked`, `on-left`, `on-right`, `on-middle` — shell commands via `sh -c`
 - `on-scroll-up`, `on-scroll-down` — scroll event commands
 - `options` — dropdown menu entries (each with `label` + `on-clicked`)
+  - Add `divider = true` before an option to insert a separator
 - Full shell syntax (`&&`, `|`) supported
 
 ---

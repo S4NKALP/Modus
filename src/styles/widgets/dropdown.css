@@ -1,64 +1,47 @@
-#dropdown-menu {
-  background-color: transparent;
+/* ── GtkMenu global styles  ── */
 
-  border-radius: 0.75rem;
-  margin: 0;
+.background.popup {
+  background: transparent;
 }
 
-#dropdown-options {
-  background-color: @glass-menu;
+/* GtkMenu container */
+menu {
+  background-color: @glass-popup;
   border: 1px solid @glass-border;
   border-radius: 0.75rem;
   padding: 0.5rem;
 }
 
-#dropdown-option {
-  background-color: transparent;
+/* GtkMenuItem */
+menu menuitem {
   border-radius: apply(radius-xs);
   padding: 0px 10px;
   margin: 1px 2px;
+  color: @glass-text;
   transition: all 0ms ease-in-out;
 }
 
-#dropdown-option:hover {
-  color: @glass-text;
-  transition: all 20ms ease-in-out;
+/* GtkMenuItem hover */
+menu menuitem:hover {
   background-color: @glass-hover;
-}
-
-#dropdown-option:hover #dropdown-option-label {
   color: @glass-text;
 }
 
-#dropdown-option-label {
+/* GtkMenuItem label */
+menu menuitem label {
   font-size: apply(font-md);
   margin: 0px;
-  color: @glass-text;
+  color: inherit;
   font-weight: 400;
 }
 
-#dropdown-option-label:first-child {
-  padding-right: 5rem;
-}
-
-#dropdown-option:hover #dropdown-option-keybind {
-  color: @glass-text;
-}
-
-#dropdown-option-keybind {
-  font-weight: 500;
+/* Submenu arrow */
+menu menuitem arrow {
   color: @glass-text-secondary;
 }
 
-/* Divider */
-
-#dropdown-divider-box {
-  background-color: transparent;
-  border-radius: apply(radius-xs);
-  padding: 0px 10px;
-  margin: 2px;
-}
-#dropdown-divider {
-  border-bottom: 1px solid @glass-divider;
-  margin: 2px 0;
+/* Disabled */
+menu menuitem:disabled {
+  color: @glass-text-disabled;
+  opacity: 0.5;
 }

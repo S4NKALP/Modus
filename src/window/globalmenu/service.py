@@ -20,6 +20,7 @@ from fabric.utils import (
 from window.globalmenu.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
 from window.globalmenu.environment import setup_global_menu_environment
 from window.globalmenu.gtkmenu import ActionMenuClient, GtkMenuClient
+from window.globalmenu.registrar import Registrar
 
 _NODE_NAME_RE = re.compile(r'<node name="([^"]+)"')
 
@@ -47,6 +48,7 @@ class _IntrospectionCache:
 
     def __init__(self):
         self._cache: dict[str, str] = {}
+        self._dead: set[str] = set()
         self._lock = threading.Lock()
 
     def get(self, service: str, path: str, bus, timeout: int) -> str:
@@ -54,12 +56,17 @@ class _IntrospectionCache:
             return ""
         key = f"{service}:{path}"
         with self._lock:
+            if key in self._dead:
+                return ""
             cached = self._cache.get(key)
             if cached is not None:
                 return cached
         xml = _dbus_introspect(bus, service, path, timeout)
         with self._lock:
-            self._cache[key] = xml
+            if xml:
+                self._cache[key] = xml
+            else:
+                self._dead.add(key)
         return xml
 
     def invalidate(self, service: str):
@@ -133,29 +140,6 @@ def _dbus_get_pid(bus, service: str, timeout: int) -> int:
         return 0
 
 
-REGISTRAR_XML = """
-<node>
-  <interface name="com.canonical.AppMenu.Registrar">
-    <method name="RegisterWindow">
-      <arg type="u" name="windowId" direction="in"/>
-      <arg type="o" name="menuObjectPath" direction="in"/>
-    </method>
-    <method name="UnregisterWindow">
-      <arg type="u" name="windowId" direction="in"/>
-    </method>
-    <method name="GetMenuForWindow">
-      <arg type="u" name="windowId" direction="in"/>
-      <arg type="s" name="service" direction="out"/>
-      <arg type="o" name="menuObjectPath" direction="out"/>
-    </method>
-    <method name="GetMenus">
-      <arg type="a(uso)" name="menus" direction="out"/>
-    </method>
-  </interface>
-</node>
-"""
-
-
 class GlobalMenuService(Service):
     """Service that extracts and provides application menus for the global menu bar."""
 
@@ -189,9 +173,7 @@ class GlobalMenuService(Service):
         self._registry_lock = threading.Lock()
         self._state_lock = threading.Lock()
 
-        self._registered_menus: dict[str, tuple[str, str]] = {}
-
-        self._setup_registrar()
+        Registrar.get_instance().start()
         self._subscribe_name_owner_changed()
         threading.Thread(target=self._setup_environment, daemon=True).start()
         threading.Thread(target=self._scan_initial_services, daemon=True).start()
@@ -269,7 +251,6 @@ class GlobalMenuService(Service):
                 return
             if entry.pid:
                 self._pid_to_service.pop(entry.pid, None)
-            self._registered_menus.pop(service_name, None)
             if isinstance(entry.importer, DBusMenuClient):
                 try:
                     entry.importer.disconnect_signals()
@@ -288,78 +269,8 @@ class GlobalMenuService(Service):
             f"[GlobalMenuService] Cleaned up disappeared service: {service_name}"
         )
 
-    def _setup_registrar(self):
-        try:
-            self._bus = _get_bus()
-            self._node = Gio.DBusNodeInfo.new_for_xml(REGISTRAR_XML)
-            self._bus.register_object(
-                "/com/canonical/AppMenu/Registrar",
-                self._node.interfaces[0],
-                self._handle_registrar_method,
-                None,
-                None,
-            )
-            Gio.bus_own_name_on_connection(
-                self._bus,
-                "com.canonical.AppMenu.Registrar",
-                Gio.BusNameOwnerFlags.NONE,
-                None,
-                None,
-            )
-            logger.info("[GlobalMenuService] AppMenu Registrar DBus service started")
-        except Exception as e:
-            logger.error(f"[GlobalMenuService] Failed to start Registrar: {e}")
-
     def _setup_environment(self):
         setup_global_menu_environment()
-
-    def _handle_registrar_method(
-        self,
-        connection,
-        sender,
-        object_path,
-        _interface_name,
-        method_name,
-        parameters,
-        invocation,
-    ):
-        try:
-            if method_name == "RegisterWindow":
-                window_id, menu_path = parameters.unpack()
-                logger.debug(
-                    f"[GlobalMenuService] App {sender} registered menu {menu_path} for window {window_id}"
-                )
-                with self._registry_lock:
-                    self._registered_menus[sender] = (sender, menu_path)
-                invocation.return_value(None)
-
-            elif method_name == "UnregisterWindow":
-                with self._registry_lock:
-                    self._registered_menus.pop(sender, None)
-                invocation.return_value(None)
-
-            elif method_name == "GetMenuForWindow":
-                window_id = parameters.unpack()[0]
-                with self._registry_lock:
-                    entry = self._registered_menus.get(sender)
-                if entry:
-                    svc_name, svc_path = entry
-                    invocation.return_value(GLib.Variant("(so)", (svc_name, svc_path)))
-                else:
-                    invocation.return_value(
-                        GLib.Variant("(so)", (sender, "/com/canonical/menu/0"))
-                    )
-
-            elif method_name == "GetMenus":
-                with self._registry_lock:
-                    menus = [
-                        (0, svc, path)
-                        for sender, (svc, path) in self._registered_menus.items()
-                    ]
-                invocation.return_value(GLib.Variant("(a(uso))", (menus,)))
-        except Exception as e:
-            logger.error(f"[GlobalMenuService] Registrar error {method_name}: {e}")
-            invocation.return_error_literal(Gio.DBusError.FAILED, "FAILED", str(e))
 
     def _uid(self, wm_class: str, pid: int) -> str:
         return f"{wm_class}:{pid}"
@@ -657,9 +568,10 @@ class GlobalMenuService(Service):
 
     def _find_registrar(self, wm_class: str, target_pid: int) -> Optional[_MenuClient]:
         bus = _get_bus()
-        with self._registry_lock:
-            registered = dict(self._registered_menus)
-        for sender, (service, path) in registered.items():
+        registrar = Registrar.get_instance()
+        registered = registrar.get_all_registrations()
+        for window_id, reg in registered.items():
+            service, path = reg.bus_name, reg.object_path
             try:
                 pid = _dbus_get_pid(bus, service, _DBUS_TIMEOUT_FAST)
                 if pid == target_pid or self._is_same_app(pid, target_pid):
@@ -678,8 +590,7 @@ class GlobalMenuService(Service):
                     return client
             except Exception as e:
                 if "NameHasNoOwner" in str(e):
-                    with self._registry_lock:
-                        self._registered_menus.pop(sender, None)
+                    registrar.unregister_window(window_id)
         return None
 
     def _find_fallback_scan(
@@ -719,14 +630,17 @@ class GlobalMenuService(Service):
                 if not (pid == target_pid or self._is_same_app(pid, target_pid)):
                     continue
 
-                with self._registry_lock:
-                    if reg_entry := self._registered_menus.get(svc):
-                        logger.info(
-                            f"[GlobalMenuService] Found Registrar path {reg_entry[1]} for {svc}"
-                        )
-                        client = DBusMenuClient(reg_entry[0], reg_entry[1])
-                        self._cache_discovery(svc, reg_entry[1], pid, wm_class, client)
-                        return client
+                registrar = Registrar.get_instance()
+                reg_entry = registrar.get_menu_for_bus_name(svc)
+                if reg_entry:
+                    logger.info(
+                        f"[GlobalMenuService] Found Registrar path {reg_entry.object_path} for {svc}"
+                    )
+                    client = DBusMenuClient(reg_entry.bus_name, reg_entry.object_path)
+                    self._cache_discovery(
+                        svc, reg_entry.object_path, pid, wm_class, client
+                    )
+                    return client
 
                 _safe_cls = re.sub(r"[^A-Za-z0-9_]", "", wm_class) if wm_class else ""
                 _safe_cap = _safe_cls.capitalize() if _safe_cls else ""
@@ -1089,6 +1003,34 @@ class GlobalMenuService(Service):
             f"[GlobalMenuService] click_item FAILED: item_id={item_id}, entry={entry}, pid={pid}"
         )
         return False
+
+    def get_current_dbusmenu_info(self) -> tuple[Optional[str], Optional[str]]:
+        """Return (unique_bus_name, object_path) for the current app if it has a DBusMenu server."""
+        entry, _pid = self._resolve_current_entry()
+        if entry and entry.importer and isinstance(entry.importer, DBusMenuClient):
+            unique_name = self._resolve_unique_name(entry.importer.service_name)
+            return unique_name, entry.importer.object_path
+        return None, None
+
+    def _resolve_unique_name(self, well_known_name: str) -> Optional[str]:
+        """Resolve a well-known D-Bus name to its unique name (e.g. :1.123)."""
+        try:
+            bus = _get_bus()
+            res = bus.call_sync(
+                "org.freedesktop.DBus",
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                "GetNameOwner",
+                GLib.Variant("(s)", (well_known_name,)),
+                GLib.VariantType("(s)"),
+                Gio.DBusCallFlags.NONE,
+                _DBUS_TIMEOUT_FAST,
+                None,
+            )
+            return res.get_child_value(0).get_string() if res else well_known_name
+        except Exception as e:
+            logger.warning(f"[service] GetNameOwner failed for {well_known_name}: {e}")
+            return well_known_name
 
     def about_to_show(self, item_id: int) -> bool:
         entry, _pid = self._resolve_current_entry()

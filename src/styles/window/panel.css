@@ -5,15 +5,10 @@
 }
 
 #panel-button:hover,
-#panel-button.active,
 #battery-button:hover,
-#battery-button.active,
 #network-button:hover,
-#network-button.active,
 #bt-button:hover,
-#bt-button.active,
 #global-menu:hover,
-#global-menu.active,
 #workspaces>button:hover {
     background-color: @glass-hover;
     color: @glass-text;
@@ -28,15 +23,39 @@
     border-radius: apply(radius-sm);
 }
 
-#battery-label,
-#date-time {
-    font-weight: 500;
+#panel-button:active,
+#battery-button:active,
+#network-button:active,
+#bt-button:active {
+    background-color: transparent;
 }
 
 #global-menu {
     margin: 5px 2px;
     padding: 0 5px;
     border-radius: apply(radius-xs);
+    background: none;
+    border: none;
+    outline: none;
+    min-height: 0;
+    min-width: 0;
+}
+
+#global-menu indicator {
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    -gtk-icon-source: none;
+}
+
+#global-menu:active {
+    background-color: transparent;
+}
+
+#battery-label,
+#date-time {
+    font-weight: 500;
 }
 
 #date-time {
@@ -73,15 +92,10 @@
 
 
 #panel-button:hover *,
-#panel-button.active *,
 #battery-button:hover *,
-#battery-button.active *,
 #network-button:hover *,
-#network-button.active *,
 #bt-button:hover *,
-#bt-button.active *,
 #global-menu:hover *,
-#global-menu.active *,
 #workspaces>button:hover * {
     color: @glass-text;
 

@@ -123,7 +123,7 @@ class DockCanvas(Gtk.DrawingArea):
                 self.set_visual(visual)
 
     def _base_icon_size(self) -> int:
-        return int(config().get("dock_icon_size", 52))
+        return int(config().get("dock.icon_size", 52))
 
     def _icon_cache_size(self) -> int:
         return int(self._base_icon_size() * MAX_SCALE)

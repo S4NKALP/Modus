@@ -79,3 +79,38 @@
 #wifi-other-button:last-child {
   margin-bottom: 3px;
 }
+
+/* DNS Switcher */
+#dns-content {
+  padding: 2px 0;
+}
+
+#dns-current-label {
+  font-size: apply(font-sm);
+  color: @glass-text-secondary;
+}
+
+#dns-provider-button {
+  background-color: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: apply(radius-sm);
+}
+
+#dns-provider-button:hover {
+  background-color: @glass-hover;
+}
+
+#dns-provider-name {
+  font-size: apply(font-base);
+  color: @glass-text;
+}
+
+#dns-provider-address {
+  font-size: apply(font-sm);
+  color: @glass-text-secondary;
+}
+
+#dns-check-icon {
+  color: @glass-active;
+}
