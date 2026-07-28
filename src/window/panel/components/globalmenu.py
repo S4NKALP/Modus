@@ -1,10 +1,11 @@
 from fabric.hyprland.widgets import HyprlandActiveWindow as ActiveWindow
-from fabric.utils import FormattedString, exec_shell_command_async, logger
+from fabric.utils import FormattedString, GLib, exec_shell_command_async, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from gi.repository import Gtk
 
 from shared.dialogs.about import AboutApp, get_about_window
+from shared.window.dropdown import ModusDropdown, dropdown_option
 from utils.app_name_resolver import format_window
 from utils.gtk_utils import setup_cursor_hover
 from utils.roam import modus_service
@@ -13,10 +14,8 @@ from window.settings.main import get_settings_window
 
 
 def has_active_window():
-    return (
-        modus_service.current_active_app_name
-        and modus_service.current_active_app_name != "Modus"
-    )
+    app_name = modus_service.current_active_app_name
+    return app_name and app_name != "Modus"
 
 
 def show_about_app(_=None):
@@ -28,41 +27,76 @@ def show_about_app(_=None):
     about_window.toggle(None)
 
 
+# Menu factories
+def _create_system_menu():
+    return [
+        dropdown_option(
+            "About this PC", callback=lambda _: get_about_window().toggle()
+        ),
+        None,
+        dropdown_option(
+            "System Settings...",
+            callback=lambda _: get_settings_window().toggle(),
+        ),
+        None,
+        dropdown_option(
+            "Force Quit",
+            callback=lambda _: exec_shell_command_async(
+                "hyprctl dispatch 'hl.dsp.window.kill()'", lambda *_: None
+            ),
+        ),
+        None,
+        dropdown_option(
+            "Sleep",
+            callback=lambda _: exec_shell_command_async(
+                "systemctl suspend", lambda *_: None
+            ),
+        ),
+        dropdown_option(
+            "Restart",
+            callback=lambda _: exec_shell_command_async(
+                "systemctl reboot", lambda *_: None
+            ),
+        ),
+        dropdown_option(
+            "Shut Down",
+            callback=lambda _: exec_shell_command_async(
+                "shutdown now", lambda *_: None
+            ),
+        ),
+        None,
+        dropdown_option(
+            "Lock Screen",
+            "󰘳     L",
+            'fabric-cli exec modus "lock_screen.lock()"',
+        ),
+    ]
+
+
+def _create_title_menu(app_name):
+    menu = Gtk.Menu()
+    for label, handler in [
+        (f"About {app_name}", lambda *_: show_about_app()),
+        (
+            f"Quit {app_name}",
+            lambda *_: exec_shell_command_async(
+                "hyprctl dispatch 'hl.dsp.window.close()'", lambda *_: None
+            ),
+        ),
+    ]:
+        item = Gtk.MenuItem.new_with_label(label)
+        item.connect("activate", handler)
+        menu.append(item)
+    menu.show_all()
+    return menu
+
+
 def _clean_label(label):
     return label.replace("_", "")
 
 
-def _make_menu_item_click(item_id):
-    def handler(_, __=None):
-        svc = get_global_menu_service()
-        if svc:
-            svc.click_item(item_id)
-
-    return handler
-
-
-def _on_click_action(
-    menu_item, on_clicked=None, on_click='echo "ModusPanelDropdown Action"'
-):
-    if on_clicked:
-        on_clicked(menu_item)
-    else:
-        exec_shell_command_async(on_click, lambda *_: None)
-    from shared.window.dropdown import dropdowns
-
-    for dd in dropdowns:
-        if dd.is_visible():
-            dd.hide()
-            break
-
-
-# ========== GtkMenu builder ==========
-
-
-def _build_gtk_menu_from_children(children):
-    """Recursively build a Gtk.Menu from DBusMenuItem children."""
+def _build_gtk_menu_from_children(children, click_handler):
     menu = Gtk.Menu()
-    menu.set_name("dropdown-options")
 
     for child in children:
         if not getattr(child, "visible", True):
@@ -70,9 +104,7 @@ def _build_gtk_menu_from_children(children):
 
         child_type = getattr(child, "type", "standard")
         if child_type == "separator":
-            sep = Gtk.SeparatorMenuItem()
-            sep.set_name("dropdown-divider")
-            menu.append(sep)
+            menu.append(Gtk.SeparatorMenuItem())
             continue
 
         label = getattr(child, "label", "")
@@ -85,51 +117,23 @@ def _build_gtk_menu_from_children(children):
         has_sub = getattr(child, "has_submenu", False) or bool(sub_children)
 
         if has_sub and sub_children:
-            item = Gtk.MenuItem.new_with_label(f"{cleaned}  ▸")
-            item.set_name("dropdown-option")
-            sub_menu = _build_gtk_menu_from_children(sub_children)
+            item = Gtk.MenuItem.new_with_label(f"{cleaned}  \u25b8")
+            sub_menu = _build_gtk_menu_from_children(sub_children, click_handler)
             sub_menu.show_all()
             item.set_submenu(sub_menu)
         else:
             item = Gtk.MenuItem.new_with_label(cleaned)
-            item.set_name("dropdown-option")
             if not enabled:
                 item.set_sensitive(False)
-            item.connect("activate", _make_menu_item_click(child.id))
+            item.connect("activate", click_handler, child.id)
 
         menu.append(item)
 
+    menu.show_all()
     return menu
 
 
-def _make_simple_gtk_menu(items):
-    """Build a simple Gtk.Menu from a list of (label, on_activate, sensitive) tuples."""
-    menu = Gtk.Menu()
-    menu.set_name("dropdown-options")
-
-    for entry in items:
-        if entry is None:
-            sep = Gtk.SeparatorMenuItem()
-            sep.set_name("dropdown-divider")
-            menu.append(sep)
-            continue
-
-        label, on_activate, *rest = entry
-        sensitive = rest[0] if rest else True
-        item = Gtk.MenuItem.new_with_label(label)
-        item.set_name("dropdown-option")
-        if not sensitive:
-            item.set_sensitive(False)
-        else:
-            item.connect("activate", on_activate)
-        menu.append(item)
-
-    return menu
-
-
-# ========== GlobalMenuDropdowns ==========
-
-
+# GlobalMenuDropdowns
 class GlobalMenuDropdowns:
     def __init__(self, parent, menu_box=None):
         self.parent = parent
@@ -137,71 +141,17 @@ class GlobalMenuDropdowns:
         self._imac_button = None
 
         self._global_menu_svc = get_global_menu_service()
-        self._has_extracted_menu = False
 
         self._gtk_menu_buttons: list[Gtk.MenuButton] = []
         self._gtk_menus: list[Gtk.Menu] = []
 
-        # System dropdown (imac button)
-        self._system_menu = _make_simple_gtk_menu(
-            [
-                ("About this PC", lambda _: get_about_window().toggle()),
-                None,
-                ("System Settings...", lambda _: get_settings_window().toggle()),
-                None,
-                (
-                    "Force Quit",
-                    lambda _: exec_shell_command_async(
-                        "hyprctl dispatch 'hl.dsp.window.kill()'", lambda *_: None
-                    ),
-                ),
-                None,
-                (
-                    "Sleep",
-                    lambda _: exec_shell_command_async(
-                        "systemctl suspend", lambda *_: None
-                    ),
-                ),
-                (
-                    "Restart",
-                    lambda _: exec_shell_command_async(
-                        "systemctl reboot", lambda *_: None
-                    ),
-                ),
-                (
-                    "Shut Down",
-                    lambda _: exec_shell_command_async("shutdown now", lambda *_: None),
-                ),
-                None,
-                (
-                    "Lock Screen",
-                    lambda _: exec_shell_command_async(
-                        'fabric-cli exec modus "lock_screen.lock()"', lambda *_: None
-                    ),
-                ),
-            ]
-        )
-        self._system_menu.show_all()
+        self._system_dropdown = ModusDropdown(items=_create_system_menu())
+        self._system_menu = self._system_dropdown.menu
 
-        # Title dropdown (About / Quit app)
-        self._title_menu = _make_simple_gtk_menu(
-            [
-                (
-                    f"About {modus_service.current_active_app_name}",
-                    lambda _: show_about_app(),
-                ),
-                (
-                    f"Quit {modus_service.current_active_app_name}",
-                    lambda _: exec_shell_command_async(
-                        "hyprctl dispatch 'hl.dsp.window.close()'", lambda *_: None
-                    ),
-                ),
-            ]
-        )
-        self._title_menu.show_all()
+        self._title_menu = _create_title_menu(modus_service.current_active_app_name)
 
-        # Active window title (clickable)
         self.global_menu_button_title = Gtk.MenuButton(name="global-menu")
+        self.global_menu_button_title.get_style_context().add_class("flat")
         self.global_menu_button_title.set_popup(self._title_menu)
         self.global_menu_button_title.show_all()
         setup_cursor_hover(self.global_menu_button_title, "pointer")
@@ -238,32 +188,17 @@ class GlobalMenuDropdowns:
         self._system_menu.show_all()
         button.set_popup(self._system_menu)
 
-    def _get_all_buttons(self):
-        buttons = list(self.all_menu_buttons)
-        if self._imac_button and self._imac_button not in buttons:
-            buttons.append(self._imac_button)
-        return buttons
+    def _make_click_handler(self, _, item_id):
+        if self._global_menu_svc:
+            self._global_menu_svc.click_item(item_id)
 
     def _on_active_app_changed(self, _, value):
         logger.info(f"[GlobalMenu] Active app changed: {value}")
 
-        # Rebuild title menu with new app name
         old_menu = self._title_menu
-        self._title_menu = _make_simple_gtk_menu(
-            [
-                (f"About {value}", lambda _: show_about_app()),
-                (
-                    f"Quit {value}",
-                    lambda _: exec_shell_command_async(
-                        "hyprctl dispatch 'hl.dsp.window.close()'", lambda *_: None
-                    ),
-                ),
-            ]
-        )
-        self._title_menu.show_all()
+        self._title_menu = _create_title_menu(value)
         self.global_menu_button_title.set_popup(self._title_menu)
-        if old_menu:
-            old_menu.destroy()
+        GLib.idle_add(old_menu.destroy)
 
         if self._global_menu_svc:
             wm_class = getattr(modus_service, "current_active_wm_class", "")
@@ -272,28 +207,28 @@ class GlobalMenuDropdowns:
     def _on_menu_changed(self, _, menu_items: list):
         self._rebuild_dynamic_menus(menu_items)
 
+    def _destroy_widgets(self, widgets):
+        for widget in widgets:
+            try:
+                widget.destroy()
+            except Exception:
+                logger.exception("[globalmenu] widget destroy failed")
+
     def _cleanup_dynamic(self):
         for btn in self.all_menu_buttons:
-            if btn not in (self.global_menu_button_title,):
-                try:
-                    if btn.get_parent():
-                        btn.get_parent().remove(btn)
-                    btn.destroy()
-                except Exception as e:
-                    logger.warning(f"[globalmenu] cleanup failed: {e}")
-
-        for mb in self._gtk_menu_buttons:
+            if btn is self.global_menu_button_title:
+                continue
             try:
-                mb.destroy()
+                if btn.get_parent():
+                    btn.get_parent().remove(btn)
+                btn.destroy()
             except Exception:
-                pass
+                logger.exception("[globalmenu] cleanup failed")
+
+        self._destroy_widgets(self._gtk_menu_buttons)
         self._gtk_menu_buttons.clear()
 
-        for m in self._gtk_menus:
-            try:
-                m.destroy()
-            except Exception:
-                pass
+        self._destroy_widgets(self._gtk_menus)
         self._gtk_menus.clear()
 
     def _rebuild_dynamic_menus(self, menu_items: list):
@@ -302,16 +237,12 @@ class GlobalMenuDropdowns:
         self._cleanup_dynamic()
 
         top_level = [
-            item
-            for item in menu_items
-            if hasattr(item, "label") and item.label and getattr(item, "visible", True)
+            item for item in menu_items if item.label and getattr(item, "visible", True)
         ]
 
         if not top_level:
-            self._has_extracted_menu = False
             self.all_menu_buttons = [self.global_menu_button_title]
         else:
-            self._has_extracted_menu = True
             new_buttons = [self.global_menu_button_title]
 
             for item in top_level:
@@ -321,15 +252,16 @@ class GlobalMenuDropdowns:
                 if not has_children:
                     btn = Button(label=item.label, name="global-menu")
                     setup_cursor_hover(btn, "pointer")
-                    btn.connect("clicked", _make_menu_item_click(item.id))
+                    btn.connect("clicked", self._make_click_handler, item.id)
                     new_buttons.append(btn)
                 else:
                     menu_btn = Gtk.MenuButton(label=item.label, name="global-menu")
                     menu_btn.get_style_context().add_class("global-menu")
                     setup_cursor_hover(menu_btn, "pointer")
 
-                    gtk_menu = _build_gtk_menu_from_children(children)
-                    gtk_menu.show_all()
+                    gtk_menu = _build_gtk_menu_from_children(
+                        children, self._make_click_handler
+                    )
                     menu_btn.set_popup(gtk_menu)
                     menu_btn.show_all()
 
@@ -346,14 +278,14 @@ class GlobalMenuDropdowns:
     def destroy(self):
         try:
             modus_service.disconnect_by_func(self._on_active_app_changed)
-        except Exception as e:
-            logger.error(f"[globalmenu] disconnect failed: {e}")
+        except Exception:
+            logger.exception("[globalmenu] disconnect failed")
 
         if self._global_menu_svc:
             try:
                 self._global_menu_svc.disconnect_by_func(self._on_menu_changed)
-            except Exception as e:
-                logger.warning(f"[globalmenu] svc disconnect failed: {e}")
+            except Exception:
+                logger.exception("[globalmenu] svc disconnect failed")
 
         self._cleanup_dynamic()
 
@@ -362,8 +294,8 @@ class GlobalMenuDropdowns:
             if obj:
                 try:
                     obj.destroy()
-                except Exception as e:
-                    logger.error(f"[globalmenu] destroy failed: {e}")
+                except Exception:
+                    logger.exception(f"[globalmenu] {name} destroy failed")
 
 
 class GlobalMenu(Box):
@@ -388,6 +320,6 @@ class GlobalMenu(Box):
         if hasattr(self, "dropdown_system") and self.dropdown_system:
             try:
                 self.dropdown_system.destroy()
-            except Exception as e:
-                logger.error(f"[globalmenu] destroy failed: {e}")
+            except Exception:
+                logger.exception("[globalmenu] destroy failed")
         super().destroy()
