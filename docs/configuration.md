@@ -143,6 +143,7 @@ on-left = "wlogout"
 - `on-clicked`, `on-left`, `on-right`, `on-middle` — shell commands via `sh -c`
 - `on-scroll-up`, `on-scroll-down` — scroll event commands
 - `options` — dropdown menu entries (each with `label` + `on-clicked`)
+  - Add `divider = true` before an option to insert a separator
 - Full shell syntax (`&&`, `|`) supported
 
 ---
