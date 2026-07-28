@@ -62,17 +62,17 @@ def search(self, query: str, token: Any) -> list[SearchResult]:
 
 ```python
 SearchResult(
-    id="unique_id",           # Unique within your plugin
-    title="Display Title",    # Main text
-    subtitle="Description",   # Secondary text
-    icon_name="",             # GTK icon name (optional)
-    icon_data=None,           # Raw image bytes for custom icons (optional)
-    score=80.0,               # 0-100, higher = better match
-    render_type="default",    # Controls rendering (see below)
-    action=lambda: ...,       # Called when user selects this result
-    plugin_name="",           # Auto-filled by spotlight
-    plugin_id="",             # Auto-filled by spotlight
-    metadata={},              # Arbitrary data for renderers
+    id="unique_id",  # Unique within your plugin
+    title="Display Title",  # Main text
+    subtitle="Description",  # Secondary text
+    icon_name="",  # GTK icon name (optional)
+    icon_data=None,  # Raw image bytes for custom icons (optional)
+    score=80.0,  # 0-100, higher = better match
+    render_type="default",  # Controls rendering (see below)
+    action=lambda: ...,  # Called when user selects this result
+    plugin_name="",  # Auto-filled by spotlight
+    plugin_id="",  # Auto-filled by spotlight
+    metadata={},  # Arbitrary data for renderers
 )
 ```
 
@@ -159,6 +159,7 @@ class HelloPlugin(SpotlightPlugin):
             )
         ]
 
+
 PLUGIN = HelloPlugin
 ```
 
@@ -190,7 +191,7 @@ class GooglePlugin(SpotlightPlugin):
         q = query.strip()
         if q:
             url = f"https://www.google.com/search?q={urllib.parse.quote(q)}"
-            spawn_detached(["xdg-open", url])   # no shell injection risk
+            spawn_detached(["xdg-open", url])  # no shell injection risk
 
 
 PLUGIN = GooglePlugin
