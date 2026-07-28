@@ -2,6 +2,7 @@ import importlib
 import os
 import pkgutil
 import sys
+from functools import partial
 
 import cairo
 import tomlkit
@@ -45,7 +46,7 @@ def _load_user_widgets() -> set[str]:
         module_name = fname[:-3]
         full_path = os.path.join(_CONFIG_DESKTOP_DIR, fname)
         try:
-            before_keys = set(DesktopWidgetRegistry._widgets)
+            before_keys = set(DesktopWidgetRegistry.keys())
             spec = importlib.util.spec_from_file_location(
                 f"user_widget_{module_name}", full_path
             )
@@ -53,7 +54,7 @@ def _load_user_widgets() -> set[str]:
             sys.modules[spec.name] = mod
             spec.loader.exec_module(mod)
             _user_widget_modules[module_name] = spec.name
-            new_keys = set(DesktopWidgetRegistry._widgets) - before_keys
+            new_keys = set(DesktopWidgetRegistry.keys()) - before_keys
             for k in new_keys:
                 _user_key_to_file[k] = module_name
                 DesktopWidgetRegistry.register_user(k)
@@ -100,13 +101,13 @@ class PositionManager:
         mid_str = str(monitor_id)
         if mid_str not in state or not state[mid_str]:
             state[mid_str] = []
-            for key in DesktopWidgetRegistry._widgets:
+            for key in DesktopWidgetRegistry.widgets():
                 pos = DesktopWidgetRegistry.get_default_position(key)
                 px, py = pos if pos else (0.0, 0.0)
                 state[mid_str].append({"key": key, "px": px, "py": py})
             cls._write(state)
         else:
-            registered = set(DesktopWidgetRegistry._widgets)
+            registered = set(DesktopWidgetRegistry.keys())
             before = len(state[mid_str])
             state[mid_str] = [e for e in state[mid_str] if e["key"] in registered]
             for key in registered - {e["key"] for e in state[mid_str]}:
@@ -173,25 +174,8 @@ class DesktopWidgetWindow(WaylandWindow):
             self._win_w = max(1, geom.width)
             self._win_h = max(1, geom.height)
 
-        self._fade_animator = Animator(
-            bezier_curve=(0.4, 0.0, 0.2, 1.0),
-            duration=0.2,
-            min_value=0.0,
-            max_value=1.0,
-            tick_widget=self._root,
-        )
-        self._fade_animator.connect("notify::value", self._on_fade_value)
-        self._fade_animator.connect("finished", self._on_fade_finished)
-
-        self._fade_out_animator = Animator(
-            bezier_curve=(0.4, 0.0, 0.2, 1.0),
-            duration=0.2,
-            min_value=0.0,
-            max_value=1.0,
-            tick_widget=self._root,
-        )
-        self._fade_out_animator.connect("notify::value", self._on_fade_out_value)
-        self._fade_out_animator.connect("finished", self._on_fade_out_finished)
+        self._fade_in_animator = self._make_fade_animator(1.0)
+        self._fade_out_animator = self._make_fade_animator(0.0)
         self._fixed.set_opacity(0.0)
 
         super().__init__(
@@ -229,33 +213,41 @@ class DesktopWidgetWindow(WaylandWindow):
 
     # fade
 
+    def _make_fade_animator(self, target_opacity: float) -> Animator:
+        animator = Animator(
+            bezier_curve=(0.4, 0.0, 0.2, 1.0),
+            duration=0.2,
+            min_value=0.0,
+            max_value=1.0,
+            tick_widget=self._root,
+        )
+        animator.connect("notify::value", self._on_fade_value)
+        animator.connect("finished", partial(self._on_fade_finished, target_opacity))
+        return animator
+
     def _on_fade_value(self, animator, _) -> None:
         self._fixed.set_opacity(animator.value)
 
-    def _on_fade_finished(self, animator) -> None:
-        self._fixed.set_opacity(1.0)
+    def _on_fade_finished(self, target_opacity: float, _animator) -> None:
+        self._fixed.set_opacity(target_opacity)
 
     def _fade_in(self) -> None:
-        if self._fade_animator.playing:
+        if self._fade_in_animator.playing:
             return
         self._fade_out_animator.pause()
-        self._fade_animator.value = self._fixed.get_opacity()
-        self._fade_animator.min_value = self._fixed.get_opacity()
-        self._fade_animator.max_value = 1.0
-        self._fade_animator.play()
+        opacity = self._fixed.get_opacity()
+        self._fade_in_animator.value = opacity
+        self._fade_in_animator.min_value = opacity
+        self._fade_in_animator.max_value = 1.0
+        self._fade_in_animator.play()
 
     def _fade_out(self) -> None:
-        self._fade_animator.pause()
+        self._fade_in_animator.pause()
+        opacity = self._fixed.get_opacity()
         self._fade_out_animator.min_value = 0.0
-        self._fade_out_animator.max_value = self._fixed.get_opacity()
-        self._fade_out_animator.value = self._fixed.get_opacity()
+        self._fade_out_animator.max_value = opacity
+        self._fade_out_animator.value = opacity
         self._fade_out_animator.play()
-
-    def _on_fade_out_value(self, animator, _) -> None:
-        self._fixed.set_opacity(animator.value)
-
-    def _on_fade_out_finished(self, animator) -> None:
-        self._fixed.set_opacity(0.0)
 
     # fallback poll — catches deletions that Gio file monitor misses
 
