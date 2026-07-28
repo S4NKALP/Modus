@@ -13,15 +13,15 @@ order = 1
 on-clicked = "python3 -m utils.google_lens_cli"
 
 
-# [Mods.terminal]
-# icon = "terminal.svg"
-# icon-size = 18
-#
-# [[Mods.terminal.options]]
-# label = "Terminal"
-# on-clicked = "kitty"
-#
-# [[Mods.terminal.options]]
-# label = "Terminal but scary"
-# on-clicked = "zen-browser"
-# divider = true
+[Mods.terminal]
+icon = "terminal.svg"
+icon-size = 18
+
+[[Mods.terminal.options]]
+label = "Terminal"
+on-clicked = "kitty"
+
+[[Mods.terminal.options]]
+label = "Terminal but scary"
+on-clicked = "zen-browser"
+divider = true

@@ -20,13 +20,16 @@ def dropdown_divider(comment):
 
 
 class ModusDropdown(AppletWindow):
-    def __init__(self, dropdown_children=None, dropdown_id=None, **kwargs):
+    def __init__(
+        self, dropdown_children=None, dropdown_id=None, parent_dropdown=None, **kwargs
+    ):
         super().__init__(
             layer="top",
             exclusivity="auto",
             name="dropdown-menu",
             title="modus-dropdown",
             visible=False,
+            parent_dropdown=parent_dropdown,
             **kwargs,
         )
 

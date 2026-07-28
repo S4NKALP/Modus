@@ -62,3 +62,46 @@
   border-bottom: 1px solid @glass-divider;
   margin: 2px 0;
 }
+
+/* ── GtkMenu submenus — same IDs as ModusDropdown ── */
+
+/* Popup window transparent background */
+.background.popup {
+  background: transparent;
+}
+
+/* Hide GtkMenuButton default arrow indicator */
+#global-menu indicator,
+#panel-button indicator {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  -gtk-icon-source: none;
+}
+
+/* Menu item label text */
+#dropdown-option label {
+  font-size: apply(font-md);
+  margin: 0px;
+  color: @glass-text;
+  font-weight: 400;
+}
+
+/* Menu item submenu arrow */
+#dropdown-option arrow {
+  color: @glass-text-secondary;
+}
+
+/* Disabled — GTK3 uses :insensitive */
+#dropdown-option:insensitive {
+  color: @glass-text-disabled;
+}
+
+/* Separator line inside GtkSeparatorMenuItem */
+#dropdown-divider menuitem *,
+#dropdown-divider * {
+  background: @glass-divider;
+  min-height: 1px;
+  margin: 4px 0;
+}

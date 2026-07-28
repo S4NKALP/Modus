@@ -6,6 +6,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
+from gi.repository import Gtk
 
 from services.config import get_config_all, on_config_change
 from services.modus import notification_service
@@ -40,11 +41,8 @@ class Panel(Window):
         )
         self.globalmenu = GlobalMenu(parent_window=self)
 
-        self.imac = Button(
-            name="panel-button",
-            child=svg_file("misc/logo.svg", size=18),
-            on_clicked=lambda *_: self.globalmenu.show_system_dropdown(self.imac),
-        )
+        self.imac = Gtk.MenuButton(name="panel-button")
+        self.imac.add(svg_file("misc/logo.svg", size=18))
         setup_cursor_hover(self.imac, "pointer")
         self.globalmenu.set_imac_button(self.imac)
 
