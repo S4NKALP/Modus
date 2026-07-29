@@ -1,3 +1,8 @@
+import os
+import shutil
+import sqlite3
+import tempfile
+
 from fabric.hyprland.widgets import HyprlandActiveWindow as ActiveWindow
 from fabric.utils import FormattedString, GLib, exec_shell_command_async, logger
 from fabric.widgets.box import Box
@@ -95,6 +100,121 @@ def _clean_label(label):
     return label.replace("_", "")
 
 
+def _open_url(url):
+    exec_shell_command_async(f"xdg-open {url}", lambda *_: None)
+
+
+def _get_firefox_bookmarks(pid, folder_label):
+    """Read Firefox/ZeN bookmarks from local SQLite database."""
+    try:
+        exe = os.path.realpath(f"/proc/{pid}/exe")
+        is_zen = "zen" in exe.lower()
+        is_ff = "firefox" in exe.lower() or "firefox" in exe
+        if not (is_zen or is_ff):
+            return None
+        config_dir = os.path.expanduser(
+            "~/.config/zen" if is_zen else "~/.mozilla/firefox"
+        )
+        profiles_ini = os.path.join(config_dir, "profiles.ini")
+        if not os.path.exists(profiles_ini):
+            return None
+        profile_path = None
+        with open(profiles_ini) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("Default=") and "1" in line:
+                    profile_path = None
+                if line.startswith("Path="):
+                    profile_path = line.split("=", 1)[1].strip()
+        if not profile_path:
+            return None
+        if not os.path.isabs(profile_path):
+            profile_path = os.path.join(config_dir, profile_path)
+        places = os.path.join(profile_path, "places.sqlite")
+        if not os.path.exists(places):
+            return None
+        folder_map = {"Bookmarks Toolbar": "toolbar", "Other Bookmarks": "unfiled"}
+        sqlite_name = folder_map.get(folder_label)
+        if not sqlite_name:
+            return None
+        tmp = os.path.join(tempfile.gettempdir(), f"places_{pid}.sqlite")
+        try:
+            shutil.copy2(places, tmp)
+        except Exception:
+            return None
+        try:
+            conn = sqlite3.connect(tmp)
+            cur = conn.execute(
+                "SELECT id FROM moz_bookmarks WHERE title=? AND type=2",
+                (sqlite_name,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            parent_id = row[0]
+            cur = conn.execute(
+                "SELECT b.title, p.url FROM moz_bookmarks b "
+                "JOIN moz_places p ON b.fk = p.id "
+                "WHERE b.parent=? AND b.type=1",
+                (parent_id,),
+            )
+            items = []
+            for title, url in cur:
+                label = title if title else url
+                items.append(
+                    type(
+                        "",
+                        (),
+                        {
+                            "_url": url,
+                            "label": label,
+                            "visible": True,
+                            "enabled": True,
+                            "type": "standard",
+                            "has_submenu": False,
+                            "children": [],
+                            "id": 0,
+                        },
+                    )()
+                )
+            conn.close()
+            return items if items else None
+        finally:
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[GlobalMenu] bookmarks fallback failed: {e}")
+        return None
+
+
+TRUNCATE_MENU_AT = 25
+
+
+def _truncate_children(children):
+    if len(children) <= TRUNCATE_MENU_AT:
+        return children
+    truncated = list(children[:TRUNCATE_MENU_AT])
+    remaining = len(children) - TRUNCATE_MENU_AT
+    more = type(
+        "",
+        (),
+        {
+            "_url": None,
+            "label": f"\u2192 {remaining} more bookmarks\u2026",
+            "visible": True,
+            "enabled": False,
+            "type": "standard",
+            "has_submenu": False,
+            "children": [],
+            "id": 0,
+        },
+    )()
+    truncated.append(more)
+    return truncated
+
+
 def _on_item_select(item, svc, child, click_handler):
     if getattr(item, "_lazy_loaded", False):
         return
@@ -105,25 +225,28 @@ def _on_item_select(item, svc, child, click_handler):
         )
         svc.about_to_show(child.id)
         entry, _ = svc._resolve_current_entry()
+        children = None
         if entry and entry.importer and hasattr(entry.importer, "update_layout"):
-            new_children = entry.importer.update_layout(
+            children = entry.importer.update_layout(
                 child.id, getattr(entry, "revision", 0)
             )
-            if new_children:
-                logger.info(
-                    f"[GlobalMenu] got {len(new_children)} children for id={child.id}: "
-                    f"{[getattr(c, 'label', '?') for c in new_children[:5]]}"
-                )
-                new_menu = _build_gtk_menu_from_children(
-                    new_children, click_handler, svc
-                )
-                new_menu.show_all()
-                item.set_submenu(new_menu)
-            else:
-                logger.info(
-                    f"[GlobalMenu] no children for id={child.id} "
-                    f"(update_layout returned {new_children})"
-                )
+        if not children and entry:
+            logger.info(
+                "[GlobalMenu] DBus empty, trying Firefox bookmark SQLite fallback"
+            )
+            children = _get_firefox_bookmarks(entry.pid, child.label)
+            if children:
+                children = _truncate_children(children)
+        if children:
+            logger.info(
+                f"[GlobalMenu] got {len(children)} children for id={child.id}: "
+                f"{[getattr(c, 'label', '?') for c in children[:5]]}"
+            )
+            new_menu = _build_gtk_menu_from_children(children, click_handler, svc)
+            new_menu.show_all()
+            item.set_submenu(new_menu)
+        else:
+            logger.info(f"[GlobalMenu] no children for id={child.id}")
     except Exception as e:
         logger.warning(f"[GlobalMenu] submenu load failed: {e}")
 
@@ -151,21 +274,21 @@ def _build_gtk_menu_from_children(children, click_handler, svc=None):
 
         if has_sub:
             item = Gtk.MenuItem.new_with_label(f"{cleaned}  \u25b8")
-            sub_menu = _build_gtk_menu_from_children(
-                sub_children, click_handler, svc
-            )
+            sub_menu = _build_gtk_menu_from_children(sub_children, click_handler, svc)
             sub_menu.show_all()
             item.set_submenu(sub_menu)
 
             if svc and getattr(child, "id", None) is not None:
-                item.connect(
-                    "select", _on_item_select, svc, child, click_handler
-                )
+                item.connect("select", _on_item_select, svc, child, click_handler)
         else:
             item = Gtk.MenuItem.new_with_label(cleaned)
             if not enabled:
                 item.set_sensitive(False)
-            item.connect("activate", click_handler, child.id)
+            url = getattr(child, "_url", None)
+            if url:
+                item.connect("activate", lambda *_: _open_url(url))
+            else:
+                item.connect("activate", click_handler, child.id)
 
         menu.append(item)
 

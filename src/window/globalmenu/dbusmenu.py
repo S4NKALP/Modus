@@ -233,9 +233,7 @@ class DBusMenuClient:
             if item.has_submenu and not item.children:
                 try:
                     self.about_to_show(item.id)
-                    child_params = GLib.Variant(
-                        "(iias)", (item.id, self._revision, [])
-                    )
+                    child_params = GLib.Variant("(iias)", (item.id, self._revision, []))
                     child_res = self._call("GetLayout", child_params)
                     if child_res:
                         child_layout = child_res.get_child_value(1)
@@ -247,9 +245,7 @@ class DBusMenuClient:
                             if c.is_of_type(GLib.VariantType("v")):
                                 c = c.get_variant()
                             item.children.append(
-                                self._parse_dbusmenu(
-                                    c, _depth + 1, item.id
-                                )
+                                self._parse_dbusmenu(c, _depth + 1, item.id)
                             )
                 except Exception as e:
                     logger.warning(
