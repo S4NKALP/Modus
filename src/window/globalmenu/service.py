@@ -438,14 +438,21 @@ class GlobalMenuService(Service):
         subtree = entry.importer.update_layout(parent_id, revision)
         if subtree is None:
             return
-        if parent_id == 0:
-            with self._state_lock:
-                if entry.wm_class == self._current_wm_class:
+        with self._state_lock:
+            if entry.wm_class == self._current_wm_class:
+                full_menu = entry.importer.get_layout()
+                if full_menu is not None:
+                    self._current_menu = full_menu
+                elif parent_id == 0:
                     self._current_menu = subtree
-                    with self._seq_lock:
-                        self._extraction_seq += 1
-                        seq = self._extraction_seq
-                    idle_add(self._emit_menu_changed, subtree, seq)
+                with self._seq_lock:
+                    self._extraction_seq += 1
+                    seq = self._extraction_seq
+                idle_add(
+                    self._emit_menu_changed,
+                    self._current_menu or subtree,
+                    seq,
+                )
 
     def _handle_items_updated(
         self,

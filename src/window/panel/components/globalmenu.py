@@ -95,7 +95,40 @@ def _clean_label(label):
     return label.replace("_", "")
 
 
-def _build_gtk_menu_from_children(children, click_handler):
+def _on_item_select(item, svc, child, click_handler):
+    if getattr(item, "_lazy_loaded", False):
+        return
+    item._lazy_loaded = True
+    try:
+        logger.info(
+            f"[GlobalMenu] load submenu id={child.id} label={getattr(child, 'label', '')}"
+        )
+        svc.about_to_show(child.id)
+        entry, _ = svc._resolve_current_entry()
+        if entry and entry.importer and hasattr(entry.importer, "update_layout"):
+            new_children = entry.importer.update_layout(
+                child.id, getattr(entry, "revision", 0)
+            )
+            if new_children:
+                logger.info(
+                    f"[GlobalMenu] got {len(new_children)} children for id={child.id}: "
+                    f"{[getattr(c, 'label', '?') for c in new_children[:5]]}"
+                )
+                new_menu = _build_gtk_menu_from_children(
+                    new_children, click_handler, svc
+                )
+                new_menu.show_all()
+                item.set_submenu(new_menu)
+            else:
+                logger.info(
+                    f"[GlobalMenu] no children for id={child.id} "
+                    f"(update_layout returned {new_children})"
+                )
+    except Exception as e:
+        logger.warning(f"[GlobalMenu] submenu load failed: {e}")
+
+
+def _build_gtk_menu_from_children(children, click_handler, svc=None):
     menu = Gtk.Menu()
 
     for child in children:
@@ -116,11 +149,18 @@ def _build_gtk_menu_from_children(children, click_handler):
         sub_children = child.children if child.children else []
         has_sub = getattr(child, "has_submenu", False) or bool(sub_children)
 
-        if has_sub and sub_children:
+        if has_sub:
             item = Gtk.MenuItem.new_with_label(f"{cleaned}  \u25b8")
-            sub_menu = _build_gtk_menu_from_children(sub_children, click_handler)
+            sub_menu = _build_gtk_menu_from_children(
+                sub_children, click_handler, svc
+            )
             sub_menu.show_all()
             item.set_submenu(sub_menu)
+
+            if svc and getattr(child, "id", None) is not None:
+                item.connect(
+                    "select", _on_item_select, svc, child, click_handler
+                )
         else:
             item = Gtk.MenuItem.new_with_label(cleaned)
             if not enabled:
@@ -225,7 +265,6 @@ class GlobalMenuDropdowns:
             except Exception:
                 logger.exception("[globalmenu] cleanup failed")
 
-        self._destroy_widgets(self._gtk_menu_buttons)
         self._gtk_menu_buttons.clear()
 
         self._destroy_widgets(self._gtk_menus)
@@ -260,7 +299,7 @@ class GlobalMenuDropdowns:
                     setup_cursor_hover(menu_btn, "pointer")
 
                     gtk_menu = _build_gtk_menu_from_children(
-                        children, self._make_click_handler
+                        children, self._make_click_handler, self._global_menu_svc
                     )
                     menu_btn.set_popup(gtk_menu)
                     menu_btn.show_all()

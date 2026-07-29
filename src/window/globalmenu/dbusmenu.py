@@ -233,9 +233,27 @@ class DBusMenuClient:
             if item.has_submenu and not item.children:
                 try:
                     self.about_to_show(item.id)
+                    child_params = GLib.Variant(
+                        "(iias)", (item.id, self._revision, [])
+                    )
+                    child_res = self._call("GetLayout", child_params)
+                    if child_res:
+                        child_layout = child_res.get_child_value(1)
+                        while child_layout.is_of_type(GLib.VariantType("v")):
+                            child_layout = child_layout.get_variant()
+                        children_variant = child_layout.get_child_value(2)
+                        for i in range(children_variant.n_children()):
+                            c = children_variant.get_child_value(i)
+                            if c.is_of_type(GLib.VariantType("v")):
+                                c = c.get_variant()
+                            item.children.append(
+                                self._parse_dbusmenu(
+                                    c, _depth + 1, item.id
+                                )
+                            )
                 except Exception as e:
                     logger.warning(
-                        f"[dbusmenu] self.about_to_show(item.id) failed: {e}"
+                        f"[dbusmenu] about_to_show/fetch children failed for {item.id}: {e}"
                     )
 
         except Exception as e:
@@ -443,6 +461,17 @@ class DBusMenuClient:
                 logger.warning(f"[dbusmenu] bus.signal_unsubscribe(sid) failed: {e}")
         self._signal_ids.clear()
 
+    def _find_and_update_children(self, items, parent_id, new_children):
+        for item in items:
+            if item.id == parent_id:
+                item.children = new_children
+                return True
+            if item.children and self._find_and_update_children(
+                item.children, parent_id, new_children
+            ):
+                return True
+        return False
+
     def update_layout(
         self, parent_id: int, revision: int
     ) -> Optional[List[DBusMenuItem]]:
@@ -456,10 +485,13 @@ class DBusMenuClient:
             while layout.is_of_type(GLib.VariantType("v")):
                 layout = layout.get_variant()
             parsed = self._parse_dbusmenu(layout).children
-            if parent_id == 0:
-                with self._lock:
+            with self._lock:
+                if parent_id == 0:
                     self._hash_cache = self._hash(parsed)
                     self._cache = parsed
+                    self._cache_valid = True
+                elif self._cache is not None:
+                    self._find_and_update_children(self._cache, parent_id, parsed)
                     self._cache_valid = True
             return parsed
         except Exception as e:
