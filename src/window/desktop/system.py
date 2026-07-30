@@ -54,21 +54,12 @@ class SystemInfoBase(Box):
                 h_align="center",
                 v_align="center",
                 children=[
-                    Box(
-                        children=[
-                            Overlay(
-                                child=self.progress,
-                                tooltip_text="",
-                                overlays=self.main_label,
-                            )
-                        ]
+                    Overlay(
+                        child=self.progress,
+                        tooltip_text="",
+                        overlays=self.main_label,
                     ),
-                    Box(
-                        h_align="center",
-                        justification="centre",
-                        orientation="v",
-                        children=[self.info_container],
-                    ),
+                    self.info_container,
                 ],
             )
         )

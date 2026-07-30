@@ -28,14 +28,10 @@ class Dock(Window):
         self.set_app_paintable(True)
 
         self.canvas = DockCanvas(self)
-
-        canvas_box = Box(
-            name="dock-canvas-box",
-            children=[self.canvas],
-        )
+        self.canvas.set_name("dock-canvas-box")
 
         self.revealer = Revealer(
-            child=canvas_box,
+            child=self.canvas,
             transition_duration=200,
             transition_type="slide-up",
         )

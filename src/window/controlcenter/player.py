@@ -144,7 +144,7 @@ class PlayerBoxStack(Box):
 
         inner_box = CenterBox(
             name="inner-player-box",
-            start_children=[Box(style_classes="album-image-c", children=album_cover)],
+            start_children=[album_cover],
             center_children=[
                 Box(
                     name="player-info-box-c",
@@ -317,16 +317,13 @@ class PlayerBox(Box):
         self.exit = False
         self._signal_connections = []
 
-        self.album_cover = Box(style_classes="album-image-c")
+        self.album_cover = Box(
+            style_classes="album-image-c", h_align="start", v_align="center"
+        )
         self.album_cover.set_style(f"background-image:url('{self.cover_path}')")
 
         self.image = Overlay(
-            child=Box(
-                h_align="start",
-                v_align="center",
-                name="player-image-stack",
-                children=[self.album_cover],
-            ),
+            child=self.album_cover,
             overlays=[
                 Box(
                     children=Image(

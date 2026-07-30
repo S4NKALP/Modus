@@ -94,7 +94,9 @@ class PlayerBoxStack(Box):
 
     def _create_no_media_box(self):
         fallback_cover_path = PLAYER_FALLBACK_ART
-        album_cover = Box(style_classes="album-image-c")
+        album_cover = Box(
+            style_classes="album-image-c", h_align="start", v_align="center"
+        )
         album_cover.set_style(f"background-image:url('{fallback_cover_path}')")
 
         track_title = Label(
@@ -131,12 +133,7 @@ class PlayerBoxStack(Box):
                             h_expand=True,
                             children=[track_info],
                         ),
-                        Box(
-                            h_align="start",
-                            v_align="center",
-                            name="player-image-stack",
-                            children=[album_cover],
-                        ),
+                        album_cover,
                     ],
                 )
             ],
@@ -291,19 +288,18 @@ class PlayerBox(Box):
         self._seekbar_signal_ids = []
         self._cached_duration = 0
 
-        self.album_cover = Box(style_classes="album-image-c")
+        self.album_cover = Box(
+            style_classes="album-image-c",
+            h_align="start",
+            v_align="center",
+        )
         self.album_cover.set_style(
             f"background-image:url('{self.fallback_cover_path}')"
         )
         self.album_cover.set_size_request(70, 70)
 
         self.image = Overlay(
-            child=Box(
-                h_align="start",
-                v_align="center",
-                name="player-image-stack",
-                children=[self.album_cover],
-            ),
+            child=self.album_cover,
             overlays=[
                 Box(
                     children=Image(
