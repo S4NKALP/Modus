@@ -578,6 +578,17 @@ class ApplicationSwitcher(Window):
         except Exception:
             logger.exception("_on_frame_ready error")
 
+    def destroy(self) -> None:
+        from services.config import off_config_change
+
+        off_config_change(self._on_config_changed)
+        try:
+            self._capture.disconnect_by_func(self._on_frame_ready)
+            self._capture.disconnect_by_func(self._on_frame_failed)
+        except Exception:
+            pass
+        super().destroy()
+
     def _on_frame_failed(self, _capture, addr, reason):
         full_addr = addr if addr.startswith("0x") else f"0x{addr}"
         logger.debug(f"AppCapture frame-failed for {full_addr}: {reason}")

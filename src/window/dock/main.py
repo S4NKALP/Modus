@@ -176,6 +176,9 @@ class Dock(Window):
     def destroy(self) -> None:
         self._destroyed = True
         self._disconnect_occlusion_signals()
+        from services.config import off_config_change
+
+        off_config_change(self._on_config_change)
 
         if hasattr(self, "canvas") and self.canvas:
             self.canvas.destroy()

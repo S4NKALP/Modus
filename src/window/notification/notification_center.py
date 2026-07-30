@@ -1003,6 +1003,16 @@ class NotificationCenter(AppletWindow):
     def _on_escape_pressed(self, *_):
         self.hide()
 
+    def destroy(self) -> None:
+        try:
+            notification_service.disconnect_by_func(self.on_notification_added)
+            notification_service.disconnect_by_func(self.on_notification_removed)
+            notification_service.disconnect_by_func(self.on_clear_all)
+            notification_service.disconnect_by_func(self.on_count_changed)
+        except Exception:
+            pass
+        super().destroy()
+
     def set_visible(self, visible: bool):
         """Control notification center visibility with slide-left animation"""
         super().set_visible(visible)

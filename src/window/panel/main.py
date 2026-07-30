@@ -383,6 +383,7 @@ class Panel(Window):
         """Clean up all signals and components"""
         try:
             modus_service.disconnect_by_func(self.on_dnd_changed)
+            modus_service.disconnect_by_func(self._on_fullscreen_changed)
             notification_service.disconnect_by_func(self.on_notification_count_changed)
             from services.config import off_config_change
 
