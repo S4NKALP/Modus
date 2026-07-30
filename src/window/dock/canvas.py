@@ -41,11 +41,11 @@ from .constants import (
     INDICATOR_COLOR,
     INDICATOR_H,
     INDICATOR_RADIUS,
-    MAX_SCALE,
     MIN_SCALE,
     PINNED_APPS_FILE,
     SEPARATOR_COLOR,
     SEPARATOR_WIDTH,
+    max_scale,
 )
 from .items import DockHitTest, DockItem, DockModel
 from .layout import DockLayout
@@ -126,7 +126,7 @@ class DockCanvas(Gtk.DrawingArea):
         return int(config().get("dock.icon_size", 52))
 
     def _icon_cache_size(self) -> int:
-        return int(self._base_icon_size() * MAX_SCALE)
+        return int(self._base_icon_size() * max_scale())
 
     def _get_desktop_apps(self) -> list:
         if not self._desktop_apps:
@@ -140,7 +140,7 @@ class DockCanvas(Gtk.DrawingArea):
     def _canvas_height(self) -> int:
         size = self._base_icon_size()
         return int(
-            size * MAX_SCALE + CANVAS_TOP_PAD + 2 * BG_PADDING_V + INDICATOR_H + 4
+            size * max_scale() + CANVAS_TOP_PAD + 2 * BG_PADDING_V + INDICATOR_H + 4
         )
 
     def _canvas_max_width(self) -> int:
@@ -149,7 +149,7 @@ class DockCanvas(Gtk.DrawingArea):
             return 200
         size = self._base_icon_size()
         return int(
-            n * size * MAX_SCALE + max(n - 1, 0) * ICON_GAP + 2 * BG_PADDING_H + 40
+            n * size * max_scale() + max(n - 1, 0) * ICON_GAP + 2 * BG_PADDING_H + 40
         )
 
     def _canvas_min_width(self) -> int:
@@ -655,7 +655,7 @@ class DockCanvas(Gtk.DrawingArea):
             bg_h = size + 2 * BG_PADDING_V
             bg_y = h - INDICATOR_H - bg_h
             baseline_y = bg_y + BG_PADDING_V + size
-            icon_top_y = baseline_y - size * MAX_SCALE
+            icon_top_y = baseline_y - size * max_scale()
             self._mouse_inside = (
                 base_start_x <= event.x <= base_start_x + total_base
                 and icon_top_y <= event.y <= baseline_y
