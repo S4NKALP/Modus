@@ -50,7 +50,7 @@ class EmbeddedExpandedPlayer(Box):
         self._check_and_update_playing_state()
 
     def destroy(self):
-        if hasattr(self, "player_content") and hasattr(self.player_content, "destroy"):
+        if self.player_content and hasattr(self.player_content, "destroy"):
             self.player_content.destroy()
         super().destroy()
 
@@ -284,6 +284,8 @@ class PlayerBox(Box):
         self.cover_path = self.fallback_cover_path
         self.exit = False
         self._user_seeking = False
+        self._seek_timeout = None
+        self._debounce_seek = None
         self._signal_connections = []
         self._property_bindings = []
         self._seekbar_signal_ids = []
@@ -654,7 +656,7 @@ class PlayerBox(Box):
             icon_file = (
                 "player/play.svg" if current_status == "paused" else "player/pause.svg"
             )
-            if hasattr(self, "play_pause_icon"):
+            if self.play_pause_icon:
                 self.play_pause_icon.dynamic_file(icon_file)
             else:
                 # Fallback if play_pause_icon isn't available
@@ -717,7 +719,7 @@ class PlayerBox(Box):
                 logger.warning(
                     f"[expanded_player] self.player.seek_position(value) failed: {e}"
                 )
-        if hasattr(self, "_seek_timeout") and self._seek_timeout:
+        if self._seek_timeout:
             GLib.source_remove(self._seek_timeout)
 
         self._seek_timeout = GLib.timeout_add(1000, self._clear_seeking)
@@ -730,7 +732,7 @@ class PlayerBox(Box):
         value = max(0.0, value)
         self.position_label.set_label(self.length_str(int(value * 1_000_000)))
 
-        if hasattr(self, "_debounce_seek") and self._debounce_seek:
+        if self._debounce_seek:
             GLib.source_remove(self._debounce_seek)
 
         self._debounce_seek = GLib.timeout_add(100, self._do_seek, value)
@@ -790,7 +792,7 @@ class ExpandedPlayer(Window):
         self._check_and_update_playing_state()
 
     def destroy(self):
-        if hasattr(self, "child") and hasattr(self.child, "destroy"):
+        if self.child and hasattr(self.child, "destroy"):
             self.child.destroy()
         super().destroy()
 

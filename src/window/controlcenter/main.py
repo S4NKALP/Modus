@@ -544,9 +544,9 @@ class ModusControlCenter(AppletWindow):
         """Handle visibility changes for resource management"""
         if not self.get_visible():
             # Suspend player updates
-            if hasattr(self, "music_widget") and hasattr(self.music_widget, "suspend"):
+            if self.music_widget and hasattr(self.music_widget, "suspend"):
                 self.music_widget.suspend()
-            if hasattr(self, "_expanded_player_widget") and hasattr(
+            if self._expanded_player_widget and hasattr(
                 self._expanded_player_widget, "suspend"
             ):
                 self._expanded_player_widget.suspend()
@@ -557,9 +557,9 @@ class ModusControlCenter(AppletWindow):
             self._initialize_resources()
 
             # Resume player updates
-            if hasattr(self, "music_widget") and hasattr(self.music_widget, "resume"):
+            if self.music_widget and hasattr(self.music_widget, "resume"):
                 self.music_widget.resume()
-            if hasattr(self, "_expanded_player_widget") and hasattr(
+            if self._expanded_player_widget and hasattr(
                 self._expanded_player_widget, "resume"
             ):
                 self._expanded_player_widget.resume()
@@ -647,13 +647,13 @@ class ModusControlCenter(AppletWindow):
             self._signal_connections.clear()
 
             # Disconnect direct scale signals (connected in _initialize_resources)
-            if hasattr(self, "volume_scale"):
+            if self.volume_scale:
                 try:
                     self.volume_scale.disconnect_by_func(self.set_volume)
                     self.volume_scale.disconnect_by_func(self.on_volume_scroll)
                 except Exception:
                     pass
-            if hasattr(self, "brightness_scale"):
+            if self.brightness_scale:
                 try:
                     self.brightness_scale.disconnect_by_func(self.set_brightness)
                     self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
@@ -878,7 +878,7 @@ class ModusControlCenter(AppletWindow):
         if not self._resources_initialized:
             return
         try:
-            if hasattr(self, "bluetooth_man") and hasattr(self.bluetooth_man, "client"):
+            if self.bluetooth_man and hasattr(self.bluetooth_man, "client"):
                 client = self.bluetooth_man.client
                 target = not client.enabled
                 set_bluetooth_enabled_with_fallback(client, target)
@@ -909,7 +909,7 @@ class ModusControlCenter(AppletWindow):
 
     def update_wifi_icon(self, *_):
         try:
-            if self.wifi_service and hasattr(self, "wifi_svg"):
+            if self.wifi_service and self.wifi_svg:
                 is_enabled = self.wifi_service.enabled
                 self.wifi_svg.dynamic_file(
                     "applets/wifi.svg" if is_enabled else "applets/wifi-off.svg"
@@ -1113,7 +1113,7 @@ class ModusControlCenter(AppletWindow):
             self._signal_connections.clear()
 
             # Disconnect scale widget signals (connected directly, not tracked)
-            if hasattr(self, "volume_scale") and self.volume_scale:
+            if self.volume_scale:
                 try:
                     self.volume_scale.disconnect_by_func(self.set_volume)
                 except Exception as e:
@@ -1123,7 +1123,7 @@ class ModusControlCenter(AppletWindow):
                 except Exception as e:
                     logger.error(f"An error occurred: {e}")
 
-            if hasattr(self, "brightness_scale") and self.brightness_scale:
+            if self.brightness_scale:
                 try:
                     self.brightness_scale.disconnect_by_func(self.set_brightness)
                 except Exception as e:
@@ -1148,28 +1148,28 @@ class ModusControlCenter(AppletWindow):
     def _cleanup_managers(self):
         """Clean up all manager instances"""
         try:
-            if hasattr(self, "wifi_man") and self.wifi_man:
+            if self.wifi_man:
                 try:
                     self.wifi_man.destroy()
                 except Exception as e:
                     logger.warning(f"Failed to destroy WiFi manager: {e}")
                 self.wifi_man = None
 
-            if hasattr(self, "bluetooth_man") and self.bluetooth_man:
+            if self.bluetooth_man:
                 try:
                     self.bluetooth_man.destroy()
                 except Exception as e:
                     logger.warning(f"Failed to destroy Bluetooth manager: {e}")
                 self.bluetooth_man = None
 
-            if hasattr(self, "network_service") and self.network_service:
+            if self.network_service:
                 try:
                     self.network_service.destroy()
                 except Exception as e:
                     logger.warning(f"Failed to destroy network service: {e}")
                 self.network_service = None
 
-            if hasattr(self, "wifi_service") and self.wifi_service:
+            if self.wifi_service:
                 try:
                     self.wifi_service.disconnect_by_func(self.update_wifi_icon)
                 except Exception as e:
@@ -1186,7 +1186,7 @@ class ModusControlCenter(AppletWindow):
     def _cleanup_widgets(self):
         try:
             # Clean up main widgets
-            if hasattr(self, "widgets") and self.widgets:
+            if self.widgets:
                 try:
                     self.widgets.destroy()
                 except Exception as e:
@@ -1194,7 +1194,7 @@ class ModusControlCenter(AppletWindow):
                 self.widgets = None
 
             # Clean up center box
-            if hasattr(self, "center_box") and self.center_box:
+            if self.center_box:
                 try:
                     self.center_box.destroy()
                 except Exception as e:
@@ -1215,7 +1215,7 @@ class ModusControlCenter(AppletWindow):
                 "bluetooth_label",
                 "focus_status_label",
                 "caffeine_status_label",
-                "wlan_svg",
+                "wifi_svg",
                 "bluetooth_svg",
                 "focus_icon",
                 "flight_icon",
@@ -1223,7 +1223,7 @@ class ModusControlCenter(AppletWindow):
             ]
 
             for attr in widget_attrs:
-                if hasattr(self, attr) and getattr(self, attr):
+                if getattr(self, attr, None):
                     try:
                         widget = getattr(self, attr)
                         if hasattr(widget, "destroy"):
