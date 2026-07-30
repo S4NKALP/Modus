@@ -14,6 +14,7 @@ from tomlkit import document as toml_document
 from tomlkit import dump as toml_dump
 from tomlkit import item as toml_item
 from tomlkit import load as toml_load
+from tomlkit import loads as toml_loads
 
 from utils.gtk_utils import toml_file
 
@@ -126,12 +127,13 @@ class ConfigService:
                     self._config = toml_load(f)
             else:
                 try:
-                    from utils.constants import DEFAULT
+                    from utils.constants import generate_default_toml
 
                     os.makedirs(os.path.dirname(self._config_file), exist_ok=True)
-                    self._config = self._dict_to_toml(DEFAULT)
+                    raw = generate_default_toml()
+                    self._config = toml_loads(raw)
                     with open(self._config_file, "w") as f:
-                        toml_dump(self._config, f)
+                        f.write(raw)
                     logger.info(
                         f"[ConfigService] Generated default config at {self._config_file}"
                     )
