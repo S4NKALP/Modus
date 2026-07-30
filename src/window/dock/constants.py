@@ -1,3 +1,4 @@
+from services.config import config
 from utils.gtk_utils import toml_file
 
 PINNED_APPS_FILE = toml_file("dock.toml")
@@ -7,7 +8,11 @@ IDLE_THRESHOLD = 0.0005
 ANIM_FPS = 60
 ANIM_INTERVAL_MS = 1000 // ANIM_FPS
 
-MAX_SCALE = 2.0
+
+def max_scale() -> float:
+    return float(config().get("dock.hover_scale", 2.0))
+
+
 MIN_SCALE = 1.0
 SIGMA_FACTOR = 1.3
 

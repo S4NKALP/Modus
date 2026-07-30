@@ -2,9 +2,8 @@ name: Pre-commit
 
 on:
   push:
-    branches: [main, dev]
+    branches: [macos]
   pull_request:
-    branches: [main, dev]
 
 permissions:
   contents: read

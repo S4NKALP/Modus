@@ -5,9 +5,9 @@ from .constants import (
     BG_PADDING_V,
     ICON_GAP,
     INDICATOR_H,
-    MAX_SCALE,
     MIN_SCALE,
     SIGMA_FACTOR,
+    max_scale,
 )
 from .items import DockItem
 
@@ -27,7 +27,7 @@ class DockLayout:
             return
 
         sigma = base_icon_size * SIGMA_FACTOR
-        amplitude = MAX_SCALE - MIN_SCALE
+        amplitude = max_scale() - MIN_SCALE
 
         n = len(items)
         base_w = base_icon_size + ICON_GAP

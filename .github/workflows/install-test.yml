@@ -2,7 +2,7 @@ name: Install Script Test
 
 on:
   push:
-    branches: [main, dev]
+    branches: [macos]
     paths:
       - "install.sh"
       - "src/window/globalmenu/**"
@@ -10,7 +10,6 @@ on:
       - "pyproject.toml"
       - "uv.lock"
   pull_request:
-    branches: [main, dev]
     paths:
       - "install.sh"
       - "src/window/globalmenu/**"

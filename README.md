@@ -143,6 +143,8 @@ See [Desktop Widgets Guide](docs/desktop_widgets.md) for full docs and examples.
 
 ## Documentation
 
+> **Note:** These docs were written with the assistance of LLM tools. Some phrasing may reflect that.
+
 | Doc                                           | What's inside                                      |
 | --------------------------------------------- | -------------------------------------------------- |
 | [Installation Guide](docs/installation.md)    | Automated & manual install, dependencies           |

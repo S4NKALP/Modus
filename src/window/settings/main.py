@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, Gtk, logger
+from fabric.utils import Gdk, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -90,12 +90,13 @@ class SettingsEntry(Entry):
 
     def on_change(self, entry, *args):
         value = entry.get_text()
-        # Try to convert to int if possible
         try:
             if value.isdigit():
                 value = int(value)
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
+            else:
+                value = float(value)
+        except (ValueError, TypeError):
+            pass
 
         config().set(self.config_key, value)
         config().save()
@@ -399,6 +400,11 @@ class SettingsWindow(Gtk.Window):
                     "Hide Special Apps",
                     SettingsSwitch("dock.hide_special_workspace_apps"),
                     "Hide apps from special workspace in dock",
+                ),
+                SettingsRow(
+                    "Hover Scale",
+                    SettingsEntry("dock.hover_scale"),
+                    "Icon scale on hover (1.0 = off, 1.6 = default, 2.0 = max)",
                 ),
             ],
         )

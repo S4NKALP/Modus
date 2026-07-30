@@ -99,11 +99,7 @@ class ClipboardPlugin(SpotlightPlugin):
     def _load_history(self) -> None:
         result = run_command(["cliphist", "list"], timeout=5)
         raw = result.stdout if isinstance(result.stdout, str) else ""
-        logger.info(
-            f"[Clipboard] _load_history: stdout type={type(result.stdout).__name__} len={len(raw)} returncode={result.returncode}"
-        )
         lines = raw.splitlines()
-        logger.info(f"[Clipboard] _load_history: {len(lines)} lines from cliphist")
         new_entries = []
         for line in lines[:100]:
             if "\t" not in line:
@@ -122,13 +118,9 @@ class ClipboardPlugin(SpotlightPlugin):
             if "binary data" in content:
                 entry["type"] = "image"
             new_entries.append(entry)
-        logger.info(f"[Clipboard] _load_history: parsed {len(new_entries)} entries")
         with self._history_lock:
             self._history.clear()
             self._history.extend(new_entries)
-        logger.info(
-            f"[Clipboard] _load_history: history now has {len(self._history)} entries"
-        )
 
     def _filter_entries(self, query: str) -> list[dict]:
         q = query.strip().lower()
