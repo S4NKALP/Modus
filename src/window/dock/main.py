@@ -135,6 +135,9 @@ class Dock(Window):
         if config().has_changed("dock.hide_special_workspace_apps", old_config):
             self.canvas._rebuild_model()
 
+        if config().has_changed("dock.hover_scale", old_config):
+            self.canvas.update_icon_size()
+
     def _update_visibility(self) -> None:
         if config().get("dock.enabled", True):
             self.show()
