@@ -4,7 +4,6 @@ on:
   push:
     branches: [macos]
   pull_request:
-    branches: [macos]
 
 permissions:
   contents: read

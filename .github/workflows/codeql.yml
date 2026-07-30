@@ -4,7 +4,6 @@ on:
   push:
     branches: [macos]
   pull_request:
-    branches: [macos]
   schedule:
     - cron: "0 6 * * 1"
 
