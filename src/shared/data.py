@@ -49,19 +49,35 @@ def load_config():
         service = start_config_service()
         return service.get_all()
     except ImportError:
-        # Fallback to direct file loading
-        config = {}
+        pass
 
-        if os.path.exists(CONFIG_FILE):
-            try:
-                import tomlkit
+    try:
+        from utils.constants import generate_default_toml
+    except ImportError:
+        generate_default_toml = None
 
-                with open(CONFIG_FILE) as f:
-                    config = dict(tomlkit.load(f))
-            except Exception as e:
-                logger.error(f"Error loading config: {e}")
+    config = {}
 
-        return config
+    if os.path.exists(CONFIG_FILE):
+        try:
+            import tomlkit
+
+            with open(CONFIG_FILE) as f:
+                config = dict(tomlkit.load(f))
+        except Exception as e:
+            logger.error(f"Error loading config: {e}")
+    elif generate_default_toml:
+        try:
+            raw = generate_default_toml()
+            with open(CONFIG_FILE, "w") as f:
+                f.write(raw)
+            import tomlkit
+
+            config = dict(tomlkit.loads(raw))
+        except Exception as e:
+            logger.error(f"Error generating default config: {e}")
+
+    return config
 
 
 NOTIFICATION_TIMEOUT_STR = "5s"
