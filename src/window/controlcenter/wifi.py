@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, GLib, idle_add, logger
+from fabric.utils import GLib, idle_add, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -9,6 +9,7 @@ from fabric.widgets.separator import Separator
 from services import dns as dns_service
 from services.network import NetworkClient
 from shared.dialogs.sysauth_dialog import run_auth_dialog
+from shared.widgets.pull_to_refresh import PullToRefreshMixin
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.window.animated_scrollwindow import AnimatedScrollable
 from utils.functions import (
@@ -402,7 +403,7 @@ class DnsSwitcher:
         self._load_current_dns()
 
 
-class WifiConnections(Box):
+class WifiConnections(PullToRefreshMixin, Box):
     def __init__(self, parent, show_back_button=True, network_service=None, **kwargs):
         super().__init__(
             spacing=8,
@@ -506,7 +507,7 @@ class WifiConnections(Box):
         self.other_networks.set_visible(False)
 
         # Add pull-to-refresh functionality to scrolled window
-        self.setup_pull_to_refresh()
+        self.setup_pull_to_refresh(self.other_networks_scrolled)
 
         # Create More Settings button (same style as Other Networks button)
         self.more_settings_button = Button(
@@ -573,33 +574,6 @@ class WifiConnections(Box):
                 self.wifi_service.scan()
             # Defer refresh until after the height animation completes
             idle_add(self._refresh_after_animation)
-
-    def _cancel_pending_refresh(self):
-        if hasattr(self, "_anim_finished_handler") and self._anim_finished_handler:
-            try:
-                self.other_networks_scrolled.height_animator.disconnect(
-                    self._anim_finished_handler
-                )
-            except Exception as e:
-                logger.warning(
-                    f"[wifi] self.other_networks_scrolled.height_animator.disconnect( ... failed: {e}"
-                )
-            self._anim_finished_handler = None
-
-    def _refresh_after_animation(self):
-        if self._destroyed:
-            return False
-        anim = self.other_networks_scrolled.height_animator
-        if anim.playing:
-            self._anim_finished_handler = anim.connect(
-                "finished",
-                lambda *_: (
-                    self.force_network_refresh() if not self._destroyed else None
-                ),
-            )
-        else:
-            self.force_network_refresh()
-        return False
 
     def on_network_ready(self, *_):
         """Called when network service is ready"""
@@ -812,78 +786,18 @@ class WifiConnections(Box):
         except Exception as e:
             logger.error(f"[WiFi] Error during forced network refresh: {e}")
 
-    def setup_pull_to_refresh(self):
-        """Setup pull-to-refresh gesture for the scrolled window"""
-        self.vadjustment = self.other_networks_scrolled.get_vadjustment()
+    def _trigger_scan(self):
+        if self.wifi_service:
+            self.wifi_service.scan()
 
-        # Track gesture state
-        self.pull_start_y = 0
-        self.is_pulling = False
-        self.pull_threshold = 50  # pixels to trigger refresh
+    def _trigger_refresh(self):
+        self.force_network_refresh()
 
-        # Connect to scroll events
-        self.other_networks_scrolled.connect("scroll-event", self.on_scroll_event)
-        self.other_networks_scrolled.connect("button-press-event", self.on_button_press)
-        self.other_networks_scrolled.connect(
-            "button-release-event", self.on_button_release
-        )
-        self.other_networks_scrolled.connect(
-            "motion-notify-event", self.on_motion_notify
-        )
+    def _get_pull_normal_label(self):
+        return "↓ Pull to scan for networks"
 
-        # Enable events
-        self.other_networks_scrolled.set_events(
-            Gdk.EventMask.SCROLL_MASK
-            | Gdk.EventMask.BUTTON_PRESS_MASK
-            | Gdk.EventMask.BUTTON_RELEASE_MASK
-            | Gdk.EventMask.POINTER_MOTION_MASK
-        )
-
-    def on_scroll_event(self, widget, event):
-        """Handle scroll events for pull-to-refresh"""
-        if self.vadjustment.get_value() <= 0:
-            if event.direction == Gdk.ScrollDirection.UP:
-                if self.wifi_service:
-                    self.wifi_service.scan()
-                    self.force_network_refresh()
-                return True
-        return False
-
-    def on_button_press(self, widget, event):
-        """Handle button press for touch/drag gestures"""
-        if self.vadjustment.get_value() <= 0:
-            self.pull_start_y = event.y
-            self.is_pulling = True
-        return False
-
-    def on_button_release(self, widget, event):
-        """Handle button release for touch/drag gestures"""
-        if self.is_pulling:
-            pull_distance = event.y - self.pull_start_y
-            if pull_distance > self.pull_threshold:
-                if self.wifi_service:
-                    self.wifi_service.scan()
-                    self.force_network_refresh()
-            self.refresh_indicator.set_visible(False)
-            self.refresh_indicator.remove_style_class("ready-to-refresh")
-            self.is_pulling = False
-        return False
-
-    def on_motion_notify(self, widget, event):
-        """Handle motion events for visual feedback during pull"""
-        if self.is_pulling and self.vadjustment.get_value() <= 0:
-            pull_distance = event.y - self.pull_start_y
-            if pull_distance > 0:
-                self.refresh_indicator.set_visible(True)
-                if pull_distance >= self.pull_threshold:
-                    self.refresh_indicator.set_label("↑ Release to scan")
-                    self.refresh_indicator.add_style_class("ready-to-refresh")
-                else:
-                    self.refresh_indicator.set_label("↓ Pull to scan for networks")
-                    self.refresh_indicator.remove_style_class("ready-to-refresh")
-            else:
-                self.refresh_indicator.set_visible(False)
-        return False
+    def _get_pull_ready_label(self):
+        return "↑ Release to scan"
 
     def on_destroy(self, widget):
         """Cleanup when widget is destroyed"""

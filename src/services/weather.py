@@ -409,8 +409,8 @@ class Weather(Service):
                         return
                     result = raw["results"][0]
                     location_data = {
-                        "lat": result["latitude"],
-                        "lon": result["longitude"],
+                        "lat": round(result["latitude"], 1),
+                        "lon": round(result["longitude"], 1),
                         "city": result.get("name", "Unknown"),
                         "country": result.get("country", ""),
                         "config_location": target_loc,
@@ -421,8 +421,8 @@ class Weather(Service):
                         GLib.idle_add(self._set_error, "Location unavailable")
                         return
                     location_data = {
-                        "lat": raw["lat"],
-                        "lon": raw["lon"],
+                        "lat": round(raw["lat"], 1),
+                        "lon": round(raw["lon"], 1),
                         "city": raw.get("city", "Unknown"),
                         "country": raw.get("country", ""),
                         "config_location": "",
@@ -450,6 +450,11 @@ class Weather(Service):
                         GLib.idle_add(self._set_error, "Weather unavailable")
                         return
                 else:
+                    weather_data = {
+                        k: v
+                        for k, v in weather_data.items()
+                        if k not in ("latitude", "longitude")
+                    }
                     self._weather_cache.set(weather_data)
 
             GLib.idle_add(self._update_properties, weather_data, location_data)

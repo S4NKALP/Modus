@@ -13,6 +13,7 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 import shared.data as data
 from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
+from shared.widgets.close_button_revealer import CloseButtonRevealerMixin
 from shared.widgets.custom_image import CustomImage
 from shared.window.applet_window import AppletWindow
 from utils.functions import clear_children, escape_markup_text
@@ -33,7 +34,7 @@ from window.notification.unified_cache import (
 )
 
 
-class ExpandableNotificationGroup(Box):
+class ExpandableNotificationGroup(CloseButtonRevealerMixin, Box):
     def __init__(self, app_name, notifications, **kwargs):
         super().__init__(
             name="notification-group", orientation="v", spacing=0, **kwargs
@@ -457,7 +458,7 @@ class ExpandableNotificationGroup(Box):
         return True
 
 
-class NotificationCenterWidget(NotificationWidget):
+class NotificationCenterWidget(CloseButtonRevealerMixin, NotificationWidget):
     def __init__(self, notification, **kwargs):
         self.notification_id = notification.cache_id
         self.cache_metadata = getattr(notification, "cache_metadata", {})
@@ -539,7 +540,7 @@ class NotificationCenterWidget(NotificationWidget):
         setup_cursor_hover(self.close_button)
 
         self._is_close_button_hovered = False
-        self._is_content_hovered = False
+        self._hovered = False
         self._close_button_hide_timeout_id = None
 
         close_event_box = EventBox(
@@ -549,7 +550,7 @@ class NotificationCenterWidget(NotificationWidget):
         close_event_box.connect("enter-notify-event", self._on_close_button_enter)
         close_event_box.connect("leave-notify-event", self._on_close_button_leave)
 
-        self.close_revealer = Gtk.Revealer(
+        self.close_button_revealer = Gtk.Revealer(
             transition_type=Gtk.RevealerTransitionType.CROSSFADE,
             transition_duration=200,
             child=close_event_box,
@@ -618,12 +619,12 @@ class NotificationCenterWidget(NotificationWidget):
             ],
             child=content,
         )
-        content_event_box.connect("enter-notify-event", self._on_content_enter)
-        content_event_box.connect("leave-notify-event", self._on_content_leave)
+        content_event_box.connect("enter-notify-event", self._on_hover_enter)
+        content_event_box.connect("leave-notify-event", self._on_hover_leave)
 
         overlay = Gtk.Overlay()
         overlay.add(content_event_box)
-        overlay.add_overlay(self.close_revealer)
+        overlay.add_overlay(self.close_button_revealer)
         overlay.show_all()
         return overlay
 
@@ -696,48 +697,6 @@ class NotificationCenterWidget(NotificationWidget):
             notification_service.remove_cached_notification(self.notification_id)
         except Exception as e:
             logger.error(f"Error removing notification {self.notification_id}: {e}")
-
-    def _on_content_enter(self, widget, event):
-        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
-            return False
-        self._is_content_hovered = True
-        self._cancel_close_button_hide()
-        self.close_revealer.set_reveal_child(True)
-        return False
-
-    def _on_content_leave(self, widget, event):
-        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
-            return False
-        self._is_content_hovered = False
-        self._schedule_close_button_hide()
-        return False
-
-    def _on_close_button_enter(self, widget, event):
-        self._is_close_button_hovered = True
-        self._cancel_close_button_hide()
-        return False
-
-    def _on_close_button_leave(self, widget, event):
-        self._is_close_button_hovered = False
-        self._schedule_close_button_hide()
-        return False
-
-    def _schedule_close_button_hide(self):
-        self._cancel_close_button_hide()
-        self._close_button_hide_timeout_id = GLib.timeout_add(
-            80, self._do_hide_close_button
-        )
-
-    def _cancel_close_button_hide(self):
-        if self._close_button_hide_timeout_id is not None:
-            GLib.source_remove(self._close_button_hide_timeout_id)
-            self._close_button_hide_timeout_id = None
-
-    def _do_hide_close_button(self):
-        self._close_button_hide_timeout_id = None
-        if not self._is_content_hovered and not self._is_close_button_hovered:
-            self.close_revealer.set_reveal_child(False)
-        return False
 
     # Override to disable timeout functionality
     def start_timeout(self):

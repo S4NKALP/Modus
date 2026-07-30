@@ -9,14 +9,58 @@ from fabric.widgets.stack import Stack
 
 import shared.data as data
 from services.mpris import PlayerManager, PlayerService
+from shared.widgets.player_box_stack import BasePlayerBoxStack
 from utils.gtk_utils import svg_file
 
 CACHE_DIR = f"{data.CACHE_DIR}/media"
 PLAYER_FALLBACK_ART = get_relative_path("../../assets/icons/music.svg")
+MPRIS_ICON_FALLBACK = "application-x-executable-symbolic"
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
 
 _shared_mpris_manager = None
+
+
+def resolve_mpris_player_icon(player_name: str) -> str:
+    """Resolve MPRIS player icon from .desktop file."""
+    raw = player_name or ""
+    app_name = raw.removeprefix("org.mpris.MediaPlayer2.")
+
+    search_dirs = [
+        os.path.join(os.path.expanduser("~/.local/share"), "applications"),
+        "/usr/share/applications",
+        "/usr/local/share/applications",
+    ]
+    for d in os.environ.get("XDG_DATA_DIRS", "/usr/share:/usr/local/share").split(":"):
+        p = os.path.join(d, "applications")
+        if p not in search_dirs:
+            search_dirs.append(p)
+
+    candidates = [app_name]
+    parts = app_name.split("-")
+    for i in range(len(parts) - 1, 0, -1):
+        shorter = "-".join(parts[:i])
+        if shorter not in candidates:
+            candidates.append(shorter)
+
+    for base in search_dirs:
+        for name in candidates:
+            dp = os.path.join(base, name + ".desktop")
+            if os.path.exists(dp):
+                try:
+                    with open(dp) as f:
+                        for line in f:
+                            if line.startswith("Icon="):
+                                return line[5:].strip()
+                except OSError:
+                    pass
+
+    # No desktop file found — try app_name as direct icon name
+    for name in candidates:
+        if name:
+            return name
+
+    return MPRIS_ICON_FALLBACK
 
 
 def get_shared_mpris_manager():
@@ -61,7 +105,7 @@ def apply_player_art(album_cover_widget, player, service=None, path=None):
     return None
 
 
-class PlayerBoxStack(Box):
+class PlayerBoxStack(BasePlayerBoxStack):
     def __init__(
         self, mpris_manager: PlayerManager = None, control_center=None, **kwargs
     ):
@@ -72,53 +116,12 @@ class PlayerBoxStack(Box):
         self._signal_connections = []
         self.no_media_box = self._create_no_media_box()
 
-        super().__init__(orientation="v", name="media", children=[self.player_stack])
-        self.player_stack.children = [self.no_media_box]
-        self.set_visible(True)
-        self.mpris_manager = mpris_manager or get_shared_mpris_manager()
-        self.connect("map", self._on_map)
+        super().__init__(mpris_manager or get_shared_mpris_manager(), **kwargs)
 
-        if self.mpris_manager is not None:
-            self._init_mpris_manager()
-
-    def _init_mpris_manager(self):
-        try:
-            connections = bulk_connect(
-                self.mpris_manager,
-                {
-                    "new-player": self.on_new_player,
-                    "player-vanish": self.on_lost_player,
-                },
-            )
-            for handler_id in connections:
-                self._signal_connections.append((self.mpris_manager, handler_id))
-
-            for name, player in self.mpris_manager.get_all_services().items():
-                self.on_new_player(self.mpris_manager, name, player)
-        except Exception as e:
-            logger.error(f"Failed to initialize PlayerBoxStack signals: {e}")
-
-    def _on_map(self, *_):
-        self._check_and_update_playing_state()
-
-    def destroy(self):
-        for obj, handler_id in self._signal_connections:
-            try:
-                obj.disconnect(handler_id)
-            except Exception as e:
-                logger.error(f"An error occurred: {e}")
-        self._signal_connections.clear()
-        super().destroy()
-
-    def suspend(self):
-        for child in self.player_stack.get_children():
-            if hasattr(child, "suspend"):
-                child.suspend()
-
-    def resume(self):
-        for child in self.player_stack.get_children():
-            if hasattr(child, "resume"):
-                child.resume()
+    def _create_player_box_widget(self, player):
+        return PlayerBox(
+            player=player, player_stack=self, control_center=self.control_center
+        )
 
     def _create_no_media_box(self):
         fallback_cover_path = get_relative_path("../../assets/icons/music.svg")
@@ -172,138 +175,6 @@ class PlayerBoxStack(Box):
             ],
         )
 
-    def _find_playing_player_index(self):
-        players = self.player_stack.get_children()
-        for i, player_box in enumerate(players):
-            if (
-                hasattr(player_box, "player")
-                and str(player_box.player.playback_status).lower() == "playing"
-            ):
-                return i
-        return None
-
-    def _check_and_update_playing_state(self):
-        players = [
-            p for p in self.player_stack.get_children() if p != self.no_media_box
-        ]
-        if len(players) > 0:
-            if self.no_media_box in self.player_stack.get_children():
-                self.player_stack.remove(self.no_media_box)
-            playing_index = self._find_playing_player_index()
-            if playing_index is not None:
-                self.on_player_clicked_by_index(playing_index)
-            return
-
-        if (
-            len(self.player_stack.get_children()) == 1
-            and self.player_stack.get_children()[0] == self.no_media_box
-        ):
-            return
-
-        self.player_stack.children = [self.no_media_box]
-        self.current_stack_pos = 0
-        self.player_stack.set_visible_child(self.no_media_box)
-
-    def on_player_playback_changed(self, player_box, status):
-        status = str(status).lower()
-        if status == "playing":
-            players = self.player_stack.get_children()
-            for i, pb in enumerate(players):
-                if pb == player_box and i != self.current_stack_pos:
-                    self.on_player_clicked_by_index(i)
-                    break
-        elif status in ["paused", "stopped"]:
-            self._check_and_update_playing_state()
-
-    def _update_all_player_buttons(self):
-        show_buttons = len(self.player_buttons) > 1
-        for child in self.player_stack.get_children():
-            if hasattr(child, "update_buttons"):
-                child.update_buttons(self.player_buttons, show_buttons)
-
-    def on_player_clicked_by_index(self, index):
-        if 0 <= index < len(self.player_buttons):
-            if self.current_stack_pos < len(self.player_buttons):
-                self.player_buttons[self.current_stack_pos].remove_style_class("active")
-            self.current_stack_pos = index
-            self.player_buttons[self.current_stack_pos].add_style_class("active")
-            self.player_stack.set_visible_child(
-                self.player_stack.get_children()[self.current_stack_pos]
-            )
-            self._update_all_player_buttons()
-
-    def on_new_player(self, mpris_manager, name, player):
-        if (
-            len(self.player_stack.get_children()) == 1
-            and self.player_stack.get_children()[0] == self.no_media_box
-        ):
-            self.player_stack.children = []
-            self.current_stack_pos = 0
-
-        new_player_box = PlayerBox(
-            player=player, player_stack=self, control_center=self.control_center
-        )
-        self.player_stack.children = [*self.player_stack.children, new_player_box]
-        self.make_new_player_button(new_player_box)
-        if self.player_buttons:
-            self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
-        self._check_and_update_playing_state()
-        self._update_all_player_buttons()
-
-    def on_lost_player(self, mpris_manager, bus_name):
-        player_box_to_remove = None
-        for player_box in self.player_stack.get_children():
-            if (
-                hasattr(player_box, "player")
-                and getattr(player_box.player, "player_name", None) == bus_name
-            ):
-                player_box_to_remove = player_box
-                break
-
-        if player_box_to_remove:
-            player_box_to_remove.destroy()
-
-        remaining_players = [
-            p for p in self.player_stack.get_children() if p != player_box_to_remove
-        ]
-        if len(remaining_players) == 0:
-            self.player_stack.children = [self.no_media_box]
-            self.current_stack_pos = 0
-            self.player_buttons = []
-            return
-
-        if self.current_stack_pos >= len(self.player_stack.get_children()):
-            self.current_stack_pos = max(0, len(self.player_stack.get_children()) - 1)
-
-        if self.player_buttons and self.current_stack_pos < len(self.player_buttons):
-            self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
-            self.player_stack.set_visible_child(
-                self.player_stack.get_children()[self.current_stack_pos]
-            )
-        self._update_all_player_buttons()
-
-    def make_new_player_button(self, player_box):
-        new_button = Button(name="player-stack-button")
-
-        def on_player_button_click(button: Button):
-            if self.current_stack_pos < len(self.player_buttons):
-                self.player_buttons[self.current_stack_pos].remove_style_class("active")
-            if button in self.player_buttons:
-                self.current_stack_pos = self.player_buttons.index(button)
-                button.add_style_class("active")
-                self.player_stack.set_visible_child(player_box)
-
-        new_button.connect("clicked", on_player_button_click)
-        self.player_buttons.append(new_button)
-        player_box.connect(
-            "destroy",
-            lambda *_: (
-                self.player_buttons.remove(new_button)
-                if new_button in self.player_buttons
-                else None
-            ),
-        )
-
 
 class PlayerBox(Box):
     def __init__(
@@ -327,7 +198,7 @@ class PlayerBox(Box):
             overlays=[
                 Box(
                     children=Image(
-                        icon_name=self.player.player_name,
+                        icon_name=resolve_mpris_player_icon(self.player.player_name),
                         name="player-app-icon",
                         icon_size=20,
                     ),

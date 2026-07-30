@@ -136,7 +136,7 @@ wheels = [
 [[package]]
 name = "fabric"
 version = "0.0.2"
-source = { git = "https://github.com/Fabric-Development/fabric.git#85cacf660b1a324525a4dd9b512521e55ef7f89b" }
+source = { git = "https://github.com/Fabric-Development/fabric.git?rev=85cacf660b1a324525a4dd9b512521e55ef7f89b#85cacf660b1a324525a4dd9b512521e55ef7f89b" }
 dependencies = [
     { name = "click" },
     { name = "loguru" },
@@ -268,7 +268,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fabric", git = "https://github.com/Fabric-Development/fabric.git" },
+    { name = "fabric", git = "https://github.com/Fabric-Development/fabric.git?rev=85cacf660b1a324525a4dd9b512521e55ef7f89b" },
     { name = "keyring", specifier = "==25.7.0" },
     { name = "keyrings-alt", specifier = "==5.0.2" },
     { name = "psutil", specifier = "==7.2.2" },

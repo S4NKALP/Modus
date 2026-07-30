@@ -19,6 +19,7 @@ import shared.data as data
 from services.config import get_config, on_config_change
 from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
+from shared.widgets.close_button_revealer import CloseButtonRevealerMixin
 from shared.widgets.custom_image import CustomImage
 from shared.widgets.customrevealer import SlideRevealer
 from utils.gtk_utils import setup_cursor_hover, svg_file
@@ -847,7 +848,7 @@ class NotificationWidget(Box):
             return data.NOTIFICATION_TIMEOUT
 
 
-class NotificationRevealer(SlideRevealer):
+class NotificationRevealer(CloseButtonRevealerMixin, SlideRevealer):
     def __init__(
         self,
         notification: Notification,
@@ -872,7 +873,7 @@ class NotificationRevealer(SlideRevealer):
         setup_cursor_hover(self.close_button)
 
         self._is_close_button_hovered = False
-        self._is_popup_hovered = False
+        self._hovered = False
         self._close_button_hide_timeout_id = None
 
         self.close_button_event_box = EventBox(
@@ -927,8 +928,8 @@ class NotificationRevealer(SlideRevealer):
             ],
             child=self.notif_box,
         )
-        self.event_box.connect("enter-notify-event", self._on_popup_enter)
-        self.event_box.connect("leave-notify-event", self._on_popup_leave)
+        self.event_box.connect("enter-notify-event", self._on_hover_enter)
+        self.event_box.connect("leave-notify-event", self._on_hover_leave)
         self.event_box.connect("button-press-event", self._on_button_press)
         self.event_box.connect("button-release-event", self._on_button_release)
         self.event_box.connect("motion-notify-event", self._on_motion_notify)
@@ -955,48 +956,6 @@ class NotificationRevealer(SlideRevealer):
     def _ease_out_cubic(self, t):
         """Smoother easing function for better animation quality"""
         return 1 - pow(1 - t, 3)
-
-    def _on_popup_enter(self, widget, event):
-        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
-            return False
-        self._is_popup_hovered = True
-        self._cancel_close_button_hide()
-        self.close_button_revealer.set_reveal_child(True)
-        return False
-
-    def _on_popup_leave(self, widget, event):
-        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
-            return False
-        self._is_popup_hovered = False
-        self._schedule_close_button_hide()
-        return False
-
-    def _on_close_button_enter(self, widget, event):
-        self._is_close_button_hovered = True
-        self._cancel_close_button_hide()
-        return False
-
-    def _on_close_button_leave(self, widget, event):
-        self._is_close_button_hovered = False
-        self._schedule_close_button_hide()
-        return False
-
-    def _schedule_close_button_hide(self):
-        self._cancel_close_button_hide()
-        self._close_button_hide_timeout_id = GLib.timeout_add(
-            80, self._do_hide_close_button
-        )
-
-    def _cancel_close_button_hide(self):
-        if self._close_button_hide_timeout_id is not None:
-            GLib.source_remove(self._close_button_hide_timeout_id)
-            self._close_button_hide_timeout_id = None
-
-    def _do_hide_close_button(self):
-        self._close_button_hide_timeout_id = None
-        if not self._is_popup_hovered and not self._is_close_button_hovered:
-            self.close_button_revealer.set_reveal_child(False)
-        return False
 
     def _on_button_press(self, widget, event):
         if event.button != 1:

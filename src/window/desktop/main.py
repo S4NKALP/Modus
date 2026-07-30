@@ -194,8 +194,6 @@ class DesktopWidgetWindow(WaylandWindow):
         self.connect("button-press-event", self._on_window_button_press)
         self._setup_drag_dest()
         self._setup_file_monitor()
-        self._last_user_files: set[str] = set()
-        GLib.timeout_add(2000, self._poll_user_widgets)
 
         GLib.timeout_add(50, self._initial_build)
 
@@ -250,31 +248,6 @@ class DesktopWidgetWindow(WaylandWindow):
         self._fade_out_animator.play()
 
     # fallback poll — catches deletions that Gio file monitor misses
-
-    def _poll_user_widgets(self) -> bool:
-        if not os.path.isdir(_CONFIG_DESKTOP_DIR):
-            return True
-        current = {
-            f[:-3]
-            for f in os.listdir(_CONFIG_DESKTOP_DIR)
-            if f.endswith(".py") and not f.startswith("_")
-        }
-        if current != self._last_user_files:
-            self._last_user_files = current
-            stale = {k for k, f in _user_key_to_file.items() if f not in current}
-            if stale:
-                logger.info(f"[DesktopWidgets] poll found stale: {stale}")
-                for key in stale:
-                    mod_name = _user_key_to_file.pop(key, None)
-                    if mod_name:
-                        sys.modules.pop(f"user_widget_{mod_name}", None)
-                        _user_widget_modules.pop(mod_name, None)
-                DesktopWidgetRegistry.unregister_user_keys(stale)
-                _load_user_widgets()
-                self.rebuild()
-        return True
-
-    # file monitor — live-rebuild when config/desktop/ changes
 
     def _setup_file_monitor(self) -> None:
         if not os.path.isdir(_CONFIG_DESKTOP_DIR):

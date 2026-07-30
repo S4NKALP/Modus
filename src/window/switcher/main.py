@@ -574,16 +574,7 @@ class ApplicationSwitcher(Window):
                     item.preview_image.set_from_pixbuf(pixbuf)
 
                 if self.get_visible() and config().get("switcher_live_preview", True):
-                    fps_delay = config().get("switcher.live_preview_delay_ms", 200)
-                    invoke_repeater(
-                        fps_delay,
-                        lambda: (
-                            self._capture.capture_by_handle(full_addr, 300, 168, True)
-                            if self.get_visible()
-                            else False
-                        ),
-                        initial_call=False,
-                    )
+                    self._capture.capture_by_handle(full_addr, 300, 168, True)
         except Exception:
             logger.exception("_on_frame_ready error")
 

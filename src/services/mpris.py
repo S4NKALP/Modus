@@ -212,6 +212,7 @@ class PlayerService(Service):
         self._is_cleaning_up = False
         self._artwork_generation = 0
         self._signal_ids = []
+        self._subscription_ids: list[int] = []
         self._last_emitted_status = ""
         self._failed_covers: set[str] = set()
         self._download_threads: dict[str, threading.Thread] = {}
@@ -220,11 +221,10 @@ class PlayerService(Service):
             self._proxy.connect("g-properties-changed", self._on_properties_changed)
         )
 
-        self._pos_source_id = 0
-        self._status_source_id = 0
-        self._last_polled_status = ""
-        self._start_status_polling()
-        self.poll_progress()
+        self._subscribe_seeked()
+
+        if self.playback_status.lower() == "playing":
+            self.fabricating()
 
         metadata = self._get_metadata()
         if metadata:
@@ -251,6 +251,49 @@ class PlayerService(Service):
             GLib.timeout_add(800, self._refresh_initial_state, attempt + 1)
         return False
 
+    def _subscribe_seeked(self):
+        conn = self._proxy.get_connection()
+        if conn:
+            self._subscription_ids.append(
+                conn.signal_subscribe(
+                    self._proxy.get_name(),
+                    MPRIS_PLAYER_IFACE,
+                    "Seeked",
+                    MPRIS_PLAYER_PATH,
+                    None,
+                    Gio.DBusSignalFlags.NONE,
+                    self._on_seeked,
+                )
+            )
+
+    def _on_seeked(
+        self,
+        _connection,
+        _sender_name,
+        _object_path,
+        _interface_name,
+        _signal_name,
+        params: GLib.Variant,
+    ):
+        if self._is_cleaning_up:
+            return
+        try:
+            pos = params.unpack()[0] / 1_000_000
+        except Exception as e:
+            logger.warning(f"[mpris] Seeked unpack failed: {e}")
+            return
+        m = self._get_metadata()
+        dur = 0
+        if m is not None:
+            v = m.get("mpris:length")
+            if v is not None:
+                dur = (
+                    v.get_uint64() / 1_000_000
+                    if isinstance(v, GLib.Variant) and v.get_type_string() == "t"
+                    else int(v) / 1_000_000
+                )
+        self.track_position(pos, dur)
+
     def get_artwork(self) -> str:
         return self._current_artwork_path
 
@@ -270,49 +313,9 @@ class PlayerService(Service):
             logger.warning(f"Could not get position: {e}")
             return 0
 
-    def _start_pos_fabricator(self):
-        if self._pos_source_id:
-            return
-        self._pos_source_id = GLib.timeout_add(2000, self._on_pos_poll)
-
-    def _stop_pos_fabricator(self):
-        if not self._pos_source_id:
-            return
-        GLib.source_remove(self._pos_source_id)
-        self._pos_source_id = 0
-
-    def _on_pos_poll(self):
-        if self._is_cleaning_up:
-            return False
-        self.fabricating()
-        return True
-
-    def _start_status_polling(self):
-        if self._status_source_id:
-            return
-        self._last_polled_status = self.playback_status
-        self._status_source_id = GLib.timeout_add(5000, self._on_status_poll)
-
-    def _stop_status_polling(self):
-        if not self._status_source_id:
-            return
-        GLib.source_remove(self._status_source_id)
-        self._status_source_id = 0
-
-    def _on_status_poll(self):
-        if self._is_cleaning_up:
-            return False
-        status = self.playback_status
-        if status != self._last_polled_status:
-            self._last_polled_status = status
-            self.poll_progress()
-            self._notify_playback(status)
-        return True
-
     def seek_position(self, pos: float):
         if self._is_cleaning_up:
             return
-        self._stop_pos_fabricator()
         try:
             self._proxy.call_sync(
                 "SetPosition",
@@ -335,13 +338,11 @@ class PlayerService(Service):
             except GLib.Error as e:
                 logger.error(f"seek_position fallback failed: {e}")
         finally:
-            if self.playback_status.lower() == "playing":
-                self._start_pos_fabricator()
+            self.poll_progress()
 
     def seek(self, offset: float):
         if self._is_cleaning_up:
             return
-        self._stop_pos_fabricator()
         try:
             self._proxy.call_sync(
                 "Seek",
@@ -353,16 +354,13 @@ class PlayerService(Service):
         except GLib.Error as e:
             logger.error(f"Failed to seek: {e}")
         finally:
-            if self.playback_status.lower() == "playing":
-                self._start_pos_fabricator()
+            self.poll_progress()
 
     def poll_progress(self):
         if self._is_cleaning_up:
             return
         if self.playback_status.lower() == "playing":
-            self._start_pos_fabricator()
-        else:
-            self._stop_pos_fabricator()
+            self.fabricating()
 
     def fabricating(self, metadata=None):
         if self._is_cleaning_up:
@@ -556,15 +554,22 @@ class PlayerService(Service):
         self._is_cleaning_up = True
         self._artwork_generation += 1
 
-        self._stop_pos_fabricator()
-        self._stop_status_polling()
-
-        for signal_id in self._signal_ids:
+        for sid in self._signal_ids:
             try:
-                self._proxy.disconnect(signal_id)
+                self._proxy.disconnect(sid)
             except Exception as e:
                 logger.warning(f"Error disconnecting signal: {e}")
         self._signal_ids.clear()
+
+        conn = self._proxy.get_connection()
+        for sid in self._subscription_ids:
+            try:
+                if conn:
+                    conn.signal_unsubscribe(sid)
+            except Exception as e:
+                logger.warning(f"Error unsubscribing signal: {e}")
+        self._subscription_ids.clear()
+
         self._current_artwork_path = ""
         self._failed_covers.clear()
         self._download_threads.clear()
