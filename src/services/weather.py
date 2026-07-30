@@ -192,7 +192,11 @@ class Cache:
     def set(self, data: dict):
         try:
             tmp = self._cache_file.with_suffix(".tmp")
-            tmp.write_text(json.dumps(data, separators=(",", ":")))
+            persist_data = data.copy() if isinstance(data, dict) else data
+            if isinstance(persist_data, dict) and "location" in self._cache_file.name:
+                persist_data.pop("lat", None)
+                persist_data.pop("lon", None)
+            tmp.write_text(json.dumps(persist_data, separators=(",", ":")))
             tmp.rename(self._cache_file)
             with self._lock:
                 self._data = data
