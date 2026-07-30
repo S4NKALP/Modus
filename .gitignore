@@ -13,3 +13,5 @@ src/styles/colors.css
 .venv/
 config/plugins/
 config/desktop.toml
+config/matugen/colors.lua
+src/assets/wallpaper_example/.thumbnails/
