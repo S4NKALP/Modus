@@ -18,6 +18,7 @@ Two launch paths are supported:
 
 import os
 import re
+from pathlib import Path
 
 from fabric.utils import exec_shell_command_async, logger
 
@@ -63,8 +64,34 @@ def launch_command(command_line: str) -> None:
     )
 
 
+def _launch_workdir(app) -> str | None:
+    """Working directory for the launched app: the desktop file's ``Path=``
+    if set, else the user's home directory.
+
+    GIO inherits the calling process's cwd when the desktop file has no
+    ``Path=`` entry, so without this terminals and file managers would open in
+    Modus's own working directory.
+    """
+    app_path = getattr(app, "_app", None)
+    path = app_path.get_string("Path") if app_path is not None else None
+    if path:
+        return str(path)
+    return str(Path.home())
+
+
 def launch_desktop_app(app) -> None:
     """Launch a :class:`fabric.utils.DesktopApp`, injecting the GTK3 shim if needed."""
+    workdir = _launch_workdir(app)
+    cwd = os.getcwd()
+
+    def launch() -> None:
+        if workdir:
+            os.chdir(workdir)
+        try:
+            app.launch()
+        finally:
+            os.chdir(cwd)
+
     shim_env = shim_env_for_executable(getattr(app, "executable", None))
     if shim_env:
         prev = os.environ.get("LD_PRELOAD")
@@ -74,11 +101,11 @@ def launch_desktop_app(app) -> None:
             f"{getattr(app, 'display_name', app)}"
         )
         try:
-            app.launch()
+            launch()
         finally:
             if prev is None:
                 os.environ.pop("LD_PRELOAD", None)
             else:
                 os.environ["LD_PRELOAD"] = prev
     else:
-        app.launch()
+        launch()
