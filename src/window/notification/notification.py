@@ -22,7 +22,7 @@ from shared.widgets.clipping_box import ClippingBox
 from shared.widgets.close_button_revealer import CloseButtonRevealerMixin
 from shared.widgets.custom_image import CustomImage
 from shared.widgets.customrevealer import SlideRevealer
-from utils.gtk_utils import setup_cursor_hover, svg_file
+from utils.gtk_utils import setup_cursor_hover
 from utils.functions import escape_markup_text
 from utils.roam import modus_service
 from utils.icon_resolver import IconResolver
@@ -531,44 +531,12 @@ class NotificationWidget(Box):
         self.show_all()
 
     def create_header(self, notification):
-        """Create notification header with app icon + app name + time"""
-        try:
-            cached_app_icon_pixbuf = cache_notification_icon(
-                notification.app_icon or notification.app_name, (64, 64)
-            )
-            if cached_app_icon_pixbuf:
-                header_icon_pixbuf = cached_app_icon_pixbuf.scale_simple(
-                    16, 16, GdkPixbuf.InterpType.BILINEAR
-                )
-                app_icon = ClippingBox(
-                    name="notification-icon",
-                    children=Image(pixbuf=header_icon_pixbuf),
-                )
-            else:
-                app_icon = ClippingBox(
-                    name="notification-icon",
-                    children=svg_file("notifications/notification-active.svg", size=16),
-                )
-        except Exception as e:
-            logger.warning(f"Failed to load cached header icon: {e}")
-            app_icon = ClippingBox(
-                name="notification-icon",
-                children=svg_file("notifications/notification-active.svg", size=16),
-            )
-
-        return Box(
-            name="notification-header",
-            orientation="h",
-            spacing=4,
-            children=[
-                app_icon,
-                Label(
-                    notification.app_name or "",
-                    name="notification-app-name",
-                    h_align="start",
-                    ellipsization="end",
-                ),
-            ],
+        """Create notification header with app name + time"""
+        return Label(
+            notification.app_name or "",
+            name="notification-app-name",
+            h_align="start",
+            ellipsization="end",
         )
 
     def create_content(self, notification):

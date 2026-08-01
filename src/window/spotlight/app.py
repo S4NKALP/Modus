@@ -128,7 +128,10 @@ def main(command: str = "", text: str = "", external: bool = False):
 
     def _close_and_quit():
         _orig_close()
-        app.quit()
+        # Plugins schedule the paste via GLib.timeout_add (emoji/clipboard),
+        # which only fires while the main loop runs. Quit a tick later so a
+        # deferred paste is not killed before it can inject the shortcut.
+        GLib.timeout_add(100, app.quit)
 
     spotlight.close_spotlight = _close_and_quit
 

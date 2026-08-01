@@ -198,7 +198,14 @@ def read_json_file(file_path: str) -> dict | None:
 
 def trigger_paste_shortcut(delay_ms: int = 50) -> bool:
     time.sleep(delay_ms / 1000)
-    result = run_command(["wtype", "-M", "ctrl", "v", "-m", "ctrl"], timeout=1)
+    result = run_command(
+        [
+            "hyprctl",
+            "dispatch",
+            'hl.dsp.send_shortcut({ mods = "CTRL", key = "V" })',
+        ],
+        timeout=1,
+    )
     return result.returncode == 0
 
 
