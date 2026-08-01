@@ -1,14 +1,18 @@
 import os
+from collections import OrderedDict
 
 
 class AppName:
+    _MAX_CACHE = 128
+
     def __init__(self, path="/usr/share/applications"):
         self.files = os.listdir(path)
         self.path = path
-        self._cache: dict[str, str | None] = {}
+        self._cache: OrderedDict[str, str | None] = OrderedDict()
 
     def get_app_name(self, wmclass, _format_=False):
         if wmclass in self._cache:
+            self._cache.move_to_end(wmclass)
             return self._cache[wmclass]
 
         desktop_file = ""
@@ -17,18 +21,22 @@ class AppName:
                 desktop_file = f
 
         if desktop_file == "":
-            self._cache[wmclass] = None
-            return None
+            result = None
+        else:
+            desktop_app_name = wmclass
+            with open(os.path.join(self.path, desktop_file)) as f:
+                lines = f.readlines()
+                for line in lines:
+                    if line.startswith("Name="):
+                        desktop_app_name = line.split("=")[1].strip()
+                        break
+            result = desktop_app_name
 
-        desktop_app_name = wmclass
-        with open(os.path.join(self.path, desktop_file)) as f:
-            lines = f.readlines()
-            for line in lines:
-                if line.startswith("Name="):
-                    desktop_app_name = line.split("=")[1].strip()
-                    break
-        self._cache[wmclass] = desktop_app_name
-        return desktop_app_name
+        self._cache[wmclass] = result
+        self._cache.move_to_end(wmclass)
+        if len(self._cache) > self._MAX_CACHE:
+            self._cache.popitem(last=False)
+        return result
 
     def format_app_name(self, title, wmclass, update=False):
         # Handle case when both title and wmclass are empty (no active window)

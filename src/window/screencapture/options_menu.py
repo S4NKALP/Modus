@@ -213,6 +213,10 @@ class OptionsMenu:
             None,
         )
 
+    def destroy(self):
+        """Destroy the persistent Gtk.Menu and its children."""
+        self._menu.destroy()
+
     def get_timer_delay(self) -> int:
         return [0, 5, 10][self._timer_idx]
 

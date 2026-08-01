@@ -106,6 +106,10 @@ class ModusDropdown:
     def popup(self, widget, source_button=None):
         self.popup_at_widget(widget, source_button)
 
+    def destroy(self):
+        """Destroy the Gtk.Menu and its children."""
+        self._menu.destroy()
+
 
 def dropdown_option(label, accel=None, command=None, callback=None, sensitive=True):
     """Create a dropdown menu option dict.

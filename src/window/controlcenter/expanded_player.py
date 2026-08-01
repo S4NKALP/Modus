@@ -460,6 +460,12 @@ class PlayerBox(Box):
     def destroy(self):
         self.exit = True
         self.suspend()
+        if self._seek_timeout:
+            GLib.source_remove(self._seek_timeout)
+            self._seek_timeout = None
+        if self._debounce_seek:
+            GLib.source_remove(self._debounce_seek)
+            self._debounce_seek = None
         for obj, handler_id in self._signal_connections:
             try:
                 obj.disconnect(handler_id)

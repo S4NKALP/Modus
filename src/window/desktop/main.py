@@ -164,6 +164,7 @@ class DesktopWidgetWindow(WaylandWindow):
         self._dragging_eb: Gtk.EventBox | None = None
         self._drag_drop_success: bool = False
         self._input_rebuild_pending: bool = False
+        self._context_menu: Gtk.Menu | None = None
 
         self._root = Box(h_expand=True, v_expand=True)
         self._root.add(self._fixed)
@@ -296,7 +297,7 @@ class DesktopWidgetWindow(WaylandWindow):
         return False
 
     def _show_context_menu(self, event: Gdk.EventButton) -> None:
-        menu = Gtk.Menu()
+        menu = self._context_menu = Gtk.Menu()
 
         label_text = "Done Edit" if self._edit_mode else "Edit Widgets"
         edit_item = Gtk.CheckMenuItem(label=label_text)
@@ -304,8 +305,14 @@ class DesktopWidgetWindow(WaylandWindow):
         edit_item.connect("toggled", self._on_edit_toggled)
         menu.append(edit_item)
 
+        menu.connect("deactivate", self._on_context_menu_deactivate)
         menu.show_all()
         menu.popup_at_pointer(event)
+
+    def _on_context_menu_deactivate(self, menu) -> None:
+        if self._context_menu is menu:
+            self._context_menu = None
+        GLib.idle_add(menu.destroy)
 
     # edit mode
 

@@ -498,6 +498,10 @@ def add_destroy_to_indicators():
                 self.bluetooth.disconnect_by_func(self.on_bluetooth_direct_changed)
                 self.bluetooth.disconnect_by_func(self.on_device_added)
                 self.bluetooth.disconnect_by_func(self.on_device_removed)
+                try:
+                    self.bluetooth.close()
+                except Exception as e:
+                    logger.error(f"Error closing bluetooth indicator client: {e}")
         except Exception as e:
             logger.error(f"Error disconnecting bluetooth indicator signals: {e}")
         try:

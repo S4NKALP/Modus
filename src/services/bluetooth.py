@@ -677,31 +677,45 @@ class BluetoothClient(Service):
             None,
         )
 
-        self._bus.signal_subscribe(
-            BLUEZ_SERVICE,
-            DBUS_OM_IFACE,
-            "InterfacesAdded",
-            None,
-            None,
-            Gio.DBusSignalFlags.NONE,
-            self._on_interfaces_added,
-            None,
-        )
-        self._bus.signal_subscribe(
-            BLUEZ_SERVICE,
-            DBUS_OM_IFACE,
-            "InterfacesRemoved",
-            None,
-            None,
-            Gio.DBusSignalFlags.NONE,
-            self._on_interfaces_removed,
-            None,
-        )
+        self._bus_sub_ids = [
+            self._bus.signal_subscribe(
+                BLUEZ_SERVICE,
+                DBUS_OM_IFACE,
+                "InterfacesAdded",
+                None,
+                None,
+                Gio.DBusSignalFlags.NONE,
+                self._on_interfaces_added,
+                None,
+            ),
+            self._bus.signal_subscribe(
+                BLUEZ_SERVICE,
+                DBUS_OM_IFACE,
+                "InterfacesRemoved",
+                None,
+                None,
+                Gio.DBusSignalFlags.NONE,
+                self._on_interfaces_removed,
+                None,
+            ),
+        ]
 
         self._cached_rfkill_blocked = _rfkill_soft_blocked()
         self._rfkill_timeout_id = GLib.timeout_add_seconds(10, self._check_rfkill)
 
         self._populate_from_object_manager()
+
+    def close(self):
+        """Release the rfkill timer and unsubscribe from the DBus bus."""
+        if self._rfkill_timeout_id:
+            GLib.source_remove(self._rfkill_timeout_id)
+            self._rfkill_timeout_id = 0
+        for sub_id in self._bus_sub_ids:
+            self._bus.signal_unsubscribe(sub_id)
+        self._bus_sub_ids.clear()
+        for adapter in list(self._adapters.values()):
+            adapter.close()
+        self._adapters.clear()
 
     def _check_rfkill(self) -> bool:
         blocked = _rfkill_soft_blocked()

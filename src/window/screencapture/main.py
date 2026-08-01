@@ -101,10 +101,27 @@ class ScreenCaptureWindow(Window):
         self._tool_group.select_id("screenshot-screen")
         self._tool_group.on_change(self._on_tool_changed)
 
-        screen_recorder_service.connect("started", self._on_recording_started)
-        screen_recorder_service.connect("stopped", self._on_recording_stopped)
-
         self.connect("key-press-event", self._on_key_press)
+
+        self._recorder_handler_ids = [
+            screen_recorder_service.connect("started", self._on_recording_started),
+            screen_recorder_service.connect("stopped", self._on_recording_stopped),
+        ]
+
+    def destroy(self):
+        for hid in self._recorder_handler_ids:
+            try:
+                screen_recorder_service.disconnect(hid)
+            except Exception as e:
+                logger.warning(f"[main] disconnect recorder signal failed: {e}")
+        self._recorder_handler_ids = []
+        if self._delay_timeout_id is not None:
+            GLib.source_remove(self._delay_timeout_id)
+            self._delay_timeout_id = None
+        if self._options_menu is not None:
+            self._options_menu.destroy()
+            self._options_menu = None
+        super().destroy()
 
     def do_focus(self, direction):
         """

@@ -16,7 +16,7 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
 
 import shared.data as data
-from services.config import get_config, on_config_change
+from services.config import get_config, off_config_change, on_config_change
 from services.modus import notification_service
 from shared.widgets.clipping_box import ClippingBox
 from shared.widgets.close_button_revealer import CloseButtonRevealerMixin
@@ -1158,7 +1158,9 @@ class ModusNoti(Window):
         self.TRANSITION_DELAY = 100  # Smoother transition timing
         self.DEBOUNCE_DELAY = 50  # Prevent rapid fire notifications
 
-        self._server.connect("notification-added", self.on_new_notification)
+        self._notification_added_handler_id = self._server.connect(
+            "notification-added", self.on_new_notification
+        )
         Window.__init__(
             self,
             anchor="top right",
@@ -1438,3 +1440,20 @@ class ModusNoti(Window):
                 self.update_config(changes)
         except Exception as e:
             logger.error(f"[ModusNoti] Error handling config change: {e}")
+
+    def destroy(self):
+        off_config_change(self._on_config_changed)
+        if self._transition_timer_id:
+            GLib.source_remove(self._transition_timer_id)
+            self._transition_timer_id = None
+        if self._debounce_timer_id:
+            GLib.source_remove(self._debounce_timer_id)
+            self._debounce_timer_id = None
+        if self._notification_added_handler_id:
+            try:
+                self._server.disconnect(self._notification_added_handler_id)
+            except Exception as e:
+                logger.error(f"[ModusNoti] Failed to disconnect server: {e}")
+            self._notification_added_handler_id = None
+        self.clear_notification_queue()
+        super().destroy()

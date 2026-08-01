@@ -241,6 +241,15 @@ class GameModeButton(Box):
         else:
             self.game_icon.remove_style_class("connected")
 
+    def destroy(self):
+        try:
+            self.gamemode_service.disconnect_by_func(self.update_state)
+        except Exception as e:
+            logger.warning(
+                f"[battery_widget] disconnect gamemode update_state failed: {e}"
+            )
+        super().destroy()
+
 
 class BatteryControl(Box):
     def __init__(self, parent, **kwargs):

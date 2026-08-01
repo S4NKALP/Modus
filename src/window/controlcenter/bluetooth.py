@@ -284,6 +284,7 @@ class BluetoothDeviceSlot(Box):
             menu.append(item_remove)
 
         menu.show_all()
+        menu.connect("deactivate", lambda m: GLib.idle_add(m.destroy))
         menu.popup_at_pointer(event)
         return True
 
@@ -661,6 +662,11 @@ class BluetoothConnections(PullToRefreshMixin, Box):
                     f"[Bluetooth] Failed to disconnect client signal {sig_id}: {e}"
                 )
         self._client_signal_ids.clear()
+        if self.client:
+            try:
+                self.client.close()
+            except Exception as e:
+                logger.error(f"[Bluetooth] Failed to close client: {e}")
 
     def close_bluetooth(self):
         """Called when Bluetooth panel is being closed"""

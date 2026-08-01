@@ -1,4 +1,4 @@
-from fabric.utils import Gdk, Gtk
+from fabric.utils import Gdk, GLib, Gtk
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -7,7 +7,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
 
-from services.config import config, on_config_change
+from services.config import config, off_config_change, on_config_change
 from shared.widgets.smooth_switch import SmoothSwitch
 from utils.gtk_utils import setup_cursor_hover, svg_file
 
@@ -66,6 +66,10 @@ class SettingsSwitch(SmoothSwitch):
         config().set(self.config_key, state)
         config().save()
 
+    def destroy(self):
+        off_config_change(self._on_config_change)
+        super().destroy()
+
 
 class SettingsEntry(Entry):
     def __init__(self, config_key: str, **kwargs):
@@ -75,9 +79,9 @@ class SettingsEntry(Entry):
         super().__init__(
             name="settings-entry",
             text=initial_value,
-            on_activate=self.on_change,
             **kwargs,
         )
+        self.connect("activate", self.on_change)
 
         # Sync with external config changes
         on_config_change(self._on_config_change)
@@ -100,6 +104,10 @@ class SettingsEntry(Entry):
 
         config().set(self.config_key, value)
         config().save()
+
+    def destroy(self):
+        off_config_change(self._on_config_change)
+        super().destroy()
 
 
 class SettingsComboBox(Gtk.ComboBoxText):
@@ -134,6 +142,10 @@ class SettingsComboBox(Gtk.ComboBoxText):
             config().set(self.config_key, value)
             config().save()
 
+    def destroy(self):
+        off_config_change(self._on_config_change)
+        super().destroy()
+
 
 class SettingsList(Box):
     """A list of tags that can be added or removed"""
@@ -146,8 +158,8 @@ class SettingsList(Box):
         self.entry = Entry(
             name="settings-list-entry",
             placeholder="Add new item...",
-            on_activate=self.on_add,
         )
+        self.entry.connect("activate", self.on_add)
 
         self.add(self.list_box)
         self.add(self.entry)
@@ -206,6 +218,10 @@ class SettingsList(Box):
             config().save()
         self._update_list()
 
+    def destroy(self):
+        off_config_change(self._on_config_change)
+        super().destroy()
+
 
 class SettingsPage(ScrolledWindow):
     def __init__(self, title: str, rows: list, **kwargs):
@@ -246,8 +262,11 @@ class SettingsWindow(Gtk.Window):
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_visible(False)
 
-        # Hide instead of destroy so the __main__ reference stays valid
-        self.connect("delete-event", lambda *_: self.hide() or True)
+        # Destroy on close so the widget tree is freed; get_settings_window
+        # recreates it on next open. Destruction is deferred out of the
+        # delete-event emission to avoid tearing the window down mid-signal.
+        self.connect("delete-event", self._on_delete_event)
+        self.connect("destroy", self._on_window_destroyed)
 
         self.stack = Stack(
             name="settings-stack",
@@ -508,6 +527,11 @@ class SettingsWindow(Gtk.Window):
         )
 
     def toggle(self):
+        if getattr(self, "_destroyed", False):
+            # A stale reference (e.g. __main__.settings) outlived this window.
+            get_settings_window().toggle()
+            return
+
         if not self.get_visible():
             self.show_all()
             self.present()
@@ -521,6 +545,16 @@ class SettingsWindow(Gtk.Window):
             self.set_page(current_page)
         else:
             self.hide()
+
+    def _on_delete_event(self, *_):
+        GLib.idle_add(self.destroy)
+        return True
+
+    def _on_window_destroyed(self, *_):
+        global _settings_window
+        self._destroyed = True
+        if _settings_window is self:
+            _settings_window = None
 
 
 _settings_window = None

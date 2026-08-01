@@ -662,6 +662,7 @@ class NotificationCenterWidget(CloseButtonRevealerMixin, NotificationWidget):
         menu.append(close_item)
 
         menu.show_all()
+        self._action_menu = menu
 
         def show_menu(btn):
             # Show the menu under the button
@@ -712,6 +713,9 @@ class NotificationCenterWidget(CloseButtonRevealerMixin, NotificationWidget):
 
     def destroy(self):
         self._cancel_close_button_hide()
+        if hasattr(self, "_action_menu") and self._action_menu is not None:
+            self._action_menu.destroy()
+            self._action_menu = None
         super().destroy()
 
 
