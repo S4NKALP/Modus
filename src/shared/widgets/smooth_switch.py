@@ -56,7 +56,9 @@ class SmoothSwitch(Gtk.DrawingArea):
         if active:
             self._animator.value = 1.0
 
-        self._animator.connect("notify::value", lambda *_: self.queue_draw())
+        self._anim_notify_handler = self._animator.connect(
+            "notify::value", lambda *_: self.queue_draw()
+        )
 
         self.add_events(
             Gdk.EventMask.BUTTON_PRESS_MASK
@@ -94,6 +96,22 @@ class SmoothSwitch(Gtk.DrawingArea):
         self._animator.max_value = target
         self._animator.value = self._animator.min_value
         self._animator.play()
+
+    def destroy(self):
+        """Stop the animator and break the self <-> animator reference cycle."""
+        if getattr(self, "_animator", None) is not None:
+            try:
+                self._animator.stop()
+            except Exception:
+                pass
+            if getattr(self, "_anim_notify_handler", None) is not None:
+                try:
+                    self._animator.disconnect(self._anim_notify_handler)
+                except Exception:
+                    pass
+                self._anim_notify_handler = None
+            self._animator = None
+        super().destroy()
 
     def _on_draw(self, _, cr: cairo.Context):
         w, h = self._width, self._height

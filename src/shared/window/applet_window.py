@@ -114,6 +114,11 @@ class AppletWindow(PopupWindow):
         self.close_applet()
 
     def destroy(self):
+        if AppletWindow._active_popup == self:
+            AppletWindow._active_popup = None
+        parent = getattr(self, "_parent_dropdown", None)
+        if parent is not None and getattr(parent, "_child_dropdown", None) is self:
+            parent._child_dropdown = None
         if hasattr(self, "dismiss_layer"):
             self.dismiss_layer.destroy()
         if self._hide_timeout_id is not None:

@@ -43,6 +43,8 @@ class BaseOSDContainer(Box):
     def _on_leave_notify(self, widget, event):
         if event.detail != Gdk.NotifyType.INFERIOR:
             self._is_hovered = False
+            if self.watchdog_handler and self.window.get_visible():
+                self._schedule_watchdog()
 
     def is_hovered(self):
         return self._is_hovered
@@ -92,20 +94,27 @@ class BaseOSDContainer(Box):
         self.window.hide()
         return False
 
+    def _schedule_watchdog(self) -> None:
+        """Arm a single-shot watchdog that hides the OSD at MAX_VISIBLE_TIME."""
+        self.remove_watchdog_handler()
+        remaining = self.show_timestamp + self.MAX_VISIBLE_TIME - time.time()
+        delay_ms = max(50, int(remaining * 1000))
+        self.watchdog_handler = GLib.timeout_add(delay_ms, self.watchdog_force_hide)
+
     def watchdog_force_hide(self, *_):
+        self.watchdog_handler = 0
         if not self.window.get_visible():
             self.cleanup_all_handlers()
             return False
 
-        elapsed = time.time() - self.show_timestamp
-        if elapsed >= self.MAX_VISIBLE_TIME:
-            if not self.is_hovered():
-                self.hide_window()
-                self.cleanup_all_handlers()
-                return False
-            else:
-                return True
-        return True
+        if self.is_hovered():
+            # Keep the OSD visible while hovered; re-check periodically.
+            self.watchdog_handler = GLib.timeout_add(500, self.watchdog_force_hide)
+            return False
+
+        self.hide_window()
+        self.cleanup_all_handlers()
+        return False
 
     def update(self, *_):
         if self._update_in_progress:
@@ -130,7 +139,7 @@ class BaseOSDContainer(Box):
 
         self.focus()
         self.last_handler = invoke_repeater(1700, self.unfocus, initial_call=False)
-        self.watchdog_handler = GLib.timeout_add(1000, self.watchdog_force_hide)
+        self._schedule_watchdog()
         self._update_in_progress = False
 
     def focus(self, *_):

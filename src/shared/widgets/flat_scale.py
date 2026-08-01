@@ -156,7 +156,9 @@ class FlatScale(Gtk.DrawingArea, Widget):
             max_value=16.0,
             tick_widget=self,
         )
-        self._anim_press.connect("notify::value", lambda *_: self.queue_draw())
+        self._anim_press_handler = self._anim_press.connect(
+            "notify::value", lambda *_: self.queue_draw()
+        )
 
         # Bubble open animator (0 → 1)
         self._anim_bubble_open = Animator(
@@ -166,7 +168,9 @@ class FlatScale(Gtk.DrawingArea, Widget):
             max_value=1.0,
             tick_widget=self,
         )
-        self._anim_bubble_open.connect("notify::value", lambda *_: self.queue_draw())
+        self._anim_bubble_open_handler = self._anim_bubble_open.connect(
+            "notify::value", lambda *_: self.queue_draw()
+        )
 
         # Bubble close animator (0 → 1, mapped as 1 - value)
         self._anim_bubble_close = Animator(
@@ -176,7 +180,9 @@ class FlatScale(Gtk.DrawingArea, Widget):
             max_value=1.0,
             tick_widget=self,
         )
-        self._anim_bubble_close.connect("notify::value", lambda *_: self.queue_draw())
+        self._anim_bubble_close_handler = self._anim_bubble_close.connect(
+            "notify::value", lambda *_: self.queue_draw()
+        )
 
         self._bubble_progress = 0.0  # 0.0 = hidden, 1.0 = fully visible
         self._bubble_closing = False
@@ -458,6 +464,27 @@ class FlatScale(Gtk.DrawingArea, Widget):
         PangoCairo.show_layout(cr, layout)
 
         cr.restore()
+
+    def destroy(self):
+        """Stop all animators and break the self <-> animator reference cycles."""
+        animators = [
+            (self._anim_press, self._anim_press_handler),
+            (self._anim_bubble_open, self._anim_bubble_open_handler),
+            (self._anim_bubble_close, self._anim_bubble_close_handler),
+        ]
+        for animator, handler_id in animators:
+            try:
+                animator.stop()
+            except Exception:
+                pass
+            try:
+                animator.disconnect(handler_id)
+            except Exception:
+                pass
+        self._anim_press = None
+        self._anim_bubble_open = None
+        self._anim_bubble_close = None
+        super().destroy()
 
     def do_draw(self, cr: cairo.Context) -> bool:
         styles = self.do_resolve_style()

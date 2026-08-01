@@ -37,6 +37,9 @@ class SystemInfoBase(Box):
             all_visible=True,
             **kwargs,
         )
+        self._system_timer_id = None
+        self.connect("map", self._on_map)
+        self.connect("unmap", self._on_unmap)
         self.progress = self.create_progress_bar(name="progress")
         self.main_label = Label(
             label="0%\nLoading", justification="center", name="progress-label"
@@ -65,14 +68,39 @@ class SystemInfoBase(Box):
         )
 
     def start_updates(self):
-        self.update()
-        self._system_timer_id = invoke_repeater(SYSTEM_UPDATE_INTERVAL, self.update)
+        self._start_update_timer()
+
+    def _start_update_timer(self):
+        self._stop_update_timer()
+        if not self.get_mapped():
+            return
+        self._system_timer_id = invoke_repeater(
+            SYSTEM_UPDATE_INTERVAL, self._update_tick
+        )
+
+    def _stop_update_timer(self):
+        if getattr(self, "_system_timer_id", None):
+            try:
+                GLib.source_remove(self._system_timer_id)
+            except Exception as e:
+                logger.error(f"Error removing system info timer: {e}")
+            self._system_timer_id = None
+
+    def _update_tick(self) -> bool:
+        if not self.get_mapped():
+            self._system_timer_id = None
+            return False
+        return self.update()
+
+    def _on_map(self, *_):
+        self._start_update_timer()
+
+    def _on_unmap(self, *_):
+        self._stop_update_timer()
 
     def destroy(self):
         """Cleanup system info update timer"""
-        if hasattr(self, "_system_timer_id") and self._system_timer_id:
-            GLib.source_remove(self._system_timer_id)
-            self._system_timer_id = None
+        self._stop_update_timer()
         super().destroy()
 
     def create_info_line(

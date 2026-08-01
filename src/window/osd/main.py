@@ -51,6 +51,11 @@ class OSD(Box):
             return
         self.show_container(self.containers.get("brightness"))
 
+    def destroy(self):
+        """Break the OSD <-> window reference cycle before teardown."""
+        self.window = None
+        super().destroy()
+
 
 class OSDWindow(Window):
     def __init__(self, **kwargs):
@@ -81,3 +86,11 @@ class OSDWindow(Window):
         if not get_config("panel.osd", True):
             return
         self.osd.containers["brightness"].update()
+
+    def destroy(self):
+        """Break the OSD <-> window reference cycle before teardown."""
+        osd = getattr(self, "osd", None)
+        self.osd = None
+        if osd is not None:
+            osd.window = None
+        super().destroy()

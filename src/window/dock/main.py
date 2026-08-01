@@ -57,6 +57,7 @@ class Dock(Window):
         self.is_hovered = False
         self.hide_ticket = 0
         self._occlusion_timer_id = None
+        self._occlusion_check_pending = False
         self._hyprland_handlers = []
         self._destroyed = False
 
@@ -87,14 +88,15 @@ class Dock(Window):
 
     def _check_occlusion_deferred(self) -> None:
         """Debounce occlusion check to avoid rapid successive checks."""
-        if hasattr(self, "_occlusion_check_pending") and self._occlusion_check_pending:
+        if self._occlusion_check_pending:
             return
         self._occlusion_check_pending = True
-        GLib.timeout_add(50, self._run_occlusion_check)
+        self._occlusion_timer_id = GLib.timeout_add(50, self._run_occlusion_check)
 
     def _run_occlusion_check(self) -> bool:
         """Run the actual occlusion check."""
         self._occlusion_check_pending = False
+        self._occlusion_timer_id = None
         if self._destroyed:
             return False
         try:
@@ -138,7 +140,9 @@ class Dock(Window):
         if config().get("dock.enabled", True):
             self.show()
             self.revealer.set_reveal_child(True)
+            self.canvas.animator.start()
         else:
+            self.canvas.animator.stop()
             self.hide()
 
     def on_hover_enter(self) -> None:
@@ -165,6 +169,7 @@ class Dock(Window):
 
     def _disconnect_occlusion_signals(self) -> None:
         """Disconnect all Hyprland occlusion signal handlers."""
+        self._cancel_occlusion_timer()
         hyprland = get_modus_service()._hyprland_connection
         for handler_id in self._hyprland_handlers:
             try:
@@ -173,8 +178,20 @@ class Dock(Window):
                 logger.warning(f"[Dock] Error disconnecting occlusion handler: {e}")
         self._hyprland_handlers.clear()
 
+    def _cancel_occlusion_timer(self) -> None:
+        if self._occlusion_timer_id is not None:
+            try:
+                GLib.source_remove(self._occlusion_timer_id)
+            except Exception as e:
+                logger.debug(
+                    f"[Dock] Failed to remove occlusion timer {self._occlusion_timer_id}: {e}"
+                )
+            self._occlusion_timer_id = None
+        self._occlusion_check_pending = False
+
     def destroy(self) -> None:
         self._destroyed = True
+        self._cancel_occlusion_timer()
         self._disconnect_occlusion_signals()
         from services.config import off_config_change
 

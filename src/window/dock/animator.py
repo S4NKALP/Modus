@@ -64,4 +64,12 @@ class DockAnimator:
             canvas._needs_redraw = False
             canvas.queue_draw()
 
+        # Self-pause: stop ticking once nothing is animating and no redraw is
+        # pending, so an idle dock consumes zero CPU. Restarted on mouse
+        # motion/enter, size changes or model rebuilds.
+        if not dirty and not canvas._needs_redraw:
+            self._running = False
+            self._timer_id = None
+            return False
+
         return self._running

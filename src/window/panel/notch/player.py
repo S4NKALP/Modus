@@ -12,7 +12,7 @@ from utils.gtk_utils import svg_file
 
 # tunables
 _BARS = 8  # number of bars
-_TICK_MS = 150  # ~7 fps — smooth with sine, very cheap
+_TICK_MS = 300  # ~3 fps — wall-clock sine curve, cheaper sampling
 _H_MIN = 2  # minimum total bar height (px, both halves)
 _H_MAX = 16  # maximum total bar height (px)
 _BAR_W = 1  # bar pixel width

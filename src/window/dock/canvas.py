@@ -163,6 +163,9 @@ class DockCanvas(Gtk.DrawingArea):
 
     def _on_size_allocate(self, widget, allocation) -> None:
         self._needs_redraw = True
+        animator = getattr(self, "animator", None)
+        if animator is not None:
+            animator.start()
 
     def do_get_preferred_height(self):
         h = self._canvas_height()
@@ -327,6 +330,7 @@ class DockCanvas(Gtk.DrawingArea):
 
         self.model.items = new_items
         self._needs_redraw = True
+        self.animator.start()
 
     def _update_trash_item(
         self,
@@ -459,7 +463,7 @@ class DockCanvas(Gtk.DrawingArea):
     def debounced_update_dock_apps(self) -> None:
         if self._dock_update_timer:
             GLib.source_remove(self._dock_update_timer)
-        self._dock_update_timer = GLib.timeout_add(50, self._do_update)
+        self._dock_update_timer = GLib.timeout_add(100, self._do_update)
 
     def _do_update(self) -> bool:
         self._dock_update_timer = None
