@@ -1,6 +1,7 @@
 # Standard library imports
 import json
 import uuid
+import weakref
 from datetime import datetime
 from pathlib import Path
 
@@ -24,20 +25,37 @@ class TodoService(Service):
 
     def add_callback(self, callback):
         """Add a callback function to be notified of changes"""
-        self._callbacks.append(callback)
+        for ref in self._callbacks:
+            if ref() == callback:
+                return
+        self._callbacks.append(self._weak_callback_ref(callback))
 
     def remove_callback(self, callback):
         """Remove a callback function"""
-        if callback in self._callbacks:
-            self._callbacks.remove(callback)
+        self._callbacks = [
+            ref for ref in self._callbacks if ref() is not None and ref() != callback
+        ]
+
+    @staticmethod
+    def _weak_callback_ref(callback):
+        try:
+            return weakref.WeakMethod(callback)
+        except TypeError:
+            return weakref.ref(callback)
 
     def _notify_callbacks(self, event_type, data=None):
         """Notify all registered callbacks of changes"""
-        for callback in self._callbacks:
+        alive = []
+        for ref in self._callbacks:
+            callback = ref()
+            if callback is None:
+                continue
+            alive.append(ref)
             try:
                 callback(event_type, data)
             except Exception as e:
                 logger.error(f"Error in todo callback: {e}")
+        self._callbacks = alive
 
     def _get_todos_file_path(self):
         """Returns the path to the todos JSON file"""

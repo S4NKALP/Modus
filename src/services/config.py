@@ -7,6 +7,7 @@ changes. It is implemented as a singleton and intended to be reused by any
 module that needs dynamic configuration.
 """
 
+import weakref
 from typing import Any, Callable, Dict, List, Optional
 
 from fabric.utils import Gio, GLib, logger, os
@@ -102,16 +103,33 @@ class ConfigService:
     def register_reload_callback(
         self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
     ) -> None:
-        if callback not in self._reload_callbacks:
-            self._reload_callbacks.append(callback)
+        live = []
+        for ref in self._reload_callbacks:
+            existing = ref()
+            if existing is None:
+                continue
+            live.append(ref)
+            if existing == callback:
+                self._reload_callbacks = live
+                return
+        live.append(self._weak_callback_ref(callback))
+        self._reload_callbacks = live
 
     def unregister_reload_callback(
         self, callback: Callable[[Dict[str, Any], Dict[str, Any]], None]
     ) -> None:
+        self._reload_callbacks = [
+            ref
+            for ref in self._reload_callbacks
+            if ref() is not None and ref() != callback
+        ]
+
+    @staticmethod
+    def _weak_callback_ref(callback):
         try:
-            self._reload_callbacks.remove(callback)
-        except ValueError:
-            pass
+            return weakref.WeakMethod(callback)
+        except TypeError:
+            return weakref.ref(callback)
 
     @staticmethod
     def _dict_to_toml(d: dict) -> Any:
@@ -181,11 +199,17 @@ class ConfigService:
             self._load_config()
 
             # Always notify listeners on reload request to be safe
-            for callback in list(self._reload_callbacks):
+            alive_callbacks = []
+            for ref in self._reload_callbacks:
+                callback = ref()
+                if callback is None:
+                    continue
+                alive_callbacks.append(ref)
                 try:
                     callback(self._config, old_config)
                 except Exception as e:
                     logger.error(f"[ConfigService] Callback failed: {e}")
+            self._reload_callbacks = alive_callbacks
 
             self._last_notified_config = self._config.copy()
             return False
