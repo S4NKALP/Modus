@@ -86,6 +86,13 @@ def setup_css(app):
     app.connect("shutdown", cleanup_css_monitors)
 
 
+class _LazySettingsWindow:
+    """Forward attribute access to the settings window, creating it on first use."""
+
+    def __getattr__(self, name):
+        return getattr(get_settings_window(), name)
+
+
 def main():
     set_process_name(APP_NAME)
     load_config()
@@ -109,7 +116,6 @@ def main():
     dock = Dock()
     osd = OSDWindow()
     screencapture = ScreenCaptureWindow()
-    settings = get_settings_window()
 
     # Register windows with the application
     for w in [
@@ -139,7 +145,7 @@ def main():
     __main__.screencapture = screencapture
     __main__.lock_screen = LockScreenWrapper()
     __main__.switch_keyboard_layout = KeyboardLayout.switch_keyboard_layout
-    __main__.settings = settings
+    __main__.settings = _LazySettingsWindow()
     __main__.desktop_widgets = DesktopWidgetService.get_instance()
 
     app.run()
