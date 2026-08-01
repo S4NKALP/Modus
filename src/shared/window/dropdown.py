@@ -68,9 +68,9 @@ class ModusDropdown:
         return item
 
     @staticmethod
-    def _activate(callback, command, *_):
+    def _activate(callback, command, *args):
         if callback:
-            callback()
+            callback(*args)
         if command:
             thread(run_command, ["sh", "-c", command], timeout=30)
 

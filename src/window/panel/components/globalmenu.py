@@ -23,13 +23,29 @@ def has_active_window():
     return app_name and app_name != "Modus"
 
 
+_about_app_window = None
+
+
+def _reset_about_app_window():
+    global _about_app_window
+    _about_app_window = None
+
+
 def show_about_app(_=None):
+    global _about_app_window
     if not has_active_window():
         return
     app_name = modus_service.current_active_app_name
     wmclass = getattr(modus_service, "current_active_wm_class", "")
-    about_window = AboutApp(app_name=app_name, wmclass=wmclass)
-    about_window.toggle(None)
+
+    window = _about_app_window
+    if window is None or getattr(window, "app_name", None) != app_name:
+        if window is not None:
+            window.destroy()
+        window = AboutApp(app_name=app_name, wmclass=wmclass)
+        window.connect("destroy", lambda *_: _reset_about_app_window())
+        _about_app_window = window
+    window.toggle(None)
 
 
 # Menu factories

@@ -165,6 +165,7 @@ class ApplicationSwitcher(Window):
     def _get_pixbuf(self, class_name: str) -> GdkPixbuf.Pixbuf | None:
         key = (class_name, self.icon_size)
         if key in self._pixbuf_cache:
+            self._pixbuf_cache.move_to_end(key)
             return self._pixbuf_cache[key]
 
         if len(self._pixbuf_cache) > 128:

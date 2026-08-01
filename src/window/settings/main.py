@@ -250,6 +250,21 @@ class SettingsPage(ScrolledWindow):
         self._container = container
 
 
+SECTION_ICONS = {
+    "general": "misc/logo.svg",
+    "dock": "misc/control.svg",
+    "panel": "misc/control-center.svg",
+    "switcher": "screencapture/window.svg",
+    "notification": "notifications/notification-active.svg",
+}
+
+DEFAULT_SECTION_ICON = "misc/logo.svg"
+
+
+def humanize_key(key):
+    return " ".join(word.capitalize() for word in key.replace("_", " ").split())
+
+
 class SettingsWindow(Gtk.Window):
     def __init__(self, **kwargs):
         super().__init__(title="Modus Settings", **kwargs)
@@ -275,31 +290,15 @@ class SettingsWindow(Gtk.Window):
             v_expand=True,
         )
 
-        self.pages = {
-            "general": self._create_general_page(),
-            "dock": self._create_dock_page(),
-            "panel": self._create_panel_page(),
-            "notifications": self._create_notifications_page(),
-        }
-
-        for name, page in self.pages.items():
-            self.stack.add_named(page, name)
-
+        self.pages = {}
         self.sidebar_buttons = {}
-        self.sidebar_buttons["general"] = self._create_sidebar_button(
-            "General", "general", "misc/logo.svg"
-        )
-        self.sidebar_buttons["dock"] = self._create_sidebar_button(
-            "Dock", "dock", "misc/control.svg"
-        )
-        self.sidebar_buttons["panel"] = self._create_sidebar_button(
-            "Panel", "panel", "misc/control-center.svg"
-        )
-        self.sidebar_buttons["notifications"] = self._create_sidebar_button(
-            "Notifications", "notifications", "notifications/notification-active.svg"
-        )
 
-        self.set_page("general")
+        for section, values in config().get_all().items():
+            if not isinstance(values, dict):
+                continue
+            self._add_section(section, values)
+
+        self.set_page(next(iter(self.pages)))
 
         self.sidebar = Box(
             name="settings-sidebar",
@@ -349,182 +348,29 @@ class SettingsWindow(Gtk.Window):
             else:
                 btn.remove_style_class("active")
 
-    def _create_general_page(self):
-        return SettingsPage(
-            "General Settings",
-            [
-                SettingsRow(
-                    "Debug Mode",
-                    SettingsSwitch("general.debug"),
-                    "Enable verbose logging for development",
-                ),
-                SettingsRow(
-                    "Weather Location",
-                    SettingsEntry("general.weather_location"),
-                    "City name for weather updates",
-                ),
-                SettingsRow(
-                    "Keyboard Layouts",
-                    SettingsList("general.keyboard_layouts"),
-                    "Manage active keyboard input languages",
-                ),
-                SettingsRow(
-                    "Hide Special Workspace",
-                    SettingsSwitch("panel.hide_special_workspace"),
-                    "Don't show special workspace in indicators",
-                ),
-                SettingsRow(
-                    "Night Light Temperature",
-                    SettingsEntry("panel.night_light_temperature"),
-                    "Color temperature in Kelvin (e.g. 4500)",
-                ),
-                SettingsRow(
-                    "Live Preview",
-                    SettingsSwitch("switcher.live_preview"),
-                    "Show live window previews in switcher",
-                ),
-                SettingsRow(
-                    "Preview Delay (ms)",
-                    SettingsEntry("switcher.live_preview_delay_ms"),
-                    "Delay before live preview appears",
-                ),
-            ],
+    def _add_section(self, section, values):
+        page = self._build_page(section, values)
+        self.pages[section] = page
+        self.stack.add_named(page, section)
+        self.sidebar_buttons[section] = self._create_sidebar_button(
+            humanize_key(section),
+            section,
+            SECTION_ICONS.get(section, DEFAULT_SECTION_ICON),
         )
 
-    def _create_dock_page(self):
-        return SettingsPage(
-            "Dock Settings",
-            [
-                SettingsRow(
-                    "Enabled",
-                    SettingsSwitch("dock.enabled"),
-                    "Show the application dock",
-                ),
-                SettingsRow(
-                    "Auto Hide",
-                    SettingsSwitch("dock.auto_hide"),
-                    "Hide dock when not in use",
-                ),
-                SettingsRow(
-                    "Always Occluded",
-                    SettingsSwitch("dock.always_occluded"),
-                    "Keep dock behind other windows",
-                ),
-                SettingsRow(
-                    "Icon Size",
-                    SettingsEntry("dock.icon_size"),
-                    "Size of dock icons in pixels",
-                ),
-                SettingsRow(
-                    "Hide Special Apps",
-                    SettingsSwitch("dock.hide_special_workspace_apps"),
-                    "Hide apps from special workspace in dock",
-                ),
-                SettingsRow(
-                    "Hover Scale",
-                    SettingsEntry("dock.hover_scale"),
-                    "Icon scale on hover (1.0 = off, 1.6 = default, 2.0 = max)",
-                ),
-            ],
-        )
+    def _build_page(self, section, values):
+        rows = []
+        for key, value in values.items():
+            widget = self._infer_widget(f"{section}.{key}", value)
+            rows.append(SettingsRow(humanize_key(key), widget))
+        return SettingsPage(f"{humanize_key(section)} Settings", rows)
 
-    def _create_panel_page(self):
-        rows = [
-            SettingsRow(
-                "Global Menu",
-                SettingsSwitch("panel.global_menu"),
-                "Show application menu in the panel",
-            ),
-            SettingsRow(
-                "iMac Button",
-                SettingsSwitch("panel.imac_button"),
-            ),
-            SettingsRow(
-                "Systray",
-                SettingsSwitch("panel.systray"),
-            ),
-            SettingsRow(
-                "Control Center",
-                SettingsSwitch("panel.control_center"),
-            ),
-            SettingsRow(
-                "Search",
-                SettingsSwitch("panel.search"),
-            ),
-            SettingsRow(
-                "Network",
-                SettingsSwitch("panel.network"),
-            ),
-            SettingsRow(
-                "Battery",
-                SettingsSwitch("panel.battery"),
-            ),
-            SettingsRow(
-                "Bluetooth",
-                SettingsSwitch("panel.bluetooth"),
-            ),
-            SettingsRow(
-                "Date & Time",
-                SettingsSwitch("panel.date_time"),
-            ),
-            SettingsRow(
-                "Workspace Indicator",
-                SettingsSwitch("panel.workspace_indicator"),
-            ),
-            SettingsRow(
-                "Notification Center",
-                SettingsSwitch("panel.notification_center"),
-            ),
-            SettingsRow(
-                "Custom Mods",
-                SettingsSwitch("panel.custom_mods"),
-                "Enable custom Hyprland mods in panel",
-            ),
-            SettingsRow(
-                "Window Switcher",
-                SettingsSwitch("switcher.window_switcher"),
-                "Enable Alt+Tab window switcher",
-            ),
-            SettingsRow(
-                "OSD",
-                SettingsSwitch("panel.osd"),
-                "Enable on-screen display for volume/brightness",
-            ),
-            SettingsRow(
-                "Wallpapers Directory",
-                SettingsEntry("general.wallpapers_dir"),
-                "Path to wallpapers folder",
-            ),
-            SettingsRow(
-                "Systray Ignore",
-                SettingsList("panel.systray_ignore"),
-                "Icons to hide from the system tray",
-            ),
-        ]
-
-        return SettingsPage("Panel Settings", rows)
-
-    def _create_notifications_page(self):
-        return SettingsPage(
-            "Notification Settings",
-            [
-                SettingsRow(
-                    "Timeout",
-                    SettingsEntry("notification.timeout"),
-                    "How long notifications stay on screen (e.g. 5s)",
-                ),
-                SettingsRow(
-                    "Ignored Apps",
-                    SettingsList("notification.ignored_apps"),
-                    "Apps that won't show notifications",
-                ),
-                SettingsRow(
-                    "Limited History",
-                    SettingsList("notification.limited_apps_history"),
-                    "Apps with only the latest notification shown",
-                ),
-            ],
-        )
+    def _infer_widget(self, full_key, value):
+        if isinstance(value, bool):
+            return SettingsSwitch(full_key)
+        if isinstance(value, list):
+            return SettingsList(full_key)
+        return SettingsEntry(full_key)
 
     def toggle(self):
         if getattr(self, "_destroyed", False):
