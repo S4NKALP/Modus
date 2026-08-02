@@ -12,6 +12,7 @@ from fabric.widgets.wayland import WaylandWindow as Window
 
 from services.mpris import PlayerManager, PlayerService
 from shared.widgets.player_box_stack import BasePlayerBoxStack
+from utils.functions import format_mmss
 from utils.gtk_utils import svg_file
 from window.controlcenter.player import (
     PLAYER_FALLBACK_ART,
@@ -408,15 +409,7 @@ class PlayerBox(Box):
     def length_str(self, length):
         if length is None or length <= 0:
             return "0:00"
-        length_seconds = length / 1000000
-        hours = int(length_seconds // 3600)
-        minutes = int((length_seconds % 3600) // 60)
-        seconds = int(length_seconds % 60)
-        return (
-            f"{hours}:{minutes:02d}:{seconds:02d}"
-            if hours > 0
-            else f"{minutes}:{seconds:02d}"
-        )
+        return format_mmss(length / 1000000)
 
     def _on_metadata(self, *args):
         if self.exit or self.player is None:
