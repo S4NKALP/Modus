@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from fabric.utils import Gdk, GdkPixbuf, GLib, Gtk, logger
+from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -20,17 +20,10 @@ from utils.functions import clear_children, escape_markup_text
 from window.notification.notification import (
     NotificationWidget,
     _get_relative_time,
-    cache_notification_icon,
     cleanup_all_notification_caches,
     cleanup_notification_specific_caches,
-    get_cached_notification_image,
+    get_notification_pixbuf,
     preload_notification_assets,
-)
-from window.notification.unified_cache import (
-    get_fallback_icon as get_fallback_notification_icon,
-)
-from window.notification.unified_cache import (
-    get_from_cache,
 )
 
 
@@ -179,68 +172,18 @@ class ExpandableNotificationGroup(CloseButtonRevealerMixin, Box):
             self.collapsed_eventbox.add(stack_container)
 
         self.add(self.collapsed_eventbox)
+        # Keep the collapsed view as the first child even after incremental
+        # refreshes recreate it.
+        self.reorder_child(self.collapsed_eventbox, 0)
 
     def _get_notification_pixbuf_for_group(self, cached_notification):
         """Get notification pixbuf at 64x64 - matches app icon size for consistency"""
-        notification = cached_notification._notification
-        pixbuf = None
-
-        # First try to get cached notification image using stored cache key
-        if (
-            hasattr(cached_notification, "cache_metadata")
-            and cached_notification.cache_metadata
-        ):
-            notification_image_cache_key = cached_notification.cache_metadata.get(
-                "notification_image_cache_key"
-            )
-            if notification_image_cache_key:
-                try:
-                    cached_image = get_cached_notification_image(
-                        notification_image_cache_key
-                    )
-                    if cached_image:
-                        pixbuf = cached_image
-                except Exception as e:
-                    logger.debug(f"Failed to load cached notification image: {e}")
-
-        # Fallback to app icon using cached key
-        if not pixbuf and (
-            hasattr(cached_notification, "cache_metadata")
-            and cached_notification.cache_metadata
-        ):
-            app_icon_cache_key = cached_notification.cache_metadata.get(
-                "app_icon_cache_key"
-            )
-            if app_icon_cache_key:
-                try:
-                    cached_app_icon = get_from_cache(app_icon_cache_key, (64, 64))
-                    if cached_app_icon:
-                        pixbuf = cached_app_icon
-                except Exception as e:
-                    logger.debug(f"Failed to load cached app icon: {e}")
-
-        # Final fallback - try to cache app icon directly if available
-        if not pixbuf:
-            try:
-                app_icon_source = getattr(notification, "app_icon", None)
-                if app_icon_source:
-                    cached_app_icon = cache_notification_icon(app_icon_source, (64, 64))
-                    if cached_app_icon:
-                        pixbuf = cached_app_icon
-            except Exception as e:
-                logger.debug(f"Failed to get directly cached app icon: {e}")
-
-        if not pixbuf:
-            pixbuf = get_fallback_notification_icon((64, 64))
-
-        # Always scale to 64x64 so screenshot thumbnails match app icon size
-        try:
-            return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
-        except Exception as e:
-            logger.warning(
-                f"[notification_center] return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.B... failed: {e}"
-            )
-            return pixbuf
+        return get_notification_pixbuf(
+            cached_notification._notification,
+            cache_metadata=getattr(cached_notification, "cache_metadata", {}) or {},
+            target_size=(64, 64),
+            include_live_image=False,
+        )
 
     def create_expanded_state(self):
         # Create main expanded container
@@ -381,17 +324,35 @@ class ExpandableNotificationGroup(CloseButtonRevealerMixin, Box):
         self.expanded_container.set_visible(False)
         return False  # Don't repeat timeout
 
-    def _refresh_expanded_state(self):
-        """Update the expanded notification list in-place without collapsing"""
-        for child in list(self.notifications_list.get_children()):
-            self.notifications_list.remove(child)
-            child.destroy()
+    def reconcile_expanded_state(self):
+        """Add/remove expanded list children in place, preserving newest-first order.
 
-        for notification in self.notifications:
-            notification_widget = NotificationCenterWidget(notification=notification)
-            self.notifications_list.add(notification_widget)
+        Avoids tearing down every ``NotificationCenterWidget`` (and its action
+        menu) when a single notification is added or removed.
+        """
+        wanted_ids = {n.cache_id for n in self.notifications}
+        for child in list(self.notifications_list.get_children()):
+            if getattr(child, "notification_id", None) not in wanted_ids:
+                self.notifications_list.remove(child)
+                child.destroy()
+
+        by_id = {
+            getattr(c, "notification_id", None): c
+            for c in self.notifications_list.get_children()
+        }
+        for i, notification in enumerate(self.notifications):
+            if notification.cache_id in by_id:
+                continue
+            widget = NotificationCenterWidget(notification=notification)
+            self.notifications_list.add(widget)
+            self.notifications_list.reorder_child(widget, i)
+            by_id[notification.cache_id] = widget
 
         self.notifications_list.show_all()
+
+    def _refresh_expanded_state(self):
+        """Update the expanded notification list in-place without collapsing"""
+        self.reconcile_expanded_state()
 
     def close_all(self, *args):
         """Close all notifications in this group with proper cache cleanup"""
@@ -476,56 +437,12 @@ class NotificationCenterWidget(CloseButtonRevealerMixin, NotificationWidget):
 
     def _get_notification_pixbuf(self, notification):
         """Get notification pixbuf at 64x64 - matches app icon size for consistency"""
-        pixbuf = None
-
-        # First try to get cached notification image using stored cache key
-        if self.cache_metadata:
-            notification_image_cache_key = self.cache_metadata.get(
-                "notification_image_cache_key"
-            )
-            if notification_image_cache_key:
-                try:
-                    cached_image = get_cached_notification_image(
-                        notification_image_cache_key
-                    )
-                    if cached_image:
-                        pixbuf = cached_image
-                except Exception as e:
-                    logger.debug(f"Failed to load cached notification image: {e}")
-
-        # Fallback to app icon using cached key
-        if not pixbuf and self.cache_metadata:
-            app_icon_cache_key = self.cache_metadata.get("app_icon_cache_key")
-            if app_icon_cache_key:
-                try:
-                    cached_app_icon = get_from_cache(app_icon_cache_key, (64, 64))
-                    if cached_app_icon:
-                        pixbuf = cached_app_icon
-                except Exception as e:
-                    logger.debug(f"Failed to load cached app icon: {e}")
-
-        # Final fallback - try to cache app icon directly if available
-        if not pixbuf:
-            try:
-                app_icon_source = getattr(notification, "app_icon", None)
-                if app_icon_source:
-                    cached_app_icon = cache_notification_icon(app_icon_source, (64, 64))
-                    if cached_app_icon:
-                        pixbuf = cached_app_icon
-            except Exception as e:
-                logger.debug(f"Failed to get directly cached app icon: {e}")
-
-        if not pixbuf:
-            pixbuf = get_fallback_notification_icon((64, 64))
-
-        # Always scale to 64x64 so screenshot thumbnails match app icon size
-        try:
-            return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
-        except Exception as e:
-            logger.warning(
-                f"[notification_center] return pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.B... failed: {e}"
-            )
-            return pixbuf
+        return get_notification_pixbuf(
+            notification,
+            cache_metadata=self.cache_metadata,
+            target_size=(64, 64),
+            include_live_image=False,
+        )
 
     def create_content(self, notification):
         self.close_button = Button(
@@ -912,20 +829,18 @@ class NotificationCenter(AppletWindow):
         """Refresh a group widget's content, preserving expanded state"""
         try:
             if group_widget.is_expanded:
-                children = list(group_widget.notifications_list.get_children())
-                current_ids = {n.cache_id for n in group_widget.notifications}
-                for child in children:
-                    if getattr(child, "notification_id", None) not in current_ids:
-                        group_widget.notifications_list.remove(child)
-                        child.destroy()
+                group_widget.reconcile_expanded_state()
                 # Only show expanded container, not the whole group
                 group_widget.expanded_container.show_all()
                 return
 
-            clear_children(group_widget)
-
+            # Collapsed: rebuild only the collapsed (latest notification) view,
+            # reconcile the expanded list incrementally instead of tearing down
+            # every child widget on each added notification.
+            if hasattr(group_widget, "collapsed_eventbox"):
+                group_widget.collapsed_eventbox.destroy()
             group_widget.create_collapsed_state()
-            group_widget.create_expanded_state()
+            group_widget.reconcile_expanded_state()
 
             group_widget.show_all()
 
