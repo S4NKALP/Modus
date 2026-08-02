@@ -274,19 +274,6 @@ class ModusService(Service):
             self._show_notificationcenter = value
             self.show_notificationcenter_changed(value)
 
-    def sc(self, signal_name: str, callback: callable, def_value="..."):
-        self.connect(signal_name, callback)
-        if signal_name == "bluetooth-changed":
-            return self.bluetooth if self.bluetooth else "Off"
-        elif signal_name == "wlan-changed":
-            return self.wlan if self.wlan else "No Connection"
-        elif signal_name == "battery-changed":
-            return self.battery if self.battery else "Unknown"
-        elif signal_name == "music-changed":
-            return self.music if self.music else ""
-        else:
-            return def_value
-
     def __init__(self):
         super().__init__()
         self._volume = 0
@@ -528,18 +515,11 @@ def get_active_workspace_id() -> int:
 def get_monitor_for_workspace(workspace_id: int | None = None) -> dict | None:
     if workspace_id is None:
         workspace_id = get_active_workspace_id()
-    for monitor in get_monitors():
+    monitors = get_monitors()
+    for monitor in monitors:
         if monitor.get("activeWorkspace", {}).get("id") == workspace_id:
             return monitor
-    monitors = get_monitors()
     return monitors[0] if monitors else None
-
-
-def get_screen_dimensions() -> tuple[int, int]:
-    monitor = get_monitor_for_workspace()
-    if monitor:
-        return monitor.get("width", 1920), monitor.get("height", 1080)
-    return 1920, 1080
 
 
 def focus_window(address: str):
@@ -584,7 +564,11 @@ def check_occlusion(occlusion_region, workspace=None) -> bool:
     if isinstance(occlusion_region, tuple) and len(occlusion_region) == 2:
         side, size = occlusion_region
         if isinstance(side, str):
-            screen_width, screen_height = get_screen_dimensions()
+            screen_width, screen_height = 1920, 1080
+            monitor = get_monitor_for_workspace(workspace)
+            if monitor:
+                screen_width = monitor.get("width", screen_width)
+                screen_height = monitor.get("height", screen_height)
             if side.lower() == "bottom":
                 occlusion_region = (0, screen_height - size, screen_width, size)
             elif side.lower() == "top":
