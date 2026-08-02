@@ -1,10 +1,10 @@
 import os
 from typing import Any
 
-from fabric.utils import DesktopApp, get_desktop_applications, logger
+from fabric.utils import DesktopApp, logger
 from gi.repository import Gio
 
-from utils.functions import fuzzy_score
+from utils.functions import fuzzy_score, get_desktop_apps, invalidate_desktop_apps_cache
 from window.spotlight.api import SearchResult, SpotlightPlugin
 
 
@@ -49,7 +49,7 @@ class ApplicationPlugin(SpotlightPlugin):
         self._monitors: list[Gio.FileMonitor] = []
 
     def initialize(self) -> None:
-        self._desktop_apps = get_desktop_applications()
+        self._desktop_apps = get_desktop_apps()
         self._dirty = False
         self._start_watching()
 
@@ -70,6 +70,7 @@ class ApplicationPlugin(SpotlightPlugin):
             Gio.FileMonitorEvent.MOVED_IN,
             Gio.FileMonitorEvent.MOVED_OUT,
         ):
+            invalidate_desktop_apps_cache()
             self._dirty = True
 
     def cleanup(self) -> None:
@@ -84,12 +85,10 @@ class ApplicationPlugin(SpotlightPlugin):
 
         if self._dirty:
             try:
-                self._desktop_apps = get_desktop_applications()
+                self._desktop_apps = get_desktop_apps()
                 self._dirty = False
             except Exception as e:
-                logger.warning(
-                    f"[application] self._desktop_apps = get_desktop_applications() failed: {e}"
-                )
+                logger.warning(f"[application] get_desktop_apps() failed: {e}")
 
         results: list[SearchResult] = []
         for app in self._desktop_apps:
