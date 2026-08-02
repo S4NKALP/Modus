@@ -1,4 +1,5 @@
 import math
+import time
 from typing import Dict, List, Optional, Tuple
 
 import cairo
@@ -8,7 +9,6 @@ from fabric.utils import (
     GdkPixbuf,
     GLib,
     Gtk,
-    get_desktop_applications,
     logger,
     os,
 )
@@ -23,7 +23,7 @@ from services.modus import (
     launch_app,
     open_trash,
 )
-from utils.functions import clear_children, is_special_workspace_id
+from utils.functions import clear_children, get_desktop_apps, is_special_workspace_id
 from utils.gtk_utils import svg_file
 from utils.icon_resolver import IconResolver
 
@@ -75,6 +75,8 @@ class DockCanvas(Gtk.DrawingArea):
 
         self._focused_address: str = ""
         self._dock_update_timer: Optional[int] = None
+        self._pending_title_addresses: set = set()
+        self._title_update_timer: Optional[int] = None
         self._hyprland_event_handlers: List = []
         self._last_requested_width: int = 0
         self._last_requested_height: int = 0
@@ -84,6 +86,7 @@ class DockCanvas(Gtk.DrawingArea):
         self._trash_pixbuf: Optional[GdkPixbuf.Pixbuf] = None
         self._cached_trash_full: Optional[bool] = None
         self._cached_trash_size: int = 0
+        self._trash_scan_time: float = 0.0
 
         self.pinned_apps: List = self._read_pinned_apps()
         self.menu = Gtk.Menu()
@@ -131,7 +134,7 @@ class DockCanvas(Gtk.DrawingArea):
     def _get_desktop_apps(self) -> list:
         if not self._desktop_apps:
             try:
-                self._desktop_apps = get_desktop_applications(include_hidden=False)
+                self._desktop_apps = get_desktop_apps()
             except Exception as e:
                 logger.warning(f"[dock] Failed to load desktop applications: {e}")
                 self._desktop_apps = []
@@ -188,6 +191,21 @@ class DockCanvas(Gtk.DrawingArea):
     def _clear_pixbuf_cache(self) -> None:
         self._pixbuf_cache.clear()
 
+    def _get_item_surface(self, item: DockItem):
+        pixbuf = item.pixbuf
+        if pixbuf is None:
+            return None
+        if item.icon_surface is not None and item.icon_surface_pixbuf is pixbuf:
+            return item.icon_surface
+        try:
+            surface = Gdk.cairo_surface_create_from_pixbuf(pixbuf, 1, None)
+        except Exception as e:
+            logger.warning(f"[DockCanvas] Failed to create icon surface: {e}")
+            return None
+        item.icon_surface = surface
+        item.icon_surface_pixbuf = pixbuf
+        return surface
+
     def _get_app_icon_pixbuf(
         self, app_data, app=None, size: Optional[int] = None
     ) -> Optional[GdkPixbuf.Pixbuf]:
@@ -212,8 +230,11 @@ class DockCanvas(Gtk.DrawingArea):
 
         try:
             clients = self._get_clients()
-            focused = self._get_focused_window()
-            self._focused_address = (focused or {}).get("address", "")
+            if not self._focused_address:
+                # Only the first rebuild needs an explicit focused-window query;
+                # subsequent focus is tracked by the activewindow event handler.
+                focused = self._get_focused_window()
+                self._focused_address = (focused or {}).get("address", "")
         except Exception as e:
             logger.error(f"[DockCanvas] Error fetching clients: {e}")
             clients = []
@@ -338,31 +359,40 @@ class DockCanvas(Gtk.DrawingArea):
         old_scales: Dict[str, float],
         size: int,
     ) -> None:
-        trash_full = self._trash_has_files()
+        # Cap the trash filesystem scan (exists + listdir) to once per second;
+        # the dock model may rebuild several times a second during window churn.
+        now = time.monotonic()
         if (
             self._trash_pixbuf is None
-            or trash_full != self._cached_trash_full
             or size != self._cached_trash_size
+            or now - self._trash_scan_time > 1.0
         ):
-            self._cached_trash_full = trash_full
-            self._cached_trash_size = size
-            trash_svg = "trash-full.svg" if trash_full else "trash-empty.svg"
-            try:
-                svg_w = svg_file(f"misc/{trash_svg}")
-                surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
-                cr = cairo.Context(surface)
-                rect = Rsvg.Rectangle()
-                rect.x = rect.y = 0
-                rect.width = size
-                rect.height = size
-                svg_w._handle.set_dpi(160)
-                svg_w._handle.render_document(cr, rect)
-                self._trash_pixbuf = Gdk.pixbuf_get_from_surface(
-                    surface, 0, 0, size, size
-                )
-            except Exception as e:
-                logger.warning(f"[canvas] Failed to render trash SVG: {e}")
-                self._trash_pixbuf = self._get_pixbuf("user-trash", size)
+            self._trash_scan_time = now
+            trash_full = self._trash_has_files()
+            if (
+                self._trash_pixbuf is None
+                or trash_full != self._cached_trash_full
+                or size != self._cached_trash_size
+            ):
+                self._cached_trash_full = trash_full
+                self._cached_trash_size = size
+                trash_svg = "trash-full.svg" if trash_full else "trash-empty.svg"
+                try:
+                    svg_w = svg_file(f"misc/{trash_svg}")
+                    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+                    cr = cairo.Context(surface)
+                    rect = Rsvg.Rectangle()
+                    rect.x = rect.y = 0
+                    rect.width = size
+                    rect.height = size
+                    svg_w._handle.set_dpi(160)
+                    svg_w._handle.render_document(cr, rect)
+                    self._trash_pixbuf = Gdk.pixbuf_get_from_surface(
+                        surface, 0, 0, size, size
+                    )
+                except Exception as e:
+                    logger.warning(f"[canvas] Failed to render trash SVG: {e}")
+                    self._trash_pixbuf = self._get_pixbuf("user-trash", size)
 
         existing = self.model.get_by_id("trash")
         if existing and existing.is_trash:
@@ -439,26 +469,46 @@ class DockCanvas(Gtk.DrawingArea):
             address = signal.data[0]
             if not address:
                 return
-            # Fetch client data BEFORE iterating so the expensive IPC call
-            # doesn't hold a stale reference to model items across rebuilds.
-            clients = self._get_clients()
-            client = next((c for c in clients if c.get("address") == address), None)
-            if not client:
-                return
-            title = client.get("title", "")
-            # Re-verify the item still exists in the CURRENT model — a
-            # debounced rebuild may have replaced the list since the signal.
-            for item in self.model.items:
-                if item.instance_address == address:
-                    app_class = item.app_class or ""
-                    item.tooltip = (
-                        f"{app_class}: {title}" if title != app_class else app_class
-                    )
-                    break
+            # Coalesce title-change bursts (e.g. terminal typing) into a single
+            # client fetch instead of one full `j/clients` IPC per event.
+            self._pending_title_addresses.add(address)
+            if self._title_update_timer:
+                GLib.source_remove(self._title_update_timer)
+            self._title_update_timer = GLib.timeout_add(150, self._apply_pending_titles)
         except Exception as e:
             logger.warning(f"[canvas] address = signal.data[0] failed: {e}")
+            self._needs_redraw = True
+            self.queue_draw()
+
+    def _apply_pending_titles(self) -> bool:
+        self._title_update_timer = None
+        pending = self._pending_title_addresses
+        self._pending_title_addresses = set()
+        try:
+            if not pending:
+                return False
+            # Fetch client data once for the whole batch so the expensive IPC
+            # call doesn't hold a stale reference to model items across rebuilds.
+            clients = self._get_clients()
+            for client in clients:
+                address = client.get("address", "")
+                if address not in pending:
+                    continue
+                title = client.get("title", "")
+                # Re-verify the item still exists in the CURRENT model — a
+                # debounced rebuild may have replaced the list since the signal.
+                for item in self.model.items:
+                    if item.instance_address == address:
+                        app_class = item.app_class or ""
+                        item.tooltip = (
+                            f"{app_class}: {title}" if title != app_class else app_class
+                        )
+                        break
+        except Exception as e:
+            logger.warning(f"[canvas] _apply_pending_titles failed: {e}")
         self._needs_redraw = True
         self.queue_draw()
+        return False
 
     def debounced_update_dock_apps(self) -> None:
         if self._dock_update_timer:
@@ -584,16 +634,27 @@ class DockCanvas(Gtk.DrawingArea):
             return
 
         if item.pixbuf:
+            surface = self._get_item_surface(item)
             cr.save()
-            pb_w = item.pixbuf.get_width()
-            pb_h = item.pixbuf.get_height()
-            if pb_w > 0 and pb_h > 0:
-                sx = iw / pb_w
-                sy = ih / pb_h
+            sw = surface.get_width() if surface is not None else 0
+            sh = surface.get_height() if surface is not None else 0
+            if surface is not None and sw > 0 and sh > 0:
+                sx = iw / sw
+                sy = ih / sh
                 cr.translate(ix, iy)
                 cr.scale(sx, sy)
-                Gdk.cairo_set_source_pixbuf(cr, item.pixbuf, 0, 0)
+                cr.set_source_surface(surface, 0, 0)
                 cr.paint()
+            else:
+                pb_w = item.pixbuf.get_width()
+                pb_h = item.pixbuf.get_height()
+                if pb_w > 0 and pb_h > 0:
+                    sx = iw / pb_w
+                    sy = ih / pb_h
+                    cr.translate(ix, iy)
+                    cr.scale(sx, sy)
+                    Gdk.cairo_set_source_pixbuf(cr, item.pixbuf, 0, 0)
+                    cr.paint()
             cr.restore()
         else:
             cr.save()
@@ -1034,6 +1095,11 @@ class DockCanvas(Gtk.DrawingArea):
         if self._dock_update_timer:
             GLib.source_remove(self._dock_update_timer)
             self._dock_update_timer = None
+
+        if self._title_update_timer:
+            GLib.source_remove(self._title_update_timer)
+            self._title_update_timer = None
+        self._pending_title_addresses.clear()
 
         for handler_id in self._hyprland_event_handlers:
             try:
