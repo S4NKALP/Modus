@@ -35,7 +35,6 @@ class Brightness(Service):
 
         self._pending_raw = None
         self._timer_id = None
-        self._poll_id = None
         self._file_monitor = None
         self._lock = GLib.Mutex()
         self._last_percent = -1
@@ -216,9 +215,6 @@ class Brightness(Service):
         if self._timer_id:
             GLib.source_remove(self._timer_id)
             self._timer_id = None
-        if self._poll_id:
-            GLib.source_remove(self._poll_id)
-            self._poll_id = None
         if self._file_monitor:
             self._file_monitor.cancel()
             self._file_monitor = None
