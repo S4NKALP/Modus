@@ -11,6 +11,7 @@ from fabric.widgets.label import Label
 from shared.widgets.flat_scale import FlatScale
 from shared.widgets.smooth_switch import SmoothSwitch
 from shared.window.applet_window import AppletWindow
+from utils.functions import format_mmss
 
 
 class PomodoroState(Enum):
@@ -420,9 +421,7 @@ class Pomodoro(AppletWindow):
             exec_shell_command_async(f"pw-play --volume={vol} '{sound_file}'")
 
     def _update_display(self):
-        mins = self.time_left // 60
-        secs = self.time_left % 60
-        self.time_label.set_label(f"{mins:02d}:{secs:02d}")
+        self.time_label.set_label(format_mmss(self.time_left, pad=True))
         self.cycle_label.set_label(f"Cycle {self.current_cycle} / {self.max_cycles}")
 
         progress = self.time_left / self.total_time if self.total_time > 0 else 0
