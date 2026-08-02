@@ -18,6 +18,7 @@ from fabric.utils import (
     Gtk,
     cairo,
     exec_shell_command_async,
+    get_desktop_applications,
     logger,
 )
 from fabric.widgets.box import Box
@@ -300,6 +301,32 @@ def escape_markup_text(text: str) -> str:
 # Process management
 
 
+_desktop_apps_cache: list | None = None
+
+
+def get_desktop_apps() -> list:
+    """Return cached desktop applications, scanning once until invalidated.
+
+    ``get_desktop_applications`` parses every .desktop file on disk, so the
+    result is shared across all consumers (dock, spotlight) instead of being
+    recomputed per caller. Call ``invalidate_desktop_apps_cache`` when the
+    desktop dirs change to trigger a rescan.
+    """
+    global _desktop_apps_cache
+    if _desktop_apps_cache is None:
+        try:
+            _desktop_apps_cache = list(get_desktop_applications(include_hidden=False))
+        except Exception as e:
+            logger.warning(f"[functions] get_desktop_applications failed: {e}")
+            _desktop_apps_cache = []
+    return list(_desktop_apps_cache)
+
+
+def invalidate_desktop_apps_cache() -> None:
+    global _desktop_apps_cache
+    _desktop_apps_cache = None
+
+
 def spawn_detached(args: list[str]) -> subprocess.Popen:
     return subprocess.Popen(
         args,
@@ -355,6 +382,34 @@ def shell_split(s: str) -> list[str]:
 
 
 # General utilities
+def format_mmss(seconds: int, pad: bool = False) -> str:
+    """
+    Convert a duration in seconds to a clock string.
+
+    pad=True -> zero-padded "MM:SS" (e.g. "02:34").
+    pad=False -> compact "M:SS" or "H:MM:SS" (e.g. "5:23", "1:02:03").
+
+    Non-positive durations render as "0:00".
+    """
+    try:
+        total = int(seconds)
+    except (TypeError, ValueError):
+        return "0:00"
+
+    if total <= 0:
+        total = 0
+
+    if pad:
+        return f"{total // 60:02d}:{total % 60:02d}"
+
+    hours = total // 3600
+    minutes = (total % 3600) // 60
+    secs = total % 60
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
 def format_duration(seconds: int) -> str:
     """
     Convert a duration in seconds to a compact human-friendly string.
