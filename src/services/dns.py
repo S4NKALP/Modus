@@ -1,7 +1,8 @@
-import subprocess
 import threading
 
 from fabric.utils import GLib, logger
+
+from utils.functions import run_command
 
 DEFAULT_PROVIDERS = [
     {"label": "Cloudflare", "primary": "1.1.1.1", "secondary": "1.0.0.1"},
@@ -14,23 +15,12 @@ DEFAULT_PROVIDERS = [
 
 def _nmcli(*args, timeout=15):
     """Run nmcli and return (returncode, stdout, stderr)."""
-    try:
-        r = subprocess.run(
-            ["nmcli", *args],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        return r.returncode, r.stdout.strip(), r.stderr.strip()
-    except FileNotFoundError:
+    result = run_command(["nmcli", *args], timeout=timeout)
+    if result.returncode == 127:
         logger.warning("[Dns] nmcli not found")
-        return 127, "", "nmcli not found"
-    except subprocess.TimeoutExpired:
+    elif result.returncode == -1:
         logger.warning("[Dns] nmcli timed out")
-        return -1, "", "timeout"
-    except Exception as e:
-        logger.error(f"[Dns] nmcli failed: {e}")
-        return 1, "", str(e)
+    return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
 def _active_connection_name():
