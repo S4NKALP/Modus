@@ -1,12 +1,11 @@
 """Global menu environment setup — GTK_MODULES, UBUNTU_MENUPROXY, settings.ini, Flatpak."""
 
 import os
-import subprocess
 from pathlib import Path
 
 from fabric.utils import exec_shell_command, logger
 
-from utils.functions import shell_split
+from utils.functions import run_command, shell_split
 
 SHIM_SRC = Path(__file__).resolve().parent / "libmenu_button_shim.c"
 SHIM_SO = Path(__file__).resolve().parent / "libmenu_button_shim.so"
@@ -99,11 +98,9 @@ def get_compiled_shim() -> Path | None:
             logger.debug("[GlobalMenu] Shim source not found, skipping")
             return None
 
-        gtk_cflags = subprocess.check_output(
+        gtk_cflags = run_command(
             ["pkg-config", "--cflags", "--libs", "gtk+-3.0"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-        ).strip()
+        ).stdout.strip()
         cmd = [
             "gcc",
             "-shared",
@@ -115,7 +112,7 @@ def get_compiled_shim() -> Path | None:
             *shell_split(gtk_cflags),
             "-ldl",
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        result = run_command(cmd, timeout=15)
         if result.returncode != 0:
             logger.warning(f"[GlobalMenu] Shim compilation failed:\n{result.stderr}")
             return None
