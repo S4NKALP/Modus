@@ -13,13 +13,29 @@ UNIFIED_NOTIFICATION_CACHE_DIR = os.path.join(data.CACHE_DIR, "notifications")
 _MEMORY_PIXBUF_CACHE: OrderedDict[str, GdkPixbuf.Pixbuf] = OrderedDict()
 _MEMORY_CACHE_MAX = 64
 
+_theme_name_cache: str | None = None
+_theme_name_cache_time: float = 0.0
+_THEME_NAME_TTL = 60
+
 
 def _get_icon_theme_name():
-    """Get the current GTK icon theme name for cache invalidation"""
+    """Get the current GTK icon theme name for cache invalidation.
+
+    The name only changes when the user switches themes, so it is cached with
+    a short TTL instead of re-reading settings on every cache-key computation.
+    """
+    global _theme_name_cache, _theme_name_cache_time
+    now = time.time()
+    if _theme_name_cache is not None and now - _theme_name_cache_time < _THEME_NAME_TTL:
+        return _theme_name_cache
     try:
         settings = Gtk.Settings.get_default()
         if settings:
-            return getattr(settings, "gtk_icon_theme_name", "") or ""
+            name = getattr(settings, "gtk_icon_theme_name", "") or ""
+            if name:
+                _theme_name_cache = name
+                _theme_name_cache_time = now
+                return name
     except Exception as e:
         logger.warning(
             f"[unified_cache] settings = Gtk.Settings.get_default() failed: {e}"
@@ -32,7 +48,9 @@ def _get_icon_theme_name():
                 for line in f:
                     line = line.strip()
                     if line.startswith("gtk-icon-theme-name="):
-                        return line.split("=", 1)[1].strip()
+                        _theme_name_cache = line.split("=", 1)[1].strip()
+                        _theme_name_cache_time = now
+                        return _theme_name_cache
     except Exception as e:
         logger.warning(
             f"[unified_cache] settings_path = os.path.expanduser('~/.config/gtk-3.0/set... failed: {e}"
