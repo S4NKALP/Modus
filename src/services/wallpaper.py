@@ -127,15 +127,3 @@ class WallpaperService(Service):
         )
 
         self.colors_generated(image_path)
-
-    def get_wallpaper_info(self, image_path: str) -> dict:
-        stat = os.stat(image_path)
-
-        return {
-            "path": image_path,
-            "filename": os.path.basename(image_path),
-            "size": stat.st_size,
-            "modified": stat.st_mtime,
-            "has_thumbnail": self.has_thumbnail(image_path),
-            "thumbnail_path": self.get_thumbnail_path(image_path),
-        }
