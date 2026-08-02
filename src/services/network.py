@@ -1,11 +1,11 @@
-import subprocess
 from dataclasses import dataclass, field
 from typing import List, Literal
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import Gio, GLib, logger
 
-from services.bluetooth import _rfkill_soft_blocked
+from services.bluetooth import rfkill_soft_blocked
+from utils.functions import run_command
 
 NM_SERVICE = "org.freedesktop.NetworkManager"
 NM_PATH = "/org/freedesktop/NetworkManager"
@@ -84,16 +84,30 @@ _CONNECTIVITY_NAMES = {
 }
 
 
+_PROXY_CACHE: dict[tuple[str, str], Gio.DBusProxy] = {}
+
+
 def _make_proxy(bus: Gio.DBusConnection, path: str, iface: str) -> Gio.DBusProxy:
-    return Gio.DBusProxy.new_sync(
-        bus,
-        Gio.DBusProxyFlags.NONE,
-        None,
-        NM_SERVICE,
-        path,
-        iface,
-        None,
-    )
+    key = (path, iface)
+    proxy = _PROXY_CACHE.get(key)
+    if proxy is None:
+        proxy = Gio.DBusProxy.new_sync(
+            bus,
+            Gio.DBusProxyFlags.NONE,
+            None,
+            NM_SERVICE,
+            path,
+            iface,
+            None,
+        )
+        _PROXY_CACHE[key] = proxy
+    return proxy
+
+
+def _invalidate_proxy(path: str) -> None:
+    """Drop cached proxies for an object path (e.g. a removed device)."""
+    for key in [k for k in _PROXY_CACHE if k[0] == path]:
+        _PROXY_CACHE.pop(key, None)
 
 
 def _get(proxy: Gio.DBusProxy, prop: str):
@@ -844,7 +858,7 @@ class NetworkClient(Service):
         )
 
         # Initial airplane mode
-        bluetooth_blocked = _rfkill_soft_blocked()
+        bluetooth_blocked = rfkill_soft_blocked()
         wifi_enabled = self._nm.wireless_enabled
         self._airplane_mode = bluetooth_blocked and not wifi_enabled
 
@@ -913,6 +927,10 @@ class NetworkClient(Service):
                 self.ethernet_device.close()
                 self.ethernet_device = None
                 self.emit("device-removed", iface)
+
+        # Drop cached proxies now that signal handlers are disconnected and the
+        # removed device is no longer referenced.
+        _invalidate_proxy(dev_path)
 
     def _get_primary_device(self) -> Literal["wifi", "wired"] | None:
         if not self._nm:
@@ -1075,7 +1093,7 @@ class NetworkClient(Service):
     @Property(bool, "read-write", default_value=False)
     def airplane_mode(self) -> bool:
         if self._nm:
-            bluetooth_blocked = _rfkill_soft_blocked()
+            bluetooth_blocked = rfkill_soft_blocked()
             wifi_enabled = self._nm.wireless_enabled
             self._airplane_mode = bluetooth_blocked and not wifi_enabled
         return self._airplane_mode
@@ -1091,13 +1109,13 @@ class NetworkClient(Service):
         """
         try:
             action = "block" if enable else "unblock"
-            subprocess.run(
-                ["rfkill", action, "bluetooth"],
-                capture_output=True,
-                timeout=5,
-            )
-        except FileNotFoundError:
-            logger.warning("[Network] rfkill not found")
+            result = run_command(["rfkill", action, "bluetooth"], timeout=5)
+            if result.returncode == 127:
+                logger.warning("[Network] rfkill not found")
+            elif result.returncode == -1:
+                logger.warning(f"[Network] rfkill {action} timed out")
+            elif result.returncode != 0:
+                logger.warning(f"[Network] rfkill {action} failed: {result.stderr}")
         except Exception as e:
             logger.warning(f"[Network] rfkill {action} failed: {e}")
 
