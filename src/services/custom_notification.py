@@ -8,7 +8,7 @@ from fabric.notifications import (
     NotificationImagePixmap,
     Notifications,
 )
-from fabric.utils import GdkPixbuf, logger, os, time
+from fabric.utils import GdkPixbuf, GLib, logger, os, time
 
 import shared.data as data
 from services.config import config, on_config_change
@@ -226,6 +226,7 @@ class CachedNotifications(Notifications):
         self._dont_disturb = False
         self._count = 0
         self._next_cache_id = 1  # Track next available cache ID
+        self._cache_write_source = None  # Debounced JSON write source id
         self._session_start_time = int(
             time.time()
         )  # Track session start time for deduplication
@@ -313,6 +314,24 @@ class CachedNotifications(Notifications):
         ]  # Convert to serializable format
         with open(NOTIFICATION_CACHE_FILE, "w") as file:
             json.dump(serialized_data, file, indent=4)
+
+    def _schedule_cache_write(self) -> None:
+        """Coalesce rapid add/remove JSON writes into a single disk write.
+
+        Each full write re-serializes every cached notification (and
+        recomputes icon cache keys), so bursts should land on one write.
+        """
+        if self._cache_write_source is not None:
+            return
+        self._cache_write_source = GLib.timeout_add(300, self._flush_cache_write)
+
+    def _flush_cache_write(self) -> bool:
+        self._cache_write_source = None
+        try:
+            self.cache_notifications()
+        except Exception as e:
+            logger.error(f"Failed to save notification cache: {e}")
+        return False
 
     def clear_all_cached_notifications(self):
         """Empty the notifications with enhanced cache cleanup"""
@@ -510,8 +529,9 @@ class CachedNotifications(Notifications):
             # Update cached notification with final metadata
             self._cached_notifications[cache_id] = cached_notification
 
-            # Save updated metadata to JSON
-            self.cache_notifications()
+            # Save updated metadata to JSON (debounced - the guaranteed first
+            # write above already persisted the notification itself)
+            self._schedule_cache_write()
 
         except Exception as e:
             logger.error(
@@ -547,7 +567,7 @@ class CachedNotifications(Notifications):
                     ),
                 )
 
-            self.cache_notifications()  # Update JSON
+            self._schedule_cache_write()  # Update JSON (debounced)
             self._count -= 1
             self.notify("count")
 
