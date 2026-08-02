@@ -18,10 +18,12 @@ on the system bus (not the session bus).
 import os
 import pwd
 import socket
-import subprocess
+import threading
 
 from fabric.core.service import Service, Signal
 from fabric.utils import Gio, GLib, logger
+
+from utils.functions import run_command
 
 POLKIT_BUS_NAME = "org.freedesktop.PolicyKit1"
 POLKIT_AUTHORITY_PATH = "/org/freedesktop/PolicyKit1/Authority"
@@ -170,6 +172,11 @@ class SysauthService(Service):
         authentication and invokes AuthenticationAgentResponse2/3 on the
         Authority as root. Direct D-Bus response calls only accept uid 0.
 
+        The helper runs on a worker thread (it can block up to 15s); the
+        held BeginAuthentication reply is returned and
+        ``authentication-completed`` is emitted on the main loop via
+        GLib.idle_add.
+
         On success the held BeginAuthentication reply is returned, which
         is what completes the pending session in polkitd. On failure the
         reply stays pending so the UI can re-prompt with the same cookie.
@@ -179,7 +186,8 @@ class SysauthService(Service):
             password: The password to send.
 
         Returns:
-            True if authentication succeeded, False otherwise.
+            True if the response was accepted for processing (not whether
+            authentication itself succeeded).
         """
         pending = self._pending.get(cookie)
         if pending is None:
@@ -189,7 +197,6 @@ class SysauthService(Service):
             return False
 
         uid = pending["uid"]
-        invocation = pending["invocation"]
 
         try:
             username = pwd.getpwuid(uid).pw_name
@@ -197,14 +204,31 @@ class SysauthService(Service):
             logger.error(f"[SysauthService] No user found for uid {uid}")
             return False
 
-        success = self._run_helper(cookie, password, username)
+        threading.Thread(
+            target=self._run_helper_async,
+            args=(cookie, password, username),
+            daemon=True,
+        ).start()
+        return True
 
-        if success:
+    def _run_helper_async(self, cookie: str, password: str, username: str) -> None:
+        """Run the auth helper off the main thread, then finish on it."""
+        try:
+            success = self._run_helper(cookie, password, username)
+        except Exception as e:
+            logger.error(f"[SysauthService] Auth helper failed: {e}")
+            success = False
+        GLib.idle_add(self._finish_respond, cookie, success)
+
+    def _finish_respond(self, cookie: str, success: bool) -> None:
+        pending = self._pending.get(cookie)
+        invocation = pending["invocation"] if pending else None
+
+        if success and invocation is not None:
             self._pending.pop(cookie, None)
-            GLib.idle_add(lambda: invocation.return_value(None))
+            invocation.return_value(None)
 
-        GLib.idle_add(lambda: self.emit("authentication-completed", cookie, success))
-        return success
+        self.emit("authentication-completed", cookie, success)
 
     def cancel(self, cookie: str) -> None:
         """Cancel a pending authentication request from the UI side.
@@ -276,20 +300,16 @@ class SysauthService(Service):
 
     def _run_helper_setuid(self, cookie: str, password: str, username: str) -> bool:
         """Authenticate through the setuid polkit-agent-helper-1 binary."""
-        try:
-            proc = subprocess.run(
-                [AGENT_HELPER_PATH, username, cookie],
-                input=password + "\n",
-                capture_output=True,
-                text=True,
-                timeout=HELPER_TIMEOUT,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
+        result = run_command(
+            [AGENT_HELPER_PATH, username, cookie],
+            input=password + "\n",
+            timeout=HELPER_TIMEOUT,
+        )
+        if result.returncode == -1:
             logger.error("[SysauthService] Setuid helper timed out")
             return False
 
-        output = (proc.stdout or "").strip()
+        output = (result.stdout or "").strip()
         return output.endswith("SUCCESS")
 
     def _register_with_authority(self) -> bool:
