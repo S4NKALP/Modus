@@ -1,10 +1,12 @@
 import enum
-import subprocess
+import os
 from collections.abc import Callable
 from typing import Any, Concatenate, ParamSpec
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import Gio, GLib, Gtk, logger
+
+from utils.functions import run_command
 
 P = ParamSpec("P")
 
@@ -16,6 +18,82 @@ DBUS_OM_IFACE = "org.freedesktop.DBus.ObjectManager"
 DBUS_PROPS_IFACE = "org.freedesktop.DBus.Properties"
 
 RFKILL_PATH = "/dev/rfkill"
+
+_rfkill_blocked: bool = False
+_rfkill_fd: int = -1
+_rfkill_watch_id: int = 0
+_rfkill_listeners: set[Callable] = set()
+
+
+def _read_rfkill_state() -> bool:
+    result = run_command(["rfkill", "list", "bluetooth"], timeout=5)
+    return "Soft blocked: yes" in (result.stdout or "")
+
+
+def _open_rfkill_monitor() -> int:
+    """Read the current rfkill state and open /dev/rfkill for event-driven updates."""
+    global _rfkill_blocked
+    try:
+        _rfkill_blocked = _read_rfkill_state()
+        return os.open(RFKILL_PATH, os.O_RDONLY | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return -1
+    except Exception as e:
+        logger.warning(f"[Bluetooth] Failed to open {RFKILL_PATH}: {e}")
+        return -1
+
+
+def rfkill_soft_blocked() -> bool:
+    """Return the cached rfkill soft-blocked state.
+
+    The first call performs one ``rfkill`` query and registers a GLib watch on
+    ``/dev/rfkill``; afterwards the cache is refreshed only when the kernel
+    reports an rfkill event, instead of spawning a subprocess on every read.
+    """
+    global _rfkill_fd, _rfkill_watch_id
+    if _rfkill_fd < 0:
+        fd = _open_rfkill_monitor()
+        if fd < 0:
+            return _read_rfkill_state()
+        _rfkill_fd = fd
+        if _rfkill_watch_id == 0:
+            _rfkill_watch_id = GLib.io_add_watch(
+                _rfkill_fd, GLib.IO_IN | GLib.IO_HUP, _on_rfkill_io, None
+            )
+    return _rfkill_blocked
+
+
+def _on_rfkill_io(fd, condition, _user_data) -> bool:
+    global _rfkill_fd, _rfkill_watch_id, _rfkill_blocked
+    if condition & GLib.IO_HUP:
+        try:
+            os.close(_rfkill_fd)
+        except OSError:
+            pass
+        _rfkill_fd = -1
+        _rfkill_watch_id = 0
+        return False
+    # Drain pending events so the fd stops reporting readable.
+    while True:
+        try:
+            if not os.read(fd, 32):
+                break
+        except (BlockingIOError, OSError):
+            break
+    blocked = _read_rfkill_state()
+    if blocked != _rfkill_blocked:
+        _rfkill_blocked = blocked
+        for listener in list(_rfkill_listeners):
+            listener()
+    return True
+
+
+def add_rfkill_listener(callback: Callable) -> None:
+    _rfkill_listeners.add(callback)
+
+
+def remove_rfkill_listener(callback: Callable) -> None:
+    _rfkill_listeners.discard(callback)
 
 
 class BluetoothState(enum.Enum):
@@ -46,23 +124,6 @@ def _make_proxy(bus: Gio.DBusConnection, path: str, iface: str) -> Gio.DBusProxy
         iface,
         None,
     )
-
-
-def _rfkill_soft_blocked() -> bool:
-    try:
-        result = subprocess.run(
-            ["rfkill", "list", "bluetooth"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return "Soft blocked: yes" in result.stdout
-    except FileNotFoundError:
-        logger.warning("[Bluetooth] rfkill not found, assuming not soft blocked")
-        return False
-    except Exception as e:
-        logger.warning(f"[Bluetooth] rfkill check failed: {e}")
-        return False
 
 
 class BluetoothDevice(Service):
@@ -301,13 +362,6 @@ class BluetoothDevice(Service):
 
         self._proxy.call("Pair", None, Gio.DBusCallFlags.NONE, 60000, None, _cb, None)
 
-    def remove(self):
-        """Remove/forget the device (must be called on the adapter)."""
-        # Removal is done via Adapter1.RemoveDevice — expose a convenience
-        # flag so the adapter can act on it.
-        logger.info(f"[Bluetooth] Remove requested for: {self.address}")
-        self.emit("changed")
-
     def trust(self):
         """Mark the device as trusted."""
         self.trusted = True
@@ -343,10 +397,6 @@ class BluetoothDevice(Service):
                 self.disconnect(_id)
 
             _id = self.connect("changed", _once)
-
-    def notifier(self, name: str, args=None):
-        self.notify(name)
-        self.emit("changed")
 
 
 class BluetoothAdapter(Service):
@@ -593,10 +643,6 @@ class BluetoothAdapter(Service):
         self._devices.clear()
         self._device_changed_ids.clear()
 
-    def notifier(self, name: str, *args):
-        self.notify(name)
-        self.emit("changed")
-
 
 class BluetoothClient(Service):
     @Signal
@@ -627,7 +673,7 @@ class BluetoothClient(Service):
     def state(self) -> str:
         if not self._adapters:
             return BluetoothState.UNAVAILABLE.value
-        if _rfkill_soft_blocked():
+        if rfkill_soft_blocked():
             return BluetoothState.INACTIVE.value
         for a in self._adapters.values():
             if a.powered:
@@ -700,16 +746,14 @@ class BluetoothClient(Service):
             ),
         ]
 
-        self._cached_rfkill_blocked = _rfkill_soft_blocked()
-        self._rfkill_timeout_id = GLib.timeout_add_seconds(10, self._check_rfkill)
+        rfkill_soft_blocked()
+        add_rfkill_listener(self._on_rfkill_changed)
 
         self._populate_from_object_manager()
 
     def close(self):
-        """Release the rfkill timer and unsubscribe from the DBus bus."""
-        if self._rfkill_timeout_id:
-            GLib.source_remove(self._rfkill_timeout_id)
-            self._rfkill_timeout_id = 0
+        """Stop listening for rfkill changes and unsubscribe from the DBus bus."""
+        remove_rfkill_listener(self._on_rfkill_changed)
         for sub_id in self._bus_sub_ids:
             self._bus.signal_unsubscribe(sub_id)
         self._bus_sub_ids.clear()
@@ -717,13 +761,9 @@ class BluetoothClient(Service):
             adapter.close()
         self._adapters.clear()
 
-    def _check_rfkill(self) -> bool:
-        blocked = _rfkill_soft_blocked()
-        if blocked != self._cached_rfkill_blocked:
-            self._cached_rfkill_blocked = blocked
-            self.notify("state")
-            self.emit("changed")
-        return True
+    def _on_rfkill_changed(self):
+        self.notify("state")
+        self.emit("changed")
 
     def _populate_from_object_manager(self):
         try:
@@ -867,10 +907,6 @@ class BluetoothClient(Service):
             logger.warning(
                 f"[Bluetooth] Cannot remove {device.address}: adapter not found"
             )
-
-    def notifier(self, name: str, *args):
-        self.notify(name)
-        self.emit("changed")
 
 
 def _device_path_to_adapter_path(device_path: str) -> str:
