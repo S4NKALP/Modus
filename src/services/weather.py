@@ -387,15 +387,26 @@ class Weather(Service):
 
     def _fetch_weather_data(self) -> None:
         try:
-            GLib.idle_add(self._set_loading, True)
-
-            location_data = self._location_cache.get()
-
             from services.config import config
 
             target_loc = config().get("general.weather_location", "").strip()
 
-            # Invalidate location cache if the config target changed
+            location_data = self._location_cache.get(allow_stale=True)
+            if (
+                location_data
+                and location_data.get("config_location", "") == target_loc
+                and self._weather_cache.is_fresh()
+            ):
+                # Cached forecast is still fresh and the location target is
+                # unchanged: skip the network/cache pipeline entirely so
+                # restarts and in-window refresh() calls avoid redundant
+                # geolocation/weather fetches and the loading flicker.
+                return
+
+            GLib.idle_add(self._set_loading, True)
+
+            location_data = self._location_cache.get()
+
             if location_data and location_data.get("config_location", "") != target_loc:
                 location_data = None
                 with self._weather_cache._lock:
@@ -596,8 +607,3 @@ class Weather(Service):
 
     def refresh(self) -> None:
         self._start_fetch_thread()
-
-    def get_weather_info_for_code(
-        self, code: int, is_day: int = 1
-    ) -> Tuple[str, str, str, str]:
-        return get_weather_info(code, is_day)
