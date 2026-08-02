@@ -4,9 +4,9 @@ Provides PAM-based password verification with su fallback,
 and system keyring integration for caching authenticated passwords.
 """
 
-import subprocess
-
 from fabric.utils import logger
+
+from utils.functions import run_command
 
 KEYRING_SERVICE = "sysauth"
 
@@ -42,17 +42,12 @@ def _verify_pam(username: str, password: str) -> bool:
 
 def _verify_su(username: str, password: str) -> bool:
     """Verify password using the su command as fallback."""
-    try:
-        result = subprocess.run(
-            ["su", "-c", "true", username],
-            input=password.encode(),
-            capture_output=True,
-            timeout=5,
-        )
-        return result.returncode == 0
-    except (subprocess.TimeoutExpired, FileNotFoundError, PermissionError) as e:
-        logger.warning(f"[password] su verification failed: {e}")
-        return False
+    result = run_command(
+        ["su", "-c", "true", username],
+        input=password,
+        timeout=5,
+    )
+    return result.returncode == 0
 
 
 def cache_password(action_id: str, uid: int, password: str) -> None:
