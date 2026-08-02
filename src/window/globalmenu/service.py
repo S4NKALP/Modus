@@ -1,6 +1,5 @@
 """Global Menu Service — event-driven, persistent importer architecture."""
 
-import json
 import re
 import threading
 import time
@@ -11,12 +10,12 @@ from fabric.core.service import Property, Service, Signal
 from fabric.utils import (
     Gio,
     GLib,
-    exec_shell_command,
     idle_add,
     logger,
     os,
 )
 
+from services.modus import get_active_window
 from window.globalmenu.dbusmenu import DBusMenuClient, DBusMenuItem, _get_bus
 from window.globalmenu.environment import setup_global_menu_environment
 from window.globalmenu.gtkmenu import ActionMenuClient, GtkMenuClient
@@ -319,14 +318,10 @@ class GlobalMenuService(Service):
     def update_active_window(self, app_name: str, wm_class: str):
         target_pid = 0
         try:
-            out = exec_shell_command("hyprctl activewindow -j")
-            if out:
-                data = json.loads(out)
-                target_pid = data.get("pid", 0)
+            data = get_active_window()
+            target_pid = data.get("pid", 0) if data else 0
         except Exception as e:
-            logger.warning(
-                f"[service] out = exec_shell_command('hyprctl activewindow -j') failed: {e}"
-            )
+            logger.warning(f"[service] get_active_window() failed: {e}")
 
         with self._state_lock:
             same_class = wm_class == self._current_wm_class
@@ -543,10 +538,10 @@ class GlobalMenuService(Service):
     ) -> Optional[_MenuClient]:
         try:
             if target_pid <= 0:
-                out = exec_shell_command("hyprctl activewindow -j")
-                if not out:
+                data = get_active_window()
+                if not data:
                     return None
-                target_pid = json.loads(out).get("pid", 0)
+                target_pid = data.get("pid", 0)
             if target_pid <= 0:
                 return None
 
