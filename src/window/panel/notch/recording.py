@@ -5,6 +5,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
 from services.modus import screen_recorder_service
+from utils.functions import format_mmss
 from utils.gtk_utils import setup_cursor_hover, svg_file
 
 
@@ -59,14 +60,11 @@ class RecordingIndicator(Box):
         if self.recording_start_time is None:
             return False
 
-        elapsed_seconds = int(time.time() - self.recording_start_time)
-        minutes = elapsed_seconds // 60
-        seconds = elapsed_seconds % 60
-
-        self.time_label.set_markup(f"{minutes:02d}:{seconds:02d}")
-        self.set_tooltip_text(
-            f"Recording in progress ({minutes:02d}:{seconds:02d}) - Click to stop"
+        elapsed_str = format_mmss(
+            int(time.time() - self.recording_start_time), pad=True
         )
+        self.time_label.set_markup(elapsed_str)
+        self.set_tooltip_text(f"Recording in progress ({elapsed_str}) - Click to stop")
         return True
 
     def on_stop_recording(self, *args):
