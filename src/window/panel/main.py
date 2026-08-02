@@ -12,11 +12,7 @@ from services.config import get_config_all, on_config_change
 from services.modus import notification_service
 from utils.gtk_utils import setup_cursor_hover, svg_file
 from utils.roam import modus_service
-from window.controlcenter.main import ModusControlCenter
-from window.notification.notification_center import NotificationCenter
 from window.panel.components.custom_mods import CustomMods
-from window.panel.components.enhanced_system_tray import apply_enhanced_system_tray
-from window.panel.components.globalmenu import GlobalMenu
 from window.panel.components.indicators import (
     BatteryIndicator,
     BluetoothIndicator,
@@ -24,8 +20,6 @@ from window.panel.components.indicators import (
 )
 from window.panel.components.workspace import WorkspaceIndicator
 from window.panel.notch import Notch
-
-apply_enhanced_system_tray()
 
 
 class Panel(Window):
@@ -39,13 +33,21 @@ class Panel(Window):
             visible=False,
             all_visible=False,
         )
-        self.globalmenu = GlobalMenu(parent_window=self)
+
+        # Deferred from module import: patches SystemTrayItem before any tray
+        # item is created.
+        from window.panel.components.enhanced_system_tray import (
+            apply_enhanced_system_tray,
+        )
+
+        apply_enhanced_system_tray()
+
+        self._globalmenu_instance = None
 
         self.imac = Gtk.MenuButton(name="panel-button")
         self.imac.get_style_context().add_class("flat")
         self.imac.add(svg_file("misc/logo.svg", size=18))
         setup_cursor_hover(self.imac, "pointer")
-        self.globalmenu.set_imac_button(self.imac)
 
         self.tray = SystemTray(name="panel-button", spacing=4, icon_size=20)
 
@@ -218,8 +220,19 @@ class Panel(Window):
         return self._todo_instance
 
     @property
+    def globalmenu(self):
+        if self._globalmenu_instance is None:
+            from window.panel.components.globalmenu import GlobalMenu
+
+            self._globalmenu_instance = GlobalMenu(parent_window=self)
+            self._globalmenu_instance.set_imac_button(self.imac)
+        return self._globalmenu_instance
+
+    @property
     def control_center(self):
         if self._control_center_instance is None:
+            from window.controlcenter.main import ModusControlCenter
+
             self._control_center_instance = ModusControlCenter(
                 parent=self, pointing_to=self.control_center_btn
             )
@@ -228,6 +241,8 @@ class Panel(Window):
     @property
     def notification_center(self):
         if self._notification_center_instance is None:
+            from window.notification.notification_center import NotificationCenter
+
             self._notification_center_instance = NotificationCenter(
                 parent=self, pointing_to=self.notification_center_btn
             )
@@ -393,12 +408,14 @@ class Panel(Window):
 
         # Destroy components
         for component in [
-            self.globalmenu,
+            self._globalmenu_instance,
             self.notch,
             self.custom_mods,
             self.workspace_indicator,
             self.indicators,
         ]:
+            if component is None:
+                continue
             try:
                 component.destroy()
             except Exception as e:
@@ -406,8 +423,8 @@ class Panel(Window):
 
         # Destroy MouseCapture windows
         for mc in [
-            self.control_center,
-            self.notification_center,
+            self._control_center_instance,
+            self._notification_center_instance,
             self._pomodoro_instance,
             self._todo_instance,
         ]:
