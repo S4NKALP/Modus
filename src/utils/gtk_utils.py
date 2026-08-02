@@ -5,7 +5,6 @@ from typing import Literal
 
 from fabric.utils import (
     Gdk,
-    GdkPixbuf,
     GLib,
     bulk_connect,
     exec_shell_command_async,
@@ -175,21 +174,3 @@ class EvdevLEDMonitor:
             except OSError as e:
                 logger.warning(f"[utils] os.close(self._fd) failed: {e}")
             self._fd = None
-
-
-def load_pixbuf_thumbnail(
-    path: str, width: int, height: int, *, fallback: str | None = None
-) -> GdkPixbuf.Pixbuf | None:
-    """Load a pixbuf scaled to fit within *width* x *height*.
-
-    Returns ``None`` on failure (file missing, corrupt, etc.).  Pass a
-    *fallback* path to try that on failure too.
-    """
-    for p in (path, fallback):
-        if p is None:
-            continue
-        try:
-            return GdkPixbuf.Pixbuf.new_from_file_at_scale(p, width, height, True)
-        except Exception as e:
-            logger.warning(f"[gtk_utils] Failed to load pixbuf from {p}: {e}")
-    return None
