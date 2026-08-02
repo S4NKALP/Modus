@@ -181,6 +181,11 @@ class ConfigService:
                 logger.error(f"[ConfigService] Failed to monitor {file_path}: {e}")
 
     def _on_file_changed(self, monitor, file, _other_file, event_type, file_path: str):
+        # The parent-directory monitor fires for every file in the config dir
+        # (.swp, lockfiles, desktop.toml, ...). Only react to the config file
+        # itself so unrelated files don't trigger a reload + callback fan-out.
+        if file.get_path() != self._config_file:
+            return
         # Trigger on various change events to be more robust across editors/OSs
         valid_events = [
             Gio.FileMonitorEvent.CHANGES_DONE_HINT,
@@ -197,6 +202,11 @@ class ConfigService:
             self._reload_pending = False
             old_config = self._last_notified_config.copy()
             self._load_config()
+
+            if self._config == old_config:
+                # Nothing actually changed (e.g. mtime-only touch): skip the
+                # callback fan-out.
+                return False
 
             # Always notify listeners on reload request to be safe
             alive_callbacks = []
