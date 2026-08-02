@@ -300,8 +300,10 @@ class BluetoothDeviceSlot(Box):
                     parent.client.remove_device(self.device)
                     return
                 parent = parent.get_parent()
-            # Fallback: use device.remove() which sets a flag
-            self.device.remove()
+            # Fallback: no client parent to issue RemoveDevice from.
+            logger.warning(
+                f"[Bluetooth] No client parent found to remove {self.device.address}"
+            )
         except Exception as e:
             logger.warning(f"[Bluetooth] Failed to remove device: {e}")
 
