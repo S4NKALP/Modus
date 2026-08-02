@@ -20,6 +20,7 @@ from services.desktop_widget import DesktopWidgetService
 from services.keyboard_layout import KeyboardLayout
 from services.sysauth import SysauthService
 from shared.data import APP_NAME, load_config
+from shared.dialogs.sysauth_dialog import connect_sysauth_service
 from utils.functions import set_process_name
 from utils.gtk_utils import generate_colors_from_wallpaper
 from window.dock import Dock
@@ -107,6 +108,7 @@ def main():
     # Initialize Polkit authentication agent
     sysauth = SysauthService()
     sysauth.start()
+    connect_sysauth_service(sysauth)
 
     switcher = ApplicationSwitcher()
     panel = Panel()
