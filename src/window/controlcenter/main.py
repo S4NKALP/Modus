@@ -1,6 +1,5 @@
 import os
 import signal
-import subprocess
 
 from fabric.utils import Gdk, GLib, idle_add, logger
 from fabric.widgets.box import Box
@@ -14,6 +13,7 @@ from services.brightness import Brightness
 from services.network import NetworkClient
 from shared.widgets.flat_scale import FlatScale
 from shared.window.applet_window import AppletWindow
+from utils.functions import spawn_detached
 from utils.gtk_utils import svg_file
 from utils.roam import audio_service, modus_service
 from window.controlcenter.bluetooth import (
@@ -565,103 +565,88 @@ class ModusControlCenter(AppletWindow):
                 self._expanded_player_widget.resume()
 
     def _initialize_resources(self):
-        """Initialize resources and connect signals when the control center becomes visible."""
-        if self._resources_initialized:
-            return
+        """Initialize resources when the control center becomes visible.
 
-        try:
-            logger.debug("Initializing control center resources...")
+        Signals are connected exactly once (guarded by ``_resources_initialized``);
+        later shows only re-activate them via ``_signals_connected``. Handlers are
+        already flag-gated, so the connect/disconnect churn per open was redundant.
+        """
+        if not self._resources_initialized:
+            try:
+                logger.debug("Initializing control center resources...")
 
-            # Connect network signal (service created earlier in __init__)
-            self.network_service.connect("device-ready", self.on_network_ready)
+                # Connect network signal (service created earlier in __init__)
+                self.network_service.connect("device-ready", self.on_network_ready)
 
-            # Check initial states lazily (only when needed)
-            self._check_initial_states()
-
-            # Store signal connections as (obj, handler_id) tuples for proper cleanup
-            self._signal_connections.extend(
-                [
-                    (
-                        audio_service,
-                        audio_service.connect("changed", self.audio_changed),
-                    ),
-                    (
-                        audio_service,
-                        audio_service.connect("changed", self.volume_changed),
-                    ),
-                    (
-                        modus_service,
-                        modus_service.connect("wlan-changed", self.wlan_changed),
-                    ),
-                    (
-                        modus_service,
-                        modus_service.connect(
-                            "bluetooth-changed", self.bluetooth_changed
+                # Store signal connections as (obj, handler_id) tuples for proper cleanup
+                self._signal_connections.extend(
+                    [
+                        (
+                            audio_service,
+                            audio_service.connect("changed", self.audio_changed),
                         ),
-                    ),
-                    (
-                        modus_service,
-                        modus_service.connect("dont-disturb-changed", self.dnd_changed),
-                    ),
-                ]
-            )
-
-            # Connect brightness controls if brightness service is available
-            if get_brightness_service().max_screen > 0:
-                self.brightness_scale.connect("value-changed", self.set_brightness)
-                self.brightness_scale.connect("scroll-event", self.on_brightness_scroll)
-                self._signal_connections.append(
-                    (
-                        get_brightness_service(),
-                        get_brightness_service().connect(
-                            "screen", self.brightness_changed
+                        (
+                            audio_service,
+                            audio_service.connect("changed", self.volume_changed),
                         ),
-                    )
+                        (
+                            modus_service,
+                            modus_service.connect("wlan-changed", self.wlan_changed),
+                        ),
+                        (
+                            modus_service,
+                            modus_service.connect(
+                                "bluetooth-changed", self.bluetooth_changed
+                            ),
+                        ),
+                        (
+                            modus_service,
+                            modus_service.connect(
+                                "dont-disturb-changed", self.dnd_changed
+                            ),
+                        ),
+                    ]
                 )
 
-            # Connect volume scale signals
-            self.volume_scale.connect("value-changed", self.set_volume)
-            self.volume_scale.connect("scroll-event", self.on_volume_scroll)
+                # Connect brightness controls if brightness service is available
+                if get_brightness_service().max_screen > 0:
+                    self.brightness_scale.connect("value-changed", self.set_brightness)
+                    self.brightness_scale.connect(
+                        "scroll-event", self.on_brightness_scroll
+                    )
+                    self._signal_connections.append(
+                        (
+                            get_brightness_service(),
+                            get_brightness_service().connect(
+                                "screen", self.brightness_changed
+                            ),
+                        )
+                    )
 
-            # Mark signals as connected
-            self._signals_connected = True
-            self._resources_initialized = True
+                # Connect volume scale signals
+                self.volume_scale.connect("value-changed", self.set_volume)
+                self.volume_scale.connect("scroll-event", self.on_volume_scroll)
 
-            logger.debug("Control center resources initialized successfully")
+                self._resources_initialized = True
+                logger.debug("Control center resources initialized successfully")
 
-        except Exception as e:
-            logger.error(f"Failed to initialize control center resources: {e}")
-            # Reset flags on failure
-            self._signals_connected = False
-            self._resources_initialized = False
+            except Exception as e:
+                logger.error(f"Failed to initialize control center resources: {e}")
+                # Reset flag so a later attempt can retry the connection block
+                self._resources_initialized = False
+
+        self._signals_connected = True
+        self._check_initial_states()
 
     def _disconnect_signals_when_hidden(self):
-        """Disconnect signals when hidden to reduce resource usage, but keep widgets intact"""
+        """Deactivate handlers when hidden, but keep signal connections intact.
+
+        Signals stay connected for the widget's lifetime; the flag-gated
+        handlers no-op while hidden, so reconnecting on every show was
+        redundant churn.
+        """
         try:
-            # Actually disconnect the signals we tracked
-            for obj, handler_id in self._signal_connections:
-                try:
-                    obj.disconnect(handler_id)
-                except Exception as e:
-                    logger.warning(f"Failed to disconnect signal: {e}")
-            self._signal_connections.clear()
-
-            # Disconnect direct scale signals (connected in _initialize_resources)
-            if self.volume_scale:
-                try:
-                    self.volume_scale.disconnect_by_func(self.set_volume)
-                    self.volume_scale.disconnect_by_func(self.on_volume_scroll)
-                except Exception:
-                    pass
-            if self.brightness_scale:
-                try:
-                    self.brightness_scale.disconnect_by_func(self.set_brightness)
-                    self.brightness_scale.disconnect_by_func(self.on_brightness_scroll)
-                except Exception:
-                    pass
-
             self._signals_connected = False
-            self._resources_initialized = False
 
             # Reset state flags
             self.has_bluetooth_open = False
@@ -672,10 +657,10 @@ class ModusControlCenter(AppletWindow):
             # Instantly reset the view
             self._delayed_reset_view()
 
-            logger.debug("Control center signals disconnected while hidden")
+            logger.debug("Control center signals deactivated while hidden")
 
         except Exception as e:
-            logger.warning(f"Control center signal disconnection failed: {e}")
+            logger.warning(f"Control center signal deactivation failed: {e}")
 
     def _delayed_reset_view(self):
         if not self.get_visible():
@@ -805,7 +790,7 @@ class ModusControlCenter(AppletWindow):
                     "sleep",
                     str(100_000_000),
                 ]
-                proc = subprocess.Popen(cmd)
+                proc = spawn_detached(cmd)
                 try:
                     with open(_CAFFEINE_PID_FILE, "w") as f:
                         f.write(str(proc.pid))
@@ -1220,6 +1205,16 @@ class ModusControlCenter(AppletWindow):
                 "focus_icon",
                 "flight_icon",
                 "caffeine_icon",
+                "music_widget",
+                "_expanded_player_widget",
+                "expanded_player_widgets",
+                "expanded_player_center_box",
+                "bluetooth_center_box",
+                "wifi_center_box",
+                "per_app_volume_center_box",
+                "bluetooth_widgets",
+                "wifi_widgets",
+                "per_app_volume_widgets",
             ]
 
             for attr in widget_attrs:
