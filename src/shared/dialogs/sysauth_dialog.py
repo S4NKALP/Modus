@@ -22,6 +22,7 @@ class AuthDialog(Window):
     def __init__(self, action_id: str, message: str, icon_name: str):
         self._result_accepted = False
         self._main_loop = None
+        self._dismissed = False
 
         super().__init__(
             title="modus-dialog",
@@ -172,6 +173,9 @@ class AuthDialog(Window):
         self._error_label.set_visible(False)
         self._entry_password.grab_focus()
 
+        if self._dismissed:
+            return self._result_accepted
+
         self._main_loop.run()
 
         return self._result_accepted
@@ -214,6 +218,11 @@ class AuthDialog(Window):
         self.hide()
         GLib.timeout_add(100, self._quit_main_loop)
 
+    def dismiss(self):
+        """Dismiss the dialog from any thread."""
+        self._dismissed = True
+        GLib.idle_add(self._dismiss)
+
     def _quit_main_loop(self):
         """Quit the nested main loop."""
         if self._main_loop is not None and self._main_loop.is_running():
@@ -230,6 +239,7 @@ class AuthDialog(Window):
     def reset(self):
         """Reset the dialog for reuse."""
         self._result_accepted = False
+        self._dismissed = False
         self._error_label.set_visible(False)
         self._entry_password.set_text("")
 
@@ -254,10 +264,25 @@ def run_auth_dialog(
         icon_name: Icon name for the action.
         on_result: Callback(password: str | None) when dialog closes.
         error_message: Optional error message to show on first display.
+
+    Returns:
+        A callable that dismisses the dialog (thread-safe). Calling it
+        before the dialog appears prevents the dialog from being shown.
     """
+    state = {"dialog": None}
+
+    def _dismiss():
+        dialog = state.get("dialog")
+        if dialog is not None:
+            dialog.dismiss()
+        else:
+            state["cancelled"] = True
 
     def _run():
         dialog = AuthDialog(action_id, message, icon_name)
+        state["dialog"] = dialog
+        if state.get("cancelled"):
+            return
 
         if error_message:
             GLib.idle_add(lambda: dialog.show_error(error_message))
@@ -275,3 +300,67 @@ def run_auth_dialog(
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
+
+    return _dismiss
+
+
+def connect_sysauth_service(service):
+    """Connect a SysauthService to the authentication dialog.
+
+    Shows the dialog on ``begin-authentication``, responds on submit,
+    re-prompts with an error on failed authentication, and dismisses
+    the open dialog when polkitd cancels the request.
+
+    Args:
+        service: The SysauthService instance to wire up.
+    """
+    pending = {}
+    open_dialogs = {}
+
+    def _respond(cookie, password):
+        threading.Thread(
+            target=lambda: service.respond(cookie, password), daemon=True
+        ).start()
+
+    def _prompt(cookie, error_message=None):
+        info = pending.get(cookie)
+        if info is None:
+            return
+        action_id, message, icon_name = info
+
+        def on_result(password):
+            open_dialogs.pop(cookie, None)
+            if password is None:
+                pending.pop(cookie, None)
+                service.cancel(cookie)
+                return
+            _respond(cookie, password)
+
+        open_dialogs[cookie] = run_auth_dialog(
+            action_id,
+            message,
+            icon_name,
+            on_result=on_result,
+            error_message=error_message,
+        )
+
+    def on_begin(_service, action_id, message, icon_name, cookie, _uid):
+        pending[cookie] = (action_id, message, icon_name)
+        _prompt(cookie)
+
+    def on_cancelled(_service, cookie):
+        pending.pop(cookie, None)
+        dismiss = open_dialogs.pop(cookie, None)
+        if dismiss is not None:
+            dismiss()
+
+    def on_completed(_service, cookie, success):
+        if success:
+            pending.pop(cookie, None)
+            open_dialogs.pop(cookie, None)
+        else:
+            _prompt(cookie, error_message="Incorrect password. Please try again.")
+
+    service.connect("begin-authentication", on_begin)
+    service.connect("authentication-cancelled", on_cancelled)
+    service.connect("authentication-completed", on_completed)
