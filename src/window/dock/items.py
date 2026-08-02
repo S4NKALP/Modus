@@ -22,6 +22,9 @@ class DockItem:
     pixbuf: Optional[GdkPixbuf.Pixbuf] = None
     tooltip: str = ""
 
+    icon_surface: object = None
+    icon_surface_pixbuf: object = None
+
     current_scale: float = MIN_SCALE
     target_scale: float = MIN_SCALE
 
