@@ -1,5 +1,6 @@
 from fabric.widgets.box import Box
 from fabric.widgets.datetime import DateTime
+from gi.repository import Gtk
 
 from window.desktop.registry import DesktopWidgetRegistry
 
@@ -12,7 +13,26 @@ class _DraggableDateTime(DateTime):
     G_SIGNAL_RUN_FIRST, which stops the accumulator before DateTime's own
     connected handler ever runs.  Both must return False for the event to
     reach the EventBox where drag_source_set lives.
+
+    It also avoids the GtkButton label visibility glitch: calling
+    set_label() on every tick destroys and recreates the internal child
+    label, and after enough redraws GTK3 stops showing it.  Instead the
+    internal label is captured once and updated in place via set_text().
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        child = self.get_child()
+        if isinstance(child, Gtk.Label):
+            self._text_label = child
+
+    def do_update_label(self):
+        text = self.do_format()
+        label = getattr(self, "_text_label", None)
+        if label is None:
+            return super().do_update_label()
+        label.set_text(text)
+        return True
 
     def do_button_press_event(self, event):
         match event.button:
@@ -39,12 +59,10 @@ class DesktopDateWidget(Box):
             **kwargs,
         )
         self.top = Box(orientation="h", name="date-top", h_expand=True)
-        # Using a highly frequent interval (e.g. 10000ms/10s) causes the DateTime widget
-        # (which inherits from Gtk.Button) to repeatedly call set_label.
-        # In GTK3, repeatedly replacing a button's label can cause rendering glitches
-        # where the layout engine drops the child label's visibility after some time.
-        # Since this is just a date widget, we increase the interval to 100000ms (100 seconds)
-        # which easily avoids the continuous redraw glitch while keeping the date accurate.
+        # Update interval is generous (100s) since the date only changes
+        # daily; _DraggableDateTime updates its label in place so the
+        # frequent set_label() glitch that drops label visibility in GTK3
+        # is avoided entirely.
         date_interval = 100000
         self.dateone = _DraggableDateTime(
             formatters=["%a"], interval=date_interval, name="day"
