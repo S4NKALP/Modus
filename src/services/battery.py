@@ -133,14 +133,17 @@ def _level_icon(capacity: int) -> str:
     return "battery-level-08-symbolic"
 
 
+_STATE_FROM_RAW = {
+    DeviceState.CHARGING: BatteryStatus.CHARGING,
+    DeviceState.DISCHARGING: BatteryStatus.DISCHARGING,
+    DeviceState.FULLY_CHARGED: BatteryStatus.FULL,
+    DeviceState.PENDING_CHARGE: BatteryStatus.NOT_CHARGING,
+    DeviceState.PENDING_DISCHARGE: BatteryStatus.NOT_CHARGING,
+}
+
+
 def _state_from_raw(state: int) -> BatteryStatus:
-    return {
-        DeviceState.CHARGING: BatteryStatus.CHARGING,
-        DeviceState.DISCHARGING: BatteryStatus.DISCHARGING,
-        DeviceState.FULLY_CHARGED: BatteryStatus.FULL,
-        DeviceState.PENDING_CHARGE: BatteryStatus.NOT_CHARGING,
-        DeviceState.PENDING_DISCHARGE: BatteryStatus.NOT_CHARGING,
-    }.get(state, BatteryStatus.UNKNOWN)
+    return _STATE_FROM_RAW.get(state, BatteryStatus.UNKNOWN)
 
 
 def _device_kind_from_u32(value: int) -> UpDeviceKind:
