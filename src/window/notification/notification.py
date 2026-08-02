@@ -196,6 +196,90 @@ def get_fallback_notification_icon(size=(48, 48)):
     return _shared_fallback_icon(size)
 
 
+def _resize_pixbuf_to(pixbuf, size):
+    """Scale a pixbuf to ``size``, short-circuiting when already that size."""
+    width, height = size
+    if (
+        pixbuf is not None
+        and pixbuf.get_width() == width
+        and pixbuf.get_height() == height
+    ):
+        return pixbuf
+    try:
+        return pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+    except Exception as e:
+        logger.warning(f"[notification] Failed to scale pixbuf to {size}: {e}")
+        return pixbuf
+
+
+def get_notification_pixbuf(
+    notification,
+    cache_metadata=None,
+    target_size=(64, 64),
+    include_live_image=True,
+):
+    """Resolve a notification thumbnail via the shared cache cascade.
+
+    Order: cached notification image (by key) -> live ``image_pixbuf``
+    (only when ``include_live_image``) -> cached app icon -> directly
+    cached app icon -> fallback icon. Never rescales a pixbuf that is
+    already at ``target_size``.
+
+    Shared by the popup widget and the notification center (previously
+    three near-verbatim copies).
+    """
+    meta = (
+        cache_metadata
+        if cache_metadata is not None
+        else (getattr(notification, "cache_metadata", None) or {})
+    )
+    pixbuf = None
+
+    if isinstance(meta, dict):
+        notif_key = meta.get("notification_image_cache_key")
+        if notif_key:
+            try:
+                pixbuf = get_cached_notification_image(notif_key)
+            except Exception as e:
+                logger.warning(
+                    f"[notification] Failed to load cached notification image: {e}"
+                )
+
+    if not pixbuf and include_live_image:
+        try:
+            img = getattr(notification, "image_pixbuf", None)
+            if img is not None:
+                nid = getattr(notification, "id", 0)
+                ck = get_notification_image_cache_key(nid, img)
+                cached = get_cached_notification_image(ck)
+                pixbuf = cached if cached else img
+        except Exception as e:
+            logger.warning(f"[notification] Failed to load notification image: {e}")
+
+    if not pixbuf and isinstance(meta, dict):
+        app_key = meta.get("app_icon_cache_key")
+        if app_key:
+            try:
+                pixbuf = _unified_get_from_cache(app_key, target_size)
+            except Exception as e:
+                logger.warning(f"[notification] Failed to load cached app icon: {e}")
+
+    if not pixbuf:
+        app_icon = getattr(notification, "app_icon", None) or getattr(
+            notification, "app_name", None
+        )
+        if app_icon:
+            try:
+                pixbuf = cache_notification_icon(app_icon, target_size)
+            except Exception as e:
+                logger.warning(f"[notification] Failed to cache app icon: {e}")
+
+    if not pixbuf:
+        pixbuf = get_fallback_notification_icon(target_size)
+
+    return _resize_pixbuf_to(pixbuf, target_size)
+
+
 def get_notification_image_cache_key(notification_id, image_pixbuf):
     """Generate a deterministic cache key based on image content to prevent duplicate caching"""
     try:
@@ -632,77 +716,11 @@ class NotificationWidget(Box):
 
     def _get_notification_pixbuf(self, notification):
         """Notification pixbuf — loads notification image or app icon, scaled consistently."""
-        pixbuf = None
-
-        # 1. Try cache_metadata keys first (cheap — no disk/pixbuf load)
-        cache_meta = getattr(notification, "cache_metadata", {}) or {}
-        notif_key = cache_meta.get("notification_image_cache_key")
-        if notif_key:
-            try:
-                pixbuf = get_cached_notification_image(notif_key)
-            except Exception as e:
-                logger.warning(
-                    f"[notification] pixbuf = get_cached_notification_image(notif_key) failed: {e}"
-                )
-
-        # 2. Try notification image via image_pixbuf (only if no cached)
-        if not pixbuf:
-            try:
-                img = getattr(notification, "image_pixbuf", None)
-                if img is not None:
-                    nid = getattr(notification, "id", 0)
-                    ck = get_notification_image_cache_key(nid, img)
-                    cached = get_cached_notification_image(ck)
-                    if cached:
-                        pixbuf = cached
-                    else:
-                        pixbuf = img
-            except Exception as e:
-                logger.warning(
-                    f"[notification] img = getattr(notification, 'image_pixbuf', None) failed: {e}"
-                )
-
-        # 3. App icon via cache_metadata
-        if not pixbuf:
-            app_key = cache_meta.get("app_icon_cache_key")
-            if app_key:
-                try:
-                    from window.notification.unified_cache import get_from_cache
-
-                    pixbuf = get_from_cache(app_key, (64, 64))
-                except Exception as e:
-                    logger.warning(
-                        f"[notification] from window.notification.unified_cache import get_from_cache failed: {e}"
-                    )
-
-        # 4. Direct app icon caching
-        if not pixbuf:
-            app_icon = getattr(notification, "app_icon", None) or getattr(
-                notification, "app_name", None
-            )
-            if app_icon:
-                try:
-                    pixbuf = cache_notification_icon(app_icon, (64, 64))
-                except Exception as e:
-                    logger.warning(
-                        f"[notification] pixbuf = cache_notification_icon(app_icon, (64, 64)) failed: {e}"
-                    )
-
-        # 5. Fallback
-        if not pixbuf:
-            pixbuf = get_fallback_notification_icon((64, 64))
-
-        try:
-            return pixbuf.scale_simple(
-                NOTIFICATION_IMAGE_SIZE,
-                NOTIFICATION_IMAGE_SIZE,
-                GdkPixbuf.InterpType.BILINEAR,
-            )
-        except Exception as e:
-            logger.warning(
-                f"[notification] return pixbuf.scale_simple( NOTIFICATION_IMAGE_SIZE, NOTI... failed: {e}"
-            )
-            return pixbuf
+        return get_notification_pixbuf(
+            notification,
+            target_size=(NOTIFICATION_IMAGE_SIZE, NOTIFICATION_IMAGE_SIZE),
+            include_live_image=True,
+        )
 
     def create_action_buttons(self, notification):
         if not notification.actions:
