@@ -14,14 +14,29 @@ from shared.widgets.animator import Animator
 from utils.gtk_utils import toml_file
 from window.desktop.registry import DesktopWidgetRegistry
 
-# Dynamically import all modules in this package to register widgets
 _dir = os.path.dirname(__file__)
-for _, _name, _ in pkgutil.iter_modules([_dir]):
-    if _name not in ("main", "registry", "widgets"):
-        try:
-            importlib.import_module(f".{_name}", package=__package__)
-        except Exception as e:
-            logger.error(f"Failed to load desktop widget module {_name}: {e}")
+_widget_modules_loaded = False
+
+
+def _ensure_widget_modules() -> None:
+    """Import built-in desktop widget modules and user widgets on first use.
+
+    Deferred from import time so the ~0.27s of widget imports don't block
+    startup; the desktop window builds its contents after a 50ms idle
+    timeout anyway.
+    """
+    global _widget_modules_loaded
+    if _widget_modules_loaded:
+        return
+    _widget_modules_loaded = True
+    for _, _name, _ in pkgutil.iter_modules([_dir]):
+        if _name not in ("main", "registry", "widgets"):
+            try:
+                importlib.import_module(f".{_name}", package=__package__)
+            except Exception as e:
+                logger.error(f"Failed to load desktop widget module {_name}: {e}")
+    _load_user_widgets()
+
 
 #  Config-backed position manager (stores percentage-based positions)          #
 
@@ -62,9 +77,6 @@ def _load_user_widgets() -> set[str]:
         except Exception as e:
             logger.error(f"[DesktopWidgets] failed to load user widget {fname}: {e}")
     return loaded_keys
-
-
-_load_user_widgets()
 
 
 class PositionManager:
@@ -481,6 +493,7 @@ class DesktopWidgetWindow(WaylandWindow):
     # widget management
 
     def rebuild(self) -> None:
+        _ensure_widget_modules()
         self._dragging_eb = None
         self._dragging_key = None
 
