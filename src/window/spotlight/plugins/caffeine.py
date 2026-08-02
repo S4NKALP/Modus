@@ -1,11 +1,10 @@
 import os
 import signal
-import subprocess
 
 from fabric.utils import logger
 
 from shared.capture import CaptureNotifier
-from utils.functions import format_duration, parse_timeout_string
+from utils.functions import format_duration, parse_timeout_string, spawn_detached
 from window.spotlight.api import SearchResult, SpotlightPlugin
 
 _PID_FILE = os.path.join(
@@ -114,7 +113,7 @@ class CaffeinePlugin(SpotlightPlugin):
             str(seconds),
         ]
         try:
-            proc = subprocess.Popen(cmd)
+            proc = spawn_detached(cmd)
         except FileNotFoundError:
             logger.error("[Caffeine] systemd-inhibit not found on this system")
             return
