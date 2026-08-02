@@ -30,6 +30,10 @@ PLAYERCTLD_SERVICE = "org.mpris.MediaPlayer2.playerctld"
 MPRIS_PLAYER_IFACE = "org.mpris.MediaPlayer2.Player"
 MPRIS_PLAYER_PATH = "/org/mpris/MediaPlayer2"
 
+# Bounded timeout (ms) for synchronous player reads so a hung player cannot
+# block the main loop forever.
+_MPRIS_CALL_TIMEOUT = 5000
+
 _MPRIS_PLAYER_IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(
     """<node>
     <interface name="org.mpris.MediaPlayer2.Player">
@@ -177,7 +181,7 @@ class PlayerService(Service):
                 "org.freedesktop.DBus.Properties.Get",
                 GLib.Variant("(ss)", (MPRIS_PLAYER_IFACE, "Position")),
                 Gio.DBusCallFlags.NONE,
-                -1,
+                _MPRIS_CALL_TIMEOUT,
                 None,
             )
             return result.get_child_value(0).unpack()
@@ -186,27 +190,33 @@ class PlayerService(Service):
             return 0
 
     def play_pause(self, *_):
-        try:
-            self._proxy.call_sync("PlayPause", None, Gio.DBusCallFlags.NONE, -1, None)
-        except GLib.Error as e:
-            logger.warning(f"play_pause failed: {e}")
+        self._call_async("PlayPause")
 
     def next(self, *_):
-        try:
-            self._proxy.call_sync("Next", None, Gio.DBusCallFlags.NONE, -1, None)
-        except GLib.Error as e:
-            logger.warning(f"next failed: {e}")
+        self._call_async("Next")
 
     def previous(self, *_):
+        self._call_async("Previous")
+
+    def _call_async(self, method: str, args=None):
+        """Fire-and-forget player control call; never blocks the main loop."""
+
+        def _on_reply(proxy, res, _user_data):
+            try:
+                proxy.call_finish(res)
+            except GLib.Error as e:
+                logger.warning(f"[mpris] {method} failed: {e}")
+
         try:
-            self._proxy.call_sync("Previous", None, Gio.DBusCallFlags.NONE, -1, None)
+            self._proxy.call(method, args, Gio.DBusCallFlags.NONE, -1, None, _on_reply)
         except GLib.Error as e:
-            logger.warning(f"previous failed: {e}")
+            logger.warning(f"[mpris] {method} call failed: {e}")
 
     def __init__(self, name: str, proxy: Gio.DBusProxy, **kwargs):
         super().__init__(**kwargs)
         self._name = name
         self._proxy = proxy
+        self._metadata_cache: dict | None = None
         self._current_artwork_hash = ""
         self._current_artwork_path = ""
         self._is_cleaning_up = False
@@ -305,7 +315,7 @@ class PlayerService(Service):
                 "org.freedesktop.DBus.Properties.Get",
                 GLib.Variant("(ss)", (MPRIS_PLAYER_IFACE, "Position")),
                 Gio.DBusCallFlags.NONE,
-                -1,
+                _MPRIS_CALL_TIMEOUT,
                 None,
             )
             return result.get_child_value(0).unpack() / 1_000_000
@@ -321,22 +331,14 @@ class PlayerService(Service):
                 "SetPosition",
                 GLib.Variant("(i)", (int(pos * 1_000_000),)),
                 Gio.DBusCallFlags.NONE,
-                -1,
+                _MPRIS_CALL_TIMEOUT,
                 None,
             )
         except GLib.Error:
-            try:
-                current = self.get_position() / 1_000_000
-                offset = pos - current
-                self._proxy.call_sync(
-                    "Seek",
-                    GLib.Variant("(x)", (int(offset * 1_000_000),)),
-                    Gio.DBusCallFlags.NONE,
-                    -1,
-                    None,
-                )
-            except GLib.Error as e:
-                logger.error(f"seek_position fallback failed: {e}")
+            # SetPosition unsupported: fall back to a relative Seek.
+            current = self.get_position() / 1_000_000
+            offset = pos - current
+            self._call_async("Seek", GLib.Variant("(x)", (int(offset * 1_000_000),)))
         finally:
             self.poll_progress()
 
@@ -344,13 +346,7 @@ class PlayerService(Service):
         if self._is_cleaning_up:
             return
         try:
-            self._proxy.call_sync(
-                "Seek",
-                GLib.Variant("(x)", (int(offset * 1_000_000),)),
-                Gio.DBusCallFlags.NONE,
-                -1,
-                None,
-            )
+            self._call_async("Seek", GLib.Variant("(x)", (int(offset * 1_000_000),)))
         except GLib.Error as e:
             logger.error(f"Failed to seek: {e}")
         finally:
@@ -370,7 +366,7 @@ class PlayerService(Service):
                 "org.freedesktop.DBus.Properties.Get",
                 GLib.Variant("(ss)", (MPRIS_PLAYER_IFACE, "Position")),
                 Gio.DBusCallFlags.NONE,
-                -1,
+                _MPRIS_CALL_TIMEOUT,
                 None,
             )
             pos = result.get_child_value(0).unpack() / 1_000_000
@@ -403,11 +399,13 @@ class PlayerService(Service):
         if "Metadata" in props:
             metadata = props["Metadata"]
             if isinstance(metadata, dict):
+                self._metadata_cache = metadata
                 self.meta_change(metadata, self)
                 self.fabricating(metadata)
             elif isinstance(metadata, GLib.Variant):
                 unpacked = metadata.unpack()
                 if isinstance(unpacked, dict):
+                    self._metadata_cache = unpacked
                     self.meta_change(unpacked, self)
                     self.fabricating(unpacked)
 
@@ -424,10 +422,14 @@ class PlayerService(Service):
             self.pause()
 
     def _get_metadata(self) -> dict | None:
+        if self._metadata_cache is not None:
+            return self._metadata_cache
         v = self._proxy.get_cached_property("Metadata")
         if v is None:
             return None
-        return v.unpack() if isinstance(v, GLib.Variant) else v
+        unpacked = v.unpack() if isinstance(v, GLib.Variant) else v
+        self._metadata_cache = unpacked if isinstance(unpacked, dict) else None
+        return self._metadata_cache
 
     def _meta_str(self, metadata, key: str) -> str | None:
         value = metadata.get(key)
@@ -571,6 +573,7 @@ class PlayerService(Service):
         self._subscription_ids.clear()
 
         self._current_artwork_path = ""
+        self._metadata_cache = None
         self._failed_covers.clear()
         self._download_threads.clear()
 
