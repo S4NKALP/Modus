@@ -24,6 +24,12 @@ from utils.functions import is_app_running, resolve_monitor
 
 _RECORDER_PROCESSES = ("wf-recorder", "gpu-screen-recorder")
 
+# How long a cached external-recorder probe stays valid. Detecting a recorder
+# spawned outside this service requires a ``pidof`` call; caching the result
+# means reading the ``active`` property never spawns a subprocess on the main
+# loop more than once per this window.
+_ACTIVE_PROBE_TTL = 2.0
+
 
 class ScreenRecorder(Service):
     """Record the screen through a pluggable :class:`CaptureBackend`."""
@@ -69,6 +75,8 @@ class ScreenRecorder(Service):
         self._output_file: str | None = None
         self._start_time: float | None = None
         self._tick_source_id: int | None = None
+        self._external_recorder_active = False
+        self._external_probe_time = 0.0
 
         self.recordings_dir = Path.home() / "Videos" / "Recordings"
         self.recordings_dir.mkdir(parents=True, exist_ok=True)
@@ -121,10 +129,21 @@ class ScreenRecorder(Service):
     def active(self) -> bool:
         """Whether a recorder process is actually running.
 
-        Unlike :attr:`recording`, this reflects the real process state and
-        also detects recordings started outside this service.
+        A recording started through this service is tracked exactly via its
+        subprocess handle. Recordings started outside modus are detected with
+        a short-lived cached ``pidof`` probe, so reading this property never
+        blocks the main loop more than once per ``_ACTIVE_PROBE_TTL`` seconds.
         """
-        return any(is_app_running(proc) for proc in _RECORDER_PROCESSES)
+        ours = self._backend.is_recorder_running()
+        if ours is not None:
+            return ours
+        now = time.monotonic()
+        if now - self._external_probe_time >= _ACTIVE_PROBE_TTL:
+            self._external_recorder_active = any(
+                is_app_running(proc) for proc in _RECORDER_PROCESSES
+            )
+            self._external_probe_time = now
+        return self._external_recorder_active
 
     # -- public API --------------------------------------------------------
 
@@ -220,6 +239,10 @@ class ScreenRecorder(Service):
         self._recording = True
         self._paused = False
         self._start_time = time.monotonic()
+        # This service now owns the recorder: drop the external cache so the
+        # next ``active`` read resolves exactly from the tracked subprocess.
+        self._external_recorder_active = False
+        self._external_probe_time = 0.0
         self._start_tick()
         self.notify("output-file")
         self.notify("recording")
@@ -230,6 +253,8 @@ class ScreenRecorder(Service):
         self._recording = False
         self._paused = False
         self._start_time = None
+        # Force a fresh external probe on the next ``active`` read.
+        self._external_probe_time = 0.0
         self.notify("recording")
         self.notify("busy")
         self.notify("elapsed-seconds")

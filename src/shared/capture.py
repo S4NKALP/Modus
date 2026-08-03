@@ -147,6 +147,7 @@ class HyprlandCaptureBackend(CaptureBackend):
             tool: find_binary(tool) is not None
             for tool in ("hyprshot", "grim", "slurp", self._RECORDER)
         }
+        self._recorder_proc: Gio.Subprocess | None = None
 
     @property
     def capabilities(self) -> BackendCapabilities:
@@ -162,6 +163,18 @@ class HyprlandCaptureBackend(CaptureBackend):
     def has_tool(self, tool: str) -> bool:
         """Return whether a wrapped tool is available on this system."""
         return self._tools.get(tool, False)
+
+    def is_recorder_running(self) -> bool | None:
+        """Return whether the recorder spawned by this backend is still alive.
+
+        ``None`` means no recorder was started through this backend, so the
+        caller must fall back to external detection. Cheap: reads the already
+        tracked subprocess instead of shelling out.
+        """
+        proc = self._recorder_proc
+        if proc is None:
+            return None
+        return not proc.get_if_exited()
 
     # screenshots
 
@@ -322,10 +335,12 @@ class HyprlandCaptureBackend(CaptureBackend):
         if proc is None:
             on_result(CaptureResult.failure(f"failed to launch {self._RECORDER}"))
             return False
+        self._recorder_proc = proc
         on_result(CaptureResult.ok(str(request.output_file)))
         return True
 
     def stop_recording(self) -> bool:
+        self._recorder_proc = None
         kill_process(self._RECORDER)
         return True
 
