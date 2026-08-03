@@ -339,6 +339,15 @@ class DesktopWidgetWindow(WaylandWindow):
                 sc.remove_class("edit-mode")
                 eb.drag_source_unset()
 
+        if self._edit_mode:
+            # Full interactive surface while editing: drag-motion events are
+            # delivered across the whole desktop instead of only over the
+            # widget rectangles, so dragged widgets follow the cursor
+            # everywhere (as before the partial input region was added).
+            self.input_shape_combine_region(None)
+        else:
+            self._schedule_input_rebuild()
+
     # GTK DnD
 
     def _setup_drag_dest(self) -> None:
@@ -377,15 +386,24 @@ class DesktopWidgetWindow(WaylandWindow):
 
     def _on_applet_drag_end(self, eb, ctx, key: str) -> None:
         if not self._drag_drop_success:
-            self._fixed.remove(eb)
-            self._fixed.put(
+            # Reposition with move(), not remove()+put(): removing and
+            # re-adding a Gtk.Fixed child does not repaint in this window.
+            self._fixed.move(
                 eb,
                 getattr(eb, "_target_x", 0),
                 getattr(eb, "_target_y", 0),
             )
+            self._reposition_now()
         self._dragging_key = None
         self._dragging_eb = None
         self._schedule_input_rebuild()
+
+    def _reposition_now(self) -> None:
+        # A Gtk.Fixed child resize only bubbles up to the toplevel when the
+        # window itself is queued; fixed/child-level queue_resize() does not
+        # reach the layer-shell window, so the child would keep its old
+        # allocation until a full rebuild. queue the window to re-allocate.
+        self.queue_resize()
 
     def _on_drag_motion(self, widget, ctx, x, y, time) -> bool:
         targets = [t.name() for t in ctx.list_targets()]
@@ -399,6 +417,7 @@ class DesktopWidgetWindow(WaylandWindow):
             nx = max(0, min(self._win_w - aw, int(x - aw / 2)))
             ny = max(0, min(self._win_h - ah, int(y - ah / 2)))
             self._fixed.move(eb, nx, ny)
+            self._reposition_now()
         Gdk.drag_status(ctx, Gdk.DragAction.MOVE, time)
         return True
 
@@ -433,8 +452,11 @@ class DesktopWidgetWindow(WaylandWindow):
                 new_y / self._win_h,
             )
 
-        self._fixed.remove(eb)
-        self._fixed.put(eb, new_x, new_y)
+        # move() instead of remove()+put(): the latter does not repaint in a
+        # layer-shell window, so the new position would only appear after a
+        # restart. move() on the already-attached child repaints immediately.
+        self._fixed.move(eb, new_x, new_y)
+        self._reposition_now()
         eb.show()
 
         self._drag_drop_success = True
@@ -578,6 +600,8 @@ class DesktopWidgetWindow(WaylandWindow):
         return False
 
     def _rebuild_input_region(self) -> None:
+        if self._edit_mode:
+            return
         rects = []
         for eb in self._children.values():
             a = eb.get_allocation()
