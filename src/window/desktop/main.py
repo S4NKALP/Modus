@@ -340,10 +340,6 @@ class DesktopWidgetWindow(WaylandWindow):
                 eb.drag_source_unset()
 
         if self._edit_mode:
-            # Full interactive surface while editing: drag-motion events are
-            # delivered across the whole desktop instead of only over the
-            # widget rectangles, so dragged widgets follow the cursor
-            # everywhere (as before the partial input region was added).
             self.input_shape_combine_region(None)
         else:
             self._schedule_input_rebuild()
