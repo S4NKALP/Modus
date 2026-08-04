@@ -1,24 +1,13 @@
 import calendar
 import datetime
 
-from fabric.utils import GLib, invoke_repeater
+from fabric.utils import GLib
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 
-from utils.functions import clear_children
 from window.desktop.registry import DesktopWidgetRegistry
 
-CALENDAR_UPDATE_INTERVAL = int(
-    (
-        (
-            datetime.datetime.combine(
-                datetime.date.today() + datetime.timedelta(days=1), datetime.time.min
-            )
-            - datetime.datetime.now()
-        ).total_seconds()
-    )
-    * 1000
-)
+MAX_WEEKS = 6
 
 
 class DesktopCalendarWidget(Box):
@@ -39,9 +28,7 @@ class DesktopCalendarWidget(Box):
         self.add(self.month_label)
         self.add(self.days_header)
         self.add(self.calendar_grid)
-        self._calendar_timer_id = invoke_repeater(
-            CALENDAR_UPDATE_INTERVAL, self.update_calendar_if_needed
-        )
+        self._schedule_calendar_update()
 
     def destroy(self):
         """Cleanup calendar update timer"""
@@ -49,6 +36,23 @@ class DesktopCalendarWidget(Box):
             GLib.source_remove(self._calendar_timer_id)
             self._calendar_timer_id = None
         super().destroy()
+
+    def _ms_until_next_day(self) -> int:
+        now = datetime.datetime.now()
+        midnight = datetime.datetime.combine(
+            now.date() + datetime.timedelta(days=1), datetime.time.min
+        )
+        return int((midnight - now).total_seconds() * 1000)
+
+    def _schedule_calendar_update(self):
+        self._calendar_timer_id = GLib.timeout_add(
+            self._ms_until_next_day(), self._on_calendar_timer
+        )
+
+    def _on_calendar_timer(self) -> bool:
+        self.update_calendar_if_needed()
+        self._schedule_calendar_update()
+        return False
 
     def _update_current_date(self):
         now = datetime.datetime.now()
@@ -84,6 +88,23 @@ class DesktopCalendarWidget(Box):
 
     def _create_calendar_grid(self):
         self.calendar_grid = Box(name="calendar-grid", orientation="v", spacing=1)
+        self._week_boxes = []
+        self._day_labels = []
+        for _ in range(MAX_WEEKS):
+            week_box = Box(orientation="h", spacing=2, h_expand=True)
+            labels = []
+            for _ in range(7):
+                label = Label(
+                    name="calendar-day-empty",
+                    label="",
+                    h_align="center",
+                    h_expand=True,
+                )
+                labels.append(label)
+                week_box.add(label)
+            self._week_boxes.append(week_box)
+            self._day_labels.append(labels)
+            self.calendar_grid.add(week_box)
         self.update_calendar()
 
     def update_calendar_if_needed(self) -> bool:
@@ -98,35 +119,31 @@ class DesktopCalendarWidget(Box):
         return True
 
     def update_calendar(self):
-
-        clear_children(self.calendar_grid)
+        now = datetime.datetime.now()
         self.month_label.set_label(calendar.month_name[self.current_month])
         cal = calendar.monthcalendar(self.current_year, self.current_month)
-        for week in cal:
-            week_box = Box(orientation="h", spacing=2, h_expand=True)
+        for week_idx, week in enumerate(cal):
+            self._week_boxes[week_idx].set_visible(True)
             for i, day in enumerate(week):
+                label = self._day_labels[week_idx][i]
                 if day == 0:
-                    label = Label(
-                        name="calendar-day-empty",
-                        label="",
-                        h_align="center",
-                        h_expand=True,
-                    )
+                    label.set_label("")
+                    label.set_name("calendar-day-empty")
                 else:
                     is_today = (
                         day == self.current_day
-                        and self.current_month == datetime.datetime.now().month
+                        and self.current_month == now.month
+                        and self.current_year == now.year
                     )
                     name = (
                         "calendar-day-today"
                         if is_today
                         else ("calendar-day-weekend" if i in (0, 6) else "calendar-day")
                     )
-                    label = Label(
-                        name=name, label=str(day), h_align="center", h_expand=True
-                    )
-                week_box.add(label)
-            self.calendar_grid.add(week_box)
+                    label.set_label(str(day))
+                    label.set_name(name)
+        for week_idx in range(len(cal), MAX_WEEKS):
+            self._week_boxes[week_idx].set_visible(False)
 
 
 class DesktopCalendarContainer(Box):
