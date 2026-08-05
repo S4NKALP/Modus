@@ -13,7 +13,7 @@
 }
 
 #osd-container .block-progress-bar block-bg {
-    background-color: alpha(@glass-surface-1, 0.6);
+    background-color: @glass-surface-solid;
 }
 
 #osd-container .block-progress-bar block-fg {
