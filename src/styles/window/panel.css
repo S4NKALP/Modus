@@ -1,6 +1,5 @@
 #panel {
     background-color: @glass-panel;
-    margin: -4px 0;
     transition: all 120ms ease-in-out;
 }
 
@@ -106,18 +105,16 @@
 }
 
 #panel-notch-stack {
-    background-color: @glass-overlay-dark;
-    border-radius: 0 0 apply(radius-lg) apply(radius-lg);
+    background-color: @glass-surface-solid;
+    border-radius: 0 0 18px 18px;
     min-width: 200px;
-    min-height: 34px;
+    min-height: 32px;
 }
 
 
 #panel-notch-corner {
-    background-color: #000000;
+    background-color: @background;
     border-radius: 0;
-    min-width: 20px;
-    min-height: 20px;
 }
 
 #panel-notch-stack #panel-button {
