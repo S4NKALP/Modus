@@ -24,7 +24,6 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
-from fabric.widgets.shapes import Corner
 from fabric.widgets.window import Window
 from gi.repository import GtkSessionLock  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -36,6 +35,7 @@ from window.panel.components.indicators import (
     BluetoothIndicator,
     NetworkIndicator,
 )
+from window.panel.notch.pill import NotchPill
 
 for log in [
     "fabric.audio.service",
@@ -53,7 +53,6 @@ class IndicatorBox(Box):
             h_align="end",
             name="indicator-box",
             spacing=5,
-            h_expand=True,
             children=[
                 BatteryIndicator(show_window=False),
                 BluetoothIndicator(show_window=False),
@@ -152,7 +151,24 @@ class LockScreen(Window):
         self._hide_timeout_id = None
         self.lock = lock
         self.content = ContentBox(self.on_activate)
-        self.lock_notch = self._build_lock_notch()
+        self.lock_notch = NotchPill(
+            center_widget=Box(
+                name="panel-notch-stack",
+                h_expand=True,
+                children=[
+                    CenterBox(
+                        name="notch-idle",
+                        h_expand=True,
+                        end_children=[
+                            Box(
+                                name="notch-idle-icon",
+                                children=[svg_file("notch/lock.svg", size=16)],
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        )
         super().__init__(
             title="lock",
             visible=False,
@@ -163,7 +179,12 @@ class LockScreen(Window):
                 orientation="vertical",
                 children=[
                     CenterBox(
-                        center_children=self.lock_notch,
+                        name="panel",
+                        start_children=Box(name="window-left"),
+                        center_children=Box(
+                            name="window-center",
+                            children=[self.lock_notch],
+                        ),
                         end_children=IndicatorBox(),
                     ),
                     self.content,
@@ -178,47 +199,6 @@ class LockScreen(Window):
         if not os.path.exists(bg):
             bg = get_relative_path("../assets/wallpapers_example/example-1.png")
         self.set_style(f"background-image: url('{bg}');")
-
-    def _build_lock_notch(self):
-        return CenterBox(
-            name="lock-notch",
-            orientation="h",
-            h_align="center",
-            v_align="start",
-            start_children=Box(
-                name="lock-notch-corner-left",
-                orientation="v",
-                h_align="start",
-                children=[
-                    Corner(
-                        name="lock-notch-corner",
-                        orientation="top-right",
-                        size=20,
-                    ),
-                ],
-            ),
-            center_children=CenterBox(
-                name="lock-notch-stack",
-                v_expand=True,
-                h_expand=True,
-                end_children=Box(
-                    children=[svg_file("notch/lock.svg", size=16)],
-                    style="margin-right: 12px;",
-                ),
-            ),
-            end_children=Box(
-                name="lock-notch-corner-right",
-                orientation="v",
-                h_align="end",
-                children=[
-                    Corner(
-                        name="lock-notch-corner",
-                        orientation="top-left",
-                        size=20,
-                    ),
-                ],
-            ),
-        )
 
     def _on_keypress(self, widget, event):
         keyval = event.keyval
