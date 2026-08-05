@@ -1,7 +1,5 @@
 from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.shapes import Corner
 from fabric.widgets.stack import Stack
 
 from services.modus import screen_recorder_service
@@ -13,22 +11,13 @@ from window.panel.notch.indicators import (
     MicrophoneIndicator,
     NumLockIndicator,
 )
+from window.panel.notch.pill import NotchPill
 from window.panel.notch.player import NotchPlayer
 from window.panel.notch.recording import RecordingIndicator
 
 
-class Notch(Box):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name="panel-notch-wrap",
-            orientation="h",
-            spacing=0,
-            v_align="center",
-            h_align="center",
-            h_expand=False,
-            **kwargs,
-        )
-
+class Notch(NotchPill):
+    def __init__(self, idle_widget=None, **kwargs):
         self.recording_indicator = RecordingIndicator()
         self.recording_indicator.set_hexpand(True)
         self.recording_indicator.set_halign(Gtk.Align.FILL)
@@ -37,9 +26,10 @@ class Notch(Box):
         self.player_widget.set_hexpand(True)
         self.player_widget.set_halign(Gtk.Align.FILL)
 
-        self.idle_widget = Box(
-            name="notch-idle",
-            h_expand=True,
+        self.idle_widget = (
+            idle_widget
+            if idle_widget is not None
+            else Box(name="notch-idle", h_expand=True)
         )
 
         self._last_scroll_index = 0
@@ -98,43 +88,7 @@ class Notch(Box):
         )
         self._last_stack_page = 0
 
-        self.left_corner = Box(
-            name="panel-notch-corner-left",
-            orientation="v",
-            h_align="start",
-            children=[
-                Corner(
-                    name="panel-notch-corner",
-                    orientation="top-right",
-                    size=20,
-                )
-            ],
-        )
-
-        self.right_corner = Box(
-            name="panel-notch-corner-right",
-            orientation="v",
-            h_align="end",
-            children=[
-                Corner(
-                    name="panel-notch-corner",
-                    orientation="top-left",
-                    size=20,
-                )
-            ],
-        )
-
-        self.notch_box = CenterBox(
-            name="panel-notch",
-            orientation="h",
-            h_align="center",
-            v_align="center",
-            start_children=self.left_corner,
-            center_children=self.notch_stack,
-            end_children=self.right_corner,
-        )
-
-        self.add(self.notch_box)
+        super().__init__(center_widget=self.notch_stack, **kwargs)
 
         self._init_state()
 
