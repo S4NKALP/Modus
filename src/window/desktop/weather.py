@@ -51,8 +51,8 @@ class DesktopWeatherWidget(Box):
             label="Loading...",
             justification="left",
             h_align="start",
-            max_chars_width=15,
-            ellipsization="end",
+            h_expand=True,
+            line_wrap="word-char",
         )
         self.temperature = Label(name="temperature", label="--°", h_align="start")
         self.condition_em = svg_file(
@@ -61,9 +61,8 @@ class DesktopWeatherWidget(Box):
         self.condition = Label(
             name="condition",
             label="Loading...",
-            max_chars_width=18,
-            ellipsization="end",
             h_align="start",
+            line_wrap="word-char",
         )
         self.feels_like = Label(name="feels-like", label="L:-- H:--", h_align="start")
 
@@ -130,5 +129,5 @@ class DesktopWeatherWidget(Box):
 
 
 DesktopWidgetRegistry.register(
-    "weather", DesktopWeatherWidget, (174, 174), (0.10052, 0.01044)
+    "weather", DesktopWeatherWidget, (174, -1), (0.10052, 0.01044)
 )
