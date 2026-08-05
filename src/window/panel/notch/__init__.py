@@ -4,5 +4,12 @@ from window.panel.notch.indicators import (
     NumLockIndicator,
 )
 from window.panel.notch.notch import Notch
+from window.panel.notch.pill import NotchPill
 
-__all__ = ["CapsLockIndicator", "KeyboardLayoutIndicator", "Notch", "NumLockIndicator"]
+__all__ = [
+    "CapsLockIndicator",
+    "KeyboardLayoutIndicator",
+    "Notch",
+    "NotchPill",
+    "NumLockIndicator",
+]
