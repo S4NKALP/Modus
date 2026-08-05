@@ -24,6 +24,7 @@
 @define-color glass-surface-2 alpha(@background, 0.45);
 @define-color glass-surface-3 alpha(@background, 0.60);
 @define-color glass-surface-4 alpha(@background, 0.75);
+@define-color glass-surface-solid alpha(@background, 0.90);
 
 /* Glass Panels */
 
