@@ -118,6 +118,10 @@ class DesktopWeatherWidget(Box):
             self.city.set_label("Error")
             self.condition.set_label("UI Error")
 
+        toplevel = self.get_toplevel()
+        if toplevel is not None and toplevel is not self:
+            toplevel.queue_resize()
+
     def destroy(self):
         try:
             self._service.disconnect_by_func(self._on_service_update)
