@@ -122,6 +122,27 @@ class _ActionInfo:
         self.state_type = state_type
 
 
+def _action_state(state_av) -> tuple[Optional[Any], str]:
+    """Extract (state, state_type) from an org.gtk.Actions state array.
+
+    ``state_av`` is a GVariant of type ``av``; each element is a variant
+    wrapping the action's state value.  The array is empty for stateless
+    actions.
+    """
+    if state_av is None or state_av.n_children() == 0:
+        return None, ""
+    st = state_av.get_child_value(0)
+    try:
+        inner = st.get_variant()
+        return inner.unpack(), inner.get_type_string()
+    except Exception:
+        try:
+            return st.unpack(), st.get_type_string()
+        except Exception as e:
+            logger.debug(f"[gtkmenu] _action_state fallback failed: {e}")
+            return None, ""
+
+
 class GtkMenuClient:
     __slots__ = (
         "_action_cache",
@@ -178,25 +199,22 @@ class GtkMenuClient:
                 )
                 if not res:
                     continue
-                data = res.get_child_value(0).unpack()
-                self._action_cache.clear()
-                for name, (enabled, param_type_v, state_v) in data.items():
-                    param_type = str(param_type_v) if param_type_v else ""
-                    state = (
-                        state_v.unpack()
-                        if state_v and state_v.n_children() > 0
-                        else None
-                    )
-                    state_type = ""
-                    if state_v and state_v.n_children() > 0:
-                        st = state_v.get_child_value(0)
-                        state_type = st.get_type_string() if st else ""
-                    self._action_cache[name] = _ActionInfo(
+                data = res.get_child_value(0)
+                cache = {}
+                for i in range(data.n_children()):
+                    pair = data.get_child_value(i)
+                    name = pair.get_child_value(0).get_string()
+                    desc = pair.get_child_value(1)
+                    enabled = desc.get_child_value(0).get_boolean()
+                    param_type = desc.get_child_value(1).get_string()
+                    state, state_type = _action_state(desc.get_child_value(2))
+                    cache[name] = _ActionInfo(
                         enabled=enabled,
                         parameter_type=param_type,
                         state=state,
                         state_type=state_type,
                     )
+                self._action_cache = cache
                 return
             except Exception as e:
                 logger.debug(f"[GtkMenuClient] DescribeAll cache error: {e}")
@@ -215,17 +233,9 @@ class GtkMenuClient:
                     path=path,
                 )
                 if res:
-                    enabled, param_type_v, state_v = res.unpack()
-                    param_type = str(param_type_v) if param_type_v else ""
-                    state = (
-                        state_v.unpack()
-                        if state_v and state_v.n_children() > 0
-                        else None
-                    )
-                    state_type = ""
-                    if state_v and state_v.n_children() > 0:
-                        st = state_v.get_child_value(0)
-                        state_type = st.get_type_string() if st else ""
+                    enabled = res.get_child_value(0).get_boolean()
+                    param_type = res.get_child_value(1).get_string()
+                    state, state_type = _action_state(res.get_child_value(2))
                     info = _ActionInfo(enabled, param_type, state, state_type)
                     self._action_cache[action_name] = info
                     return info
@@ -475,23 +485,22 @@ class ActionMenuClient:
             )
             if not res:
                 return
-            data = res.get_child_value(0).unpack()
-            self._action_cache.clear()
-            for name, (enabled, param_type_v, state_v) in data.items():
-                param_type = str(param_type_v) if param_type_v else ""
-                state = (
-                    state_v.unpack() if state_v and state_v.n_children() > 0 else None
-                )
-                state_type = ""
-                if state_v and state_v.n_children() > 0:
-                    st = state_v.get_child_value(0)
-                    state_type = st.get_type_string() if st else ""
-                self._action_cache[name] = _ActionInfo(
+            data = res.get_child_value(0)
+            cache = {}
+            for i in range(data.n_children()):
+                pair = data.get_child_value(i)
+                name = pair.get_child_value(0).get_string()
+                desc = pair.get_child_value(1)
+                enabled = desc.get_child_value(0).get_boolean()
+                param_type = desc.get_child_value(1).get_string()
+                state, state_type = _action_state(desc.get_child_value(2))
+                cache[name] = _ActionInfo(
                     enabled=enabled,
                     parameter_type=param_type,
                     state=state,
                     state_type=state_type,
                 )
+            self._action_cache = cache
         except Exception as e:
             logger.debug(f"[ActionMenuClient] DescribeAll cache error: {e}")
 
@@ -507,15 +516,9 @@ class ActionMenuClient:
                 GLib.VariantType("(bgav)"),
             )
             if res:
-                enabled, param_type_v, state_v = res.unpack()
-                param_type = str(param_type_v) if param_type_v else ""
-                state = (
-                    state_v.unpack() if state_v and state_v.n_children() > 0 else None
-                )
-                state_type = ""
-                if state_v and state_v.n_children() > 0:
-                    st = state_v.get_child_value(0)
-                    state_type = st.get_type_string() if st else ""
+                enabled = res.get_child_value(0).get_boolean()
+                param_type = res.get_child_value(1).get_string()
+                state, state_type = _action_state(res.get_child_value(2))
                 info = _ActionInfo(enabled, param_type, state, state_type)
                 self._action_cache[action_name] = info
                 return info
@@ -624,21 +627,17 @@ class ActionMenuClient:
             return self._cached_items
 
         try:
-            data = res.get_child_value(0).unpack()
+            data = res.get_child_value(0)
             items: List[DBusMenuItem] = []
             self._action_map = {}
-            for i, (name, (enabled, param_type_v, state_v)) in enumerate(data.items()):
+            for i in range(data.n_children()):
+                pair = data.get_child_value(i)
+                name = pair.get_child_value(0).get_string()
+                desc = pair.get_child_value(1)
+                enabled = desc.get_child_value(0).get_boolean()
+                param_type = desc.get_child_value(1).get_string()
+                state, state_type = _action_state(desc.get_child_value(2))
                 label = name.replace("-", " ").replace("_", " ").strip().title()
-                param_type = str(param_type_v) if param_type_v else ""
-                state = None
-                state_type = ""
-                if state_v and state_v.n_children() > 0:
-                    st = state_v.get_child_value(0)
-                    state_type = st.get_type_string() if st else ""
-                    try:
-                        state = st.get_value()
-                    except Exception:
-                        state = state_v.unpack() if state_v else None
                 self._action_cache[name] = _ActionInfo(
                     enabled, param_type, state, state_type
                 )

@@ -207,6 +207,8 @@ def _get_firefox_bookmarks(pid, folder_label):
 
 TRUNCATE_MENU_AT = 25
 
+MAX_GLOBAL_MENU_ITEMS = 32
+
 
 def _truncate_children(children):
     if len(children) <= TRUNCATE_MENU_AT:
@@ -417,6 +419,13 @@ class GlobalMenuDropdowns:
         top_level = [
             item for item in menu_items if item.label and getattr(item, "visible", True)
         ]
+
+        if len(top_level) > MAX_GLOBAL_MENU_ITEMS:
+            logger.warning(
+                f"[GlobalMenu] truncating top-level menu to {MAX_GLOBAL_MENU_ITEMS} "
+                f"items (from {len(top_level)})"
+            )
+            top_level = top_level[:MAX_GLOBAL_MENU_ITEMS]
 
         if not top_level:
             self.all_menu_buttons = [self.global_menu_button_title]

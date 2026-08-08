@@ -23,9 +23,17 @@ from window.globalmenu.registrar import Registrar
 
 _NODE_NAME_RE = re.compile(r'<node name="([^"]+)"')
 
-_DBUS_TIMEOUT_INTROSPECT = 500
+_DBUS_TIMEOUT_INTROSPECT = 250
 _DBUS_TIMEOUT_PID = 200
 _DBUS_TIMEOUT_FAST = 100
+_PROBE_BUDGET = 2.0
+_PROBE_BUDGET_FRESH = 6.0
+_MAX_PROBE_PATHS = 12
+_NO_MENU_TTL = 15.0
+_NO_MENU_FRESH_TTL = 4.0
+_NO_MENU_APP_AGE = 10.0
+
+_MAX_ACTION_MENU_ITEMS = 64
 
 _DE_NAMESPACES = [
     "xfce",
@@ -74,6 +82,7 @@ class _IntrospectionCache:
             self._cache = {
                 k: v for k, v in self._cache.items() if not k.startswith(prefix)
             }
+            self._dead = {k for k in self._dead if not k.startswith(prefix)}
 
 
 @dataclass
@@ -87,6 +96,7 @@ class AppServiceInfo:
     importer: Optional[_MenuClient] = None
     revision: int = 0
     connected_signals: bool = False
+    first_seen: float = 0.0
 
 
 def _resolve_executable(pid: int) -> str:
@@ -161,8 +171,11 @@ class GlobalMenuService(Service):
 
         self._service_registry: dict[str, AppServiceInfo] = {}
         self._pid_to_service: dict[int, str] = {}
+        self._pid_first_seen: dict[int, float] = {}
 
         self._introspection_cache = _IntrospectionCache()
+        self._no_menu_until: dict[str, float] = {}
+        self._no_menu_until_app: dict[str, float] = {}
 
         self._seq_lock = threading.Lock()
         self._extraction_seq = 0
@@ -311,6 +324,7 @@ class GlobalMenuService(Service):
                 service_name=service_name,
                 pid=pid,
                 executable=executable,
+                first_seen=time.monotonic(),
             )
             if pid:
                 self._pid_to_service[pid] = service_name
@@ -327,10 +341,14 @@ class GlobalMenuService(Service):
             same_class = wm_class == self._current_wm_class
             same_pid = target_pid != 0 and target_pid == self._current_pid
 
+        if target_pid:
+            with self._state_lock:
+                self._pid_first_seen.setdefault(target_pid, time.monotonic())
+
         if same_class and same_pid:
             with self._state_lock:
                 current_menu = self._current_menu
-            if current_menu is not None:
+            if current_menu:
                 self.menu_changed(current_menu)
             return
 
@@ -440,13 +458,12 @@ class GlobalMenuService(Service):
                     self._current_menu = full_menu
                 elif parent_id == 0:
                     self._current_menu = subtree
-                with self._seq_lock:
-                    self._extraction_seq += 1
-                    seq = self._extraction_seq
+                with self._state_lock:
+                    current_wm_class = self._current_wm_class
                 idle_add(
                     self._emit_menu_changed,
                     self._current_menu or subtree,
-                    seq,
+                    current_wm_class,
                 )
 
     def _handle_items_updated(
@@ -482,17 +499,12 @@ class GlobalMenuService(Service):
 
             items = client.get_layout() or []
 
-            with self._seq_lock:
-                current_seq = self._extraction_seq
-
-            if seq != current_seq:
-                return
-
             with self._state_lock:
-                if wm_class == self._current_wm_class:
-                    self._current_menu = items
+                if wm_class != self._current_wm_class:
+                    return
+                self._current_menu = items
 
-            idle_add(self._emit_menu_changed, items, current_seq)
+            idle_add(self._emit_menu_changed, items, wm_class)
         except Exception as e:
             logger.error(
                 f"[GlobalMenuService] Error extracting from importer for '{wm_class}': {e}"
@@ -534,7 +546,7 @@ class GlobalMenuService(Service):
             logger.debug(f"[GlobalMenuService] Initial scan error: {e}")
 
     def _discover_dbus_client(
-        self, wm_class: str, target_pid: int = 0
+        self, wm_class: str, target_pid: int = 0, fast_only: bool = False
     ) -> Optional[_MenuClient]:
         try:
             if target_pid <= 0:
@@ -548,7 +560,7 @@ class GlobalMenuService(Service):
             strategies = [
                 self._find_registry,
                 self._find_registrar,
-                self._find_fallback_scan,
+                lambda w, p: self._find_fallback_scan(w, p, fast_only=fast_only),
             ]
 
             for strategy in strategies:
@@ -588,16 +600,21 @@ class GlobalMenuService(Service):
                     if gtk_client.get_layout():
                         self._cache_discovery(service, path, pid, wm_class, gtk_client)
                         return gtk_client
-                    self._cache_discovery(service, path, pid, wm_class, client)
-                    return client
+                    logger.debug(
+                        f"[GlobalMenuService] Registrar entry empty: {service} {path}"
+                    )
             except Exception as e:
                 if "NameHasNoOwner" in str(e):
                     registrar.unregister_window(window_id)
         return None
 
     def _find_fallback_scan(
-        self, wm_class: str, target_pid: int
+        self, wm_class: str, target_pid: int, fast_only: bool = False
     ) -> Optional[_MenuClient]:
+        # An app that has been up for a while and showed no menu on a recent
+        # scan is not going to grow one — skip it to keep re-focus instant.
+        if wm_class and time.monotonic() < self._no_menu_until_app.get(wm_class, 0):
+            return None
         bus = _get_bus()
         try:
             res = bus.call_sync(
@@ -626,24 +643,117 @@ class GlobalMenuService(Service):
             if n != "org.freedesktop.DBus" and not n.startswith("org.freedesktop.DBus")
         ]
 
+        # Cheap pass: find every service owned by the app and check the AppMenu
+        # registrar (fast).  A single app usually owns several names (unique
+        # :1.x names plus well-known ones), so this is collected first and the
+        # expensive probe below runs only once per app.
+        matched: list[tuple[str, int]] = []
         for svc in services:
             try:
                 pid = _dbus_get_pid(bus, svc, _DBUS_TIMEOUT_PID)
-                if not (pid == target_pid or self._is_same_app(pid, target_pid)):
-                    continue
+            except Exception:
+                continue
+            if not (pid == target_pid or self._is_same_app(pid, target_pid)):
+                continue
 
-                registrar = Registrar.get_instance()
-                reg_entry = registrar.get_menu_for_bus_name(svc)
-                if reg_entry:
-                    logger.info(
-                        f"[GlobalMenuService] Found Registrar path {reg_entry.object_path} for {svc}"
-                    )
-                    client = DBusMenuClient(reg_entry.bus_name, reg_entry.object_path)
+            registrar = Registrar.get_instance()
+            reg_entry = registrar.get_menu_for_bus_name(svc)
+            if reg_entry:
+                logger.info(
+                    f"[GlobalMenuService] Found Registrar path {reg_entry.object_path} for {svc}"
+                )
+                client = DBusMenuClient(reg_entry.bus_name, reg_entry.object_path)
+                if client.get_layout():
                     self._cache_discovery(
                         svc, reg_entry.object_path, pid, wm_class, client
                     )
                     return client
+                gtk_client = GtkMenuClient(reg_entry.bus_name, reg_entry.object_path)
+                if gtk_client.get_layout():
+                    self._cache_discovery(
+                        svc, reg_entry.object_path, pid, wm_class, gtk_client
+                    )
+                    return gtk_client
 
+            matched.append((svc, pid))
+
+        if not matched:
+            return None
+
+        # Fast path: GTK apps export their menubar under a predictable object
+        # root derived from the bus name or the window class (e.g.
+        # /org/xfce/Thunar/menus/menubar/N).  Probe it once against the most
+        # promising service before crawling the whole object tree (which can
+        # take many seconds on a busy app).
+        wm_cls_lower = wm_class.lower() if wm_class else ""
+        probe_svc = next(
+            (
+                s
+                for s, _ in matched
+                if not s.startswith(":") and wm_cls_lower in s.lower()
+            ),
+            next((s for s, _ in matched if not s.startswith(":")), matched[0][0]),
+        )
+        # Apps export menu objects lazily (window created, menubar wired up,
+        # module registered).  Introspection results cached from an earlier scan
+        # can therefore point at dead/empty objects, e.g.
+        # /org/<app>/menus/menubar/0.  Drop the cache so this probe sees the
+        # current object tree.
+        self._introspection_cache.invalidate(probe_svc)
+
+        wm_path = "/" + wm_class.replace(".", "/") if wm_class else ""
+        roots = [wm_path] if wm_path and GLib.Variant.is_object_path(wm_path) else []
+        svc_path = (
+            "/" + probe_svc.replace(".", "/") if not probe_svc.startswith(":") else ""
+        )
+        if svc_path and GLib.Variant.is_object_path(svc_path):
+            roots.append(svc_path)
+        roots.append("/org/gtk/Application")
+        # A freshly-launched app may still be exporting its menubar, so give it
+        # a longer probe budget; an established app gets the short one.  Age is
+        # taken from the youngest matched service actually in the registry
+        # (unique names like :1.x are never registered and must not contribute
+        # a zero), falling back to the pid's first focus if nothing is
+        # registered yet.
+        oldest = None
+        for s, _ in matched:
+            entry = self._service_registry.get(s)
+            if entry is None:
+                continue
+            if oldest is None or entry.first_seen < oldest:
+                oldest = entry.first_seen
+        pid_seen = self._pid_first_seen.get(target_pid) if target_pid else None
+        if pid_seen and (oldest is None or pid_seen < oldest):
+            oldest = pid_seen
+        app_age = time.monotonic() - oldest if oldest else float("inf")
+        budget = _PROBE_BUDGET_FRESH if app_age < _NO_MENU_APP_AGE else _PROBE_BUDGET
+        logger.debug(
+            f"[GlobalMenuService] matched={[s for s, _ in matched]} "
+            f"probe_svc={probe_svc} age={app_age if app_age != float('inf') else 'inf'}s"
+        )
+        client = self._probe_predictable_menu(
+            probe_svc,
+            roots,
+            bus,
+            target_pid,
+            wm_class,
+            budget=budget,
+            is_fresh=app_age < _NO_MENU_APP_AGE,
+        )
+        if client:
+            return client
+
+        if fast_only:
+            return None
+
+        # Full crawl: per matched service, walk the predictable paths plus a
+        # bounded DFS, using the persistent introspection cache.  Unique names
+        # (:1.x) are skipped: a pid can own several, some stale/never-answered,
+        # and menus are exported under well-known names.
+        for svc, pid in matched:
+            if svc.startswith(":"):
+                continue
+            try:
                 _safe_cls = re.sub(r"[^A-Za-z0-9_]", "", wm_class) if wm_class else ""
                 _safe_cap = _safe_cls.capitalize() if _safe_cls else ""
 
@@ -712,6 +822,12 @@ class GlobalMenuService(Service):
                     if 'interface name="org.gtk.Actions"' in xml:
                         test_client = ActionMenuClient(svc, act_base)
                         if test_items := test_client.get_layout():
+                            if len(test_items) > _MAX_ACTION_MENU_ITEMS:
+                                logger.warning(
+                                    f"[GlobalMenuService] Skipping oversized action menu {svc} "
+                                    f"{act_base} ({len(test_items)} items > {_MAX_ACTION_MENU_ITEMS})"
+                                )
+                                continue
                             logger.info(
                                 f"[GlobalMenuService] Action menu: {svc} {act_base} ({len(test_items)} items)"
                             )
@@ -719,15 +835,16 @@ class GlobalMenuService(Service):
                                 svc, act_base, pid, wm_class, test_client
                             )
                             return test_client
-
-                logger.info(
-                    f"[GlobalMenuService] No menu found for {svc} wm={wm_class}"
-                )
             except Exception as e:
-                logger.warning(
-                    f"[service] pid = _dbus_get_pid(bus, svc, _DBUS_TIMEOUT_PID) failed: {e}"
-                )
-                continue
+                logger.warning(f"[service] crawl for {svc} failed: {e}")
+
+        # Full discovery found no menu.  Remember it per-app so a re-focus does
+        # not re-probe: a no-menu app has no reason to grow one.  Established
+        # apps get a long skip, freshly-launched ones a short one — their
+        # menubar may still be exporting.
+        if wm_class:
+            ttl = _NO_MENU_TTL if app_age >= _NO_MENU_APP_AGE else _NO_MENU_FRESH_TTL
+            self._no_menu_until_app[wm_class] = time.monotonic() + ttl
         return None
 
     def _build_action_candidates(
@@ -816,6 +933,104 @@ class GlobalMenuService(Service):
 
         return fallback_paths, seen_fallback
 
+    def _probe_predictable_menu(
+        self,
+        svc: str,
+        roots: list,
+        bus,
+        pid: int,
+        wm_class: str,
+        budget: float = _PROBE_BUDGET,
+        is_fresh: bool = False,
+    ) -> Optional[_MenuClient]:
+        """Walk shallowly from the app's likely menu roots (derived from both
+        the bus name and the window class), probing for org.gtk.Menus or
+        com.canonical.dbusmenu.  Menus often live at .../menus/menubar/N where N
+        varies per window, so children are walked too.  Apps that just launched
+        answer DBus slowly while exporting their menubar, so keep re-probing
+        until the deadline — the menu appears within a moment of the app
+        exporting it.  Established apps that answer cleanly with no menu
+        interface at all are considered menu-less and return early; fresh apps
+        always probe the full budget since their menubar may still be
+        exporting.  Services already known to have no menu are skipped."""
+        if time.monotonic() < self._no_menu_until.get(svc, 0):
+            logger.debug(f"[GlobalMenuService] probe {svc} service-TTL skip")
+            return None
+        logger.debug(
+            f"[GlobalMenuService] probe {svc} budget={budget}s is_fresh={is_fresh}"
+        )
+        deadline = time.monotonic() + budget
+        while time.monotonic() < deadline:
+            seen: set[str] = set()
+            stack = [r for r in roots if r and GLib.Variant.is_object_path(r)]
+            candidates: dict[str, str] = {}
+            any_timeout = False
+            while stack and len(seen) < _MAX_PROBE_PATHS:
+                path = stack.pop()
+                if path in seen:
+                    continue
+                seen.add(path)
+                try:
+                    res = bus.call_sync(
+                        svc,
+                        path,
+                        "org.freedesktop.DBus.Introspectable",
+                        "Introspect",
+                        None,
+                        GLib.VariantType("(s)"),
+                        Gio.DBusCallFlags.NONE,
+                        _DBUS_TIMEOUT_FAST,
+                        None,
+                    )
+                    xml = res.get_child_value(0).get_string() if res else ""
+                except GLib.Error as e:
+                    if "UnknownObject" in (e.message or ""):
+                        continue
+                    any_timeout = True
+                    continue
+                if "org.gtk.Menus" in xml or "com.canonical.dbusmenu" in xml:
+                    candidates[path] = xml
+                depth = path.count("/")
+                if depth <= 6:
+                    for child in _NODE_NAME_RE.findall(xml)[:6]:
+                        stack.append(f"{path}/{child}")
+            for path, xml in candidates.items():
+                if "com.canonical.dbusmenu" in xml:
+                    logger.info(
+                        f"[GlobalMenuService] DBusMenu found (fast): {svc} {path}"
+                    )
+                    client = DBusMenuClient(svc, path)
+                    self._cache_discovery(svc, path, pid, wm_class, client)
+                    return client
+                if "org.gtk.Menus" in xml:
+                    test_client = GtkMenuClient(svc, path)
+                    test_items = test_client.get_layout()
+                    if test_items:
+                        logger.info(
+                            f"[GlobalMenuService] GTK menu (fast): {svc} {path} "
+                            f"({len(test_items)} items)"
+                        )
+                        self._cache_discovery(svc, path, pid, wm_class, test_client)
+                        return test_client
+            # An established app that answered every probe with no menu
+            # interface at all is responsive and simply has no menu — stop
+            # early instead of burning the whole budget.  Anything else
+            # (timeouts while the app exports, or a menu interface whose items
+            # are still appearing, or a freshly-launched app) keeps re-probing
+            # until the deadline.
+            if not is_fresh and not candidates and not any_timeout:
+                logger.debug(
+                    f"[GlobalMenuService] probe {svc} clean-bail "
+                    f"(candidates={len(candidates)} timeouts={any_timeout})"
+                )
+                return None
+            time.sleep(0.1)
+        logger.debug(f"[GlobalMenuService] probe {svc} deadline reached")
+        self._no_menu_until[svc] = time.monotonic() + (
+            _NO_MENU_FRESH_TTL if is_fresh else _NO_MENU_TTL
+        )
+        return None
+
     def _cache_discovery(
         self,
         service: str,
@@ -832,6 +1047,7 @@ class GlobalMenuService(Service):
                     pid=pid,
                     wm_class=wm_class,
                     importer=client,
+                    first_seen=time.monotonic(),
                 )
                 self._service_registry[service] = entry
                 if pid:
@@ -902,6 +1118,11 @@ class GlobalMenuService(Service):
         return results
 
     def _is_same_app(self, pid1: int, pid2: int) -> bool:
+        """True when both pids belong to the same application.  Only the
+        executable and comm name are compared — a bare parent/child (ppid)
+        check is deliberately avoided: on a systemd user session every process
+        is a child of the session manager, which would falsely match
+        org.freedesktop.systemd1 for every app and bloat the crawl."""
         if pid1 == pid2:
             return True
         try:
@@ -920,20 +1141,6 @@ class GlobalMenuService(Service):
                 logger.warning(
                     f"[service] with open(f'/proc/(pid1)/comm') as f: comm1 = f.read().st... failed: {e}"
                 )
-
-            def _ppid(p: int) -> int:
-                try:
-                    with open(f"/proc/{p}/stat") as f:
-                        parts = f.read().split()
-                        return int(parts[3]) if len(parts) > 4 else 0
-                except Exception as e:
-                    logger.warning(
-                        f"[service] with open(f'/proc/(p)/stat') as f: parts = f.read().split... failed: {e}"
-                    )
-                    return 0
-
-            if _ppid(pid1) == pid2 or _ppid(pid2) == pid1:
-                return True
         except (OSError, PermissionError, FileNotFoundError) as e:
             logger.warning(
                 f"[service] exe1 = os.path.realpath(f'/proc/(pid1)/exe') failed: {e}"
@@ -944,15 +1151,12 @@ class GlobalMenuService(Service):
         self, wm_class: str, seq: int, target_pid: int = 0, inflight_key: str = ""
     ):
         try:
-            with self._seq_lock:
-                if seq != self._extraction_seq:
-                    return
+            client = self._discover_dbus_client(wm_class, target_pid, fast_only=True)
+            items = client.get_layout() if client else []
 
-            client = self._discover_dbus_client(wm_class, target_pid)
-            items = []
-
-            if client:
-                items = client.get_layout()
+            if not items:
+                client = self._discover_dbus_client(wm_class, target_pid)
+                items = client.get_layout() if client else []
 
             if items:
                 logger.info(
@@ -961,17 +1165,12 @@ class GlobalMenuService(Service):
             else:
                 logger.info(f"[GlobalMenuService] No DBus menu found for '{wm_class}'")
 
-            with self._seq_lock:
-                current_seq = self._extraction_seq
-
-            if seq != current_seq:
-                return
-
             with self._state_lock:
-                if wm_class == self._current_wm_class:
-                    self._current_menu = items
+                if wm_class != self._current_wm_class:
+                    return
+                self._current_menu = items
 
-            idle_add(self._emit_menu_changed, items, current_seq)
+            idle_add(self._emit_menu_changed, items, wm_class)
 
         except Exception as e:
             logger.error(
@@ -982,12 +1181,10 @@ class GlobalMenuService(Service):
                 with self._inflight_lock:
                     self._extracting_in_flight.discard(inflight_key)
 
-    def _emit_menu_changed(self, items: list[DBusMenuItem], seq: int = 0):
-        if seq:
-            with self._seq_lock:
-                if seq != self._extraction_seq:
-                    return False
+    def _emit_menu_changed(self, items: list[DBusMenuItem], wm_class: str = ""):
         with self._state_lock:
+            if wm_class and wm_class != self._current_wm_class:
+                return False
             self._current_menu = items
         self.menu_changed(items)
         return False
