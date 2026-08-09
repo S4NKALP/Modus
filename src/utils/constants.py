@@ -11,6 +11,7 @@ DEFAULT = {
     },
     "dock": {
         "enabled": True,
+        "position": "bottom",
         "auto_hide": True,
         "always_occluded": False,
         "icon_size": 52,
@@ -62,6 +63,8 @@ def generate_default_toml() -> str:
 
     dock = _table()
     dock.add("enabled", True)
+    dock.add("position", "bottom")
+    dock["position"].comment("'bottom' | 'left' | 'right'")
     dock.add("auto_hide", True)
     dock.add("always_occluded", False)
     dock.add("icon_size", 52)

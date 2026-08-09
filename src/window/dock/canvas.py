@@ -45,6 +45,8 @@ from .constants import (
     PINNED_APPS_FILE,
     SEPARATOR_COLOR,
     SEPARATOR_WIDTH,
+    dock_position,
+    is_vertical,
     max_scale,
 )
 from .items import DockHitTest, DockItem, DockModel
@@ -140,13 +142,13 @@ class DockCanvas(Gtk.DrawingArea):
                 self._desktop_apps = []
         return self._desktop_apps
 
-    def _canvas_height(self) -> int:
+    def _canvas_edge_thickness(self) -> int:
         size = self._base_icon_size()
         return int(
             size * max_scale() + CANVAS_TOP_PAD + 2 * BG_PADDING_V + INDICATOR_H + 4
         )
 
-    def _canvas_max_width(self) -> int:
+    def _canvas_edge_length(self) -> int:
         n = len(self.model.items)
         if n == 0:
             return 200
@@ -154,6 +156,16 @@ class DockCanvas(Gtk.DrawingArea):
         return int(
             n * size * max_scale() + max(n - 1, 0) * ICON_GAP + 2 * BG_PADDING_H + 40
         )
+
+    def _canvas_height(self) -> int:
+        if is_vertical():
+            return self._canvas_edge_length()
+        return self._canvas_edge_thickness()
+
+    def _canvas_max_width(self) -> int:
+        if is_vertical():
+            return self._canvas_edge_thickness()
+        return self._canvas_edge_length()
 
     def _canvas_min_width(self) -> int:
         return self._canvas_max_width()
@@ -545,7 +557,7 @@ class DockCanvas(Gtk.DrawingArea):
         self._draw_background(cr, bg_x, bg_y, bg_w, bg_h)
 
         if self.model.has_pinned() and self.model.has_running_only():
-            self._draw_separator(cr, items, bg_y, bg_h, base_size)
+            self._draw_separator(cr, items, bg_x, bg_y, bg_w, bg_h)
 
         for item in items:
             self._draw_item(cr, item, base_size, h)
@@ -592,29 +604,39 @@ class DockCanvas(Gtk.DrawingArea):
         self,
         cr: cairo.Context,
         items: List[DockItem],
+        bg_x: float,
         bg_y: float,
+        bg_w: float,
         bg_h: float,
-        base_size: int,
     ) -> None:
-        last_pinned_x: Optional[float] = None
-        first_running_x: Optional[float] = None
+        vertical = is_vertical()
+        last_pinned_c: Optional[float] = None
+        first_running_c: Optional[float] = None
 
         for item in items:
             if item.is_pinned:
-                last_pinned_x = item.render_x + item.render_w
-            elif first_running_x is None:
-                first_running_x = item.render_x
+                last_pinned_c = (
+                    item.render_y + item.render_h
+                    if vertical
+                    else item.render_x + item.render_w
+                )
+            elif first_running_c is None:
+                first_running_c = item.render_y if vertical else item.render_x
 
-        if last_pinned_x is None or first_running_x is None:
+        if last_pinned_c is None or first_running_c is None:
             return
 
-        sep_x = (last_pinned_x + first_running_x) / 2.0
+        sep_c = (last_pinned_c + first_running_c) / 2.0
         sep_margin = BG_PADDING_V + 4
         cr.save()
         cr.set_source_rgba(*SEPARATOR_COLOR)
         cr.set_line_width(SEPARATOR_WIDTH)
-        cr.move_to(sep_x, bg_y + sep_margin)
-        cr.line_to(sep_x, bg_y + bg_h - sep_margin)
+        if vertical:
+            cr.move_to(bg_x + sep_margin, sep_c)
+            cr.line_to(bg_x + bg_w - sep_margin, sep_c)
+        else:
+            cr.move_to(sep_c, bg_y + sep_margin)
+            cr.line_to(sep_c, bg_y + bg_h - sep_margin)
         cr.stroke()
         cr.restore()
 
@@ -664,10 +686,14 @@ class DockCanvas(Gtk.DrawingArea):
             cr.restore()
 
         if item.instance_address and item.instance_address == self._focused_address:
-            dot_cx = ix + iw / 2.0
-            dot_cy = iy + ih + 4
             cr.save()
             cr.set_source_rgba(*INDICATOR_COLOR)
+            if is_vertical():
+                dot_cx = ix + iw + 4 if dock_position() == "right" else ix - 4
+                dot_cy = iy + ih / 2.0
+            else:
+                dot_cx = ix + iw / 2.0
+                dot_cy = iy + ih + 4
             cr.arc(dot_cx, dot_cy, INDICATOR_RADIUS, 0, 2 * math.pi)
             cr.fill()
             cr.restore()
@@ -715,16 +741,36 @@ class DockCanvas(Gtk.DrawingArea):
             n = len(items)
             total_base = n * size + max(n - 1, 0) * ICON_GAP
             w = self.get_allocated_width()
-            base_start_x = (w - total_base) / 2.0
             h = self.get_allocated_height()
-            bg_h = size + 2 * BG_PADDING_V
-            bg_y = h - INDICATOR_H - bg_h
-            baseline_y = bg_y + BG_PADDING_V + size
-            icon_top_y = baseline_y - size * max_scale()
-            self._mouse_inside = (
-                base_start_x <= event.x <= base_start_x + total_base
-                and icon_top_y <= event.y <= baseline_y
-            )
+
+            if is_vertical():
+                base_start_y = (h - total_base) / 2.0
+                bg_w = size + 2 * BG_PADDING_V
+                if dock_position() == "right":
+                    bg_x = w - INDICATOR_H - bg_w
+                    baseline_x = bg_x + BG_PADDING_V + size
+                    icon_left_x = baseline_x - size * max_scale()
+                    self._mouse_inside = (
+                        icon_left_x <= event.x <= baseline_x
+                        and base_start_y <= event.y <= base_start_y + total_base
+                    )
+                else:
+                    bg_x = INDICATOR_H
+                    baseline_x = bg_x + BG_PADDING_V + size
+                    self._mouse_inside = (
+                        bg_x <= event.x <= baseline_x + size * max_scale()
+                        and base_start_y <= event.y <= base_start_y + total_base
+                    )
+            else:
+                base_start_x = (w - total_base) / 2.0
+                bg_h = size + 2 * BG_PADDING_V
+                bg_y = h - INDICATOR_H - bg_h
+                baseline_y = bg_y + BG_PADDING_V + size
+                icon_top_y = baseline_y - size * max_scale()
+                self._mouse_inside = (
+                    base_start_x <= event.x <= base_start_x + total_base
+                    and icon_top_y <= event.y <= baseline_y
+                )
         else:
             self._mouse_inside = False
 

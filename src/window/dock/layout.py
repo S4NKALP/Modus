@@ -7,6 +7,8 @@ from .constants import (
     INDICATOR_H,
     MIN_SCALE,
     SIGMA_FACTOR,
+    dock_position,
+    is_vertical,
     max_scale,
 )
 from .items import DockItem
@@ -17,7 +19,7 @@ class DockLayout:
     def compute(
         items: list[DockItem],
         mouse_x: float,
-        _mouse_y: float,
+        mouse_y: float,
         base_icon_size: int,
         canvas_w: int,
         canvas_h: int,
@@ -26,19 +28,24 @@ class DockLayout:
         if not items:
             return
 
+        vertical = is_vertical()
         sigma = base_icon_size * SIGMA_FACTOR
         amplitude = max_scale() - MIN_SCALE
 
         n = len(items)
-        base_w = base_icon_size + ICON_GAP
+        base_unit = base_icon_size + ICON_GAP
         total_base = n * base_icon_size + max(n - 1, 0) * ICON_GAP
-        start_x = (canvas_w - total_base) / 2.0
+        start = (
+            ((canvas_h - total_base) / 2.0)
+            if vertical
+            else ((canvas_w - total_base) / 2.0)
+        )
 
         for i, item in enumerate(items):
-            est_cx = start_x + i * base_w + base_icon_size / 2.0
+            est_c = start + i * base_unit + base_icon_size / 2.0
 
             if mouse_inside:
-                dist = abs(est_cx - mouse_x)
+                dist = abs(est_c - (mouse_y if vertical else mouse_x))
                 target = MIN_SCALE + amplitude * math.exp(
                     -(dist * dist) / (2.0 * sigma * sigma)
                 )
@@ -47,6 +54,16 @@ class DockLayout:
 
             item.target_scale = target
 
+        if vertical:
+            DockLayout._layout_vertical(items, base_icon_size, canvas_w, canvas_h)
+        else:
+            DockLayout._layout_horizontal(items, base_icon_size, canvas_w, canvas_h)
+
+    @staticmethod
+    def _layout_horizontal(
+        items: list[DockItem], base_icon_size: int, canvas_w: int, canvas_h: int
+    ) -> None:
+        n = len(items)
         bg_h = base_icon_size + 2 * BG_PADDING_V
         bg_y = canvas_h - INDICATOR_H - bg_h
         baseline_y = bg_y + BG_PADDING_V + base_icon_size
@@ -68,12 +85,62 @@ class DockLayout:
             cursor_x += iw + ICON_GAP
 
     @staticmethod
+    def _layout_vertical(
+        items: list[DockItem], base_icon_size: int, canvas_w: int, canvas_h: int
+    ) -> None:
+        n = len(items)
+        bg_w = base_icon_size + 2 * BG_PADDING_V
+        position = dock_position()
+
+        rendered_heights = [base_icon_size * item.current_scale for item in items]
+        total_h = sum(rendered_heights) + max(n - 1, 0) * ICON_GAP
+        cursor_y = (canvas_h - total_h) / 2.0
+
+        if position == "right":
+            bg_x = canvas_w - INDICATOR_H - bg_w
+            anchor_x = bg_x + BG_PADDING_V + base_icon_size
+        else:
+            bg_x = INDICATOR_H
+            anchor_x = bg_x + BG_PADDING_V
+
+        for i, item in enumerate(items):
+            ih = rendered_heights[i]
+            iw = base_icon_size * item.current_scale
+            iy = cursor_y
+            ix = anchor_x - iw if position == "right" else anchor_x
+            item.render_x = ix
+            item.render_y = iy
+            item.render_w = iw
+            item.render_h = ih
+            item.drag_index = i
+            cursor_y += ih + ICON_GAP
+
+    @staticmethod
     def background_rect(
         items: list[DockItem],
         base_icon_size: int,
         canvas_w: int,
         canvas_h: int,
     ) -> tuple[float, float, float, float]:
+        if is_vertical():
+            bg_w = base_icon_size + 2 * BG_PADDING_V
+            bg_x = (
+                canvas_w - INDICATOR_H - bg_w
+                if dock_position() == "right"
+                else INDICATOR_H
+            )
+
+            if items:
+                min_y = min(item.render_y for item in items)
+                max_y = max(item.render_y + item.render_h for item in items)
+                bg_y = min_y - BG_PADDING_H
+                bg_h = (max_y - min_y) + 2 * BG_PADDING_H
+            else:
+                bg_y = BG_PADDING_H
+                bg_h = canvas_h - 2 * BG_PADDING_H
+
+            return bg_x, bg_y, bg_w, bg_h
+
         bg_h = base_icon_size + 2 * BG_PADDING_V
         bg_y = canvas_h - INDICATOR_H - bg_h
 

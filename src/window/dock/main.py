@@ -3,18 +3,20 @@ from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
+from gi.repository import Gtk
 
 from services.config import config, on_config_change
 from services.modus import check_occlusion, get_modus_service
 
 from .canvas import DockCanvas
+from .constants import dock_position, is_vertical
 
 
 class Dock(Window):
     def __init__(self):
         super().__init__(
             layer="top",
-            anchor="bottom center",
+            anchor=self._anchor_for_position(),
             exclusivity="none",
             title="modus-dock",
             name="dock",
@@ -33,14 +35,15 @@ class Dock(Window):
         self.revealer = Revealer(
             child=self.canvas,
             transition_duration=200,
-            transition_type="slide-up",
+            transition_type=self._transition_for_position(),
         )
 
         hover_strip = Box(
             name="dock-hover-strip",
         )
 
-        outer_box = Box(
+        self.hover_strip = hover_strip
+        self.outer_box = Box(
             name="dock-outer-box",
             orientation="v",
             children=[self.revealer, hover_strip],
@@ -48,12 +51,13 @@ class Dock(Window):
 
         self.children = EventBox(
             events=["enter-notify", "leave-notify"],
-            child=outer_box,
+            child=self.outer_box,
             on_enter_notify_event=lambda *_: self.on_hover_enter(),
             on_leave_notify_event=lambda *_: self.on_hover_leave(),
         )
 
-        self.dock_height = 100
+        self.dock_thickness = self.canvas._canvas_edge_thickness()
+        self._apply_position()
         self.is_hovered = False
         self.hide_ticket = 0
         self._occlusion_timer_id = None
@@ -69,6 +73,47 @@ class Dock(Window):
         if config().get("dock.auto_hide", True):
             self._setup_occlusion_signals()
         self._check_occlusion_deferred()
+
+    @staticmethod
+    def _anchor_for_position() -> str:
+        return {
+            "left": "center left",
+            "right": "center right",
+        }.get(dock_position(), "bottom center")
+
+    @staticmethod
+    def _transition_for_position() -> str:
+        return {
+            "left": "slide-right",
+            "right": "slide-left",
+        }.get(dock_position(), "slide-up")
+
+    def _occlusion_region(self) -> tuple[str, int]:
+        position = dock_position()
+        if position in ("left", "right"):
+            return position, self.dock_thickness
+        return "bottom", self.dock_thickness
+
+    def _apply_position(self) -> None:
+        self.anchor = self._anchor_for_position()
+        self.revealer.transition_type = self._transition_for_position()
+
+        vertical = is_vertical()
+        self.outer_box.set_orientation(
+            Gtk.Orientation.HORIZONTAL if vertical else Gtk.Orientation.VERTICAL
+        )
+        if vertical:
+            children = (
+                [self.revealer, self.hover_strip]
+                if dock_position() == "right"
+                else [self.hover_strip, self.revealer]
+            )
+        else:
+            children = [self.revealer, self.hover_strip]
+        self.outer_box.children = children
+
+        self.dock_thickness = self.canvas._canvas_edge_thickness()
+        self.canvas._update_size_request()
 
     def _setup_occlusion_signals(self) -> None:
         """Subscribe to Hyprland events that affect occlusion."""
@@ -103,7 +148,7 @@ class Dock(Window):
             if not config().get("dock_auto_hide", True):
                 return False
             is_occ = config().get("dock.always_occluded", False) or check_occlusion(
-                ("bottom", self.dock_height)
+                self._occlusion_region()
             )
             if is_occ and not self.is_hovered and self.revealer.get_reveal_child():
                 self.revealer.set_reveal_child(False)
@@ -119,6 +164,10 @@ class Dock(Window):
     def _on_config_change(self, new_config, old_config) -> None:
         if config().has_changed("dock.enabled", old_config):
             self._update_visibility()
+
+        if config().has_changed("dock.position", old_config):
+            self._apply_position()
+            self.canvas.update_icon_size()
 
         if config().has_changed("dock.icon_size", old_config):
             self.canvas.update_icon_size()
@@ -160,7 +209,7 @@ class Dock(Window):
                 if config().get("dock.auto_hide", True):
                     is_occ = config().get(
                         "dock.always_occluded", False
-                    ) or check_occlusion(("bottom", self.dock_height))
+                    ) or check_occlusion(self._occlusion_region())
                     if is_occ:
                         self.revealer.set_reveal_child(False)
             return False

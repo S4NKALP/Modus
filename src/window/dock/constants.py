@@ -3,6 +3,18 @@ from utils.gtk_utils import toml_file
 
 PINNED_APPS_FILE = toml_file("dock.toml")
 
+_POSITIONS = ("bottom", "left", "right")
+
+
+def dock_position() -> str:
+    position = str(config().get("dock.position", "bottom")).lower()
+    return position if position in _POSITIONS else "bottom"
+
+
+def is_vertical() -> bool:
+    return dock_position() in ("left", "right")
+
+
 LERP_FACTOR = 0.20
 IDLE_THRESHOLD = 0.0005
 ANIM_FPS = 60
