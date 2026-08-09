@@ -260,6 +260,10 @@ SECTION_ICONS = {
 
 DEFAULT_SECTION_ICON = "misc/logo.svg"
 
+ENUM_OPTIONS = {
+    "dock.position": ["bottom", "left", "right"],
+}
+
 
 def humanize_key(key):
     return " ".join(word.capitalize() for word in key.replace("_", " ").split())
@@ -366,6 +370,8 @@ class SettingsWindow(Gtk.Window):
         return SettingsPage(f"{humanize_key(section)} Settings", rows)
 
     def _infer_widget(self, full_key, value):
+        if full_key in ENUM_OPTIONS:
+            return SettingsComboBox(full_key, ENUM_OPTIONS[full_key])
         if isinstance(value, bool):
             return SettingsSwitch(full_key)
         if isinstance(value, list):
