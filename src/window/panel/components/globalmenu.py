@@ -88,7 +88,7 @@ def _create_system_menu():
         None,
         dropdown_option(
             "Lock Screen",
-            "󰘳     L",
+            "󰘳  +  CTRL  +  L",
             'fabric-cli exec modus "lock_screen.lock()"',
         ),
     ]
