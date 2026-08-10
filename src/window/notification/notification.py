@@ -786,6 +786,23 @@ class NotificationWidget(Box):
         if not self._is_hovered:  # Only resume if not hovered
             self.start_timeout()
 
+    def set_hover_state(self, hovered: bool):
+        """Reconcile hover state from the popup surface level.
+
+        The popup window's enter/leave events are compositor-driven and
+        reliable, unlike the nested-widget crossing events which can be
+        mis-reported (e.g. a leave-notify arriving with INFERIOR detail
+        when the pointer moves onto the close-button overlay). That used
+        to strand ``_is_hovered`` as ``True`` with the timeout killed, so
+        the notification never auto-dismissed. Forcing the state here
+        restarts the countdown once the pointer leaves the popup.
+        """
+        self._is_hovered = hovered
+        if hovered:
+            self.pause_timeout()
+        else:
+            self.start_timeout()
+
     def _manual_close(self):
         """Handle manual close button click - just close notification"""
         self.notification.close("dismissed-by-user")
@@ -1190,6 +1207,12 @@ class ModusNoti(Window):
             exclusive=False,
         )
 
+        # Surface-level hover tracking: compositor-driven enter/leave on the
+        # popup window is reliable, unlike nested-widget crossing events, so
+        # it acts as a backstop for the per-widget timeout pause/resume.
+        self.connect("enter-notify-event", self._on_popup_hover_enter)
+        self.connect("leave-notify-event", self._on_popup_hover_leave)
+
     def on_new_notification(self, fabric_notif, id):
         notification: Notification = fabric_notif.get_notification_from_id(id)
 
@@ -1323,6 +1346,27 @@ class ModusNoti(Window):
             return True
 
         GLib.idle_add(start_animation)
+
+    def _on_popup_hover_enter(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+        self._set_popup_hovered(True)
+        return False
+
+    def _on_popup_hover_leave(self, widget, event):
+        if hasattr(event, "detail") and event.detail == Gdk.NotifyType.INFERIOR:
+            return False
+        self._set_popup_hovered(False)
+        return False
+
+    def _set_popup_hovered(self, hovered: bool):
+        revealer = self.current_notification
+        if revealer is None:
+            return
+        box = getattr(revealer, "notif_box", None)
+        if box is None:
+            return
+        box.set_hover_state(hovered)
 
     def _on_notification_finished(self, notification_box):
         if notification_box != self.current_notification:
