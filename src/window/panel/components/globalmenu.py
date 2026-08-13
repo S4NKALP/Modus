@@ -329,13 +329,14 @@ class GlobalMenuDropdowns:
         self._system_dropdown = ModusDropdown(items=_create_system_menu())
         self._system_menu = self._system_dropdown.menu
 
-        self._title_menu = _create_title_menu(modus_service.current_active_app_name)
+        self._title_menu = None
 
         self.global_menu_button_title = Gtk.MenuButton(name="global-menu")
         self.global_menu_button_title.get_style_context().add_class("flat")
-        self.global_menu_button_title.set_popup(self._title_menu)
         self.global_menu_button_title.show_all()
         setup_cursor_hover(self.global_menu_button_title, "pointer")
+
+        self._set_title_menu(modus_service.current_active_app_name)
 
         self._active_window_ref = ActiveWindow(
             formatter=FormattedString(
@@ -373,13 +374,21 @@ class GlobalMenuDropdowns:
         if self._global_menu_svc:
             self._global_menu_svc.click_item(item_id)
 
+    def _set_title_menu(self, app_name: str):
+        old_menu = self._title_menu
+        if app_name and app_name != "Modus":
+            self._title_menu = _create_title_menu(app_name)
+            self.global_menu_button_title.set_popup(self._title_menu)
+        else:
+            self._title_menu = None
+            self.global_menu_button_title.set_popup(None)
+        if old_menu is not None:
+            GLib.idle_add(old_menu.destroy)
+
     def _on_active_app_changed(self, _, value):
         logger.info(f"[GlobalMenu] Active app changed: {value}")
 
-        old_menu = self._title_menu
-        self._title_menu = _create_title_menu(value)
-        self.global_menu_button_title.set_popup(self._title_menu)
-        GLib.idle_add(old_menu.destroy)
+        self._set_title_menu(value)
 
         if self._global_menu_svc:
             wm_class = getattr(modus_service, "current_active_wm_class", "")
