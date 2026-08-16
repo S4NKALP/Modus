@@ -19,6 +19,12 @@ class AppName:
         for f in self.files:
             if f.startswith(wmclass + ".desktop"):
                 desktop_file = f
+                break
+        if desktop_file == "":
+            for f in self.files:
+                if f.lower().startswith(wmclass.lower() + ".desktop"):
+                    desktop_file = f
+                    break
 
         if desktop_file == "":
             result = None
