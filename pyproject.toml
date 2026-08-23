@@ -106,4 +106,4 @@ known-first-party = ["services", "utils", "shared", "window"]
 "examples/**" = ["INP001", "D101", "D102", "D103"]
 
 [tool.uv.sources]
-fabric = { git = "https://github.com/Fabric-Development/fabric.git", tag = "v0.0.2" }
+fabric = { git = "https://github.com/Fabric-Development/fabric.git" }
