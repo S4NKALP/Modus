@@ -62,6 +62,15 @@
   margin-left: 8px;
 }
 
+/* Section headers (Known Network, Devices) — align with wifi-other-button
+   rows which use padding: 8px 6px and a bold font-sm label */
+#networks-title {
+  color: @glass-text;
+  font-size: apply(font-sm);
+  font-weight: bold;
+  margin-left: 6px;
+}
+
 /* Other Networks and Settings buttons */
 #wifi-other-button {
   background-color: transparent;
