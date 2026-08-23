@@ -27,6 +27,8 @@ NM_CONN_SETTINGS_IFACE = "org.freedesktop.NetworkManager.Settings.Connection"
 # DeviceType constants
 DEVICE_TYPE_ETHERNET = 1
 DEVICE_TYPE_WIFI = 2
+# Bluetooth PAN (e.g. bluetooth tethering) shows up as its own device type
+DEVICE_TYPE_BLUETOOTH = 5
 
 # DeviceState constants
 DEVICE_STATE_UNMANAGED = 10
@@ -759,10 +761,17 @@ class Ethernet(Service):
     @Signal
     def changed(self) -> None: ...
 
-    def __init__(self, nm: NmProxy, device_path: str, **kwargs) -> None:
+    def __init__(
+        self,
+        nm: NmProxy,
+        device_path: str,
+        device_type: int = DEVICE_TYPE_ETHERNET,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self._nm = nm
         self._device_path = device_path
+        self.device_type = device_type
         self._handler_id: int | None = None
         dev = _make_proxy(nm._bus, device_path, NM_DEVICE_IFACE)
         self._handler_id = dev.connect(
@@ -835,6 +844,7 @@ class NetworkClient(Service):
         self.wifi_device: Wifi | None = None
         self.wifi_devices: dict[str, Wifi] = {}
         self.ethernet_device: Ethernet | None = None
+        self.ethernet_devices: dict[str, Ethernet] = {}
         self._airplane_mode: bool = False
         self._nm_proxy_handler: int | None = None
         super().__init__(**kwargs)
@@ -872,8 +882,7 @@ class NetworkClient(Service):
         new_devices = set(self._nm.devices)
         # Track by old wifi device paths
         old_paths = {w._device_path for w in self.wifi_devices.values()}
-        if self.ethernet_device:
-            old_paths.add(self.ethernet_device._device_path)
+        old_paths |= set(self.ethernet_devices.keys())
 
         new_paths = set(new_devices)
         added = new_paths - old_paths
@@ -901,9 +910,12 @@ class NetworkClient(Service):
             self.emit("device-added", iface)
             self.emit("device-ready")
 
-        elif dtype == DEVICE_TYPE_ETHERNET:
-            if self.ethernet_device is None:
-                self.ethernet_device = Ethernet(self._nm, dev_path)
+        elif dtype in (DEVICE_TYPE_ETHERNET, DEVICE_TYPE_BLUETOOTH):
+            if dev_path not in self.ethernet_devices:
+                ethernet = Ethernet(self._nm, dev_path, device_type=dtype)
+                self.ethernet_devices[dev_path] = ethernet
+                if self.ethernet_device is None:
+                    self.ethernet_device = ethernet
                 self.emit("device-ready")
 
     def _handle_device_removed(self, dev_path: str):
@@ -922,15 +934,30 @@ class NetworkClient(Service):
             logger.info(f"[Network] Wifi device removed: {iface}")
             self.emit("device-removed", iface)
 
-        elif dtype == DEVICE_TYPE_ETHERNET:
-            if self.ethernet_device is not None:
-                self.ethernet_device.close()
-                self.ethernet_device = None
+        elif dtype in (DEVICE_TYPE_ETHERNET, DEVICE_TYPE_BLUETOOTH):
+            ethernet = self.ethernet_devices.pop(dev_path, None)
+            if ethernet is not None:
+                ethernet.close()
+                if self.ethernet_device is ethernet:
+                    self.ethernet_device = next(
+                        iter(self.ethernet_devices.values()), None
+                    )
                 self.emit("device-removed", iface)
 
         # Drop cached proxies now that signal handlers are disconnected and the
         # removed device is no longer referenced.
         _invalidate_proxy(dev_path)
+
+    def get_ethernet_device(self) -> Ethernet | None:
+        """Return the wired device with an active connection if any.
+
+        USB tethering appears as an extra wired device, so prefer one that is
+        activated/activating over a merely present (often unavailable) port.
+        """
+        for ethernet in self.ethernet_devices.values():
+            if ethernet.internet in ("activated", "activating"):
+                return ethernet
+        return next(iter(self.ethernet_devices.values()), None)
 
     def _get_primary_device(self) -> Literal["wifi", "wired"] | None:
         if not self._nm:

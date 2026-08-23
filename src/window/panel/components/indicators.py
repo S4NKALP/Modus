@@ -5,7 +5,7 @@ from fabric.widgets.label import Label
 
 from services.battery import Battery
 from services.bluetooth import BluetoothClient
-from services.network import NetworkClient
+from services.network import DEVICE_TYPE_BLUETOOTH, NetworkClient
 from shared.window.applet_window import AppletWindow
 from shared.window.battery_widget import BatteryControl
 from utils.functions import format_duration, get_wifi_icon_for_strength
@@ -168,6 +168,7 @@ class NetworkIndicator(Box):
         self.show_window = show_window
 
         self.network_service = NetworkClient()
+        self._connected_eth_paths: set[str] = set()
 
         self.network_icon = svg_file("applets/wifi-clear.svg", size=22)
 
@@ -200,6 +201,7 @@ class NetworkIndicator(Box):
         modus_service.connect("wlan-changed", self.on_wlan_changed)
         self.network_service.connect("device-ready", self.on_wifi_device_added)
         self.network_service.connect("device-ready", self.on_ethernet_device_added)
+        self.network_service.connect("device-removed", self.on_network_changed)
         self.update_modus_service_wlan_state()
         self.update_state()
 
@@ -216,10 +218,12 @@ class NetworkIndicator(Box):
         self.update_state()
 
     def on_ethernet_device_added(self, *args):
-        if self.network_service.ethernet_device:
-            self.network_service.ethernet_device.connect(
-                "changed", self.on_network_direct_changed
-            )
+        # Track every wired device (e.g. USB tethering adds one) so any of
+        # them can drive the indicator state
+        for path, eth in self.network_service.ethernet_devices.items():
+            if path not in self._connected_eth_paths:
+                eth.connect("changed", self.on_network_direct_changed)
+                self._connected_eth_paths.add(path)
         self.update_modus_service_wlan_state()
         self.update_state()
 
@@ -236,27 +240,25 @@ class NetworkIndicator(Box):
 
         if self.network_service.airplane_mode:
             wlan_state = "airplane"
-        elif self.network_service.wifi_device:
+        else:
             wifi = self.network_service.wifi_device
-            if not wifi.enabled:
-                wlan_state = "disabled"
-            elif wifi.ssid and wifi.ssid != "Disconnected":
+            ethernet = self.network_service.get_ethernet_device()
+
+            # Ethernet (including USB tethering) must be considered even when
+            # a disconnected wifi device is present
+            if wifi and wifi.enabled and wifi.ssid and wifi.ssid != "Disconnected":
                 wlan_state = f"connected:{wifi.ssid}"
                 if wifi.strength >= 0:
                     wlan_state += f":{wifi.strength}%"
-            else:
-                wlan_state = "enabled"
-
-        # Check Ethernet if WiFi is not connected
-        elif self.network_service.ethernet_device:
-            ethernet = self.network_service.ethernet_device
-            if ethernet.internet == "activated":
+            elif ethernet and ethernet.internet == "activated":
                 wlan_state = "ethernet:connected"
                 if hasattr(ethernet, "speed") and ethernet.speed:
                     wlan_state += f":{ethernet.speed}"
-            elif ethernet.internet == "activating":
+            elif ethernet and ethernet.internet == "activating":
                 wlan_state = "ethernet:connecting"
-            else:
+            elif wifi:
+                wlan_state = "enabled" if wifi.enabled else "disabled"
+            elif ethernet:
                 wlan_state = "ethernet:disconnected"
 
         modus_service.wlan = wlan_state
@@ -265,17 +267,18 @@ class NetworkIndicator(Box):
         tooltip = "No network connection"
         icon_file = "wifi-off-clear.svg"
 
-        # Airplane mode takes priority
         if self.network_service.airplane_mode:
-            icon_file = "wifi-off-clear.svg"
+            # Airplane mode takes priority
             tooltip = "Airplane mode"
-        # Check WiFi first (prioritize WiFi over Ethernet)
-        elif self.network_service.wifi_device:
+        else:
             wifi = self.network_service.wifi_device
-            if not wifi.enabled:
-                icon_file = "wifi-off-clear.svg"
-                tooltip = "WiFi disabled"
-            elif wifi.ssid and wifi.ssid != "Disconnected":
+            ethernet = self.network_service.get_ethernet_device()
+            wifi_connected = (
+                wifi and wifi.enabled and wifi.ssid and wifi.ssid != "Disconnected"
+            )
+
+            if wifi_connected:
+                # WiFi takes priority when actually connected
                 wifi_icon_path = get_wifi_icon_for_strength(wifi.strength)
                 self.network_icon.set_from_file(wifi_icon_path)
                 tooltip = f"Connected to {wifi.ssid}"
@@ -283,22 +286,27 @@ class NetworkIndicator(Box):
                     tooltip += f" ({wifi.strength}%)"
                 self.network_button.set_tooltip_text(tooltip)
                 return  # Early return to avoid setting icon again
-            else:
-                icon_file = "wifi-off-clear.svg"
-                tooltip = "WiFi disconnected"
 
-        # Check Ethernet if WiFi is not connected
-        elif self.network_service.ethernet_device:
-            ethernet = self.network_service.ethernet_device
-            if ethernet.internet == "activated":
+            # Check Ethernet regardless of WiFi presence. USB tethering shows
+            # up as a wired device, so it would be masked by the elif before.
+            if ethernet and ethernet.internet in ("activated", "activating"):
                 icon_file = "network-wired.svg"
-                tooltip = "Ethernet connected"
-                if hasattr(ethernet, "speed") and ethernet.speed:
-                    tooltip += f" ({ethernet.speed})"
-            elif ethernet.internet == "activating":
-                icon_file = "network-wired.svg"
-                tooltip = "Ethernet connecting..."
-            else:
+                wired_label = (
+                    "Bluetooth tethering"
+                    if ethernet.device_type == DEVICE_TYPE_BLUETOOTH
+                    else "Ethernet"
+                )
+                if ethernet.internet == "activated":
+                    tooltip = f"{wired_label} connected"
+                    if hasattr(ethernet, "speed") and ethernet.speed:
+                        tooltip += f" ({ethernet.speed})"
+                else:
+                    tooltip = f"{wired_label} connecting..."
+            elif wifi and not wifi.enabled:
+                tooltip = "WiFi disabled"
+            elif wifi:
+                tooltip = "WiFi disconnected"
+            elif ethernet:
                 icon_file = "network-wired-offline.svg"
                 tooltip = "Ethernet disconnected"
 
@@ -535,14 +543,14 @@ def add_destroy_to_indicators():
                         )
                     except Exception as e:
                         logger.error(f"An error occurred: {e}")
-                if (
-                    hasattr(self.network_service, "ethernet_device")
-                    and self.network_service.ethernet_device
-                ):
+                for eth_path in self._connected_eth_paths:
+                    eth = getattr(self.network_service, "ethernet_devices", {}).get(
+                        eth_path
+                    )
+                    if eth is None:
+                        continue
                     try:
-                        self.network_service.ethernet_device.disconnect_by_func(
-                            self.on_network_direct_changed
-                        )
+                        eth.disconnect_by_func(self.on_network_direct_changed)
                     except Exception as e:
                         logger.error(f"An error occurred: {e}")
         except Exception as e:
