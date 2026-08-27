@@ -169,6 +169,7 @@ class NetworkIndicator(Box):
 
         self.network_service = NetworkClient()
         self._connected_eth_paths: set[str] = set()
+        self._connected_wifi_paths: set[str] = set()
 
         self.network_icon = svg_file("applets/wifi-clear.svg", size=22)
 
@@ -202,6 +203,11 @@ class NetworkIndicator(Box):
         self.network_service.connect("device-ready", self.on_wifi_device_added)
         self.network_service.connect("device-ready", self.on_ethernet_device_added)
         self.network_service.connect("device-removed", self.on_network_changed)
+        # Devices already listed before we subscribed to `device-ready` will
+        # never emit it again. Wire up their `changed` signals now so the
+        # icon still updates later (e.g. auto-reconnect to a saved network).
+        self.on_wifi_device_added()
+        self.on_ethernet_device_added()
         self.update_modus_service_wlan_state()
         self.update_state()
 
@@ -210,10 +216,10 @@ class NetworkIndicator(Box):
 
     def on_wifi_device_added(self, *args):
         """Called when WiFi device is added"""
-        if self.network_service.wifi_device:
-            self.network_service.wifi_device.connect(
-                "changed", self.on_network_direct_changed
-            )
+        wifi = self.network_service.wifi_device
+        if wifi is not None and wifi._device_path not in self._connected_wifi_paths:
+            wifi.connect("changed", self.on_network_direct_changed)
+            self._connected_wifi_paths.add(wifi._device_path)
         self.update_modus_service_wlan_state()
         self.update_state()
 
@@ -533,14 +539,14 @@ def add_destroy_to_indicators():
                 self.network_service.disconnect_by_func(self.on_network_changed)
 
                 # Also disconnect from the devices themselves if they exist
-                if (
-                    hasattr(self.network_service, "wifi_device")
-                    and self.network_service.wifi_device
-                ):
+                for wifi_path in self._connected_wifi_paths:
+                    wifi = getattr(self.network_service, "wifi_devices", {}).get(
+                        wifi_path
+                    )
+                    if wifi is None:
+                        continue
                     try:
-                        self.network_service.wifi_device.disconnect_by_func(
-                            self.on_network_direct_changed
-                        )
+                        wifi.disconnect_by_func(self.on_network_direct_changed)
                     except Exception as e:
                         logger.error(f"An error occurred: {e}")
                 for eth_path in self._connected_eth_paths:
