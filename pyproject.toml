@@ -35,7 +35,7 @@ Discord = "https://discord.gg/tRFxkbQ3Zq"
 
 [dependency-groups]
 dev = [
-    "pre-commit==4.6.1",
+    "pre-commit==4.6.2",
     "ruff==0.16.5",
 ]
 
