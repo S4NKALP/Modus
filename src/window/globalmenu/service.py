@@ -709,6 +709,16 @@ class GlobalMenuService(Service):
         if svc_path and GLib.Variant.is_object_path(svc_path):
             roots.append(svc_path)
         roots.append("/org/gtk/Application")
+        # GTK3 appmenu-gtk-module exports the menubar model under this root on
+        # the app's (often unique) bus name, e.g. nwg-look at
+        # /org/appmenu/gtk/window/menus/menubar/0 on :1.x. Probe it directly so
+        # such apps are found before the expensive full crawl.
+        for appmenu_root in (
+            "/org/appmenu/gtk/window",
+            "/org/appmenu/gtk/window/menus/menubar",
+        ):
+            if GLib.Variant.is_object_path(appmenu_root):
+                roots.append(appmenu_root)
         # A freshly-launched app may still be exporting its menubar, so give it
         # a longer probe budget; an established app gets the short one.  Age is
         # taken from the youngest matched service actually in the registry
