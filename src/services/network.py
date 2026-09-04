@@ -847,6 +847,9 @@ class NetworkClient(Service):
         self.ethernet_devices: dict[str, Ethernet] = {}
         self._airplane_mode: bool = False
         self._nm_proxy_handler: int | None = None
+        self._saved_ssids: set[str] = set()
+        self._saved_ssids_loaded = False
+        self._conn_handler_id: int | None = None
         super().__init__(**kwargs)
         bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
         if bus is None:
@@ -867,6 +870,14 @@ class NetworkClient(Service):
             "g-properties-changed", self._on_nm_props_changed
         )
 
+        # Keep the cached saved-SSID list in sync when connections change,
+        # so looking networks up never triggers a blocking D-Bus call on the
+        # main thread (which froze the shell during wifi switches).
+        self._conn_handler_id = self._nm._settings.connect(
+            "g-properties-changed", self._on_settings_props_changed
+        )
+        self._refresh_saved_ssids()
+
         # Initial airplane mode
         bluetooth_blocked = rfkill_soft_blocked()
         wifi_enabled = self._nm.wireless_enabled
@@ -874,6 +885,52 @@ class NetworkClient(Service):
 
         self.notify("primary-device")
         self.notify("airplane-mode")
+
+    def _on_settings_props_changed(self, proxy, changed, invalidated):
+        props = changed.unpack() if changed else {}
+        if "Connections" in props:
+            self._refresh_saved_ssids()
+
+    def _collect_saved_ssids(self) -> set[str]:
+        """Read saved wireless SSIDs (blocking; run off the main thread)."""
+        saved: set[str] = set()
+        if not self._nm:
+            return saved
+        conn_paths = _get(self._nm._settings, "Connections") or []
+        for conn_path in conn_paths:
+            try:
+                cs = _make_proxy(self._nm._bus, conn_path, NM_CONN_SETTINGS_IFACE)
+                settings = _call(cs, "GetSettings")
+                if not settings:
+                    continue
+                if isinstance(settings, tuple) and settings:
+                    settings = settings[0]
+                sections = settings if isinstance(settings, dict) else {}
+                if "802-11-wireless" not in sections:
+                    continue
+                conn_id = sections.get("connection", {}).get("id")
+                if isinstance(conn_id, GLib.Variant):
+                    conn_id = conn_id.unpack()
+                if conn_id:
+                    saved.add(str(conn_id))
+            except GLib.Error:
+                continue
+        return saved
+
+    def _refresh_saved_ssids(self):
+        """Refresh saved SSIDs off the main thread, then swap cache in."""
+
+        def _load():
+            saved = self._collect_saved_ssids()
+            GLib.idle_add(self._apply_saved_ssids, saved)
+
+        import threading
+
+        threading.Thread(target=_load, daemon=True).start()
+
+    def _apply_saved_ssids(self, saved):
+        self._saved_ssids = saved
+        self._saved_ssids_loaded = True
 
     def _on_nm_props_changed(self, proxy, changed, invalidated):
         props = changed.unpack() if changed else {}
@@ -975,29 +1032,21 @@ class NetworkClient(Service):
         return None
 
     def is_network_saved(self, ssid: str) -> bool:
+        """Return whether ``ssid`` is a known/saved connection.
+
+        Reads a lazily cached list of saved SSIDs instead of querying
+        NetworkManager synchronously, so the main thread is never blocked
+        while the wifi UI refreshes during connection changes.  The cache is
+        filled in the background and kept in sync via ``Connections``
+        property-change notifications.
+        """
+        if self._saved_ssids_loaded:
+            return ssid in self._saved_ssids
         if not self._nm:
             return False
-        conn_paths = _get(self._nm._settings, "Connections") or []
-        for conn_path in conn_paths:
-            try:
-                cs = _make_proxy(self._nm._bus, conn_path, NM_CONN_SETTINGS_IFACE)
-                settings = _call(cs, "GetSettings")
-                if not settings:
-                    continue
-                if isinstance(settings, tuple) and settings:
-                    settings = settings[0]
-                sections = settings if isinstance(settings, dict) else {}
-                if "802-11-wireless" not in sections:
-                    continue
-                conn_section = sections.get("connection", {})
-                conn_id = conn_section.get("id")
-                if isinstance(conn_id, GLib.Variant):
-                    conn_id = conn_id.unpack()
-                if conn_id == ssid:
-                    return True
-            except GLib.Error:
-                continue
-        return False
+        # Cold path (first lookup): resolve synchronously so behaviour is
+        # unchanged before the async refresh has completed.
+        return ssid in self._collect_saved_ssids()
 
     def connect_wifi(self, ap: AccessPointData, callback=None):
         if not self._nm or not self.wifi_device:
@@ -1032,7 +1081,7 @@ class NetworkClient(Service):
                 logger.info(
                     f"[Network] activate/add_result={result!r} for ssid={ap.ssid!r}"
                 )
-                ok = isinstance(result, tuple) and result[0]
+                ok = bool(result)
                 if callback:
                     GLib.idle_add(callback, ok, "")
             except Exception as e:
@@ -1084,7 +1133,7 @@ class NetworkClient(Service):
                 logger.info(
                     f"[Network] activate/add_result={result!r} for ssid={ap.ssid!r}"
                 )
-                ok = isinstance(result, tuple) and result[0]
+                ok = bool(result)
                 if callback:
                     GLib.idle_add(callback, ok, "")
             except Exception as e:
