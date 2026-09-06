@@ -23,7 +23,7 @@ except (ValueError, ImportError):
     MediaArt = None
     _MEDIAART_AVAILABLE = False
 
-TEMP_DIR = CACHE_DIR
+TEMP_DIR = Path(CACHE_DIR)
 
 MPRIS_PLAYER_PREFIX = "org.mpris.MediaPlayer2."
 PLAYERCTLD_SERVICE = "org.mpris.MediaPlayer2.playerctld"
