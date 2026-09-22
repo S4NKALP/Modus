@@ -19,6 +19,7 @@
 [![Hyprland](https://img.shields.io/badge/Made%20for-Hyprland-pink?style=for-the-badge&logo=linux&logoColor=D9E0EE&labelColor=292324&color=C6A0F6)](https://hyprland.org/)
 [![Maintained](https://img.shields.io/badge/Maintained-Yes-blue?style=for-the-badge&logo=linux&logoColor=D9E0EE&labelColor=292324&color=3362E1)]()
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/tRFxkbQ3Zq)](https://discord.gg/tRFxkbQ3Zq)
+[![Blog](https://img.shields.io/badge/Read%20the%20Blog-Blog-0077B6?style=for-the-badge&logo=blogger&logoColor=D9E0EE&labelColor=292324)](https://sankalptharu.com.np/blog/modus)
 
 </div>
 
