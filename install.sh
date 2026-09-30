@@ -207,11 +207,68 @@ echo ""
 section "Pre-flight checks"
 
 step "Checking operating system..."
-if ! grep -qi "arch" /etc/os-release; then
+
+OS_RELEASE_FILE=""
+for candidate in /etc/os-release /usr/lib/os-release; do
+    if [ -r "$candidate" ]; then
+        OS_RELEASE_FILE="$candidate"
+        break
+    fi
+done
+
+os_release_field() {
+    # shellcheck disable=SC1090
+    ( . "$OS_RELEASE_FILE" >/dev/null 2>&1; printf '%s' "${!1:-}" )
+}
+
+OS_ID=""
+OS_ID_LIKE=""
+OS_PRETTY=""
+if [ -n "$OS_RELEASE_FILE" ]; then
+    OS_ID=$(os_release_field ID)
+    OS_ID_LIKE=$(os_release_field ID_LIKE)
+    OS_PRETTY=$(os_release_field PRETTY_NAME)
+fi
+
+# Derivatives that ship pacman but omit ID_LIKE=arch
+ARCH_FAMILY_IDS=(
+    arch artix archarm arch32 archbang archlabs archman archcraft antergos
+    endeavouros cachyos garuda arcolinux kaos mx steamos blendos
+    manjaro manjaro-arm pikaos bazzite
+)
+
+is_arch_family() {
+    local known
+    for known in "${ARCH_FAMILY_IDS[@]}"; do
+        if [ "$OS_ID" = "$known" ]; then
+            return 0
+        fi
+    done
+    for known in $OS_ID_LIKE; do
+        if [ "$known" = "arch" ]; then
+            return 0
+        fi
+    done
+    if command -v pacman >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+if [ "${MODUS_SKIP_OS_CHECK:-0}" = "1" ]; then
+    warn "Operating system check skipped (MODUS_SKIP_OS_CHECK=1)"
+elif is_arch_family; then
+    success "${OS_PRETTY:-${OS_ID:-Arch Linux}} detected"
+else
     error "This script requires Arch Linux or an Arch-based distribution"
+    info "Detected: ${OS_PRETTY:-${OS_ID:-unknown}}"
+    info "If this is a false positive, re-run with MODUS_SKIP_OS_CHECK=1"
     exit 1
 fi
-success "Arch Linux detected"
+
+if [ ! -d /run/systemd/system ]; then
+    warn "systemd not detected — uwsm and session locking may not work"
+fi
 
 step "Checking user permissions..."
 if [ "$(id -u)" -eq 0 ]; then
