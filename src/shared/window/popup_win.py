@@ -2,6 +2,8 @@ from fabric.utils import Gdk, GLib, Gtk, logger
 from fabric.widgets.wayland import WaylandWindow
 from gi.repository import GtkLayerShell
 
+OPEN_COOLDOWN_SEC = 0.6
+
 
 def _get_monitor_geometry(widget: Gtk.Widget) -> tuple[int, int]:
     screen = Gdk.Screen.get_default()

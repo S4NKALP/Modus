@@ -1,8 +1,10 @@
+import time
+
 from fabric.utils import GLib, logger
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.wayland import WaylandWindow as Window
 
-from shared.window.popup_win import PopupWindow
+from shared.window.popup_win import OPEN_COOLDOWN_SEC, PopupWindow
 
 
 class DismissLayer(Window):
@@ -26,18 +28,37 @@ class AppletWindow(PopupWindow):
     def __init__(self, edge_margin: int = 0, **kwargs):
         self._is_open = False
         self._hide_timeout_id = None
+        self._open_cooldown_until = 0.0
+        self._keyboard_exclusive = False
         self._parent_dropdown = kwargs.pop("parent_dropdown", None)
         self._child_dropdown = None
         self.dismiss_layer = DismissLayer(on_dismiss=self.toggle)
         kwargs["keyboard_mode"] = "on-demand"
         super().__init__(edge_margin=edge_margin, **kwargs)
-        self.add_keybinding("escape", lambda *_: self.toggle())
+        self.add_keybinding("escape", self._on_escape)
 
     def toggle(self, *_):
         if self._is_open:
-            self.close_applet()
+            if self._can_close():
+                self.close_applet()
         else:
             self.open_applet()
+
+    def _can_close(self) -> bool:
+        return self._is_open and time.monotonic() >= self._open_cooldown_until
+
+    def _on_escape(self, *_):
+        if self._child_dropdown is not None:
+            try:
+                self._child_dropdown.close_applet()
+            except Exception as e:
+                logger.warning(
+                    f"[AppletWindow] child dropdown escape close failed: {e}"
+                )
+            self._child_dropdown = None
+            return True
+        self.close_applet()
+        return True
 
     def open_applet(self):
         if self._is_open:
@@ -79,11 +100,23 @@ class AppletWindow(PopupWindow):
 
         self.set_visible(True)
 
+        self._open_cooldown_until = time.monotonic() + OPEN_COOLDOWN_SEC
+
+        if not self._parent_dropdown and not self._keyboard_exclusive:
+            self._keyboard_exclusive = True
+            self.keyboard_mode = "exclusive"
+
     def close_applet(self):
         if not self._is_open:
             return
 
         self._is_open = False
+
+        self._open_cooldown_until = 0.0
+
+        if self._keyboard_exclusive:
+            self._keyboard_exclusive = False
+            self.keyboard_mode = "on-demand"
 
         if hasattr(self, "_child_dropdown") and self._child_dropdown:
             try:
