@@ -36,7 +36,7 @@ Discord = "https://discord.gg/tRFxkbQ3Zq"
 [dependency-groups]
 dev = [
     "pre-commit==4.7.0",
-    "ruff==0.16.9",
+    "ruff==0.17.3",
 ]
 
 [project.scripts]
